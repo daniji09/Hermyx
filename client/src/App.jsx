@@ -1,5 +1,7 @@
+import { Test } from "./components/Test";
+
 function App() {
-  return <></>;
+  return <Test />;
 }
 
 export default App;
