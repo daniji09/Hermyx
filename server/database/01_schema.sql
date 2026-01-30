@@ -21,7 +21,10 @@ CREATE TABLE APP_USER (
 	description VARCHAR(500),
 	name VARCHAR(50),
 	surnames VARCHAR(100),
-	location VARCHAR(300)
+	location VARCHAR(300),
+
+	stripe_customer_id VARCHAR(255),
+  stripe_connected_id VARCHAR(255)
 );
 
 CREATE TABLE PAYMENT_METHOD (
@@ -37,14 +40,33 @@ CREATE TABLE MISSION (
 	description VARCHAR(1000) NOT NULL,
 	vacancies INT NOT NULL,
 	monetary_reward NUMERIC NOT NULL,
-	status VARCHAR(20) NOT NULL CHECK (status IN ('open', 'in_progress', 'closed', 'canceled', 'in_dispute')),
-	applicant_id INT NOT NULL,
-	FOREIGN KEY (applicant_id) REFERENCES APP_USER(uid)
+	status VARCHAR(20) NOT NULL CHECK (status IN ('pending_payment',
+    'funded',
+    'in_progress',
+    'delivered',
+    'accepted',
+    'releasing',
+    'released',
+		'partially_released',
+    'refunding',
+    'refunded',
+    'canceled',
+    'in_dispute')),
+	owner_id INT NOT NULL,
+
+	stripe_pi_id VARCHAR(255),
+  stripe_refund_id VARCHAR(255),
+
+	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid)
 );
 
 CREATE TABLE MISSION_PARTICIPATION (
 	mid INT NOT NULL,
 	adventurer_id INT NOT NULL,
+
+	transfer_id VARCHAR(255),
+  amount_paid NUMERIC,
+
 	FOREIGN KEY (mid) REFERENCES MISSION(mid),
 	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid),
 	PRIMARY KEY (mid, adventurer_id)
