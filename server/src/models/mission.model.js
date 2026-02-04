@@ -73,9 +73,77 @@ const finalizeRefund = async (mid, refundId) => {
   await pool.query(query, [refundId, mid]);
 };
 
+const createMission = async (missionDate) => {
+  const { title, description, vacancies, reward, status, ownerId } = missionDate;
+
+  const query = `
+    INSERT INTO mission (title, description, vacancies, monetary_reward, status, owner_id)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    title,
+    description,
+    vacancies,
+    reward,
+    status,
+    ownerId,
+  ]);
+  return result.rows[0];
+};
+
+const getAllMissions = async () => {
+  const query = "SELECT * FROM mission WHERE status != 'draft'";
+  const result = await pool.query(query, []);
+  return result.rows;
+};
+
+const getAllMissionsInDraft = async () => {
+  const query = "SELECT * FROM mission WHERE status = 'draft'";
+  const result = await pool.query(query, []);
+  return result.rows;
+};
+
+const getMissionById = async (mid) => {
+  const query = "SELECT * FROM mission WHERE mid = $1";
+  const result = await pool.query(query, [mid]);
+  return result.rows[0];
+};
+
+const updateMission = async (mid, updateData) => {
+  const { title, description, vacancies, reward } = updateData;
+
+  const query = `
+    UPDATE mission
+    SET title = $1, description = $2, vacancies = $3, monetary_reward = $4
+    WHERE mid = $5
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    title,
+    description,
+    vacancies,
+    reward,
+    mid,
+  ]);
+  return result.rows[0];
+};
+
+const deleteMission = async (mid) => {
+  const query = "DELETE FROM mission WHERE mid = $1 RETURNING *";
+  const result = await pool.query(query, [mid]);
+  return result.rows[0];
+};
+
 module.exports = {
   getById,
   updatePaymentInfo,
+  getMissionById,
+  getAllMissions,
+  getAllMissionsInDraft,
+  createMission,
+  updateMission,
+  deleteMission,
   getParticipantsForRelease,
   lockForRelease,
   lockForRefund,
