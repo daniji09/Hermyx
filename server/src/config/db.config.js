@@ -7,11 +7,11 @@ const pool = new Pool({
   user: CONFIG.DB_USER,
   password: CONFIG.DB_PASSWORD,
   host: CONFIG.DB_HOST,
-  post: CONFIG.DB_PORT,
+  port: CONFIG.DB_PORT,
   database: CONFIG.DB_NAME,
 });
 
-// To check wether the connection was successful or not
+// To check whether the connection was successful or not
 pool.on("connect", () => {
   console.log("Connected to Hermyx Database successfully");
 });
