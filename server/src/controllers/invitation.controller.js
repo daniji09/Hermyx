@@ -2,6 +2,7 @@ const invitationModel = require("../models/invitation.model");
 const missionModel = require("../models/mission.model");
 const missionParticipantionModel = require("../models/mission_participation.model");
 
+//receives missionId, senderId and receiverId, prepares the data, and create it in the model.
 const createInvitation = async (req, res) => {
   const { missionId, senderId, receiverId } = req.body;
 
@@ -25,6 +26,8 @@ const createInvitation = async (req, res) => {
   }
 };
 
+/*Receive invitationId and the response (accepted or rejected). The invitation must exist, the recipient must be logged in, and the mission must be pending. 
+If rejected, simply update the status. If not, check that there is a vacancy. If there is, add it to the list and update the status of the invitation.*/
 const respondToInvitation = async (req, res) => {
   const { invitationId } = req.params;
   const { response } = req.body;

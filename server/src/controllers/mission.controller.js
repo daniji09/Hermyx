@@ -1,6 +1,7 @@
 //External modules
 const missionModel = require("../models/mission.model");
 
+//check that these fields are not empty
 const validateMission = (title, description, vacancies, reward) => {
   if (
     !title ||
@@ -22,6 +23,8 @@ const validateMission = (title, description, vacancies, reward) => {
   }
 };
 
+/*Check whether the user wants to save the creation or create a new mission. 
+Depending on that, the fields are checked or not, and the status is updated accordingly.*/
 const createMission = async (req, res) => {
   try {
     const { uid } = req.user;
@@ -153,6 +156,45 @@ const deleteMission = async (req, res) => {
   }
 };
 
+/*Verify that the owner of the mission is the one deleting it and that at least one person is assigned to close the mission.*/
+const close = async (req, res) => {
+  const { missionId } = req.params;
+  const userId = req.user.uid;
+
+  try {
+    const mission = await missionModel.getById(missionId);
+    if (!mission) {
+      return res.status(404).json({ error: "Mission not found" });
+    }
+
+    if (mission.owner_id !== userId) {
+      return res
+        .status(403)
+        .json({ error: "You do not hace permission to close this mission." });
+    }
+
+    const currentParticipants = (
+      await missionModel.getParticipantsForRelease(missionId)
+    ).length;
+
+    if (currentParticipants === 0) {
+      return res
+        .status(400)
+        .json({ error: "You cannot close a mission without adventurers" });
+    }
+
+    await missionModel.updateMission(missionId, "in_progress");
+
+    return res.status(200).json({
+      message: "Mision closed.",
+      status: "in:progress",
+      participants: currentParticipants,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Error interno" });
+  }
+};
+
 module.exports = {
   createMission,
   getAllMissions,
@@ -160,4 +202,5 @@ module.exports = {
   getMissionById,
   updateMission,
   deleteMission,
+  close,
 };
