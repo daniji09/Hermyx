@@ -16,7 +16,7 @@ CREATE TABLE APP_USER (
 	uid SERIAL PRIMARY KEY,
 	username VARCHAR(20) NOT NULL UNIQUE,
 	email VARCHAR(100) UNIQUE,
-	password VARCHAR(255),
+	firebase_uid VARCHAR(255) NOT NULL UNIQUE,
 	google_account VARCHAR(255),
 	description VARCHAR(500),
 	name VARCHAR(50),

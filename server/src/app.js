@@ -60,8 +60,10 @@ app.use("/stripe", paymentRouter);
 
 // Application routers
 const testRouter = require("./routes/test.router");
+const usersRouter = require("./routes/users.router");
 
 // Application routes
 app.use("/test", testRouter);
+app.use("/api/users", usersRouter);
 
 module.exports = app;

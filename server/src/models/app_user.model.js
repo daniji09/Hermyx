@@ -21,9 +21,36 @@ const updateStripeConnected = async (uid, stripeConnectedId) => {
 
 //Get the user by their email
 const getByEmail = async (email) => {
-  const query = "SELECT * FROM app_user WHERE email = $1";
-  const result = await pool.query(query, [email]);
-  return result.rows[0];
+  try {
+    const query = "SELECT * FROM app_user WHERE email = $1";
+    const result = await pool.query(query, [email]);
+    return result.rows[0];
+  } catch (e) {
+    throw e;
+  }
+};
+
+// Get user by username
+const getByUsername = async (username) => {
+  try {
+    const query = "SELECT * FROM app_user WHERE username = $1";
+    const result = await pool.query(query, [username]);
+    return result.rows[0];
+  } catch (e) {
+    throw e;
+  }
+};
+
+// Creates new user
+const create = async (email, username, firebaseUid) => {
+  try {
+    const query =
+      "INSERT INTO app_user(email, username, firebase_uid) VALUES($1, $2, $3) RETURNING *";
+    const result = await pool.query(query, [email, username, firebaseUid]);
+    return result.rows[0];
+  } catch (e) {
+    throw e;
+  }
 };
 
 module.exports = {
@@ -31,4 +58,6 @@ module.exports = {
   updateStripeCustomer,
   updateStripeConnectId: updateStripeConnected,
   getByEmail,
+  getByUsername,
+  create,
 };
