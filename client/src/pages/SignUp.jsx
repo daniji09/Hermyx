@@ -1,6 +1,6 @@
-import { useActionState } from "react";
-import { createUserWithEmailAndPassword, deleteUser } from "firebase/auth";
-import { auth } from "../config/firebase";
+import { useActionState } from 'react';
+import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
+import { auth } from '../config/firebase';
 
 export function SignUp() {
   const initialState = { success: null, errors: {} };
@@ -11,22 +11,22 @@ export function SignUp() {
       Object.fromEntries(formData);
 
     if (!username || !email || !password || !confirmPassword) {
-      errors.general = "All fields are required.";
+      errors.general = 'All fields are required.';
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (email && !emailRegex.test(email)) {
-      errors.email = "Please, enter a correct e-mail.";
+      errors.email = 'Please, enter a correct e-mail.';
     }
     /*
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    Const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (password && !passwordRegex.test(password)) {
       errors.password =
         "Password must have at least 8 characters, an uppercase, a lowercase and a number.";
     }
 */
     if (password !== confirmPassword) {
-      errors.confirmPassword = "Passwords do not match.";
+      errors.confirmPassword = 'Passwords do not match.';
     }
 
     // Field errors
@@ -84,11 +84,11 @@ export function SignUp() {
 
       // Otherwise, it creates the account on HermyxBD
       const createAccountResponse = await fetch(
-        "http://localhost:3000/api/users",
+        'http://localhost:3000/api/users',
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
+            'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             username: username,
@@ -102,7 +102,7 @@ export function SignUp() {
       if (createAccountResponse.status !== 201) {
         // Deletes user
         await deleteUser(userCredential.user);
-        console.log("User deleted");
+        console.log('User deleted');
         return {
           success: null,
           errors: { general: `Could not create new account.` },
@@ -124,42 +124,42 @@ export function SignUp() {
 
   return (
     <form action={signUpFormAction} noValidate>
-      {state.success && <p className="text-green-600">Signed up!</p>}
+      {state.success && <p className='text-green-600'>Signed up!</p>}
       {state.errors?.general && (
-        <p className="text-red-600">{state.errors.general}</p>
+        <p className='text-red-600'>{state.errors.general}</p>
       )}
 
       <div>
         <label>Username:</label>
-        <input type="text" name="username" required />
+        <input type='text' name='username' required />
       </div>
 
       <div>
         <label>E-mail:</label>
-        <input type="email" name="email" required />
+        <input type='email' name='email' required />
         {state.errors?.email && (
-          <p className="text-red-600">{state.errors.email}</p>
+          <p className='text-red-600'>{state.errors.email}</p>
         )}
       </div>
 
       <div>
         <label>Password:</label>
-        <input type="password" name="password" required />
+        <input type='password' name='password' required />
         {state.errors?.password && (
-          <p className="text-red-600">{state.errors.password}</p>
+          <p className='text-red-600'>{state.errors.password}</p>
         )}
       </div>
 
       <div>
         <label>Confirm password:</label>
-        <input type="password" name="confirmPassword" required />
+        <input type='password' name='confirmPassword' required />
         {state.errors?.confirmPassword && (
-          <p className="text-red-600">{state.errors.confirmPassword}</p>
+          <p className='text-red-600'>{state.errors.confirmPassword}</p>
         )}
       </div>
 
-      <button type="submit" disabled={isPending}>
-        {isPending ? "Signing up..." : "Sign up"}
+      <button type='submit' disabled={isPending}>
+        {isPending ? 'Signing up...' : 'Sign up'}
       </button>
     </form>
   );

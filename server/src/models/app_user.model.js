@@ -1,28 +1,28 @@
-const pool = require("../config/db.config");
+import pool from '../config/db.config.js';
 
 //Get the user by their ID
-const getById = async (uid) => {
-  const query = "SELECT * FROM app_user WHERE uid = $1";
+export const getById = async (uid) => {
+  const query = 'SELECT * FROM app_user WHERE uid = $1';
   const result = await pool.query(query, [uid]);
   return result.rows[0];
 };
 
 //Save the Stripe Customer ID in the user table.
-const updateStripeCustomer = async (uid, stripeCustomerId) => {
-  const query = "UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2";
+export const updateStripeCustomer = async (uid, stripeCustomerId) => {
+  const query = 'UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2';
   await pool.query(query, [stripeCustomerId, uid]);
 };
 
 //Saves the Stripe Connect Account ID in the user table.
-const updateStripeConnected = async (uid, stripeConnectedId) => {
-  const query = "UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2";
+export const updateStripeConnected = async (uid, stripeConnectedId) => {
+  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
   await pool.query(query, [stripeConnectedId, uid]);
 };
 
 //Get the user by their email
-const getByEmail = async (email) => {
+export const getByEmail = async (email) => {
   try {
-    const query = "SELECT * FROM app_user WHERE email = $1";
+    const query = 'SELECT * FROM app_user WHERE email = $1';
     const result = await pool.query(query, [email]);
     return result.rows[0];
   } catch (e) {
@@ -31,9 +31,9 @@ const getByEmail = async (email) => {
 };
 
 // Get user by username
-const getByUsername = async (username) => {
+export const getByUsername = async (username) => {
   try {
-    const query = "SELECT * FROM app_user WHERE username = $1";
+    const query = 'SELECT * FROM app_user WHERE username = $1';
     const result = await pool.query(query, [username]);
     return result.rows[0];
   } catch (e) {
@@ -42,22 +42,13 @@ const getByUsername = async (username) => {
 };
 
 // Creates new user
-const create = async (email, username, firebaseUid) => {
+export const create = async (email, username, firebaseUid) => {
   try {
     const query =
-      "INSERT INTO app_user(email, username, firebase_uid) VALUES($1, $2, $3) RETURNING *";
+      'INSERT INTO app_user(email, username, firebase_uid) VALUES($1, $2, $3) RETURNING *';
     const result = await pool.query(query, [email, username, firebaseUid]);
     return result.rows[0];
   } catch (e) {
     throw e;
   }
-};
-
-module.exports = {
-  getById,
-  updateStripeCustomer,
-  updateStripeConnectId: updateStripeConnected,
-  getByEmail,
-  getByUsername,
-  create,
 };

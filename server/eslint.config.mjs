@@ -36,6 +36,7 @@ export default [
       // Other rules
       'no-console': 'off',
       'capitalized-comments': ['error', 'always'],
+      'no-useless-catch': 'off',
     },
   },
 ];

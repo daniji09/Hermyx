@@ -1,8 +1,12 @@
-const invitationModel = require("../models/invitation.model");
-const missionModel = require("../models/mission.model");
-const missionParticipantionModel = require("../models/mission_participation.model");
+import {
+  createInvitation as _createInvitation,
+  findByIid,
+  updateInvitationStatus,
+} from '../models/invitation.model';
+import missionModel from '../models/mission.model';
+import { addParticipant } from '../models/mission_participation.model';
 
-//receives missionId, senderId and receiverId, prepares the data, and create it in the model.
+//Receives missionId, senderId and receiverId, prepares the data, and create it in the model.
 const createInvitation = async (req, res) => {
   const { missionId, senderId, receiverId } = req.body;
 
@@ -17,12 +21,12 @@ const createInvitation = async (req, res) => {
       receiverId,
     };
 
-    const newInvitationId =
-      await invitationModel.createInvitation(invitationData);
+    const newInvitationId = await _createInvitation(invitationData);
 
     return res.status(201).json(newInvitationId);
   } catch (error) {
-    return res.status(500).json({ error: "Database error" });
+    console.error(error);
+    return res.status(500).json({ error: 'Database error' });
   }
 };
 
@@ -35,28 +39,28 @@ const respondToInvitation = async (req, res) => {
   const userId = req.user.uid;
 
   try {
-    const invitation = await invitationModel.findByIid(invitationId);
+    const invitation = await findByIid(invitationId);
 
     if (!invitation) {
-      return res.status(404).json({ error: "Invitation not found" });
+      return res.status(404).json({ error: 'Invitation not found' });
     }
 
     if (invitation.receiver_id !== userId) {
       return res.status(403).json({
-        error: "You do not have permission to respond to this invitation.",
+        error: 'You do not have permission to respond to this invitation.',
       });
     }
 
-    if (invitation.status !== "pending") {
+    if (invitation.status !== 'pending') {
       return res.status(400).json({
         error: `This invitation has already been ${invitation.status}.`,
       });
     }
 
-    if (response === "rejected") {
-      await invitationModel.updateInvitationStatus(invitationId, "rejected");
-      return res.status(200).json({ message: "Invitation rejected" });
-    } else if (response === "accept") {
+    if (response === 'rejected') {
+      await updateInvitationStatus(invitationId, 'rejected');
+      return res.status(200).json({ message: 'Invitation rejected' });
+    } else if (response === 'accept') {
       const missionId = invitation.associated_mission_id;
 
       const [mission, participants] = await Promise.all([
@@ -67,28 +71,26 @@ const respondToInvitation = async (req, res) => {
       if (mission.vacancies <= participants.length) {
         return res
           .status(409)
-          .json({ error: "There are no vacancies available" });
+          .json({ error: 'There are no vacancies available' });
       }
 
-      await missionParticipantionModel.addParticipant(
-        missionId,
-        invitation.receiver_id,
-      );
+      await addParticipant(missionId, invitation.receiver_id);
 
-      await invitationModel.updateInvitationStatus(invitationId, "accepted");
+      await updateInvitationStatus(invitationId, 'accepted');
 
       return res
         .status(200)
-        .json({ message: "Adventurer successfully added " });
+        .json({ message: 'Adventurer successfully added ' });
     } else {
-      return res.status(400).json({ error: "Invalid response action" });
+      return res.status(400).json({ error: 'Invalid response action' });
     }
   } catch (error) {
-    return res.status(500).json({ error: "Error processing the request" });
+    console.error(error);
+    return res.status(500).json({ error: 'Error processing the request' });
   }
 };
 
-module.exports = {
+export default {
   createInvitation,
   respondToInvitation,
 };

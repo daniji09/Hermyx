@@ -1,14 +1,12 @@
 // External modules
-const pool = require("../config/db.config");
+import pool from '../config/db.config.js';
 
-const getAll = async () => {
+export const getAll = async () => {
   try {
-    const query = "SELECT * FROM app_user";
+    const query = 'SELECT * FROM app_user';
     const result = await pool.query(query);
     return result.rows;
   } catch (e) {
     throw e;
   }
 };
-
-module.exports = { getAll };

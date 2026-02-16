@@ -1,26 +1,35 @@
 // External modules
-const express = require("express");
-const router = express.Router();
-const missionController = require("../controllers/mission.controller");
+import { Router } from 'express';
+const router = Router();
+import {
+  createMission,
+  getAllMissions,
+  getAllMissionsInDraft,
+  getMissionById,
+  updateMission,
+  deleteMission,
+  close,
+} from '../controllers/mission.controller.js';
 
+//Create mission
+router.post('/', createMission);
 
-//create mission
-router.post("/", missionController.createMission);
+//List all missions
+router.get('/', getAllMissions);
 
-//list all missions
-router.get("/", missionController.getAllMissions);
+//List all draft missions
+router.get('/in-draft', getAllMissionsInDraft);
 
-//list all draft missions
-router.get("/in-draft", missionController.getAllMissionsInDraft);
+//Get mission by id
+router.get('/:missionId', getMissionById);
 
-//get mission by id
-router.get("/:missionId", missionController.getMissionById);
+//Update mission
+router.put('/:missionId', updateMission);
 
-//update mission
-router.put("/:missionId", missionController.updateMission);
+//Delete mission
+router.delete('/:missionId', deleteMission);
 
-//delete mission
-router.delete("/:missionId", missionController.deleteMission);
+//Close a mission
+router.post('/:missionId/close', close);
 
-//close a mission
-router.post("/:missionId/close", missionController.close);
+export default router;

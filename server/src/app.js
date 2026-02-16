@@ -1,9 +1,9 @@
 // To load environment variables
-require('dotenv').config();
+import 'dotenv/config';
 
 // External modules
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
 const corsOptions = {
   // Cors configuration for accepting only allowed urls
   origin: ['http://localhost:5173'],
@@ -17,7 +17,10 @@ app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-const paymentRouter = require('./routes/payment.router');
+// Application routers
+import testRouter from './routes/test.router.js';
+import usersRouter from './routes/users.router.js';
+import paymentRouter from './routes/payment.router.js';
 
 app.use((req, res, next) => {
   // Payment test
@@ -56,14 +59,9 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/stripe', paymentRouter);
-
-// Application routers
-const testRouter = require('./routes/test.router');
-const usersRouter = require('./routes/users.router');
-
 // Application routes
 app.use('/test', testRouter);
+app.use('/stripe', paymentRouter);
 app.use('/api/users', usersRouter);
 
-module.exports = app;
+export default app;

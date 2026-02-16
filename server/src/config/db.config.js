@@ -1,23 +1,23 @@
 // External modules
-const CONFIG = require("./config");
-const { Pool } = require("pg");
+import { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME } from './config.js';
+import { Pool } from 'pg';
 
 // Pool connection configuration
 const pool = new Pool({
-  user: CONFIG.DB_USER,
-  password: CONFIG.DB_PASSWORD,
-  host: CONFIG.DB_HOST,
-  port: CONFIG.DB_PORT,
-  database: CONFIG.DB_NAME,
+  user: DB_USER,
+  password: DB_PASSWORD,
+  host: DB_HOST,
+  port: DB_PORT,
+  database: DB_NAME,
 });
 
 // To check whether the connection was successful or not
-pool.on("connect", () => {
-  console.log("Connected to Hermyx Database successfully");
+pool.on('connect', () => {
+  console.log('Connected to Hermyx Database successfully');
 });
 
-pool.on("error", (err) => {
-  console.error("Error connecting to Hermyx Database: ", err);
+pool.on('error', (err) => {
+  console.error('Error connecting to Hermyx Database: ', err);
 });
 
-module.exports = pool;
+export default pool;

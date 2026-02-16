@@ -1,14 +1,14 @@
 // External modules
-const usersModel = require("../models/app_user.model");
+import { getByEmail, getByUsername, create } from '../models/app_user.model.js';
 
-const getUsers = async (req, res) => {
+export const getUsers = async (req, res) => {
   try {
     // Gets attributes
     const { email, username } = req.query;
 
     if (email) {
       // It searches user by email
-      const user = await usersModel.getByEmail(email);
+      const user = await getByEmail(email);
 
       // Returns success or error
       if (!user)
@@ -19,7 +19,7 @@ const getUsers = async (req, res) => {
       return res.status(200).json({ data: user });
     } else if (username) {
       // It searches user by username
-      const user = await usersModel.getByUsername(username);
+      const user = await getByUsername(username);
 
       // Returns success or error
       if (!user)
@@ -35,13 +35,13 @@ const getUsers = async (req, res) => {
   }
 };
 
-const signUp = async (req, res) => {
+export const signUp = async (req, res) => {
   try {
     // Gets new account attributes
     const { email, username, firebaseUid } = req.body;
 
     // Creates account
-    const user = await usersModel.create(email, username, firebaseUid);
+    const user = await create(email, username, firebaseUid);
 
     // Returns success or error
     if (user) return res.status(201).json({ data: user });
@@ -51,4 +51,3 @@ const signUp = async (req, res) => {
     res.status(500).end();
   }
 };
-module.exports = { getUsers, signUp };

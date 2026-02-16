@@ -1,25 +1,34 @@
 //External modules
-const missionModel = require("../models/mission.model");
+import {
+  createMission as _createMission,
+  getAllMissions as _getAllMissions,
+  getAllMissionsInDraft as _getAllMissionsInDraft,
+  getMissionById as _getMissionById,
+  updateMission as _updateMission,
+  deleteMission as _deleteMission,
+  getById,
+  getParticipantsForRelease,
+} from '../models/mission.model';
 
-//check that these fields are not empty
+//Check that these fields are not empty
 const validateMission = (title, description, vacancies, reward) => {
   if (
     !title ||
     title.trim().length === 0 ||
     !description ||
     description.trim().length === 0 ||
-    vacancies == "" ||
+    vacancies === '' ||
     vacancies === null ||
     vacancies === undefined ||
-    reward == "" ||
+    reward === '' ||
     reward === null ||
     reward === undefined
   ) {
-    return "Missing required fields";
+    return 'Missing required fields';
   }
 
   if (vacancies < 0 || reward < 0) {
-    return "Vacancies and reward must be non-negative";
+    return 'Vacancies and reward must be non-negative';
   }
 };
 
@@ -40,63 +49,63 @@ const createMission = async (req, res) => {
     }
 
     const missionData = {
-      title: title || "Mission not titled",
-      description: description || "",
+      title: title || 'Mission not titled',
+      description: description || '',
       vacancies: vacancies || 0,
       reward: reward || 0,
-      status: isDraft ? "draft" : "pending_payment",
+      status: isDraft ? 'draft' : 'pending_payment',
       ownerId: uid,
     };
 
-    const newMission = await missionModel.createMission(missionData);
+    const newMission = await _createMission(missionData);
 
     res
       .status(201)
-      .json({ data: newMission, message: "Mission created successfully" });
+      .json({ data: newMission, message: 'Mission created successfully' });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Error creating mission" });
+    res.status(500).json({ error: 'Error creating mission' });
   }
 };
 
 const getAllMissions = async (req, res) => {
   try {
-    const missions = await missionModel.getAllMissions();
+    const missions = await _getAllMissions();
     res
       .status(200)
-      .json({ data: missions, message: "Missions retrieved successfully" });
+      .json({ data: missions, message: 'Missions retrieved successfully' });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Error fetching missions" });
+    res.status(500).json({ error: 'Error fetching missions' });
   }
 };
 
 const getAllMissionsInDraft = async (req, res) => {
   try {
-    const missions = await missionModel.getAllMissionsInDraft();
+    const missions = await _getAllMissionsInDraft();
     res
       .status(200)
-      .json({ data: missions, message: "Missions retrieved successfully" });
+      .json({ data: missions, message: 'Missions retrieved successfully' });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Error fetching missions" });
+    res.status(500).json({ error: 'Error fetching missions' });
   }
 };
 
 const getMissionById = async (req, res) => {
   try {
     const { missionId } = req.params;
-    const mission = await missionModel.getMissionById(missionId);
+    const mission = await _getMissionById(missionId);
     if (!mission) {
-      return res.status(404).json({ error: "Mission not found" });
+      return res.status(404).json({ error: 'Mission not found' });
     } else {
       return res
         .status(200)
-        .json({ data: mission, message: "Mission retrieved successfully" });
+        .json({ data: mission, message: 'Mission retrieved successfully' });
     }
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Error fetching mission" });
+    res.status(500).json({ error: 'Error fetching mission' });
   }
 };
 
@@ -113,46 +122,43 @@ const updateMission = async (req, res) => {
     }
 
     const updateData = {
-      title: title || "Mission not titled",
-      description: description || "",
+      title: title || 'Mission not titled',
+      description: description || '',
       vacancies: vacancies || 0,
       reward: reward || 0,
     };
 
-    const updatedMission = await missionModel.updateMission(
-      missionId,
-      updateData,
-    );
+    const updatedMission = await _updateMission(missionId, updateData);
 
     if (!updatedMission) {
-      return res.status(404).json({ error: "Mission not found" });
+      return res.status(404).json({ error: 'Mission not found' });
     } else {
       res.status(200).json({
         data: updatedMission,
-        message: "Mission updated successfully",
+        message: 'Mission updated successfully',
       });
     }
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Error updating mission" });
+    res.status(500).json({ error: 'Error updating mission' });
   }
 };
 
 const deleteMission = async (req, res) => {
   try {
     const { missionId } = req.params;
-    const deletedMission = await missionModel.deleteMission(missionId);
+    const deletedMission = await _deleteMission(missionId);
     if (!deletedMission) {
-      return res.status(404).json({ error: "Mission not found" });
+      return res.status(404).json({ error: 'Mission not found' });
     } else {
       res.status(200).json({
         data: deletedMission,
-        message: "Mission deleted successfully",
+        message: 'Mission deleted successfully',
       });
     }
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Error deleting mission" });
+    res.status(500).json({ error: 'Error deleting mission' });
   }
 };
 
@@ -162,40 +168,40 @@ const close = async (req, res) => {
   const userId = req.user.uid;
 
   try {
-    const mission = await missionModel.getById(missionId);
+    const mission = await getById(missionId);
     if (!mission) {
-      return res.status(404).json({ error: "Mission not found" });
+      return res.status(404).json({ error: 'Mission not found' });
     }
 
     if (mission.owner_id !== userId) {
       return res
         .status(403)
-        .json({ error: "You do not hace permission to close this mission." });
+        .json({ error: 'You do not hace permission to close this mission.' });
     }
 
-    const currentParticipants = (
-      await missionModel.getParticipantsForRelease(missionId)
-    ).length;
+    const currentParticipants = (await getParticipantsForRelease(missionId))
+      .length;
 
     if (currentParticipants === 0) {
       return res
         .status(400)
-        .json({ error: "You cannot close a mission without adventurers" });
+        .json({ error: 'You cannot close a mission without adventurers' });
     }
 
-    await missionModel.updateMission(missionId, "in_progress");
+    await _updateMission(missionId, 'in_progress');
 
     return res.status(200).json({
-      message: "Mision closed.",
-      status: "in:progress",
+      message: 'Mission closed.',
+      status: 'in:progress',
       participants: currentParticipants,
     });
   } catch (error) {
-    return res.status(500).json({ error: "Error interno" });
+    console.error(error);
+    return res.status(500).json({ error: 'Error interno' });
   }
 };
 
-module.exports = {
+export default {
   createMission,
   getAllMissions,
   getAllMissionsInDraft,

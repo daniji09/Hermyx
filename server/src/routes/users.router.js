@@ -1,12 +1,12 @@
 // External modules
-const express = require("express");
-const router = express.Router();
-const usersController = require("../controllers/users.controller");
+import { Router } from 'express';
+const router = Router();
+import { getUsers, signUp } from '../controllers/users.controller.js';
 
 // Get users
-router.get("/", usersController.getUsers);
+router.get('/', getUsers);
 
 // Sign up a new user
-router.post("/", usersController.signUp);
+router.post('/', signUp);
 
-module.exports = router;
+export default router;

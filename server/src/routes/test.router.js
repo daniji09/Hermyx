@@ -1,8 +1,8 @@
 // External modules
-const express = require("express");
-const router = express.Router();
-const testController = require("../controllers/test.controller");
+import { Router } from 'express';
+const router = Router();
+import { getAll } from '../controllers/test.controller.js';
 
-router.get("/", testController.getAll);
+router.get('/', getAll);
 
-module.exports = router;
+export default router;

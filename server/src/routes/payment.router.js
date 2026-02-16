@@ -1,84 +1,81 @@
-require("dotenv").config();
-const express = require("express");
-const router = express.Router();
-const paymentController = require("../controllers/payment.controller");
-const paymentService = require("../services/payment.service");
+import { Router } from 'express';
+const router = Router();
+import {
+  addCardToCustomer,
+  listCards,
+  setDefaultCard,
+  deleteCard,
+  payDefault,
+  payNew,
+  confirmPayment,
+  connectOnboard,
+  connectSuccess,
+  releaseMissionPayment,
+  refundMissionPayment,
+  getDashboardLink,
+} from '../controllers/payment.controller.js';
+import { checkStripeCustomer } from '../services/payment.service.js';
 
-//middleware to require customerId
+//Middleware to require customerId
 const requireCustomer = async (req, res, next) => {
   try {
-    const customerId = await paymentService.checkStripeCustomer(req.user);
+    const customerId = await checkStripeCustomer(req.user);
 
     req.user.stripe_customer_id = customerId;
 
     next();
   } catch (error) {
-    console.error("Error in requireCustomer middleware:", error);
-    return res.status(500).json({ error: "Error managing payment customer" });
+    console.error('Error in requireCustomer middleware:', error);
+    return res.status(500).json({ error: 'Error managing payment customer' });
   }
 };
 
-//add a card
+//Add a card
+router.post('/add-card-to-customer', requireCustomer, addCardToCustomer);
+
+//List the cards
+router.get('/cards', requireCustomer, listCards);
+
+//Set a card as default
+router.post('/cards/default', requireCustomer, setDefaultCard);
+
+//Delete a card
+router.delete('/cards/:paymentMethodId', requireCustomer, deleteCard);
+
+//Pay with a predetermined card
+router.post('/pay/default', requireCustomer, payDefault);
+
+//Pay with a new card
+router.post('/pay/new', requireCustomer, payNew);
+
+//Route to confirm that we have charged the customer
 router.post(
-  "/add-card-to-customer",
+  '/missions/:missionId/confirm-payment',
   requireCustomer,
-  paymentController.addCardToCustomer,
+  confirmPayment,
 );
 
-//list the cards
-router.get("/cards", requireCustomer, paymentController.listCards);
+//Route to register as a connected account
+router.get('/connect/onboard', connectOnboard);
 
-//set a card as default
+//Successful connected account route
+router.get('/connect/success', connectSuccess);
+
+//Route to release the money
 router.post(
-  "/cards/default",
+  '/missions/:missionId/release',
   requireCustomer,
-  paymentController.setDefaultCard,
+  releaseMissionPayment,
 );
 
-//delete a card
-router.delete(
-  "/cards/:paymentMethodId",
-  requireCustomer,
-  paymentController.deleteCard,
-);
-
-//pay with a predetermined card
-router.post("/pay/default", requireCustomer, paymentController.payDefault);
-
-//pay with a new card
-router.post("/pay/new", requireCustomer, paymentController.payNew);
-
-//route to confirm that we have charged the customer
+//Refund route
 router.post(
-  "/missions/:missionId/confirm-payment",
+  '/missions/:missionId/refund',
   requireCustomer,
-  paymentController.confirmPayment,
+  refundMissionPayment,
 );
 
-//route to register as a connected account
-router.get("/connect/onboard", paymentController.connectOnboard);
+//Route to get the dashboard link for connected accounts
+router.post('/connect/login-link', getDashboardLink);
 
-//successful connected account route
-router.get("/connect/success", paymentController.connectSuccess);
-
-//route to release the money
-router.post(
-  "/missions/:missionId/release",
-  requireCustomer,
-  paymentController.releaseMissionPayment,
-);
-
-//refund route
-router.post(
-  "/missions/:missionId/refund",
-  requireCustomer,
-  paymentController.refundMissionPayment,
-);
-
-//route to get the dashboard link for connected accounts
-router.post(
-  "/connect/login-link",
-  paymentController.getDashboardLink,
-);
-
-module.exports = router;
+export default router;

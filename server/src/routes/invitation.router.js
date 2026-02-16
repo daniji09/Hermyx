@@ -1,10 +1,15 @@
-const express = require("express");
-const router = express.Router();
+import { Router } from 'express';
+const router = Router();
 
-const invitationController = require("../controllers/invitation.controller");
+import {
+  createInvitation,
+  respondToInvitation,
+} from '../controllers/invitation.controller.js';
 
-//crete invitation
-router.post("/invitation", invitationController.createInvitation);
+//Crete invitation
+router.post('/invitation', createInvitation);
 
-//respond to invitation
-router.post("/:invitationId/respond", invitationController.respondToInvitation);
+//Respond to invitation
+router.post('/:invitationId/respond', respondToInvitation);
+
+export default router;
