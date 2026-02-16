@@ -1,0 +1,18 @@
+# Dependencies
+node_modules
+
+# Production builds
+dist
+build
+out
+
+# System and log files
+.DS_Store
+*.log
+npm-debug.log
+
+# Testing
+coverage
+
+# Package managers
+package-lock.json
