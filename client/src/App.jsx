@@ -1,7 +1,7 @@
-import { Test } from "./components/Test";
+import { SignUp } from "./pages/SignUp";
 
 function App() {
-  return <Test />;
+  return <SignUp></SignUp>;
 }
 
 export default App;
