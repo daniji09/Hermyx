@@ -1,6 +1,7 @@
 import { useActionState } from 'react';
 import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 import { auth } from '../config/firebase';
+import api from '../config/api';
 
 export function SignUp() {
   const initialState = { success: null, errors: {} };
@@ -34,20 +35,14 @@ export function SignUp() {
       return { data: null, errors: errors };
     }
 
-    // Necessary checks to create user, first posible params of search are initialized
-    const byEmailParams = new URLSearchParams({
-      email: email,
-    });
-
-    const byUsernameParams = new URLSearchParams({
-      username: username,
-    });
-
+    // Necessary checks to create user
     try {
       // Checks if email is already in use
-      const existingEmailResponse = await fetch(
-        `http://localhost:3000/api/users?${byEmailParams.toString()}`,
-      );
+      const existingEmailResponse = await api.get('/users', {
+        params: { email: email },
+        // A 404 status is ok, it means the email is not already in use
+        validateStatus: (status) => status === 200 || status === 404,
+      });
 
       // If it is, it returns the error
       if (existingEmailResponse.status === 200)
@@ -57,9 +52,11 @@ export function SignUp() {
         };
 
       // If not, checks if username is already in use
-      const existingUsernameResponse = await fetch(
-        `http://localhost:3000/api/users?${byUsernameParams.toString()}`,
-      );
+      const existingUsernameResponse = await api.get('/users', {
+        params: { username: username },
+        // A 404 status is ok, it means the username is not already in use
+        validateStatus: (status) => status === 200 || status === 404,
+      });
 
       // If it is, it returns the error
       if (existingUsernameResponse.status === 200)
@@ -83,26 +80,18 @@ export function SignUp() {
         };
 
       // Otherwise, it creates the account on HermyxBD
-      const createAccountResponse = await fetch(
-        'http://localhost:3000/api/users',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username: username,
-            email: email,
-            firebaseUid: userCredential.user.uid,
-          }),
-        },
-      );
+      const newUser = {
+        username: username,
+        email: email,
+        firebaseUid: userCredential.user.uid,
+      };
+      const createAccountResponse = await api.post('/users', newUser);
 
       // If it does not create it successfully, it deletes account on Firebase and returns the error
       if (createAccountResponse.status !== 201) {
         // Deletes user
         await deleteUser(userCredential.user);
-        console.log('User deleted');
+
         return {
           success: null,
           errors: { general: `Could not create new account.` },
@@ -112,8 +101,9 @@ export function SignUp() {
       // Otherwise, its successful
       return { success: true };
     } catch (e) {
-      console.log(e);
-      return { success: null, errors: { general: e } };
+      const errorMessage =
+        e.response?.data?.message || e.message || 'Unexpected error';
+      return { success: null, errors: { general: errorMessage } };
     }
   };
 
