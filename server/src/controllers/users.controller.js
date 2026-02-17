@@ -12,11 +12,11 @@ export const getUsers = async (req, res) => {
 
       // Returns success or error
       if (!user)
-        return res
-          .status(404)
-          .json({ error: `User with e-mail ${email} not found.` });
+        return res.status(404).json({
+          errors: { general: `User with email ${email} not found.` },
+        });
 
-      return res.status(200).json({ data: user });
+      return res.status(200).json({ user: user });
     } else if (username) {
       // It searches user by username
       const user = await getByUsername(username);
@@ -25,9 +25,9 @@ export const getUsers = async (req, res) => {
       if (!user)
         return res
           .status(404)
-          .json({ error: `Username ${username} not found.` });
+          .json({ error: { general: `Username ${username} not found.` } });
 
-      return res.status(200).json({ data: user });
+      return res.status(200).json({ user: user });
     }
   } catch (e) {
     console.error(e);
@@ -44,8 +44,10 @@ export const signUp = async (req, res) => {
     const user = await create(email, username, firebaseUid);
 
     // Returns success or error
-    if (user) return res.status(201).json({ data: user });
-    return res.status(400).json({ error: `Could not create new account.` });
+    if (user) return res.status(201).json({ user: user });
+    return res
+      .status(400)
+      .json({ error: { general: `Could not create new account.` } });
   } catch (e) {
     console.error(e);
     res.status(500).end();

@@ -2,108 +2,200 @@ import { useActionState } from 'react';
 import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import api from '../config/api';
+import { signUpClientSchema } from '@hermyx/shared';
 
 export function SignUp() {
+  // Initial state for the React Hook useStateAction
   const initialState = { success: null, errors: {} };
 
-  const signUpAction = async (previousState, formData) => {
-    const errors = {};
-    const { username, email, password, confirmPassword } =
-      Object.fromEntries(formData);
+  // Checks if the email is already in use
+  async function checkEmailAlreadyInUse(fieldsData) {
+    // API call
+    const { data, status } = await api.get('/users', {
+      params: { email: fieldsData.email },
+      // A 404 status is ok, it means the email is not already in use
+      validateStatus: (status) =>
+        status === 200 || status === 400 || status === 404,
+    });
 
-    if (!username || !email || !password || !confirmPassword) {
-      errors.general = 'All fields are required.';
+    // If it is, it returns the error
+    if (status === 200)
+      throw {
+        controlledError: true,
+        errors: {
+          general: [`User with email ${fieldsData.email} already exists.`],
+        },
+      };
+    // If there is a request error, it shows it
+    else if (status === 400) {
+      throw {
+        controlledError: true,
+        errors: data.errors,
+      };
     }
+  }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email && !emailRegex.test(email)) {
-      errors.email = 'Please, enter a correct e-mail.';
-    }
-    /*
-    Const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    if (password && !passwordRegex.test(password)) {
-      errors.password =
-        "Password must have at least 8 characters, an uppercase, a lowercase and a number.";
-    }
-*/
-    if (password !== confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match.';
-    }
+  // Checks if the username is already in use
+  async function checkUsernameAlreadyInUse(fieldsData) {
+    // API call
+    const { data, status } = await api.get('/users', {
+      params: { username: fieldsData.username },
+      // A 404 status is ok, it means the username is not already in use
+      validateStatus: (status) =>
+        status === 200 || status === 400 || status === 404,
+    });
 
-    // Field errors
-    if (Object.keys(errors).length > 0) {
-      return { data: null, errors: errors };
+    // If it is, it returns the error
+    if (status === 200)
+      throw {
+        controlledError: true,
+        errors: {
+          general: [`Username ${fieldsData.username} already in use.`],
+        },
+      };
+    // If there is a request error, it shows it
+    else if (status === 400) {
+      throw {
+        controlledError: true,
+        errors: data.errors,
+      };
     }
+  }
 
-    // Necessary checks to create user
+  // Creates Firebase user
+  async function createFirebaseUser(fieldsData) {
     try {
-      // Checks if email is already in use
-      const existingEmailResponse = await api.get('/users', {
-        params: { email: email },
-        // A 404 status is ok, it means the email is not already in use
-        validateStatus: (status) => status === 200 || status === 404,
-      });
-
-      // If it is, it returns the error
-      if (existingEmailResponse.status === 200)
-        return {
-          success: null,
-          errors: { general: `User with email ${email} already exists.` },
-        };
-
-      // If not, checks if username is already in use
-      const existingUsernameResponse = await api.get('/users', {
-        params: { username: username },
-        // A 404 status is ok, it means the username is not already in use
-        validateStatus: (status) => status === 200 || status === 404,
-      });
-
-      // If it is, it returns the error
-      if (existingUsernameResponse.status === 200)
-        return {
-          success: null,
-          errors: { general: `Username ${username} already in use.` },
-        };
-
-      // If not, creates user in Firebase Auth
+      // API call
       const userCredential = await createUserWithEmailAndPassword(
         auth,
-        email,
-        password,
+        fieldsData.email,
+        fieldsData.password,
       );
 
       // If user credential is not received, it returns the error
       if (!userCredential)
-        return {
-          success: null,
-          errors: { general: `Could not create new account.` },
+        throw {
+          controlledError: true,
+          errors: { general: [`Could not create new account.`] },
         };
+      return userCredential;
+    } catch (error) {
+      let message = 'Could not create new account';
+      let field = 'general';
+      console.log(error.code);
+      // Firebase errors and exceptions are treated
+      switch (error.code) {
+        case 'auth/email-already-in-use':
+          message = `User with email ${fieldsData.email} already exists.`;
+          field = 'email';
+          break;
 
-      // Otherwise, it creates the account on HermyxBD
-      const newUser = {
-        username: username,
-        email: email,
-        firebaseUid: userCredential.user.uid,
+        case 'auth/invalid-email':
+          message = 'Please, enter a valid email.';
+          field = 'email';
+          break;
+
+        case 'auth/weak-password':
+          message = 'Please, enter a valid password.';
+          field = 'password';
+          break;
+
+        case 'auth/missing-password':
+          message = 'Please, enter a password.';
+          field = 'password';
+          break;
+
+        case 'auth/network-request-failed':
+          message = 'Connection error, please check your network.';
+          break;
+      }
+
+      throw {
+        controlledError: true,
+        errors: { [field]: [message] },
       };
-      const createAccountResponse = await api.post('/users', newUser);
+    }
+  }
 
-      // If it does not create it successfully, it deletes account on Firebase and returns the error
-      if (createAccountResponse.status !== 201) {
-        // Deletes user
-        await deleteUser(userCredential.user);
+  // Creates Hermyx user
+  async function createUser(fieldsData, userCredential) {
+    // Otherwise, it creates the account on HermyxBD
+    const newUser = {
+      username: fieldsData.username,
+      email: fieldsData.email,
+      firebaseUid: userCredential.user.uid,
+    };
 
-        return {
-          success: null,
-          errors: { general: `Could not create new account.` },
+    // API call
+    const { data, status } = await api.post('/users', newUser, {
+      validateStatus: (status) => status === 201 || status === 400,
+    });
+
+    // If it does not create it successfully, it deletes account on Firebase and returns the error
+    if (status !== 201) {
+      // Deletes user
+      await deleteUser(userCredential.user);
+
+      // If there is a request error, it shows it
+      if (status === 400) {
+        throw {
+          controlledError: true,
+          errors: data.errors,
         };
       }
 
+      throw {
+        controlledError: true,
+        errors: { general: [`Could not create new account.`] },
+      };
+    }
+  }
+
+  // Action executed when form is sent
+  const signUpAction = async (previousState, formData) => {
+    // Data is collected
+    const fieldsData = Object.fromEntries(formData);
+
+    // Fields validation
+    const validatedFields = signUpClientSchema.safeParse(fieldsData);
+
+    if (!validatedFields.success) {
+      return {
+        success: false,
+        errors: validatedFields.error.flatten().fieldErrors,
+        data: fieldsData,
+      };
+    }
+
+    // Necessary checks and operations to create user
+    try {
+      // Checks if the email is already in use
+      await checkEmailAlreadyInUse(fieldsData);
+
+      // Checks if the username is already in use
+      await checkUsernameAlreadyInUse(fieldsData);
+
+      // If not, creates user in Firebase Auth
+      const userCredential = await createFirebaseUser(fieldsData);
+
+      // And creates user in Hermyx DB
+      await createUser(fieldsData, userCredential);
+
       // Otherwise, its successful
       return { success: true };
-    } catch (e) {
+    } catch (error) {
+      // If it some controlled error found in server
+      if (error.controlledError)
+        return { success: false, errors: error.errors, data: fieldsData };
+
+      // Any other error
       const errorMessage =
-        e.response?.data?.message || e.message || 'Unexpected error';
-      return { success: null, errors: { general: errorMessage } };
+        error.response?.data?.message || error.message || 'Unexpected error';
+      return {
+        success: false,
+        errors: { general: [errorMessage] },
+        data: fieldsData,
+      };
     }
   };
 
@@ -116,19 +208,32 @@ export function SignUp() {
     <form action={signUpFormAction} noValidate>
       {state.success && <p className='text-green-600'>Signed up!</p>}
       {state.errors?.general && (
-        <p className='text-red-600'>{state.errors.general}</p>
+        <p className='text-red-600'>{state.errors.general[0]}</p>
       )}
 
       <div>
         <label>Username:</label>
-        <input type='text' name='username' required />
+        <input
+          type='text'
+          name='username'
+          defaultValue={state.data?.username || ''}
+          required
+        />
+        {state.errors?.username && (
+          <p className='text-red-600'>{state.errors.username[0]}</p>
+        )}
       </div>
 
       <div>
         <label>E-mail:</label>
-        <input type='email' name='email' required />
+        <input
+          type='email'
+          name='email'
+          defaultValue={state.data?.email || ''}
+          required
+        />
         {state.errors?.email && (
-          <p className='text-red-600'>{state.errors.email}</p>
+          <p className='text-red-600'>{state.errors.email[0]}</p>
         )}
       </div>
 
@@ -136,7 +241,7 @@ export function SignUp() {
         <label>Password:</label>
         <input type='password' name='password' required />
         {state.errors?.password && (
-          <p className='text-red-600'>{state.errors.password}</p>
+          <p className='text-red-600'>{state.errors.password[0]}</p>
         )}
       </div>
 
@@ -144,7 +249,7 @@ export function SignUp() {
         <label>Confirm password:</label>
         <input type='password' name='confirmPassword' required />
         {state.errors?.confirmPassword && (
-          <p className='text-red-600'>{state.errors.confirmPassword}</p>
+          <p className='text-red-600'>{state.errors.confirmPassword[0]}</p>
         )}
       </div>
 
