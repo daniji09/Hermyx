@@ -1,12 +1,8 @@
-import admin, {
-  initializeApp,
-  credential as _credential,
-} from 'firebase-admin';
+import admin from 'firebase-admin';
+import serviceAccount from './firebase-service-account.json' with { type: 'json' };
 
-import serviceAccount from './firebase-service-account.json';
-
-initializeApp({
-  credential: _credential.cert(serviceAccount),
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
 });
 
 export default admin;

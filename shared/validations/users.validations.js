@@ -23,21 +23,17 @@ export const getUsersQuerySchema = z
   });
 
 // Server and client sign up shared validation
-const baseSignUpSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.USERNAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    ),
-  email: z.email(messages.FIELD_NOT_VALID('username')).trim(),
-});
-
-// Client variant
-export const signUpClientSchema = baseSignUpSchema
-  .extend({
+export const signUpSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .min(1, messages.FIELD_REQUIRED)
+      .max(
+        consts.USERNAME_MAX_LENGTH,
+        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
+      ),
+    email: z.email(messages.FIELD_NOT_VALID('username')).trim(),
     password: z
       .string()
       .trim()
@@ -57,8 +53,3 @@ export const signUpClientSchema = baseSignUpSchema
     message: messages.PASSWORDS_NOT_MATCH,
     path: ['confirmPassword'],
   });
-
-// Server variant
-export const signUpServerSchema = baseSignUpSchema.extend({
-  firebaseUid: z.string(messages.FIREBASE_UID_REQUIRED),
-});
