@@ -1,156 +1,11 @@
 import { useActionState } from 'react';
-import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
-import { auth } from '../config/firebase';
 import api from '../config/api';
-import { signUpClientSchema } from '@hermyx/shared';
+import { signUpSchema } from '@hermyx/shared';
 import { messages } from '@hermyx/shared';
 
 export function SignUp() {
   // Initial state for the React Hook useStateAction
   const initialState = { success: null, errors: {} };
-
-  // Checks if the email is already in use
-  async function checkEmailAlreadyInUse(fieldsData) {
-    // API call
-    const { data, status } = await api.get('/users', {
-      params: { email: fieldsData.email },
-      // A 404 status is ok, it means the email is not already in use
-      validateStatus: (status) =>
-        status === 200 || status === 400 || status === 404,
-    });
-
-    // If it is, it returns the error
-    if (status === 200)
-      throw {
-        controlledError: true,
-        errors: {
-          general: [messages.EMAIL_ALREADY_EXISTS(fieldsData.email)],
-        },
-      };
-    // If there is a request error, it shows it
-    else if (status === 400) {
-      throw {
-        controlledError: true,
-        errors: data.errors,
-      };
-    }
-  }
-
-  // Checks if the username is already in use
-  async function checkUsernameAlreadyInUse(fieldsData) {
-    // API call
-    const { data, status } = await api.get('/users', {
-      params: { username: fieldsData.username },
-      // A 404 status is ok, it means the username is not already in use
-      validateStatus: (status) =>
-        status === 200 || status === 400 || status === 404,
-    });
-
-    // If it is, it returns the error
-    if (status === 200)
-      throw {
-        controlledError: true,
-        errors: {
-          general: [messages.USERNAME_ALREADY_EXISTS(fieldsData.username)],
-        },
-      };
-    // If there is a request error, it shows it
-    else if (status === 400) {
-      throw {
-        controlledError: true,
-        errors: data.errors,
-      };
-    }
-  }
-
-  // Creates Firebase user
-  async function createFirebaseUser(fieldsData) {
-    try {
-      // API call
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        fieldsData.email,
-        fieldsData.password,
-      );
-
-      // If user credential is not received, it returns the error
-      if (!userCredential)
-        throw {
-          controlledError: true,
-          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
-        };
-      return userCredential;
-    } catch (error) {
-      let message = messages.COULD_NOT_CREATE_NEW_ACCOUNT;
-      let field = 'general';
-
-      // Firebase errors and exceptions are treated
-      switch (error.code) {
-        case 'auth/email-already-in-use':
-          message = messages.EMAIL_ALREADY_EXISTS(fieldsData.email);
-          field = 'email';
-          break;
-
-        case 'auth/invalid-email':
-          message = messages.FIELD_NOT_VALID('email');
-          field = 'email';
-          break;
-
-        case 'auth/weak-password':
-          message = messages.FIELD_NOT_VALID('password');
-          field = 'password';
-          break;
-
-        case 'auth/missing-password':
-          message = messages.FIELD_REQUIRED;
-          field = 'password';
-          break;
-
-        case 'auth/network-request-failed':
-          message = messages.CONNECTION_ERROR;
-          break;
-      }
-
-      throw {
-        controlledError: true,
-        errors: { [field]: [message] },
-      };
-    }
-  }
-
-  // Creates Hermyx user
-  async function createUser(fieldsData, userCredential) {
-    // Otherwise, it creates the account on HermyxBD
-    const newUser = {
-      username: fieldsData.username,
-      email: fieldsData.email,
-      firebaseUid: userCredential.user.uid,
-    };
-
-    // API call
-    const { data, status } = await api.post('/users', newUser, {
-      validateStatus: (status) => status === 201 || status === 400,
-    });
-
-    // If it does not create it successfully, it deletes account on Firebase and returns the error
-    if (status !== 201) {
-      // Deletes user
-      await deleteUser(userCredential.user);
-
-      // If there is a request error, it shows it
-      if (status === 400) {
-        throw {
-          controlledError: true,
-          errors: data.errors,
-        };
-      }
-
-      throw {
-        controlledError: true,
-        errors: data.errors,
-      };
-    }
-  }
 
   // Action executed when form is sent
   const signUpAction = async (previousState, formData) => {
@@ -158,7 +13,7 @@ export function SignUp() {
     const fieldsData = Object.fromEntries(formData);
 
     // Fields validation
-    const validatedFields = signUpClientSchema.safeParse(fieldsData);
+    const validatedFields = signUpSchema.safeParse(fieldsData);
 
     if (!validatedFields.success) {
       return {
@@ -168,19 +23,19 @@ export function SignUp() {
       };
     }
 
-    // Necessary checks and operations to create user
+    // API call
     try {
-      // Checks if the email is already in use
-      await checkEmailAlreadyInUse(fieldsData);
+      const { data, status } = await api.post('/users', fieldsData, {
+        validateStatus: (status) =>
+          status === 201 || status === 400 || status === 500,
+      });
 
-      // Checks if the username is already in use
-      await checkUsernameAlreadyInUse(fieldsData);
-
-      // If not, creates user in Firebase Auth
-      const userCredential = await createFirebaseUser(fieldsData);
-
-      // And creates user in Hermyx DB
-      await createUser(fieldsData, userCredential);
+      // If it does not create it successfully, it returns the error
+      if (status !== 201)
+        throw {
+          controlledError: true,
+          errors: data.errors,
+        };
 
       // Otherwise, its successful
       return { success: true };
@@ -194,6 +49,7 @@ export function SignUp() {
         error.response?.data?.message ||
         error.message ||
         messages.UNEXPECTED_ERROR;
+
       return {
         success: false,
         errors: { general: [errorMessage] },

@@ -1,13 +1,13 @@
 export const messages = {
   ///// Common messages
   //// Error
-  FIELD_REQUIRED: 'This field is required.',
+  CONNECTION_ERROR: 'Connection error, please check your network.',
   FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
   FIELD_TOO_LONG: (field, max) =>
     `${field} must be shorter than ${max} characters.`,
   FIELD_TOO_SHORT: (field, min) =>
     `${field} must be longer than ${min} characters.`,
-  CONNECTION_ERROR: 'Connection error, please check your network.',
+  FIELD_REQUIRED: 'This field is required.',
   UNEXPECTED_ERROR: 'Unexpected error',
 
   ///// User messages
