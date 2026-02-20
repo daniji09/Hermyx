@@ -19,11 +19,22 @@ export const messages = {
   EMAIL_USERNAME_NOT_PROVIDED: 'Username or email must be provided.',
   FIREBASE_UID_REQUIRED: 'Firebase UID is required.',
   PASSWORDS_NOT_MATCH: 'Passwords do not match.',
+  USERNAME_INVALID_CHARACTERS:
+    'Username must only contain letters, numbers or [._-]. ',
 
   // Server errors
   EMAIL_ALREADY_EXISTS: (email) => `User with email ${email} already exists.`,
   EMAIL_NOT_FOUND: (email) => `User with email ${email} not found.`,
   USERNAME_ALREADY_EXISTS: (username) => `Username ${username} already in use.`,
   USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
-  COULD_NOT_CREATE_NEW_ACCOUNT: `Could not create new account.`,
+  COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
+
+  //// Log In
+  /// Info
+  /// Errors
+  // Validation errors
+  // Server errors
+  INVALID_CREDENTIALS: 'Invalid credentials',
+  PASSWORD_WRONG: 'Wrong password.',
+  COULD_NOT_LOG_IN: 'Could not log im.',
 };
