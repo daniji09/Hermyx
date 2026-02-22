@@ -3,8 +3,7 @@ import { messages } from '@hermyx/shared';
 import { getByEmail, getByUsername, create } from '../models/app_user.model.js';
 import firebaseAdmin from '../config/firebase.config.js';
 
-/*
-Export const getUsers = async (req, res) => {
+export const getUsers = async (req, res) => {
   try {
     // Gets attributes
     const { email, username } = req.query;
@@ -36,7 +35,7 @@ Export const getUsers = async (req, res) => {
     console.error(e);
     res.status(500).end();
   }
-};*/
+};
 
 export const signUp = async (req, res) => {
   try {
