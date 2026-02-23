@@ -67,9 +67,11 @@ jobs:
         with:
           app-name: 'hermyxbackend'
           slot-name: 'Production'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: .
 
           
+
 
 
 
