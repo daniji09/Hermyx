@@ -61,3 +61,4 @@ coverage/
 *.sw?
 Thumbs.db
 ehthumbs.db
+.vercel
