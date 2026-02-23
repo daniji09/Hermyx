@@ -14,6 +14,7 @@ export const getUsersQuerySchema = z
         consts.USERNAME_MAX_LENGTH,
         messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
       )
+      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS)
       .optional(),
     email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
   })
@@ -32,7 +33,8 @@ export const signUpSchema = z
       .max(
         consts.USERNAME_MAX_LENGTH,
         messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-      ),
+      )
+      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
     email: z.email(messages.FIELD_NOT_VALID('username')).trim(),
     password: z
       .string()
@@ -52,4 +54,25 @@ export const signUpSchema = z
   .refine((val) => val.password === val.confirmPassword, {
     message: messages.PASSWORDS_NOT_MATCH,
     path: ['confirmPassword'],
+  });
+
+// Server and client log in shared validation
+export const logInSchema = z
+  .object({
+    username: z
+      .string()
+      .trim()
+      .min(1, messages.FIELD_REQUIRED)
+      .max(
+        consts.USERNAME_MAX_LENGTH,
+        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
+      )
+      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS)
+      .optional(),
+    email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
+    password: z.string().trim().min(1, messages.FIELD_REQUIRED),
+  })
+  .refine((val) => val.email || val.username, {
+    message: messages.EMAIL_USERNAME_NOT_PROVIDED,
+    path: ['usernameEmail'],
   });
