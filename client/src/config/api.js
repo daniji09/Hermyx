@@ -3,8 +3,7 @@ import axios from 'axios';
 export default axios.create({
   baseURL:
     import.meta.env.API_URL ||
-    'hermyxbackend-hqb3bffcbbf7arbq.spaincentral-01.azurewebsites.net' ||
-    'http://localhost:3000/api',
+    'https://hermyxbackend-hqb3bffcbbf7arbq.spaincentral-01.azurewebsites.net',
   headers: {
     'Content-Type': 'application/json',
   },
