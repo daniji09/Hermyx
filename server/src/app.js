@@ -21,6 +21,7 @@ app.use(express.json());
 import testRouter from './routes/test.router.js';
 import usersRouter from './routes/users.router.js';
 import paymentRouter from './routes/payment.router.js';
+import missionsRouter from './routes/missions.router.js';
 
 app.use((req, res, next) => {
   // Payment test
@@ -63,5 +64,6 @@ app.use((req, res, next) => {
 app.use('/test', testRouter);
 app.use('/stripe', paymentRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/missions', missionsRouter);
 
 export default app;

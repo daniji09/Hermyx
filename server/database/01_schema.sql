@@ -35,8 +35,10 @@ CREATE TABLE PAYMENT_METHOD (
 
 CREATE TABLE MISSION (
 	mid SERIAL PRIMARY KEY,
+	publication_date TIMESTAMP NOT NULL,
 	title VARCHAR(100) NOT NULL,
 	description VARCHAR(1000) NOT NULL,
+	difficulty INT NOT NULL,
 	vacancies INT NOT NULL,
 	monetary_reward NUMERIC NOT NULL,
 	status VARCHAR(20) NOT NULL CHECK (status IN ('pending_payment',

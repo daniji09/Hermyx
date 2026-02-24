@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { messages } from '../messages/messages';
+import { messages } from '../messages/messages.js';
 
 // Server and client sign up shared validation
 const basePublishSchema = z.object({
@@ -12,6 +12,9 @@ const basePublishSchema = z.object({
   price: z.coerce
     .number({ invalid_type_error: 'Must be a valid number' })
     .min(1, 'Price must be greater than 0'),
+  difficulty: z.coerce
+    .number({ invalid_type_error: 'Must be a valid number' })
+    .min(1, 'Price must be greater than 0'),
 });
 
 // Server and client sign up shared validation
@@ -20,6 +23,17 @@ const baseDraftSchema = z.object({
   description: z.string().trim().optional(),
   vacancies: z.coerce.number().int().optional(),
   reward: z.coerce.number().optional(),
+  difficulty: z.coerce.number().optional(),
+});
+
+// Server get mission validation
+export const getMissionSchema = z.object({
+  id: z.coerce
+    .number({
+      invalid_type_error: 'Mission id must be a number.',
+    })
+    .int('Mission id must be an integer.')
+    .min(0, 'Mission id be positive.'),
 });
 
 // Client variant

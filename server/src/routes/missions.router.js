@@ -9,13 +9,17 @@ import {
   updateMission,
   deleteMission,
   close,
-} from '../controllers/mission.controller.js';
+} from '../controllers/missions.controller.js';
 
-import { validateBodySchema } from '../middlewares/validation.middleware.js';
+import {
+  validateBodySchema,
+  validateParamsSchema,
+} from '../middlewares/validations.middleware.js';
 
 import {
   publishMissionServerSchema,
   draftMissionServerSchema,
+  getMissionSchema,
 } from '@hermyx/shared';
 
 //Dynamic middleware to decide which schema to use
@@ -37,7 +41,7 @@ router.get('/', getAllMissions);
 router.get('/in-draft', getAllMissionsInDraft);
 
 //Get mission by id
-router.get('/:missionId', getMissionById);
+router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
 
 //Update mission
 router.put('/:missionId', dynamicValidation, updateMission);

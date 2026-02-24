@@ -8,7 +8,7 @@ import {
   deleteMission as _deleteMission,
   getById,
   getParticipantsForRelease,
-} from '../models/mission.model';
+} from '../models/mission.model.js';
 
 /*Check whether the user wants to save the creation or create a new mission. 
 Depending on that, the fields are checked or not, and the status is updated accordingly.*/
@@ -64,31 +64,37 @@ export const getAllMissionsInDraft = async (req, res) => {
 
 export const getMissionById = async (req, res) => {
   try {
-    const { missionId } = req.params;
-    const mission = await _getMissionById(missionId);
+    // Gets the id
+    const { id } = req.params;
+
+    // Searches mission by id
+    const mission = await _getMissionById(id);
+
+    // Returns success or error
     if (!mission) {
       return res.status(404).json({ error: 'Mission not found' });
-    } else {
-      return res
-        .status(200)
-        .json({ data: mission, message: 'Mission retrieved successfully' });
     }
+
+    return res.status(200).json({ mission: mission });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: 'Error fetching mission' });
+    res.status(500).end();
   }
 };
 
 export const updateMission = async (req, res) => {
   try {
     const { missionId } = req.params;
-    const { title, description, vacancies, reward, isDraft } = req.body;
+    const { title, description, vacancies, reward, difficulty, isDraft } =
+      req.body;
 
     const updateData = {
       title: title || 'Mission not titled',
+      publication_date: Date.now(),
       description: description || '',
       vacancies: vacancies || 0,
       reward: reward || 0,
+      difficulty: difficulty || 0,
       status: isDraft ? 'draft' : 'pending_payment',
     };
 

@@ -18,7 +18,7 @@ export const getUsers = async (req, res) => {
           errors: { general: [messages.EMAIL_NOT_FOUND(email)] },
         });
 
-      return res.status(200).json({ user: user });
+      return res.status(200).json({ user });
     } else if (username) {
       // It searches user by username
       const user = await getByUsername(username);
@@ -29,7 +29,7 @@ export const getUsers = async (req, res) => {
           errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
         });
 
-      return res.status(200).json({ user: user });
+      return res.status(200).json({ user });
     }
   } catch (e) {
     console.error(e);
@@ -77,6 +77,7 @@ export const signUp = async (req, res) => {
     } catch (error) {
       // Firebase errors and exceptions are treated
       switch (error.code) {
+        case 'auth/email-already-exists':
         case 'auth/email-already-in-use':
           return res.status(400).json({
             errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
