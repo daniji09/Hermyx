@@ -14,7 +14,7 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('https://hermyxbackend-hqb3bffcbbf7arbq.spaincentral-01.azurewebsites.net/users');
+      const response = await fetch('https://hermyxbackend-hqb3bffcbbf7arbq.spaincentral-01.azurewebsites.net/test');
 
       if (!response.ok) {
         throw new Error('Error al conectar con el servidor');
