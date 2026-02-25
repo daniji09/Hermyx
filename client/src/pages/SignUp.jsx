@@ -25,7 +25,7 @@ export function SignUp() {
 
     // API call
     try {
-      const { data, status } = await api.post('/users', fieldsData, {
+      const { data, status } = await api.post('/api/users', fieldsData, {
         validateStatus: (status) =>
           status === 201 || status === 400 || status === 500,
       });
