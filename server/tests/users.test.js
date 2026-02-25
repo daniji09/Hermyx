@@ -52,6 +52,9 @@ describe('POST /api/users - Sign Up', () => {
 
     // Checks response
     expect(response.status).toBe(201); // 201 Created
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
     expect(response.body.user.username).toBeDefined();
     expect(response.body.user.email).toBeDefined();
     expect(response.body.user.firebase_uid).toBeDefined();
@@ -76,9 +79,19 @@ describe('POST /api/users - Sign Up', () => {
 
     // Checks response
     expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
     expect(response.body.errors.email[0]).toBe(
       messages.FIELD_NOT_VALID('email'),
     );
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
   });
 
   it('should return a 400 status because email field is invalid', async () => {
@@ -91,9 +104,19 @@ describe('POST /api/users - Sign Up', () => {
 
     // Checks response
     expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
     expect(response.body.errors.email[0]).toBe(
       messages.FIELD_NOT_VALID('email'),
     );
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
   });
 
   it('should return a 400 status because username field is required', async () => {
@@ -106,7 +129,17 @@ describe('POST /api/users - Sign Up', () => {
 
     // Checks response
     expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
     expect(response.body.errors.username[0]).toBe(messages.FIELD_REQUIRED);
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
   });
 
   it('should return a 400 status because username field is too long', async () => {
@@ -119,9 +152,19 @@ describe('POST /api/users - Sign Up', () => {
 
     // Checks response
     expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
     expect(response.body.errors.username[0]).toBe(
       messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
     );
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
   });
 
   it('should return a 400 status because username field is invalid', async () => {
@@ -134,8 +177,18 @@ describe('POST /api/users - Sign Up', () => {
 
     // Checks response
     expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
     expect(response.body.errors.username[0]).toBe(
       messages.USERNAME_INVALID_CHARACTERS,
     );
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
   });
 });
