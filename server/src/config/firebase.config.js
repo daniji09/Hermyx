@@ -1,8 +1,20 @@
 import admin from 'firebase-admin';
-import serviceAccount from './firebase-service-account.json' with { type: 'json' };
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
+let serviceAccount;
+
+if (process.env.FIREBASE_CREDENTIALS) {
+  serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+} else {
+  const module = await import('./firebase-service-account.json', {
+    with: { type: 'json' },
+  });
+  serviceAccount = module.default;
+}
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 export default admin;
