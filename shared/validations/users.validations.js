@@ -35,7 +35,7 @@ export const signUpSchema = z
         messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
       )
       .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-    email: z.email(messages.FIELD_NOT_VALID('username')).trim(),
+    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
     password: z
       .string()
       .trim()

@@ -1,7 +1,10 @@
 // External modules
 import { messages, consts } from '@hermyx/shared';
 import { getByEmail, getByUsername, create } from '../models/app_user.model.js';
-import firebaseAdmin from '../config/firebase.config.js';
+import {
+  createFirebaseUser,
+  deleteFirebaseUser,
+} from '../services/auth.service.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -60,20 +63,9 @@ export const signUp = async (req, res) => {
         errors: { username: [messages.USERNAME_ALREADY_EXISTS(username)] },
       });
 
-    let firebaseUser = null;
-    // Creates Firebase user
+    let firebaseUser;
     try {
-      firebaseUser = await firebaseAdmin.auth().createUser({
-        email: email,
-        password: password,
-        displayName: username,
-      });
-
-      // If Firebase user is not received, it returns the error
-      if (!firebaseUser)
-        return res.status(500).json({
-          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
-        });
+      firebaseUser = await createFirebaseUser({ email, username, password });
     } catch (error) {
       // Firebase errors and exceptions are treated
       const errorBuilder = consts.FIREBASE_ERRORS[error.code];
@@ -84,6 +76,8 @@ export const signUp = async (req, res) => {
         });
       }
 
+      if (error.errors) return res.status(500).json(error.errors);
+
       return res.status(500).json({
         errors: { general: [messages.UNEXPECTED_ERROR] },
       });
@@ -93,17 +87,17 @@ export const signUp = async (req, res) => {
       const user = await create(email, username, firebaseUser.uid);
 
       // Returns success or error
-      if (user) return res.status(201).json({ user: user });
+      if (user) return res.status(201).json({ user });
       else {
         // If there is an error, Firebase user must be deleted
-        await firebaseAdmin.auth().deleteUser(firebaseUser.uid);
+        await deleteFirebaseUser(firebaseUser.uid);
         return res.status(400).json({
           errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
         });
       }
     } catch (e) {
       // If there is an error, Firebase user must be deleted
-      await firebaseAdmin.auth().deleteUser(firebaseUser.uid);
+      await deleteFirebaseUser(firebaseUser.uid);
       throw e;
     }
   } catch (e) {

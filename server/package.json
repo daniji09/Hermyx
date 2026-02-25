@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --watch src --watch ../shared src/server.js",
+    "test": "cross-env NODE_ENV=test vitest",
     "format": "prettier --write .",
     "lint": "eslint --fix . --ext .js,.jsx"
   },
@@ -27,10 +28,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "cross-env": "^10.1.0",
     "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.3.0",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "supertest": "^7.2.2",
+    "vitest": "^4.0.18"
   }
 }

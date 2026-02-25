@@ -1,6 +1,16 @@
 // External modules
-import { DB_USER, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME } from './config.js';
+import {
+  DB_USER,
+  DB_PASSWORD,
+  DB_HOST,
+  DB_PORT,
+  DB_TEST_NAME,
+  DB_NAME,
+} from './config.js';
 import { Pool } from 'pg';
+
+const isTesting = process.env.NODE_ENV === 'test';
+const dbName = isTesting ? DB_TEST_NAME : DB_NAME;
 
 // Pool connection configuration
 const pool = new Pool({
@@ -8,12 +18,12 @@ const pool = new Pool({
   password: DB_PASSWORD,
   host: DB_HOST,
   port: DB_PORT,
-  database: DB_NAME,
+  database: dbName,
 });
 
 // To check whether the connection was successful or not
 pool.on('connect', () => {
-  console.log('Connected to Hermyx Database successfully');
+  console.log(`Connected to Hermyx Database successfully`);
 });
 
 pool.on('error', (err) => {
