@@ -3,7 +3,7 @@ import admin from 'firebase-admin';
 let serviceAccount;
 
 if (process.env.FIREBASE_CREDENTIALS) {
-  serviceAccount = JSON.parse(process.env.FIREBASE_CREDENTIALS);
+  serviceAccount = JSON.parse(process.env.FIREBASE_JSON);
 } else {
   const module = await import('./firebase-service-account.json', {
     with: { type: 'json' },
