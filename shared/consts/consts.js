@@ -22,7 +22,7 @@ export const consts = {
       status: 400,
     }),
     'auth/invalid-email': () => ({
-      field: 'usernameEmail',
+      field: 'email',
       message: messages.FIELD_NOT_VALID('email'),
       status: 400,
     }),
@@ -32,7 +32,7 @@ export const consts = {
       status: 400,
     }),
     'auth/missing-email': () => ({
-      field: 'usernameEmail',
+      field: 'email',
       message: messages.FIELD_REQUIRED,
       status: 400,
     }),
