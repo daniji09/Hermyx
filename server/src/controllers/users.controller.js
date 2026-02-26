@@ -36,7 +36,9 @@ export const getUsers = async (req, res) => {
     }
   } catch (e) {
     console.error(e);
-    res.status(500).end();
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
   }
 };
 

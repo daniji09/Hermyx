@@ -38,18 +38,118 @@ vi.mock('../src/services/auth.service.js', () => {
   };
 });
 
+// Before each test, test db data is cleansed
+beforeEach(async () => {
+  await pool.query('TRUNCATE TABLE app_user CASCADE');
+});
+
+// After all tests pool is ended
+afterAll(async () => {
+  await pool.end();
+});
+
 // Tests
+describe('GET /api/users', () => {
+  // Happy paths
+  it('should get a user by their email', async () => {
+    // First, the user is added
+    await pool.query(
+      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
+      [test_user.email, test_user.username, test_user.firebaseUid],
+    );
+
+    // Then is it searched
+    const response = await request(app).get('/api/users').query({
+      email: test_user.email,
+    });
+
+    // Checks response
+    expect(response.status).toBe(200); // 200 OK
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.user.username).toBe(test_user.username);
+    expect(response.body.user.email).toBe(test_user.email);
+    expect(response.body.user.firebase_uid).toBe(test_user.firebaseUid);
+  });
+
+  it('should get a user by their username', async () => {
+    // First, the user is added
+    await pool.query(
+      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
+      [test_user.email, test_user.username, test_user.firebaseUid],
+    );
+
+    // Then is it searched
+    const response = await request(app).get('/api/users').query({
+      username: test_user.username,
+    });
+
+    // Checks response
+    expect(response.status).toBe(200); // 200 OK
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.user.username).toBe(test_user.username);
+    expect(response.body.user.email).toBe(test_user.email);
+    expect(response.body.user.firebase_uid).toBe(test_user.firebaseUid);
+  });
+
+  // Corner cases
+  it('should return a 404 because user is not found by email', async () => {
+    // No user is added
+    // Then is it searched
+    const response = await request(app).get('/api/users').query({
+      email: test_user.email,
+    });
+
+    // Checks response
+    expect(response.status).toBe(404); // 200 OK
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.errors.general[0]).toBe(
+      messages.EMAIL_NOT_FOUND(test_user.email),
+    );
+  });
+
+  it('should return a 404 because user is not found by username', async () => {
+    // No user is added
+    // Then is it searched
+    const response = await request(app).get('/api/users').query({
+      username: test_user.username,
+    });
+
+    // Checks response
+    expect(response.status).toBe(404); // 200 OK
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.errors.general[0]).toBe(
+      messages.USERNAME_NOT_FOUND(test_user.username),
+    );
+  });
+
+  it('should return a 500 status because there was a db error', async () => {
+    // First, the db error is simulated
+    const dbSpy = vi
+      .spyOn(pool, 'query')
+      .mockRejectedValueOnce(new Error('Bd connection failed'));
+
+    // Then a user is searched
+    const response = await request(app).get('/api/users').query({
+      username: test_user.username,
+    });
+
+    // Checks response
+    expect(response.status).toBe(500); // 500 Internal Server Error
+    expect(response.body.errors.general[0]).toBe(messages.UNEXPECTED_ERROR);
+
+    dbSpy.mockRestore();
+  });
+});
+
 describe('POST /api/users - Sign Up', () => {
-  // Before each test, test db data is cleansed
-  beforeEach(async () => {
-    await pool.query('TRUNCATE TABLE app_user CASCADE');
-  });
-
-  // After all tests pool is ended
-  afterAll(async () => {
-    await pool.end();
-  });
-
   // Happy path
   it('should sign up a user successfully and return a 201 status', async () => {
     const response = await request(app).post('/api/users').send({
@@ -353,12 +453,10 @@ describe('POST /api/users - Sign Up', () => {
   // Logic errors
   it('should return a 400 status without modifying db because new users email is already in use', async () => {
     // First a correct new user is added
-    await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
+    await pool.query(
+      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
+      [test_user.email, test_user.username, test_user.firebaseUid],
+    );
 
     // Then, another user with same email is tried to be added
     const response = await request(app).post('/api/users').send({
@@ -393,12 +491,10 @@ describe('POST /api/users - Sign Up', () => {
 
   it('should return a 400 status without modifying db because new users username is already in use', async () => {
     // First a correct new user is added
-    await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
+    await pool.query(
+      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
+      [test_user.email, test_user.username, test_user.firebaseUid],
+    );
 
     // Then, another user with same username is tried to be added
     const response = await request(app).post('/api/users').send({
@@ -688,5 +784,33 @@ describe('POST /api/users - Sign Up', () => {
       [test_user.email],
     );
     expect(dbCheck.rows.length).toBe(0);
+  });
+
+  it('should return a 500 status without modifying db because there was a db error', async () => {
+    // First, the db error is simulated
+    const dbSpy = vi
+      .spyOn(pool, 'query')
+      .mockRejectedValueOnce(new Error('Bd connection failed'));
+
+    // Then a new user is added
+    const response = await request(app).post('/api/users').send({
+      username: test_user.username,
+      email: test_user.email,
+      password: test_user.password,
+      confirmPassword: test_user.confirmPassword,
+    });
+
+    // Checks response
+    expect(response.status).toBe(500); // 500 Internal Server Error
+    expect(response.body.errors.general[0]).toBe(messages.UNEXPECTED_ERROR);
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
+
+    dbSpy.mockRestore();
   });
 });
