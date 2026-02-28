@@ -16,13 +16,15 @@ export const createMission = async (req, res) => {
   try {
     const { uid } = req.user;
 
-    const { title, description, vacancies, reward, isDraft } = req.body;
+    const { title, description, vacancies, reward, difficulty, isDraft } =
+      req.body;
 
     const missionData = {
       title: title || 'Mission not titled',
       description: description || '',
       vacancies: vacancies || 0,
       reward: reward || 0,
+      difficulty: difficulty || 0,
       status: isDraft ? 'draft' : 'pending_payment',
       ownerId: uid,
     };
@@ -84,7 +86,7 @@ export const getMissionById = async (req, res) => {
 
 export const updateMission = async (req, res) => {
   try {
-    const { missionId } = req.params;
+    const { id } = req.params;
     const { title, description, vacancies, reward, difficulty, isDraft } =
       req.body;
 
@@ -98,7 +100,7 @@ export const updateMission = async (req, res) => {
       status: isDraft ? 'draft' : 'pending_payment',
     };
 
-    const updatedMission = await _updateMission(missionId, updateData);
+    const updatedMission = await _updateMission(id, updateData);
 
     if (!updatedMission) {
       return res.status(404).json({ error: 'Mission not found' });
@@ -116,8 +118,8 @@ export const updateMission = async (req, res) => {
 
 export const deleteMission = async (req, res) => {
   try {
-    const { missionId } = req.params;
-    const deletedMission = await _deleteMission(missionId);
+    const { id } = req.params;
+    const deletedMission = await _deleteMission(id);
     if (!deletedMission) {
       return res.status(404).json({ error: 'Mission not found' });
     } else {

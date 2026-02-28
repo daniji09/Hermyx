@@ -4,6 +4,8 @@ import { LogIn } from './pages/LogIn';
 import { Home } from './pages/Home';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Mission } from './pages/Mission';
+import { NewMission } from './pages/NewMission';
+import { Payment } from './pages/Payment';
 
 function App() {
   return (
@@ -35,6 +37,25 @@ function App() {
           </ProtectedRoute>
         }
       ></Route>
+
+      {/* New missions */}
+      <Route
+        path='/missions/new'
+        element={
+          <ProtectedRoute>
+            <NewMission />
+          </ProtectedRoute>
+        }
+      ></Route>
+      {/*Payment path*/}
+      <Route
+        path='/missions/:id/pay'
+        element={
+          <ProtectedRoute>
+            <Payment />
+          </ProtectedRoute>
+        }
+      />
 
       {/* Missions */}
       <Route

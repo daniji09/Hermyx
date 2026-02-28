@@ -1,6 +1,7 @@
 import {
   //CreateCustomer,
   createSetupIntent,
+  checkStripeCustomer,
   retrieveCustomer,
   listCards as _listCards,
   setDefaultCard as _setDefaultCard,
@@ -33,16 +34,16 @@ import {
 import { updateTransferInfo } from '../models/mission_participation.model.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
-/*
-Export async function register(req, res) {
+
+export async function register(req, res) {
   try {
-    const { uid, email, name, stripe_customer_id } = req.user;
+    const { email, name, stripe_customer_id } = req.user;
 
     if (stripe_customer_id) {
       return res.json({ customerId: stripe_customer_id });
     }
 
-    const customer = await createCustomer(name, email);
+    const customer = await checkStripeCustomer(name, email);
     req.session.customerId = customer.id;
 
     res.json({
@@ -53,7 +54,7 @@ Export async function register(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
-*/
+
 //Creates a SetupIntent to save a credit card without charging it yet.
 export async function addCardToCustomer(req, res) {
   try {
@@ -73,6 +74,7 @@ export async function addCardToCustomer(req, res) {
 export async function listCards(req, res) {
   try {
     const customerId = req.user.stripe_customer_id;
+
     if (!customerId)
       return res.status(400).json({ error: 'You do not have a Customer ID' });
 
@@ -88,6 +90,7 @@ export async function listCards(req, res) {
       cards: cards.data,
     });
   } catch (err) {
+    console.log('Error listing cards');
     res.status(500).json({ error: err.message });
   }
 }

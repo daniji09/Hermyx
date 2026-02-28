@@ -73,13 +73,13 @@ export const finalizeRefund = async (mid, refundId) => {
   await pool.query(query, [refundId, mid]);
 };
 
-export const createMission = async (missionDate) => {
-  const { title, description, vacancies, reward, status, ownerId } =
-    missionDate;
+export const createMission = async (missionData) => {
+  const { title, description, vacancies, reward, difficulty, status, ownerId } =
+    missionData;
 
   const query = `
-    INSERT INTO mission (title, description, vacancies, monetary_reward, status, owner_id)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO mission (publication_date, title, description, vacancies, monetary_reward, difficulty, status, owner_id)
+    VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7)
     RETURNING *
   `;
   const result = await pool.query(query, [
@@ -87,6 +87,7 @@ export const createMission = async (missionDate) => {
     description,
     vacancies,
     reward,
+    difficulty,
     status,
     ownerId,
   ]);
@@ -105,13 +106,13 @@ export const getAllMissionsInDraft = async () => {
   return result.rows;
 };
 
-export const getMissionById = async (mid) => {
+export const getMissionById = async (id) => {
   const query = 'SELECT * FROM mission WHERE mid = $1';
-  const result = await pool.query(query, [mid]);
+  const result = await pool.query(query, [id]);
   return result.rows[0];
 };
 
-export const updateMission = async (mid, updateData) => {
+export const updateMission = async (id, updateData) => {
   const { title, description, vacancies, reward } = updateData;
 
   const query = `
@@ -125,13 +126,13 @@ export const updateMission = async (mid, updateData) => {
     description,
     vacancies,
     reward,
-    mid,
+    id,
   ]);
   return result.rows[0];
 };
 
-export const deleteMission = async (mid) => {
+export const deleteMission = async (id) => {
   const query = 'DELETE FROM mission WHERE mid = $1 RETURNING *';
-  const result = await pool.query(query, [mid]);
+  const result = await pool.query(query, [id]);
   return result.rows[0];
 };

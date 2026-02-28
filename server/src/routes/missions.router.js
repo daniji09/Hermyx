@@ -44,10 +44,10 @@ router.get('/in-draft', getAllMissionsInDraft);
 router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
 
 //Update mission
-router.put('/:missionId', dynamicValidation, updateMission);
+router.put('/:id', dynamicValidation, updateMission);
 
 //Delete mission
-router.delete('/:missionId', deleteMission);
+router.delete('/:id', deleteMission);
 
 //Close a mission
 router.post('/:missionId/close', close);

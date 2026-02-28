@@ -9,7 +9,7 @@ const basePublishSchema = z.object({
     .number({ invalid_type_error: 'Must be a valid number' })
     .int('Vacancies must be an integer')
     .min(1, 'There must be at least 1 vacancy'),
-  price: z.coerce
+  reward: z.coerce
     .number({ invalid_type_error: 'Must be a valid number' })
     .min(1, 'Price must be greater than 0'),
   difficulty: z.coerce

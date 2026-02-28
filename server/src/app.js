@@ -63,7 +63,7 @@ app.use((req, res, next) => {
 
 // Application routes
 app.use('/test', testRouter);
-app.use('/stripe', paymentRouter);
+app.use('/api/stripe', paymentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
 
