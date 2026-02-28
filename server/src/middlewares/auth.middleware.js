@@ -23,6 +23,12 @@ export const verifyToken = async (req, res, next) => {
     // User is saved
     req.user = await getByFirebaseUid(decodedToken.user_id);
 
+    if (!req.user) {
+      return res
+        .status(401)
+        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+    }
+
     next();
   } catch (error) {
     console.error('Error verifying token:', error);
