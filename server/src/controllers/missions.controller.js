@@ -1,4 +1,5 @@
 //External modules
+import { messages } from '@hermyx/shared';
 import {
   createMission as _createMission,
   getAllMissions as _getAllMissions,
@@ -46,7 +47,7 @@ export const getAllMissions = async (req, res) => {
     if (req.query.page && req.query.limit) {
       if (!res.paginationResults || res.paginationResults.length === 0)
         return res.status(404).json({
-          errors: { general: ['There is no missions yet.'] },
+          errors: { general: [messages.NO_MISSIONS] },
         });
 
       return res
@@ -60,7 +61,7 @@ export const getAllMissions = async (req, res) => {
 
       if (!missions)
         return res.status(404).json({
-          errors: { general: ['There is no missions yet.'] },
+          errors: { general: [messages.NO_MISSIONS] },
         });
 
       return res.status(200).json({ missions });

@@ -15,6 +15,10 @@ export async function setup() {
 
     // Db creation script is executed
     await pool.query(schemaSql);
+
+    // Then all tables are truncated
+    await pool.query('TRUNCATE TABLE app_user CASCADE');
+    await pool.query('TRUNCATE TABLE mission CASCADE');
   } catch (error) {
     console.error('Error creating test database:', error);
     process.exit(1); // Stops testing if db couldn't be created

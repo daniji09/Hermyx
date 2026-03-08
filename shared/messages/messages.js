@@ -42,4 +42,12 @@ export const messages = {
   INVALID_CREDENTIALS: 'Invalid credentials.',
   PASSWORD_WRONG: 'Wrong password.',
   COULD_NOT_LOG_IN: 'Could not log in.',
+
+  ///// Mission messages
+  //// Get all paginated
+  /// Info
+  NO_MISSIONS: 'There is no missions yet.',
+  /// Errors
+  // Validation errors
+  // Server errors
 };

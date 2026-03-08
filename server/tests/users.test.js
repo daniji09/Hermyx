@@ -8,11 +8,11 @@ import { createFirebaseUser } from '../src/services/auth.service.js';
 // Test fake data
 const test_user = vi.hoisted(() => {
   return {
-    email: 'test@email.com',
-    emailAlternative: 'test2@email.com',
+    email: 'email@email.com',
+    emailAlternative: 'email2@email.com',
     emailInvalid: 'test@email.c',
-    username: 'testUser',
-    usernameAlternative: 'testUser2',
+    username: 'test_username',
+    usernameAlternative: 'test_username_alt',
     usernameTooLong: 'username'.repeat(3),
     usernameInvalid: '@username?',
     password: 'testPassword123_',
@@ -40,6 +40,7 @@ vi.mock('../src/services/auth.service.js', () => {
 
 // Before each test, test db data is cleansed
 beforeEach(async () => {
+  await pool.query('TRUNCATE TABLE mission CASCADE');
   await pool.query('TRUNCATE TABLE app_user CASCADE');
 });
 

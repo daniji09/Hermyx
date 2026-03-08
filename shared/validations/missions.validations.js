@@ -47,12 +47,12 @@ export const draftMissionServerSchema = baseDraftSchema.extend({});
 // Backend endpoint getMissions
 export const getMissionsQuerySchema = z.object({
   page: z.coerce
-    .number({ invalid_type_error: messages.FIELD_NUMBER('Page') })
+    .number(messages.FIELD_NUMBER('Page'))
     .int(messages.FIELD_INTEGER('Page'))
     .min(0, messages.FIELD_POSITIVE('Page'))
     .optional(),
   limit: z.coerce
-    .number({ invalid_type_error: messages.FIELD_NUMBER('Limit') })
+    .number(messages.FIELD_NUMBER('Limit'))
     .int(messages.FIELD_INTEGER('Limit'))
     .min(0, messages.FIELD_POSITIVE('Limit'))
     .optional(),
