@@ -15,6 +15,7 @@ const basePublishSchema = z.object({
   difficulty: z.coerce
     .number({ invalid_type_error: 'Must be a valid number' })
     .min(1, 'Price must be greater than 0'),
+  isDraft: z.boolean().optional(),
 });
 
 // Server and client sign up shared validation
@@ -24,6 +25,7 @@ const baseDraftSchema = z.object({
   vacancies: z.coerce.number().int().optional(),
   reward: z.coerce.number().optional(),
   difficulty: z.coerce.number().optional(),
+  isDraft: z.boolean().optional(),
 });
 
 // Server get mission validation

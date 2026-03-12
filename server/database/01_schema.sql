@@ -41,7 +41,7 @@ CREATE TABLE MISSION (
 	difficulty INT NOT NULL,
 	vacancies INT NOT NULL,
 	monetary_reward NUMERIC NOT NULL,
-	status VARCHAR(20) NOT NULL CHECK (status IN ('pending_payment',
+	status VARCHAR(20) NOT NULL CHECK (status IN ('draft','pending_payment',
     'funded',
     'in_progress',
     'delivered',
