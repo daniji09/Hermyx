@@ -22,7 +22,7 @@ export const createMission = async (req, res) => {
 
     const missionData = {
       title: title || 'Mission not titled',
-      description: description || '',
+      description: description || 'No description',
       vacancies: vacancies || 0,
       reward: reward || 0,
       difficulty: difficulty || 0,
