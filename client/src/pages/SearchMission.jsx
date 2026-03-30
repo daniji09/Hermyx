@@ -9,7 +9,7 @@ export const SearchMission = () => {
     return failureCount < 3;
   };
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
+  // API call using React Query (if the same query is used in more than one component it should be isolated)
   const { data, hasNextPage, isFetchNextPage, fetchNextPage } =
     useInfiniteQuery(
       getMissionsInfiniteQueryOptions(PAGINATION_LIMIT.MISSIONS, {

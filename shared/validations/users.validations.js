@@ -76,3 +76,11 @@ export const logInSchema = z
     message: messages.EMAIL_USERNAME_NOT_PROVIDED,
     path: ['usernameEmail'],
   });
+
+// Sync with Google backend validation
+export const syncGoogleSchema = z.object({
+  username: z.string().trim().min(1, messages.FIELD_REQUIRED),
+  email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+  firebaseUid: z.string().trim().min(1, messages.FIELD_REQUIRED),
+  isNewUser: z.boolean(),
+});

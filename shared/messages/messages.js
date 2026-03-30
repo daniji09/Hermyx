@@ -12,6 +12,7 @@ export const messages = {
     `${field} must be longer than ${min} characters.`,
   FIELD_REQUIRED: 'This field is required.',
   FORBIDDEN: 'Action is not authorized.',
+  OPERATION_ERROR: 'Operation ended abruptly.',
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
   UNEXPECTED_ERROR: 'Unexpected error.',
 
@@ -25,7 +26,7 @@ export const messages = {
   FIREBASE_UID_REQUIRED: 'Firebase UID is required.',
   PASSWORDS_NOT_MATCH: 'Passwords do not match.',
   USERNAME_INVALID_CHARACTERS:
-    'Username must only contain letters, numbers or [._-]. ',
+    'Username must only contain letters, numbers or [._-].',
 
   // Server errors
   EMAIL_ALREADY_EXISTS: (email) => `User with email ${email} already exists.`,

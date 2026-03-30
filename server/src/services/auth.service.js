@@ -7,6 +7,7 @@ export const createFirebaseUser = async (user) => {
     email: user.email,
     password: user.password,
     displayName: user.username,
+    emailVerified: true,
   });
 
   // If Firebase user is not received, it returns the error

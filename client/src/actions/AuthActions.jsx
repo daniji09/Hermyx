@@ -86,7 +86,7 @@ export const logInAction = async (previousState, formData) => {
 
   // API call
   try {
-    // If username is provided, its username is searched
+    // If username is provided, its email is searched
     if (fieldsData.username) {
       const user = await getUserByUsername(fieldsData.username);
       fieldsData.email = user.email;

@@ -815,3 +815,221 @@ describe('POST /api/users - Sign Up', () => {
     dbSpy.mockRestore();
   });
 });
+
+describe('POST /api/users/syncGoogle - Synchronization with Google', () => {
+  // Happy paths
+  it('should log in an existing user', async () => {
+    // First a correct new user is added
+    await pool.query(
+      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
+      [test_user.email, test_user.username, test_user.firebaseUid],
+    );
+
+    const response = await request(app).post('/api/users/sync-google').send({
+      email: test_user.email,
+      username: test_user.username,
+      firebaseUid: test_user.firebaseUid,
+      isNewUser: false,
+    });
+
+    // Checks response
+    expect(response.status).toBe(200); // 200 OK
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.checkedUser.username).toBeDefined();
+    expect(response.body.checkedUser.email).toBeDefined();
+    expect(response.body.checkedUser.firebase_uid).toBeDefined();
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(1);
+    expect(dbCheck.rows[0].username).toBe(test_user.username);
+    expect(dbCheck.rows[0].firebase_uid).toBe(test_user.firebaseUid);
+  });
+
+  it('should sign up a new user', async () => {
+    const response = await request(app).post('/api/users/sync-google').send({
+      email: test_user.email,
+      username: test_user.username,
+      firebaseUid: test_user.firebaseUid,
+      isNewUser: true,
+    });
+
+    // Checks response
+    expect(response.status).toBe(201); // 201 Created
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.user.username).toBeDefined();
+    expect(response.body.user.email).toBeDefined();
+    expect(response.body.user.firebase_uid).toBeDefined();
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(1);
+    expect(dbCheck.rows[0].firebase_uid).toBe(test_user.firebaseUid);
+  });
+
+  // Corner cases
+  it('should return a 400 status without modifying db because email field is required', async () => {
+    const response = await request(app).post('/api/users/sync-google').send({
+      username: test_user.username,
+      firebaseUid: test_user.firebaseUid,
+      isNewUser: true,
+    });
+
+    // Checks response
+    expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.errors.email[0]).toBe(
+      messages.FIELD_NOT_VALID('email'),
+    );
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
+  });
+
+  it('should return a 400 status without modifying db because username field is required', async () => {
+    const response = await request(app).post('/api/users/sync-google').send({
+      username: '',
+      email: test_user.email,
+      firebaseUid: test_user.firebaseUid,
+      isNewUser: true,
+    });
+
+    // Checks response
+    expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.errors.username[0]).toBe(messages.FIELD_REQUIRED);
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
+  });
+
+  it('should return a 400 status without modifying db because firebaseUid field is required', async () => {
+    const response = await request(app).post('/api/users/sync-google').send({
+      username: test_user.username,
+      email: test_user.email,
+      firebaseUid: '',
+      isNewUser: true,
+    });
+
+    // Checks response
+    expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.errors.firebaseUid[0]).toBe(messages.FIELD_REQUIRED);
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
+  });
+
+  // Logic errors
+  it('should return a 400 status because Firebase made a sign up when it was a log in', async () => {
+    // First a correct new user is added
+    await pool.query(
+      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
+      [test_user.email, test_user.username, test_user.firebaseUid],
+    );
+
+    const response = await request(app).post('/api/users/sync-google').send({
+      email: test_user.email,
+      username: test_user.username,
+      firebaseUid: test_user.firebaseUid,
+      isNewUser: true,
+    });
+
+    // Checks response
+    expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.errors.general[0]).toBe(messages.COULD_NOT_LOG_IN);
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(1);
+    expect(dbCheck.rows[0].firebase_uid).toBe(test_user.firebaseUid);
+  });
+
+  it('should return a 400 status because Firebase made a log in when it was a sign up', async () => {
+    // First a correct new user is added
+    const response = await request(app).post('/api/users/sync-google').send({
+      email: test_user.email,
+      username: test_user.username,
+      firebaseUid: test_user.firebaseUid,
+      isNewUser: false,
+    });
+
+    // Checks response
+    expect(response.status).toBe(400); // 400 Bad Request
+    expect(response.headers['content-type']).toEqual(
+      expect.stringContaining('json'),
+    );
+    expect(response.body.errors.general[0]).toBe(
+      messages.COULD_NOT_CREATE_NEW_ACCOUNT,
+    );
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
+  });
+
+  it('should return a 500 status without modifying db because there was a db error', async () => {
+    // First, the db error is simulated
+    const dbSpy = vi
+      .spyOn(pool, 'query')
+      .mockRejectedValueOnce(new Error('Bd connection failed'));
+
+    // Then a new user is added
+    const response = await request(app).post('/api/users').send({
+      username: test_user.username,
+      email: test_user.email,
+      password: test_user.password,
+      confirmPassword: test_user.confirmPassword,
+    });
+
+    // Checks response
+    expect(response.status).toBe(500); // 500 Internal Server Error
+    expect(response.body.errors.general[0]).toBe(messages.UNEXPECTED_ERROR);
+
+    // Checks db
+    const dbCheck = await pool.query(
+      'SELECT * FROM app_user WHERE email = $1',
+      [test_user.email],
+    );
+    expect(dbCheck.rows.length).toBe(0);
+
+    dbSpy.mockRestore();
+  });
+});
