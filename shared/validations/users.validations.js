@@ -117,26 +117,3 @@ export const updateMyAccountSchema = z.object({
     'Description',
   ),
 });
-
-export const updateMyAccountCredentialsSchema = z
-  .object({
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
-    newPassword: z
-      .string()
-      .trim()
-      .min(
-        consts.PASSWORD_MIN_LENGTH,
-        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
-      )
-      .max(
-        consts.PASSWORD_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
-      )
-      .regex(regex.PASSWORD_REGEX, messages.FIELD_NOT_VALID('password'))
-      .optional(),
-    confirmNewPassword: z.string().trim().optional(),
-  })
-  .refine((v) => !v.newPassword || v.newPassword === v.confirmNewPassword, {
-    message: messages.PASSWORDS_NOT_MATCH,
-    path: ['confirmNewPassword'],
-  });

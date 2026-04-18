@@ -9,7 +9,6 @@ import {
   getMyProfile,
   getMyAccount,
   updateMyAccount,
-  updateMyAccountCredentials,
 } from '../controllers/users.controller.js';
 import {
   validateBodySchema,
@@ -19,7 +18,6 @@ import {
   getUsersQuerySchema,
   signUpSchema,
   updateMyAccountSchema,
-  updateMyAccountCredentialsSchema,
 } from '@hermyx/shared';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
@@ -46,13 +44,6 @@ router.patch(
   verifyToken,
   validateBodySchema(updateMyAccountSchema),
   updateMyAccount,
-);
-
-router.patch(
-  '/me/account/credentials',
-  verifyToken,
-  validateBodySchema(updateMyAccountCredentialsSchema),
-  updateMyAccountCredentials,
 );
 
 export default router;
