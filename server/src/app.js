@@ -6,7 +6,7 @@ import express from 'express';
 import cors from 'cors';
 const corsOptions = {
   // Cors configuration for accepting only allowed urls
-  origin: ['http://localhost:5173', 'https://hermyx-git-dev-deploy-daniji09s-projects.vercel.app'],
+  origin: ['http://localhost:5173', 'https://hermyx-lbcecfldx-daniji09s-projects.vercel.app'],
 };
 
 // Application initialization
