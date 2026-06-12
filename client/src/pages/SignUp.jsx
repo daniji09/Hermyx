@@ -2,6 +2,7 @@ import { useActionState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signUpAction } from '../actions/AuthActions';
 import { initialStateUseStateAction } from '../consts/consts';
+import { PrimaryButton } from '../components/PrimaryButton';
 
 export const SignUp = () => {
   const navigate = useNavigate();
@@ -64,9 +65,9 @@ export const SignUp = () => {
         )}
       </div>
 
-      <button type='submit' disabled={isPending}>
+      <PrimaryButton type='submit' disabled={isPending}>
         {isPending ? 'Signing up...' : 'Sign up'}
-      </button>
+      </PrimaryButton>
     </form>
   );
 };
