@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import {
   Card,
   CardAction,
@@ -46,7 +47,9 @@ export const MissionSearchCard = ({ mission }) => {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>See mission</Button>
+          <Button asChild>
+            <Link to={`/missions/${mission.mid}`}>See mission</Link>
+          </Button>
         </CardFooter>
       </article>
     </Card>

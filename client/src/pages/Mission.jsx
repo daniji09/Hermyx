@@ -1,6 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { getMissionByIdQueryOptions } from './../queries/MissionsQueries';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { timestampToDayMonthYear } from './../utils/date';
+import { Button } from '@/components/ui/button';
+import { Star, Users, HandCoins } from 'lucide-react';
 
 export const Mission = () => {
   // Mission id
@@ -38,22 +49,41 @@ export const Mission = () => {
 
   if (!mission) return <p>Mission not found.</p>;
 
-  // Data destructure for cleaner code
-  const { title, owner_id, description, vacancies, monetary_reward } = mission;
-
   return (
-    <div>
-      <p>Nombre:{title}</p>
-      <p>Fecha de publicación:</p>
-      <p>Solicitante:{owner_id}</p>
-      <p>Gremios subidos: aún no.</p>
-      <p>Descripción:{description}</p>
-      <p>Dificultad:</p>
-      <p>Vacantes:{vacancies}</p>
-      <p>Geolocalización: aún no.</p>
-      <p>Recompensa monetaria:{monetary_reward}</p>
-      <p>Otras recompensas: aún no.</p>
-      <button>Ponerse en contacto con Solicitante</button>
-    </div>
+    <Card asChild className='m-4'>
+      <main>
+        <CardHeader>
+          <CardTitle asChild className='text-5xl'>
+            <h1>{mission.title}</h1>
+          </CardTitle>
+          <CardDescription className='text-xl'>
+            <p>{timestampToDayMonthYear(mission.publication_date)}</p>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className='flex flex-1 flex-col text-lg'>
+          <div className='mb-4'>{mission.description}</div>
+          <div className='mt-auto flex flex-col gap-2'>
+            <div className='flex items-center gap-2'>
+              <span>Difficulty:</span>
+              <span>{mission.difficulty}</span>
+              <Star className='h-6 w-6' aria-hidden='true' />
+            </div>
+            <div className='flex items-center gap-2'>
+              <span>Vacancies:</span>
+              <span>{mission.vacancies}</span>
+              <Users className='h-6 w-6' aria-hidden='true' />
+            </div>
+            <div className='flex items-center gap-2'>
+              <span>Monetary reward:</span>
+              <span>{mission.monetary_reward}$</span>
+              <HandCoins className='h-6 w-6' aria-hidden='true' />
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button>Contact</Button>
+        </CardFooter>
+      </main>
+    </Card>
   );
 };
