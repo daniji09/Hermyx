@@ -8,6 +8,7 @@ import { NewMission } from './pages/NewMission';
 import { Payment } from './pages/Payment';
 import { SearchMission } from './pages/SearchMission';
 import { UserMissions } from './pages/UserMissions';
+import TestDashboard from './pages/TestDashboard';
 
 function App() {
   return (
@@ -71,6 +72,14 @@ function App() {
         element={
           <ProtectedRoute>
             <UserMissions />
+          </ProtectedRoute>
+        }
+      ></Route>
+      <Route
+        path='/test'
+        element={
+          <ProtectedRoute>
+            <TestDashboard />
           </ProtectedRoute>
         }
       ></Route>
