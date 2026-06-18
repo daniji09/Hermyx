@@ -18,7 +18,7 @@ export const getUsersQuerySchema = z
       .optional(),
     email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
   })
-  .refine((val) => val.email || val.username, {
+  .refine((val) => val.email || val.username || val.firebaseUid, {
     message: messages.EMAIL_USERNAME_NOT_PROVIDED,
     path: ['email'],
   });
@@ -79,3 +79,28 @@ export const logInSchema = z
     message: messages.EMAIL_USERNAME_NOT_PROVIDED,
     path: ['usernameEmail'],
   });
+
+export const getUsersByFirebaseUidParamSchema = z.object({
+  firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
+});
+
+export const getMissionsFromUserParamSchema = z.object({
+  uid: z.coerce
+    .number(messages.FIELD_NUMBER('uid'))
+    .int(messages.FIELD_INTEGER('uid'))
+    .min(0, messages.FIELD_POSITIVE('uid')),
+});
+
+export const getMissionsFromUserQuerySchema = z.object({
+  type: z.string().min(1, messages.FIELD_REQUIRED),
+  page: z.coerce
+    .number(messages.FIELD_NUMBER('Page'))
+    .int(messages.FIELD_INTEGER('Page'))
+    .min(0, messages.FIELD_POSITIVE('Page'))
+    .optional(),
+  limit: z.coerce
+    .number(messages.FIELD_NUMBER('Limit'))
+    .int(messages.FIELD_INTEGER('Limit'))
+    .min(0, messages.FIELD_POSITIVE('Limit'))
+    .optional(),
+});

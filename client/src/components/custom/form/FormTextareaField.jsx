@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/field';
 import { Textarea } from '@/components/ui/textarea';
 
-export const TextareaFormField = ({
+export const FormTextareaField = ({
   invalid,
   id: externalId,
   label,

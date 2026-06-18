@@ -4,24 +4,37 @@ import { signUpAction } from '../actions/AuthActions';
 import { initialStateUseStateAction } from '../consts/consts';
 import { messages } from '../messages/messages';
 import { Button } from '@/components/ui/button';
-import { Form } from '../components/custom/form/CardForm';
-import { InputFormField } from '../components/custom/form/FormInputField';
-import { AlertForm } from '../components/custom/form/FormAlert';
-import { PasswordInputFormField } from '../components/custom/form/FormPasswordInputField';
+import { CardForm } from '../components/custom/form/CardForm';
+import { FormInputField } from '../components/custom/form/FormInputField';
+import { FormAlert } from '../components/custom/form/FormAlert';
+import { FormPasswordInputField } from '../components/custom/form/FormPasswordInputField';
 import { consts } from '@hermyx/shared';
 
 export const SignUp = () => {
-  const navigate = useNavigate();
+  // Form action handling
   const [state, signUpFormAction, isPending] = useActionState(
     signUpAction,
     initialStateUseStateAction,
   );
 
   // Effect for navigating to login
+  const navigate = useNavigate();
   useEffect(() => {
     if (state.success) navigate('/login');
   }, [state.success, navigate]);
 
+  return (
+    <main className='flex min-h-screen items-center justify-center p-4'>
+      <SignUpForm
+        state={state}
+        action={signUpFormAction}
+        isPending={isPending}
+      ></SignUpForm>
+    </main>
+  );
+};
+
+const SignUpForm = ({ state, action, isPending }) => {
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [clearedFields, setClearedFields] = useState({});
   const [prevServerState, setPrevServerState] = useState(state);
@@ -39,28 +52,15 @@ export const SignUp = () => {
     const fieldName = e.target.name;
     setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
   };
-
   return (
-    <main className='flex min-h-screen items-center justify-center p-4'>
-      <div className='flex flex-col w-full max-w-155 gap-4'>
-        <Form
-          id='signUpForm'
-          formTitle={messages.SIGN_UP.FORM_TITLE}
-          action={signUpFormAction}
-          legend='Application sign up form.'
-          footer={
-            <Button
-              className='w-full'
-              id='sendSignUp'
-              type='submit'
-              form='signUpForm'
-              disabled={isPending}
-            >
-              {isPending ? 'Signing up...' : 'Sign up'}
-            </Button>
-          }
-        >
-          <InputFormField
+    <div className='flex flex-col w-full max-w-155 gap-4'>
+      <CardForm id='signUpForm' action={action}>
+        <CardForm.Header>
+          <CardForm.Title>{messages.SIGN_UP.FORM_TITLE}</CardForm.Title>
+        </CardForm.Header>
+
+        <CardForm.Content legend='Application sign up form.'>
+          <FormInputField
             id='signUpUsername'
             label='Username (required):'
             description={messages.SIGN_UP.USERNAME_DESCRIPTION}
@@ -79,9 +79,9 @@ export const SignUp = () => {
             aria-invalid={!clearedFields.username && !!state.errors?.username}
             disabled={isPending}
             onChange={handleFieldChange}
-          ></InputFormField>
+          ></FormInputField>
 
-          <InputFormField
+          <FormInputField
             id='signUpEmail'
             label='E-mail (required):'
             error={
@@ -99,9 +99,9 @@ export const SignUp = () => {
             aria-invalid={!clearedFields.email && !!state.errors?.email}
             disabled={isPending}
             onChange={handleFieldChange}
-          ></InputFormField>
+          ></FormInputField>
 
-          <PasswordInputFormField
+          <FormPasswordInputField
             id='signUpPassword'
             label='Password (required):'
             description={messages.SIGN_UP.PASSWORD_DESCRIPTION}
@@ -120,9 +120,9 @@ export const SignUp = () => {
             aria-invalid={!clearedFields.password && !!state.errors?.password}
             disabled={isPending}
             onChange={handleFieldChange}
-          ></PasswordInputFormField>
+          ></FormPasswordInputField>
 
-          <PasswordInputFormField
+          <FormPasswordInputField
             id='signUpConfirmPassword'
             label='Confirm password (required):'
             error={
@@ -144,14 +144,26 @@ export const SignUp = () => {
             }
             disabled={isPending}
             onChange={handleFieldChange}
-          ></PasswordInputFormField>
-        </Form>
-        {state.errors?.general && !isAlertClosed && (
-          <AlertForm onClose={() => setIsAlertClosed(true)}>
-            {state.errors.general[0]}
-          </AlertForm>
-        )}
-      </div>
-    </main>
+          ></FormPasswordInputField>
+        </CardForm.Content>
+
+        <CardForm.Footer>
+          <Button
+            className='w-full'
+            id='sendSignUp'
+            type='submit'
+            form='signUpForm'
+            disabled={isPending}
+          >
+            {isPending ? 'Signing up...' : 'Sign up'}
+          </Button>
+        </CardForm.Footer>
+      </CardForm>
+      {state.errors?.general && !isAlertClosed && (
+        <FormAlert onClose={() => setIsAlertClosed(true)}>
+          {state.errors.general[0]}
+        </FormAlert>
+      )}
+    </div>
   );
 };

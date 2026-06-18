@@ -1,34 +1,20 @@
-export const pagination =
-  async (getData, countData) => async (req, res, next) => {
-    // Early exit if there is no pagination to be made
-    if (!req.query.page || !req.query.limit) next();
+import { consts } from '@hermyx/shared';
 
-    // Page and limit parameters
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit);
+export const pagination = () => (req, res, next) => {
+  // Early exit if there is no pagination to be made
+  if (!req.query.page || !req.query.limit) next();
 
-    // Other optional parameters
-    const title = req.query.title || undefined;
+  // Page and limit parameters
+  const page = parseInt(req.query.page) || consts.PAGINATION.DEFAULT_PAGE;
+  const limit = parseInt(req.query.limit) || consts.PAGINATION.DEFAULT_LIMIT;
 
-    // Indexes for searching data correctly
-    const offset = (page - 1) * limit;
+  // Indexes for searching data correctly
+  const offset = (page - 1) * limit;
 
-    // Needed data is search in a parallel way
-    const [data, length] = await Promise.all([
-      getData(limit, offset, title),
-      countData(),
-    ]);
+  // Pagination object is build
+  const pagination = { limit, page, offset };
 
-    // Pagination object is built
-    const pagination = {
-      currentPage: page,
-      totalPages: Math.ceil(length / limit),
-      totalItems: length,
-      hasMore: page * limit < length,
-    };
-
-    // Data and pagination is returned
-    res.pagination = pagination;
-    res.paginationResults = data;
-    next();
-  };
+  // Data and pagination is returned
+  req.pagination = pagination;
+  next();
+};

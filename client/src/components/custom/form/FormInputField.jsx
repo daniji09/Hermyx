@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 
-export const InputFormField = ({
+export const FormInputField = ({
   invalid,
   id: externalId,
   label,

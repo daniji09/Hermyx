@@ -8,7 +8,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff } from 'lucide-react';
 
-export const PasswordInputFormField = ({
+export const FormPasswordInputField = ({
   invalid,
   id: externalId,
   label,

@@ -3,25 +3,38 @@ import { useNavigate } from 'react-router-dom';
 import { logInAction } from '../actions/AuthActions';
 import { initialStateUseStateAction } from '../consts/consts.js';
 import { Button } from '@/components/ui/button';
-import { Form } from '../components/custom/form/CardForm.jsx';
-import { InputFormField } from '../components/custom/form/FormInputField.jsx';
-import { AlertForm } from '../components/custom/form/FormAlert.jsx';
-import { PasswordInputFormField } from '../components/custom/form/FormPasswordInputField.jsx';
+import { CardForm } from '../components/custom/form/CardForm.jsx';
+import { FormInputField } from '../components/custom/form/FormInputField.jsx';
+import { FormAlert } from '../components/custom/form/FormAlert.jsx';
+import { FormPasswordInputField } from '../components/custom/form/FormPasswordInputField.jsx';
 import { messages } from '../messages/messages.js';
 import { consts } from '@hermyx/shared';
 
 export const LogIn = () => {
-  const navigate = useNavigate();
+  // Form action handling
   const [state, logInFormAction, isPending] = useActionState(
     logInAction,
     initialStateUseStateAction,
   );
 
   // Effect for navigating to home
+  const navigate = useNavigate();
   useEffect(() => {
     if (state.success) navigate('/');
   }, [state.success, navigate]);
 
+  return (
+    <main className='flex min-h-screen items-center justify-center p-4'>
+      <LogInForm
+        state={state}
+        action={logInFormAction}
+        isPending={isPending}
+      ></LogInForm>
+    </main>
+  );
+};
+
+const LogInForm = ({ state, action, isPending }) => {
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [clearedFields, setClearedFields] = useState({});
   const [prevServerState, setPrevServerState] = useState(state);
@@ -39,28 +52,15 @@ export const LogIn = () => {
     const fieldName = e.target.name;
     setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
   };
-
   return (
-    <main className='flex min-h-screen items-center justify-center p-4'>
-      <div className='flex flex-col w-full max-w-155 gap-4'>
-        <Form
-          id='logInForm'
-          formTitle={messages.LOG_IN.FORM_TITLE}
-          action={logInFormAction}
-          legend='Application log in form.'
-          footer={
-            <Button
-              className='w-full'
-              id='sendLogIn'
-              type='submit'
-              form='logInForm'
-              disabled={isPending}
-            >
-              {isPending ? 'Logging in...' : 'Log in'}
-            </Button>
-          }
-        >
-          <InputFormField
+    <div className='flex flex-col w-full max-w-155 gap-4'>
+      <CardForm id='logInForm' action={action}>
+        <CardForm.Header>
+          <CardForm.Title>{messages.LOG_IN.FORM_TITLE}</CardForm.Title>
+        </CardForm.Header>
+
+        <CardForm.Content legend='Application log in form.'>
+          <FormInputField
             id='logInUsernameEmail'
             label='Username or e-mail (required):'
             error={
@@ -82,9 +82,8 @@ export const LogIn = () => {
             }
             disabled={isPending}
             onChange={handleFieldChange}
-          ></InputFormField>
-
-          <PasswordInputFormField
+          ></FormInputField>
+          <FormPasswordInputField
             id='logInPassword'
             label='Password (required):'
             error={
@@ -102,14 +101,27 @@ export const LogIn = () => {
             aria-invalid={!clearedFields.password && !!state.errors?.password}
             disabled={isPending}
             onChange={handleFieldChange}
-          ></PasswordInputFormField>
-        </Form>
-        {state.errors?.general && !isAlertClosed && (
-          <AlertForm onClose={() => setIsAlertClosed(true)}>
-            {state.errors.general[0]}
-          </AlertForm>
-        )}
-      </div>
-    </main>
+          ></FormPasswordInputField>
+        </CardForm.Content>
+
+        <CardForm.Footer>
+          <Button
+            className='w-full'
+            id='sendLogIn'
+            type='submit'
+            form='logInForm'
+            disabled={isPending}
+          >
+            {isPending ? 'Logging in...' : 'Log in'}
+          </Button>
+        </CardForm.Footer>
+      </CardForm>
+
+      {state.errors?.general && !isAlertClosed && (
+        <FormAlert onClose={() => setIsAlertClosed(true)}>
+          {state.errors.general[0]}
+        </FormAlert>
+      )}
+    </div>
   );
 };

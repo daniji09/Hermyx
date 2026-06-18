@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/alert';
 import { X } from 'lucide-react';
 
-export const AlertForm = ({ children, onClose }) => {
+export const FormAlert = ({ children, onClose }) => {
   return (
     <Alert variant='destructive' className='relative w-full'>
       <AlertCircleIcon />

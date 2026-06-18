@@ -18,14 +18,12 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 // Application routers
-import testRouter from './routes/test.router.js';
 import usersRouter from './routes/users.router.js';
 import paymentRouter from './routes/payment.router.js';
 import missionsRouter from './routes/missions.router.js';
 import { verifyToken } from './middlewares/auth.middleware.js';
 
 // Application routes
-app.use('/test', testRouter);
 app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);

@@ -18,4 +18,13 @@ export const messages = {
     DIFFICULTY_DESCRIPTION:
       'Higher difficulty implies higher rewards for adventurers.',
   },
+  MISSION: {
+    MISSION_CLOSED: 'Mission already closed!',
+    MISSION_FILLED: 'Mission already filled!',
+  },
+  SEARCH_MISSIONS: {
+    LOADING: 'Searching missions...',
+    ERROR: 'Oops! Something went wrong while loading missions',
+    NO_MISSIONS: 'It seems there is no missions yet. Add one!',
+  },
 };
