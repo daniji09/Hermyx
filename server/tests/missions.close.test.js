@@ -2,15 +2,17 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import app from '../src/app.js';
 import pool from '../src/config/db.config.js';
+import { messages } from '@hermyx/shared';
 
 const testMission = vi.hoisted(() => {
   return {
     title: 'Closeable mission',
     description: 'Mission ready to be closed.',
-    vacancies: 2,
-    monetaryReward: 250,
     difficulty: 3,
-    status: 'funded',
+    totalVacancies: 2,
+    occupiedVacancies: 1,
+    monetaryReward: 250,
+    status: 'in_progress',
   };
 });
 
@@ -44,7 +46,6 @@ const testUsers = vi.hoisted(() => {
 let ownerId;
 let anotherOwnerId;
 let authenticatedUserId;
-let adventurerIds;
 
 vi.mock('../src/middlewares/auth.middleware.js', () => {
   return {
@@ -82,46 +83,41 @@ beforeEach(async () => {
   );
 
   anotherOwnerId = anotherOwnerResult.rows[0].uid;
-  adventurerIds = [];
-
-  for (const adventurer of testUsers.adventurers) {
-    const adventurerResult = await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3) RETURNING uid',
-      [adventurer.email, adventurer.username, adventurer.firebaseUid],
-    );
-
-    adventurerIds.push(adventurerResult.rows[0].uid);
-  }
 });
 
 afterAll(async () => {
   await pool.end();
 });
 
-const createMission = async ({ vacancies = testMission.vacancies } = {}) => {
+const createMission = async ({
+  status = testMission.status,
+  occupiedVacancies = testMission.occupiedVacancies,
+} = {}) => {
   const missionResult = await pool.query(
-    'INSERT INTO mission (publication_date, title, description, difficulty, vacancies, monetary_reward, status, owner_id) VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7) RETURNING mid',
+    `INSERT INTO mission (
+      publication_date,
+      title,
+      description,
+      difficulty,
+      total_vacancies,
+      occupied_vacancies,
+      monetary_reward,
+      status,
+      owner_id
+    ) VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid`,
     [
       testMission.title,
       testMission.description,
       testMission.difficulty,
-      vacancies,
+      testMission.totalVacancies,
+      occupiedVacancies,
       testMission.monetaryReward,
-      testMission.status,
+      status,
       ownerId,
     ],
   );
 
   return missionResult.rows[0].mid;
-};
-
-const addParticipants = async (missionId, participants) => {
-  for (const adventurerId of participants) {
-    await pool.query(
-      'INSERT INTO mission_participation (mid, adventurer_id) VALUES ($1, $2)',
-      [missionId, adventurerId],
-    );
-  }
 };
 
 const getMissionStatus = async (missionId) => {
@@ -134,49 +130,7 @@ const getMissionStatus = async (missionId) => {
 };
 
 describe('POST /api/missions/:missionId/close', () => {
-  it('should close a mission when all vacancies are occupied', async () => {
-    const missionId = await createMission({ vacancies: 2 });
-
-    await addParticipants(missionId, adventurerIds);
-
-    const response = await request(app).post(
-      `/api/missions/${missionId}/close`,
-    );
-
-    const updatedStatus = await getMissionStatus(missionId);
-
-    expect(response.status).toBe(200);
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.message).toBe('Mission closed.');
-    expect(response.body.status).toBe('in_progress');
-    expect(response.body.participants).toBe(2);
-    expect(updatedStatus).toBe('in_progress');
-  });
-
-  it('should close a mission when at least one vacancy is occupied', async () => {
-    const missionId = await createMission({ vacancies: 2 });
-
-    await addParticipants(missionId, [adventurerIds[0]]);
-
-    const response = await request(app).post(
-      `/api/missions/${missionId}/close`,
-    );
-
-    const updatedStatus = await getMissionStatus(missionId);
-
-    expect(response.status).toBe(200);
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.message).toBe('Mission closed.');
-    expect(response.body.status).toBe('in_progress');
-    expect(response.body.participants).toBe(1);
-    expect(updatedStatus).toBe('in_progress');
-  });
-
-  it('should not close a mission without occupied vacancies', async () => {
+  it('should close an in progress mission when the authenticated user is the owner', async () => {
     const missionId = await createMission();
 
     const response = await request(app).post(
@@ -185,21 +139,29 @@ describe('POST /api/missions/:missionId/close', () => {
 
     const updatedStatus = await getMissionStatus(missionId);
 
-    expect(response.status).toBe(400);
+    expect(response.status).toBe(200);
     expect(response.headers['content-type']).toEqual(
       expect.stringContaining('json'),
     );
-    expect(response.body.error).toBe(
-      'You cannot close a mission without adventurers',
+    expect(response.body.mission).toMatchObject({
+      mid: missionId,
+      title: testMission.title,
+      description: testMission.description,
+      difficulty: testMission.difficulty,
+      total_vacancies: testMission.totalVacancies,
+      occupied_vacancies: testMission.occupiedVacancies,
+      status: 'accepted',
+      owner_id: ownerId,
+    });
+    expect(Number(response.body.mission.monetary_reward)).toBe(
+      testMission.monetaryReward,
     );
-    expect(updatedStatus).toBe(testMission.status);
+    expect(updatedStatus).toBe('accepted');
   });
 
   it('should not close a mission if the authenticated user is not the owner', async () => {
     const missionId = await createMission();
     authenticatedUserId = anotherOwnerId;
-
-    await addParticipants(missionId, [adventurerIds[0]]);
 
     const response = await request(app).post(
       `/api/missions/${missionId}/close`,
@@ -211,9 +173,7 @@ describe('POST /api/missions/:missionId/close', () => {
     expect(response.headers['content-type']).toEqual(
       expect.stringContaining('json'),
     );
-    expect(response.body.error).toBe(
-      'You do not have permission to close this mission.',
-    );
+    expect(response.body.error).toBe(messages.UNAUTHORIZED_ERROR);
     expect(updatedStatus).toBe(testMission.status);
   });
 
@@ -224,6 +184,6 @@ describe('POST /api/missions/:missionId/close', () => {
     expect(response.headers['content-type']).toEqual(
       expect.stringContaining('json'),
     );
-    expect(response.body.error).toBe('Mission not found');
+    expect(response.body.error).toBe(messages.MISSIONS_NOT_FOUND);
   });
 });

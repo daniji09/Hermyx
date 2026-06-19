@@ -310,7 +310,7 @@ export const getByUidAndTitle = async (uid, title) => {
 
 // Closes mission
 export const closeMission = async (mid) => {
-  const query = `UPDATE mission SET status = 'accepted' WHERE mid = $1`;
+  const query = `UPDATE mission SET status = 'accepted' WHERE mid = $1 RETURNING *`;
   const result = await pool.query(query, [mid]);
   return result.rows[0];
 };
