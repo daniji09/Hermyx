@@ -81,8 +81,14 @@ export const getUserMissions = async (
   }
 };
 
-// Closes a mission
+// Starts a mission
 export const startMission = async (mid) => {
   const { data } = await api.post(`/missions/${mid}/start`);
+  return data.mission;
+};
+
+// Closes a mission
+export const closeMission = async (mid) => {
+  const { data } = await api.post(`/missions/${mid}/close`);
   return data.mission;
 };

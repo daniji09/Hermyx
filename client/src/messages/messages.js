@@ -21,10 +21,17 @@ export const messages = {
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
     MISSION_FILLED: 'Mission already filled!',
+    MISSION_PENDING_PAYMENT: `Mission can't be opened until payment is done.`,
   },
   SEARCH_MISSIONS: {
     LOADING: 'Searching missions...',
     ERROR: 'Oops! Something went wrong while loading missions',
     NO_MISSIONS: 'It seems there is no missions yet. Add one!',
+  },
+  PAYMENT: {
+    FORM_TITLE: 'Mission payment',
+    STRIPE_NOT_LOADED: 'Stripe has not loaded yet.',
+    MISSION_NOT_FOUND: `Couldn't find mission.`,
+    CARD_NOT_READ: `Credit card couldn't be read.`,
   },
 };

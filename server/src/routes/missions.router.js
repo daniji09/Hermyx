@@ -10,6 +10,7 @@ import {
   deleteMission,
   start,
   joinMission,
+  closeMission,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -24,6 +25,7 @@ import {
   getMissionSchema,
   getMissionsQuerySchema,
   joinMissionSchema,
+  closeMissionSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -60,6 +62,13 @@ router.post('/:missionId/start', start);
 
 // Joins an adventurer into a mission
 router.post('/:mid/join', validateParamsSchema(joinMissionSchema), joinMission);
+
+// Closes a mission
+router.post(
+  '/:mid/close',
+  validateParamsSchema(closeMissionSchema),
+  closeMission,
+);
 
 /// PUT
 

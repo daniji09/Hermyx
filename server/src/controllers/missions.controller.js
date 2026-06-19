@@ -11,6 +11,7 @@ import {
   adventurerJoined,
   updateMissionStatus,
   getByUidAndTitle,
+  closeMission as _closeMission,
 } from '../models/mission.model.js';
 
 import {
@@ -208,6 +209,32 @@ export const joinMission = async (req, res) => {
     } else {
       return res.status(200).json({ mission });
     }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Closes a mission
+export const closeMission = async (req, res) => {
+  const { mid } = req.params;
+  const userId = req.user.uid;
+
+  try {
+    const mission = await getById(mid);
+    if (!mission) {
+      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
+    }
+
+    if (mission.owner_id !== userId) {
+      return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
+    }
+
+    await _closeMission(mid);
+
+    return res.status(200).json({
+      mission,
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
