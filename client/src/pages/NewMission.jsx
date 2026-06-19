@@ -21,9 +21,10 @@ export const NewMission = () => {
   const navigate = useNavigate();
   useEffect(() => {
     if (state.success) {
-      navigate('/missions/mine');
+      const destination = state.redirectTo || '/';
+      navigate(destination);
     }
-  }, [state.success, navigate]);
+  }, [state.success, state.redirectTo, navigate]);
 
   return (
     <main className='flex min-h-screen items-center justify-center p-4'>

@@ -48,16 +48,15 @@ export const createMissionAction = async (previousState, formData) => {
       ...validatedFields.data,
       status: 'pending_payment',
     });
-    /*
-    If (!created?.mid) {
+
+    if (!success?.mid) {
       throw {
         response: {
           status: 500,
-          data: { message: 'The payment could not be initiated.' },
+          data: { message: messages.UNEXPECTED_ERROR },
         },
       };
     }
-*/
 
     if (!success) {
       throw {
@@ -71,6 +70,7 @@ export const createMissionAction = async (previousState, formData) => {
     //Success
     return {
       success: true,
+      redirectTo: `/missions/${success.mid}/pay`,
       errors: {},
       data: null,
     };
@@ -114,4 +114,53 @@ export const searchMissionByTitleAction = async (previousState, formData) => {
   }
 
   return { success: true, data: fieldsData, errors: {} };
+};
+
+export const paymentAction = async (extraParam, previousState, formData) => {
+  console.log(extraParam, Object.fromEntries(formData));
+  /*
+  If (!stripe || !elements) {
+    return addLog('Error Pago', 'Stripe no ha cargado todavia.');
+  }
+  if (!missionId) return alert('Pon un ID de misión');
+
+  try {
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      return addLog('Error Pago', 'No se pudo leer la tarjeta.');
+    }
+
+    // 1. Pedir PaymentIntent (Ruta: /pay/new)
+    const { data } = await api.post('/stripe/pay/new', {
+      missionId: missionId.trim(),
+      saveCard: true,
+    });
+
+    if (data.error) return addLog('Error Backend Pago', data);
+
+    // 2. Confirmar Pago
+    const result = await stripe.confirmCardPayment(data.clientSecret, {
+      payment_method: { card: cardElement },
+    });
+
+    if (result.error) addLog('Error Pago Stripe', result.error);
+    else {
+      // 3. Confirmar al servidor (Ruta: /missions/:id/confirm-payment)
+      if (result.paymentIntent.status === 'succeeded') {
+        await api.post(`/stripe/missions/${missionId.trim()}/confirm-payment`, {
+          paymentIntentId: result.paymentIntent.id,
+        });
+
+        // 4. Establecer tarjeta como default si se guardó
+        await api.post('/stripe/cards/default', {
+          paymentMethodId: result.paymentIntent.payment_method,
+        });
+
+        addLog('✅ PAGO COMPLETADO', result.paymentIntent.payment_method);
+        cardElement.clear(); // Limpiar el input
+      }
+    }
+  } catch (e) {
+    addLog('Error Pago Nueva Tarjeta', getErrorData(e));
+  }*/
 };

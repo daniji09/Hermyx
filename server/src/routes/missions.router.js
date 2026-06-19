@@ -10,6 +10,8 @@ import {
   deleteMission,
   start,
   joinMission,
+  closeMission,
+  getMissionsFunded,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -24,6 +26,7 @@ import {
   getMissionSchema,
   getMissionsQuerySchema,
   joinMissionSchema,
+  closeMissionSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -47,6 +50,14 @@ router.get(
 //List all draft missions
 router.get('/in-draft', getAllMissionsInDraft);
 
+// List all funded missions
+router.get(
+  '/funded',
+  validateQuerySchema(getMissionsQuerySchema),
+  await pagination(),
+  getMissionsFunded,
+);
+
 //Get mission by id
 router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
 
@@ -60,6 +71,13 @@ router.post('/:missionId/start', start);
 
 // Joins an adventurer into a mission
 router.post('/:mid/join', validateParamsSchema(joinMissionSchema), joinMission);
+
+// Closes a mission
+router.post(
+  '/:mid/close',
+  validateParamsSchema(closeMissionSchema),
+  closeMission,
+);
 
 /// PUT
 

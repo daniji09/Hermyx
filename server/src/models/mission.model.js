@@ -135,6 +135,47 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   return { rows, totalCount };
 };
 
+// TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
+export const getMissionsFunded = async ({ title = undefined, pagination }) => {
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
+    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status = 'funded'`;
+  const values = [];
+
+  if (title) {
+    values.push(title);
+    query += ` AND unaccent(title) ILIKE unaccent('%' || $${values.length} || '%')`;
+  }
+  query += ` ORDER BY m.publication_date DESC`;
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+
+  // Si no hay resultados, rows está vacío y totalCount es 0
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  const totalCount = parseInt(result.rows[0].total_count);
+
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
+};
+
 export const getAllMissionsInDraft = async () => {
   const query = "SELECT * FROM mission WHERE status = 'draft'";
   const result = await pool.query(query, []);
@@ -264,5 +305,12 @@ export const getByUidAndTitle = async (uid, title) => {
     ) AS "hasDuplicate";
   `;
   const result = await pool.query(query, [uid, title]);
+  return result.rows[0];
+};
+
+// Closes mission
+export const closeMission = async (mid) => {
+  const query = `UPDATE mission SET status = 'accepted' WHERE mid = $1`;
+  const result = await pool.query(query, [mid]);
   return result.rows[0];
 };

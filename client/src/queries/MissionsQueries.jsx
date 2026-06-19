@@ -1,7 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import {
   getMissionById,
-  getMissions,
+  getMissionsFunded,
   getUserMissions,
 } from '../services/MissionsServices';
 
@@ -16,7 +16,8 @@ export const getMissionByIdQueryOptions = (params, options) => {
 export const getMissionsInfiniteQueryOptions = (limit, params, options) => {
   return infiniteQueryOptions({
     queryKey: ['getMissions', params],
-    queryFn: ({ pageParam }) => getMissions({ page: pageParam, limit, params }),
+    queryFn: ({ pageParam }) =>
+      getMissionsFunded({ page: pageParam, limit, params }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       return lastPage.pagination.hasMore

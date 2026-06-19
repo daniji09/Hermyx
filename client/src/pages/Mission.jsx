@@ -14,7 +14,11 @@ import { Star, Users, HandCoins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
 import { useContext } from 'react';
-import { startMission, joinMission } from '../services/MissionsServices';
+import {
+  startMission,
+  joinMission,
+  closeMission,
+} from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 
 export const Mission = () => {
@@ -152,10 +156,12 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                   <CloseMissionButton
                     missionId={mission.mid}
                   ></CloseMissionButton>
-                ) : mission.status === 'pending_payment' ? (
+                ) : mission.status === 'funded' ? (
                   <StartMissionButton
                     missionId={mission.mid}
                   ></StartMissionButton>
+                ) : mission.status === 'pending_payment' ? (
+                  <PayMissionButton missionId={mission.mid}></PayMissionButton>
                 ) : (
                   <p className='text-muted-foreground bg-muted/20'>
                     {messages.MISSION.MISSION_CLOSED}
@@ -221,7 +227,7 @@ const StartMissionButton = ({ missionId }) => {
       queryClient.invalidateQueries(['getMissions']);
     },
   });
-
+  //If (isError) return <FormAlert>{error}</FormAlert>;
   return (
     <Button
       type='button'
@@ -235,17 +241,38 @@ const StartMissionButton = ({ missionId }) => {
 };
 
 const CloseMissionButton = ({ missionId }) => {
+  const queryClient = useQueryClient();
+  const { isPending, isError, error, mutate } = useMutation({
+    mutationFn: () => closeMission(missionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+  });
+  //If (isError) return <FormAlert>{error}</FormAlert>;
+  return (
+    <Button
+      type='button'
+      id='closeMissionButton'
+      onClick={mutate}
+      disabled={isPending}
+    >
+      {'Close mission'}
+    </Button>
+  );
+};
+
+const PayMissionButton = ({ missionId }) => {
   const navigate = useNavigate();
 
   return (
     <Button
       type='button'
-      id='closeMissionButton'
+      id='payMissionButton'
       onClick={() => {
         navigate(`/missions/${missionId}/pay`);
       }}
     >
-      {'Close mission'}
+      {'Pay mission'}
     </Button>
   );
 };
