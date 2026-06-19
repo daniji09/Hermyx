@@ -78,8 +78,8 @@ export const createMission = async (missionData) => {
     missionData;
 
   const query = `
-    INSERT INTO mission (publication_date, title, description, vacancies, monetary_reward, difficulty, status, owner_id)
-    VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7)
+    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id)
+    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7)
     RETURNING *
   `;
   const result = await pool.query(query, [
@@ -94,17 +94,45 @@ export const createMission = async (missionData) => {
   return result.rows[0];
 };
 
-export const getAllMissions = async (limit, offset) => {
-  let query, result;
-  if (limit && offset !== undefined) {
-    query =
-      "SELECT * FROM mission WHERE status != 'draft' ORDER BY mid DESC LIMIT $1 OFFSET $2";
-    result = await pool.query(query, [limit, offset]);
-  } else {
-    query = "SELECT * FROM mission WHERE status != 'draft'";
-    result = await pool.query(query, []);
+// TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
+export const getMissions = async ({ title = undefined, pagination }) => {
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
+    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft'`;
+  const values = [];
+
+  if (title) {
+    values.push(title);
+    query += ` AND unaccent(title) ILIKE unaccent('%' || $${values.length} || '%')`;
   }
-  return result.rows;
+  query += ` ORDER BY m.publication_date DESC`;
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+
+  // Si no hay resultados, rows está vacío y totalCount es 0
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  const totalCount = parseInt(result.rows[0].total_count);
+
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
 };
 
 export const getAllMissionsInDraft = async () => {
@@ -113,28 +141,24 @@ export const getAllMissionsInDraft = async () => {
   return result.rows;
 };
 
-export const getMissionById = async (id) => {
-  const query = 'SELECT * FROM mission WHERE mid = $1';
-  const result = await pool.query(query, [id]);
+export const getMissionById = async (id, uid) => {
+  const query = `SELECT *, EXISTS (
+      SELECT 1 
+      FROM mission_participation ma 
+      WHERE ma.mid = m.mid AND ma.adventurer_id = $2
+    ) AS is_joined FROM mission m WHERE mid = $1`;
+  const result = await pool.query(query, [id, uid]);
   return result.rows[0];
 };
 
-export const updateMission = async (id, updateData) => {
-  const { title, description, vacancies, reward } = updateData;
-
+export const updateMissionStatus = async (id, updateData) => {
   const query = `
     UPDATE mission
-    SET title = $1, description = $2, vacancies = $3, monetary_reward = $4
-    WHERE mid = $5
+    SET status = $2
+    WHERE mid = $1
     RETURNING *
   `;
-  const result = await pool.query(query, [
-    title,
-    description,
-    vacancies,
-    reward,
-    id,
-  ]);
+  const result = await pool.query(query, [id, updateData]);
   return result.rows[0];
 };
 
@@ -148,4 +172,97 @@ export const countMissions = async () => {
   const query = 'SELECT COUNT(*) FROM mission';
   const result = await pool.query(query, []);
   return parseInt(result.rows[0].count);
+};
+
+export const adventurerJoined = async (mid) => {
+  const query =
+    'UPDATE mission SET occupied_vacancies = occupied_vacancies + 1 WHERE mid = $1 RETURNING occupied_vacancies';
+  const result = await pool.query(query, [mid]);
+  return result.rows[0];
+};
+
+export const getMissionsByUid = async (uid, pagination = null) => {
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, m.occupied_vacancies, 
+    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft' AND m.owner_id = $1 
+    ORDER BY m.publication_date DESC`;
+  const values = [uid];
+
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+
+  // Si no hay resultados, rows está vacío y totalCount es 0
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  const totalCount = parseInt(result.rows[0].total_count);
+
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
+};
+
+export const getMissionsJoinedByUser = async (uid, pagination = null) => {
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
+    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+    FROM (mission_participation AS ma JOIN app_user AS a ON (ma.adventurer_id = a.uid)) JOIN mission AS m ON (m.mid = ma.mid) 
+    WHERE adventurer_id = $1 ORDER BY m.publication_date DESC`;
+  const values = [uid];
+
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+
+  // Si no hay resultados, rows está vacío y totalCount es 0
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  const totalCount = parseInt(result.rows[0].total_count);
+
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
+};
+
+// Gets mission by uid and title
+export const getByUidAndTitle = async (uid, title) => {
+  const query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM mission 
+      WHERE owner_id = $1 
+        AND LOWER(TRIM(title)) = LOWER($2)
+    ) AS "hasDuplicate";
+  `;
+  const result = await pool.query(query, [uid, title]);
+  return result.rows[0];
 };

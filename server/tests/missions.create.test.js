@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import app from '../src/app.js';
 import pool from '../src/config/db.config.js';
-import { messages } from '@hermyx/shared';
 
 const test_mission = vi.hoisted(() => {
   return {

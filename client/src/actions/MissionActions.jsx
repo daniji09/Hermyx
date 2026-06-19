@@ -1,6 +1,7 @@
 import {
-  publishMissionClientSchema,
-  draftMissionClientSchema,
+  publishMissionSchema,
+  draftMissionSchema,
+  searchMissionByTitleSchema,
 } from '@hermyx/shared';
 
 import { messages } from '@hermyx/shared';
@@ -15,9 +16,9 @@ export const createMissionAction = async (previousState, formData) => {
 
   // Fields validation
   if (intent === 'draft') {
-    validatedFields = draftMissionClientSchema.safeParse(fieldsData);
+    validatedFields = draftMissionSchema.safeParse(fieldsData);
   } else {
-    validatedFields = publishMissionClientSchema.safeParse(fieldsData);
+    validatedFields = publishMissionSchema.safeParse(fieldsData);
   }
 
   if (!validatedFields.success) {
@@ -43,12 +44,12 @@ export const createMissionAction = async (previousState, formData) => {
       return { success: true, redirectUrl: null, data: null, errors: {} };
     }
 
-    const created = await createMission({
+    const success = await createMission({
       ...validatedFields.data,
       status: 'pending_payment',
     });
-
-    if (!created?.mid) {
+    /*
+    If (!created?.mid) {
       throw {
         response: {
           status: 500,
@@ -56,11 +57,20 @@ export const createMissionAction = async (previousState, formData) => {
         },
       };
     }
+*/
+
+    if (!success) {
+      throw {
+        response: {
+          status: 500,
+          data: { message: messages.UNEXPECTED_ERROR },
+        },
+      };
+    }
 
     //Success
     return {
       success: true,
-      redirectTo: `/missions/${created.mid}/pay`,
       errors: {},
       data: null,
     };
@@ -86,4 +96,22 @@ export const createMissionAction = async (previousState, formData) => {
       data: fieldsData,
     };
   }
+};
+
+export const searchMissionByTitleAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedFields = searchMissionByTitleSchema.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  return { success: true, data: fieldsData, errors: {} };
 };

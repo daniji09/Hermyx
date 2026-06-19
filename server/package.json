@@ -7,7 +7,8 @@
     "dev": "nodemon --watch src --watch ../shared src/server.js",
     "test": "cross-env NODE_ENV=test vitest",
     "format": "prettier --write .",
-    "lint": "eslint --fix . --ext .js,.jsx"
+    "lint": "eslint --fix . --ext .js,.jsx",
+    "db:push": "node scripts/init_db.js"
   },
   "repository": {
     "type": "git",

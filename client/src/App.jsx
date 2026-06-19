@@ -2,11 +2,13 @@ import { Routes, Route } from 'react-router-dom';
 import { SignUp } from './pages/SignUp';
 import { LogIn } from './pages/LogIn';
 import { Home } from './pages/Home';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { ProtectedRoute } from './components/custom/ProtectedRoute';
 import { Mission } from './pages/Mission';
 import { NewMission } from './pages/NewMission';
 import { Payment } from './pages/Payment';
 import { SearchMission } from './pages/SearchMission';
+import { UserMissions } from './pages/UserMissions';
+import TestDashboard from './pages/TestDashboard';
 
 function App() {
   return (
@@ -30,14 +32,7 @@ function App() {
       ></Route>
 
       {/* Home */}
-      <Route
-        path='/home'
-        element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        }
-      ></Route>
+      <Route path='/' element={<Home />}></Route>
 
       {/* Missions */}
       <Route
@@ -65,10 +60,26 @@ function App() {
         }
       ></Route>
       <Route
-        path='missions'
+        path='/missions'
         element={
           <ProtectedRoute>
             <SearchMission />
+          </ProtectedRoute>
+        }
+      ></Route>
+      <Route
+        path='/missions/mine'
+        element={
+          <ProtectedRoute>
+            <UserMissions />
+          </ProtectedRoute>
+        }
+      ></Route>
+      <Route
+        path='/test'
+        element={
+          <ProtectedRoute>
+            <TestDashboard />
           </ProtectedRoute>
         }
       ></Route>

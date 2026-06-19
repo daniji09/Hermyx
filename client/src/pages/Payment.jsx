@@ -69,7 +69,10 @@ function MissionPayInner() {
   );
 
   const errMsg = (e, fallback) =>
-    e?.response?.data?.message || e?.message || fallback;
+    e?.response?.data?.error ||
+    e?.response?.data?.message ||
+    e?.message ||
+    fallback;
 
   const fetchCards = useCallback(async () => {
     setLoadingCards(true);
@@ -120,7 +123,7 @@ function MissionPayInner() {
     if (!cardEl) throw new Error('No se pudo leer la tarjeta.');
 
     const { data } = await api.post('/stripe/pay/new', {
-      missionId: id,
+      missionId: id.trim(),
       saveCard,
     });
 
@@ -158,7 +161,7 @@ function MissionPayInner() {
     }
 
     const { data } = await api.post('/stripe/pay/default', {
-      missionId: id,
+      missionId: id.trim(),
     });
 
     if (!data?.clientSecret)
@@ -197,7 +200,7 @@ function MissionPayInner() {
       if (selectedPmId === 'new') await payWithNewCard();
       else await payWithSavedCard();
 
-      navigate('/home');
+      navigate('/');
     } catch (e) {
       setError(errMsg(e, 'Error de pago'));
     } finally {
