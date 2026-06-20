@@ -6,6 +6,9 @@ import {
   signUp,
   getUsersByFirebaseUid,
   getUserMissions,
+  getUserPublicProfile,
+  getUserCompletedMissions,
+  getMyProfile,
 } from '../controllers/users.controller.js';
 import {
   validateBodySchema,
@@ -25,6 +28,24 @@ import { verifyToken } from '../middlewares/auth.middleware.js';
 /// GET
 // Get users
 router.get('/', validateQuerySchema(getUsersQuerySchema), getUsers);
+
+//Get my profile
+router.get('/me/profile', verifyToken, getMyProfile);
+
+//Get user by username
+router.get('/:username/profile', getUserPublicProfile);
+
+// Get completed missions history of a user by username
+router.get('/:username/completed-missions', getUserCompletedMissions);
+
+//Get my profile
+router.get('/me/profile', verifyToken, getMyProfile);
+
+//Get user by username
+router.get('/:username/profile', getUserPublicProfile);
+
+// Get completed missions history of a user by username
+router.get('/:username/completed-missions', getUserCompletedMissions);
 
 // Get users by firebaseUid
 router.get(

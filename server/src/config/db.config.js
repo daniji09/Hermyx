@@ -6,11 +6,13 @@ import {
   DB_PORT,
   DB_TEST_NAME,
   DB_NAME,
+  DB_SSL,
 } from './config.js';
 import { Pool } from 'pg';
 
 const isTesting = process.env.NODE_ENV === 'test';
 const dbName = isTesting ? DB_TEST_NAME : DB_NAME;
+const ssl = DB_SSL === 'true' ? { rejectUnauthorized: false } : false;
 
 // Pool connection configuration
 const pool = new Pool({
@@ -19,9 +21,7 @@ const pool = new Pool({
   host: DB_HOST,
   port: DB_PORT,
   database: dbName,
-  ssl: {
-    rejectUnauthorized: false, // It allows to connect with Azure certificate
-  },
+  ssl,
 });
 
 // To check whether the connection was successful or not

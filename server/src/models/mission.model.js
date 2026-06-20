@@ -63,6 +63,16 @@ export const updateStatus = async (mid, status) => {
   await pool.query(query, [status, mid]);
 };
 
+// Updates mission status and stores completion date for paid-out missions.
+export const updateReleaseStatus = async (mid, status) => {
+  const query = `
+    UPDATE mission
+    SET status = $1, completion_date = NOW()
+    WHERE mid = $2
+  `;
+  await pool.query(query, [status, mid]);
+};
+
 //Set the mission as 'refunded' and saves the Stripe Refund ID for reference.
 export const finalizeRefund = async (mid, refundId) => {
   const query = `
@@ -313,4 +323,78 @@ export const closeMission = async (mid) => {
   const query = `UPDATE mission SET status = 'accepted' WHERE mid = $1 RETURNING *`;
   const result = await pool.query(query, [mid]);
   return result.rows[0];
+};
+
+export const getCompletedMission = async (userId) => {
+  const query = `
+    SELECT 
+      m.mid, 
+      m.title, 
+      m.difficulty, 
+      u.username AS requester_name,
+      m.publication_date,
+      m.completion_date,
+      mp.review
+    FROM MISSION m
+    JOIN MISSION_PARTICIPATION mp ON m.mid = mp.mid
+    JOIN APP_USER u ON m.owner_id = u.uid
+    WHERE mp.adventurer_id = $1 
+      AND m.status = 'released'
+    ORDER BY m.completion_date DESC NULLS LAST;
+  `;
+
+  const result = await pool.query(query, [userId]);
+  return result.rows;
+};
+
+// Active missions where the user is the owner
+export const getActiveMissionsByOwner = async (id) => {
+  const query = `SELECT
+      m.mid,
+      m.title,
+      m.difficulty,
+      m.status,
+      m.publication_date,
+      m.monetary_reward
+    FROM mission m
+    WHERE m.owner_id = $1
+      AND m.status IN (
+        'pending_payment',
+        'funded',
+        'in_progress',
+        'delivered',
+        'accepted'
+      )
+    ORDER BY m.publication_date DESC`;
+
+  const result = await pool.query(query, [id]);
+  return result.rows;
+};
+
+// Active missions in which the user participates as an adventurer
+export const getActiveMissionsByAdventurer = async (id) => {
+  const query = `
+    SELECT
+      m.mid,
+      m.title,
+      m.difficulty,
+      m.status,
+      m.publication_date,
+      m.monetary_reward,
+      owner_user.username AS requester_name
+    FROM mission m
+    JOIN mission_participation mp ON mp.mid = m.mid
+    JOIN app_user owner_user ON owner_user.uid = m.owner_id
+    WHERE mp.adventurer_id = $1
+      AND m.status IN (
+        'funded',
+        'in_progress',
+        'delivered',
+        'accepted'
+      )
+    ORDER BY m.publication_date DESC
+  `;
+
+  const result = await pool.query(query, [id]);
+  return result.rows;
 };

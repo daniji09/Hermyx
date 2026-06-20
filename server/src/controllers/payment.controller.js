@@ -27,6 +27,7 @@ import {
   lockForRelease,
   getParticipantsForRelease,
   updateStatus,
+  updateReleaseStatus,
   lockForRefund,
   finalizeRefund,
 } from '../models/mission.model.js';
@@ -418,7 +419,7 @@ export async function releaseMissionPayment(req, res) {
     const allSuccess = transferResults.every((r) => r.success);
     const finalStatus = allSuccess ? 'released' : 'partially_released';
 
-    await updateStatus(missionId, finalStatus);
+    await updateReleaseStatus(missionId, finalStatus);
 
     res.json({ success: allSuccess, transfers: transferResults });
   } catch (err) {
