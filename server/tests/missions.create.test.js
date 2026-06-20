@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 import request from 'supertest';
 import app from '../src/app.js';
 import pool from '../src/config/db.config.js';
-import { messages } from '@hermyx/shared';
+import { consts, messages } from '@hermyx/shared';
 
-const test_mission = vi.hoisted(() => {
+const testMission = vi.hoisted(() => {
   return {
     title: 'Test mission',
     description: 'This is a test mission.',
@@ -15,92 +15,164 @@ const test_mission = vi.hoisted(() => {
   };
 });
 
-const test_user = vi.hoisted(() => {
+const testUser = vi.hoisted(() => {
   return {
     email: 'email@email.com',
     username: 'testUsername',
-    password: 'testPassword123_',
     firebaseUid: 'test-firebase-uid-123',
   };
 });
 
-let owner_id;
+let ownerId;
 
 vi.mock('../src/middlewares/auth.middleware.js', () => {
   return {
     verifyToken: (req, res, next) => {
-      req.user = { uid: owner_id };
+      req.user = { uid: ownerId };
       next();
     },
   };
 });
 
-// Before each test, test db data is cleansed
 beforeEach(async () => {
   await pool.query('TRUNCATE TABLE mission CASCADE');
   await pool.query('TRUNCATE TABLE app_user CASCADE');
 
   const insertResult = await pool.query(
     'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3) RETURNING uid',
-    [test_user.email, test_user.username, test_user.firebaseUid],
+    [testUser.email, testUser.username, testUser.firebaseUid],
   );
 
-  owner_id = insertResult.rows[0].uid;
+  ownerId = insertResult.rows[0].uid;
 });
 
-// After all tests pool is ended
 afterAll(async () => {
   await pool.end();
 });
 
-describe('POST /api/missions', () => {
-  it('should create a valid mission when all required fields are provided', async () => {
-    const response = await request(app)
-      .post('/api/missions')
-      .send(test_mission);
+const postMission = (mission = testMission) => {
+  return request(app).post('/api/missions').send(mission);
+};
 
-    console.log(response.body);
+describe('POST /api/missions - HY-003 publish mission', () => {
+  it('should publish a valid mission when all required fields are valid', async () => {
+    const response = await postMission();
 
     expect(response.status).toBe(201);
     expect(response.header['content-type']).toEqual(
       expect.stringContaining('json'),
     );
 
-    expect(response.body.data.title).toBe(test_mission.title);
-    expect(response.body.data.description).toBe(test_mission.description);
-    expect(response.body.data.owner_id).toBe(owner_id);
+    expect(response.body.mission).toMatchObject({
+      title: testMission.title,
+      description: testMission.description,
+      total_vacancies: testMission.vacancies,
+      occupied_vacancies: 0,
+      difficulty: testMission.difficulty,
+      status: 'pending_payment',
+      owner_id: ownerId,
+    });
+    expect(Number(response.body.mission.monetary_reward)).toBe(
+      testMission.reward,
+    );
   });
 
-  it('should allow saving a draft even if the title is missing', async () => {
-    const draftMission = {
-      ...test_mission,
-      title: '',
-      isDraft: true,
-    };
+  it('should reject a mission with a title already used by the same user', async () => {
+    await postMission();
 
-    const response = await request(app)
-      .post('/api/missions')
-      .send(draftMission);
-    console.log(response.body);
-
-    expect(response.status).toBe(201);
-  });
-
-  it('should return 400 if numeric values are invalid', async () => {
-    const invalidMission = {
-      ...test_mission,
-      vacancies: 1,
-      reward: -100,
-      isDraft: false,
-    };
-
-    const response = await request(app)
-      .post('/api/missions')
-      .send(invalidMission);
-    console.log(response.body);
+    const response = await postMission();
 
     expect(response.status).toBe(400);
-
-    expect(response.body.errors).toBeDefined();
+    expect(response.body.errors.general[0]).toBe(messages.MISSION_SAME_TITLE);
   });
+
+  it.each([
+    ['title', ''],
+    ['description', ''],
+    ['vacancies', undefined],
+    ['reward', undefined],
+    ['difficulty', undefined],
+  ])('should reject a published mission without %s', async (field, value) => {
+    const response = await postMission({
+      ...testMission,
+      [field]: value,
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors[field]).toBeDefined();
+  });
+
+  it.each([
+    [
+      'title',
+      'a'.repeat(consts.MISSION.TITLE_MAX_LENGTH + 1),
+      messages.FIELD_TOO_LONG('Title', consts.MISSION.TITLE_MAX_LENGTH),
+    ],
+    [
+      'description',
+      'a'.repeat(consts.MISSION.DESCRIPTION_MAX_LENGTH + 1),
+      messages.FIELD_TOO_LONG(
+        'Description',
+        consts.MISSION.DESCRIPTION_MAX_LENGTH,
+      ),
+    ],
+    [
+      'vacancies',
+      consts.MISSION.VACANCIES.MIN - 1,
+      messages.FIELD_TOO_SMALL('Vacancies', consts.MISSION.VACANCIES.MIN),
+    ],
+    [
+      'vacancies',
+      consts.MISSION.VACANCIES.MAX + 1,
+      messages.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
+    ],
+    [
+      'reward',
+      consts.MISSION.REWARD.MIN - 1,
+      messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+    ],
+    [
+      'reward',
+      consts.MISSION.REWARD.MAX + 1,
+      messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+    ],
+    [
+      'difficulty',
+      consts.MISSION.DIFFICULTY.MIN - 1,
+      messages.FIELD_TOO_SMALL('Difficulty', consts.MISSION.DIFFICULTY.MIN),
+    ],
+    [
+      'difficulty',
+      consts.MISSION.DIFFICULTY.MAX + 1,
+      messages.FIELD_TOO_BIG('Difficulty', consts.MISSION.DIFFICULTY.MAX),
+    ],
+  ])(
+    'should reject a published mission when %s is outside its valid range',
+    async (field, value, expectedError) => {
+      const response = await postMission({
+        ...testMission,
+        [field]: value,
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors[field][0]).toBe(expectedError);
+    },
+  );
+
+  it.each([
+    ['vacancies', 1.5, messages.FIELD_INTEGER('Vacancies')],
+    ['reward', 10.5, messages.FIELD_INTEGER('Reward')],
+    ['difficulty', 1.5, messages.FIELD_INTEGER('Difficulty')],
+  ])(
+    'should reject a published mission when %s is not an integer',
+    async (field, value, expectedError) => {
+      const response = await postMission({
+        ...testMission,
+        [field]: value,
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors[field][0]).toBe(expectedError);
+    },
+  );
 });

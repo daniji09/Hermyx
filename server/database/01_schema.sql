@@ -76,6 +76,7 @@ CREATE TABLE INVITATION (
 	iid SERIAL PRIMARY KEY,
 	date TIMESTAMP NOT NULL,
 	type VARCHAR(50) NOT NULL CHECK (type IN ('applicant_to_adventurer','adventurer_to_applicant')),
+	status VARCHAR(20) NOT NULL CHECK (status IN ('pending','accepted','rejected')),
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,
 	associated_mission_id INT NOT NULL,

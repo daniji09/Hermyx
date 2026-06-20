@@ -189,7 +189,7 @@ export const start = async (req, res) => {
     await updateMissionStatus(missionId, 'in_progress');
 
     return res.status(200).json({
-      status: 'in:progress',
+      status: 'in_progress',
       participants: currentParticipants,
     });
   } catch (error) {
@@ -268,10 +268,10 @@ export const closeMission = async (req, res) => {
       return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
     }
 
-    await _closeMission(mid);
+    const updatedMission = await _closeMission(mid);
 
     return res.status(200).json({
-      mission,
+      mission: updatedMission,
     });
   } catch (error) {
     console.error(error);
