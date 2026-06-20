@@ -1,6 +1,11 @@
 // External modules
 import { messages, consts } from '@hermyx/shared';
-import { getByEmail, getByUsername, create } from '../models/app_user.model.js';
+import {
+  getByEmail,
+  getByUsername,
+  create,
+  getByFirebaseUid,
+} from '../models/app_user.model.js';
 import {
   getCompletedMission,
   getActiveMissionsByOwner,
@@ -10,6 +15,10 @@ import {
   createFirebaseUser,
   deleteFirebaseUser,
 } from '../services/auth.service.js';
+import {
+  getMissionsByUid,
+  getMissionsJoinedByUser,
+} from '../models/mission.model.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -23,7 +32,7 @@ export const getUsers = async (req, res) => {
       // Returns success or error
       if (!user)
         return res.status(404).json({
-          errors: { general: [messages.EMAIL_NOT_FOUND(email)] },
+          errors: { usernameEmail: [messages.EMAIL_NOT_FOUND(email)] },
         });
 
       return res.status(200).json({ user });
@@ -34,11 +43,83 @@ export const getUsers = async (req, res) => {
       // Returns success or error
       if (!user)
         return res.status(404).json({
-          errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
+          errors: { usernameEmail: [messages.USERNAME_NOT_FOUND(username)] },
         });
 
       return res.status(200).json({ user });
     }
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const getUsersByFirebaseUid = async (req, res) => {
+  try {
+    // Gets attributes
+    const { firebaseUid } = req.params;
+
+    if (firebaseUid) {
+      // It searches user by email
+      const user = await getByFirebaseUid(firebaseUid);
+
+      // Returns success or error
+      if (!user)
+        return res.status(404).json({
+          errors: { general: [messages.FIREBASE_UID_NOT_FOUND(firebaseUid)] },
+        });
+
+      return res.status(200).json({ user });
+    }
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const getUserMissions = async (req, res) => {
+  const { uid } = req.params;
+  const { type } = req.query;
+  const pagination = req.pagination;
+
+  // It missions from user of a type
+  try {
+    let result = { rows: [], totalCount: 0 };
+
+    if (type === 'published') {
+      result = await getMissionsByUid(uid, pagination);
+    } else if (type === 'joined') {
+      result = await getMissionsJoinedByUser(uid, pagination);
+    } else {
+      return res
+        .status(400)
+        .json({ errors: { general: [messages.INVALID_MISSION_TYPE] } });
+    }
+    const missions = result.rows;
+    const totalItems = parseInt(result.totalCount);
+
+    if (missions) {
+      const totalPages = Math.ceil(totalItems / pagination.limit);
+      const hasMore = pagination.page < totalPages;
+
+      // Pagination object is built
+      return res.status(200).json({
+        missions,
+        pagination: {
+          currentPage: pagination.page,
+          totalPages: totalPages,
+          totalItems: totalItems,
+          hasMore: hasMore,
+        },
+      });
+    } else
+      return res.status(404).json({
+        errors: { general: [messages.MISSIONS_NOT_FOUND] },
+      });
   } catch (e) {
     console.error(e);
     return res

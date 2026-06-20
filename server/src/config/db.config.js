@@ -19,6 +19,9 @@ const pool = new Pool({
   host: DB_HOST,
   port: DB_PORT,
   database: dbName,
+  ssl: {
+    rejectUnauthorized: false, // It allows to connect with Azure certificate
+  },
 });
 
 // To check whether the connection was successful or not

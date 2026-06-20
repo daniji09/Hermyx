@@ -9,7 +9,8 @@ const test_mission = vi.hoisted(() => {
   return {
     title: 'Test mission',
     description: 'This is a test mission.',
-    vacancies: 5,
+    total_vacancies: 5,
+    occupied_vacancies: 0,
     monetary_reward: 1000,
     difficulty: 3,
     status: 'funded',
@@ -63,13 +64,14 @@ describe('GET /api/missions with pagination', () => {
     for (let i = 0; i < 2; i++) {
       mids.push(
         await pool.query(
-          'INSERT INTO mission (publication_date, title, description, difficulty, vacancies, monetary_reward, status, owner_id)' +
-            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7) RETURNING mid',
+          'INSERT INTO mission (publication_date, title, description, difficulty, total_vacancies, occupied_vacancies, monetary_reward, status, owner_id)' +
+            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid',
           [
             test_mission.title,
             test_mission.description,
             test_mission.difficulty,
-            test_mission.vacancies,
+            test_mission.total_vacancies,
+            test_mission.occupied_vacancies,
             test_mission.monetary_reward,
             test_mission.status,
             owner_id,
@@ -111,13 +113,14 @@ describe('GET /api/missions with pagination', () => {
     for (let i = 0; i < 3; i++) {
       mids.push(
         await pool.query(
-          'INSERT INTO mission (publication_date, title, description, difficulty, vacancies, monetary_reward, status, owner_id)' +
-            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7) RETURNING mid',
+          'INSERT INTO mission (publication_date, title, description, difficulty, total_vacancies, occupied_vacancies, monetary_reward, status, owner_id)' +
+            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid',
           [
             test_mission.title,
             test_mission.description,
             test_mission.difficulty,
-            test_mission.vacancies,
+            test_mission.total_vacancies,
+            test_mission.occupied_vacancies,
             test_mission.monetary_reward,
             test_mission.status,
             owner_id,
@@ -158,13 +161,14 @@ describe('GET /api/missions with pagination', () => {
     for (let i = 0; i < 3; i++) {
       mids.push(
         await pool.query(
-          'INSERT INTO mission (publication_date, title, description, difficulty, vacancies, monetary_reward, status, owner_id)' +
-            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7) RETURNING mid',
+          'INSERT INTO mission (publication_date, title, description, difficulty, total_vacancies, occupied_vacancies, monetary_reward, status, owner_id)' +
+            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid',
           [
             test_mission.title,
             test_mission.description,
             test_mission.difficulty,
-            test_mission.vacancies,
+            test_mission.total_vacancies,
+            test_mission.occupied_vacancies,
             test_mission.monetary_reward,
             test_mission.status,
             owner_id,
@@ -194,7 +198,7 @@ describe('GET /api/missions with pagination', () => {
   });
 
   // Corner cases
-  it('should return a 404 status because there are no missions to load', async () => {
+  it('should return an empty list when there are no missions to load', async () => {
     // Search is made with no data loaded
     const response = await request(app).get('/api/missions').query({
       page: test_mission.first_page,
@@ -202,11 +206,15 @@ describe('GET /api/missions with pagination', () => {
     });
 
     // Checks response
-    expect(response.status).toBe(404); // 404 Not Found
+    expect(response.status).toBe(200); // 200 OK
     expect(response.headers['content-type']).toEqual(
       expect.stringContaining('json'),
     );
-    expect(response.body.errors.general[0]).toBe(messages.NO_MISSIONS);
+    expect(response.body.missions).toEqual([]);
+    expect(response.body.pagination.currentPage).toBe(1);
+    expect(response.body.pagination.totalPages).toBe(0);
+    expect(response.body.pagination.totalItems).toBe(0);
+    expect(response.body.pagination.hasMore).toBe(false);
   });
 
   it('should return a 400 status because the page value is not valid', async () => {

@@ -21,7 +21,7 @@ export const verifyToken = async (req, res, next) => {
     const decodedToken = await verifyIdToken(token);
 
     // User is saved
-    req.user = await getByFirebaseUid(decodedToken.user_id);
+    req.user = await getByFirebaseUid(decodedToken.uid);
 
     if (!req.user) {
       return res
