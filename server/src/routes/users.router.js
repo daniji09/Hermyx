@@ -29,6 +29,7 @@ import {
 } from '@hermyx/shared';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
+import { pagination } from '../middlewares/pagination.middleware.js';
 
 /// GET
 // Get users
