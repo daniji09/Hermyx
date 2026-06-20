@@ -7,7 +7,8 @@ const testMission = vi.hoisted(() => {
   return {
     title: 'Mission with vacancy',
     description: 'Mission waiting for an adventurer.',
-    vacancies: 1,
+    totalVacancies: 1,
+    occupiedVacancies: 0,
     monetaryReward: 100,
     difficulty: 2,
     status: 'funded',
@@ -77,14 +78,18 @@ const createUser = async (user) => {
   return result.rows[0].uid;
 };
 
-const createMission = async ({ vacancies = testMission.vacancies } = {}) => {
+const createMission = async ({
+  totalVacancies = testMission.totalVacancies,
+  occupiedVacancies = testMission.occupiedVacancies,
+} = {}) => {
   const result = await pool.query(
-    'INSERT INTO mission (publication_date, title, description, difficulty, vacancies, monetary_reward, status, owner_id) VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7) RETURNING mid',
+    'INSERT INTO mission (publication_date, title, description, difficulty, total_vacancies, occupied_vacancies, monetary_reward, status, owner_id) VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid',
     [
       testMission.title,
       testMission.description,
       testMission.difficulty,
-      vacancies,
+      totalVacancies,
+      occupiedVacancies,
       testMission.monetaryReward,
       testMission.status,
       ownerId,
@@ -114,6 +119,15 @@ const getParticipationCount = async (missionId) => {
   );
 
   return Number(result.rows[0].count);
+};
+
+const getOccupiedVacancies = async (missionId) => {
+  const result = await pool.query(
+    'SELECT occupied_vacancies FROM mission WHERE mid = $1',
+    [missionId],
+  );
+
+  return result.rows[0].occupied_vacancies;
 };
 
 const getInvitationStatus = async (invitationId) => {
@@ -153,6 +167,7 @@ describe('HY-004 add adventurer to mission vacancy', () => {
       .send({ response: 'accepted' });
 
     const participationCount = await getParticipationCount(missionId);
+    const occupiedVacancies = await getOccupiedVacancies(missionId);
     const invitationStatus = await getInvitationStatus(createResponse.body);
     const invitationType = await getInvitationType(createResponse.body);
 
@@ -160,6 +175,7 @@ describe('HY-004 add adventurer to mission vacancy', () => {
     expect(response.status).toBe(200);
     expect(response.body.message).toBe('Adventurer successfully added');
     expect(participationCount).toBe(1);
+    expect(occupiedVacancies).toBe(1);
     expect(invitationStatus).toBe('accepted');
     expect(invitationType).toBe('applicant_to_adventurer');
   });
@@ -197,6 +213,28 @@ describe('HY-004 add adventurer to mission vacancy', () => {
 
     expect(response.status).toBe(409);
     expect(response.body.error).toBe('There are no vacancies available');
+    expect(participationCount).toBe(1);
+    expect(invitationStatus).toBe('pending');
+  });
+
+  it('should not add the adventurer when they are already joined to the mission', async () => {
+    const missionId = await createMission({ totalVacancies: 2 });
+    const invitationId = await createInvitation({ missionId });
+
+    await pool.query(
+      'INSERT INTO mission_participation (mid, adventurer_id) VALUES ($1, $2)',
+      [missionId, adventurerId],
+    );
+
+    const response = await request(app)
+      .post(`/api/invitations/${invitationId}/respond`)
+      .send({ response: 'accepted' });
+
+    const participationCount = await getParticipationCount(missionId);
+    const invitationStatus = await getInvitationStatus(invitationId);
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe('Adventurer already joined this mission');
     expect(participationCount).toBe(1);
     expect(invitationStatus).toBe('pending');
   });

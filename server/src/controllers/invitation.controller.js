@@ -3,12 +3,20 @@ import {
   findByIid,
   updateInvitationStatus,
 } from '../models/invitation.model.js';
-import { getById, getParticipantsForRelease } from '../models/mission.model.js';
-import { addParticipant } from '../models/mission_participation.model.js';
+import {
+  adventurerJoined,
+  getById,
+  getParticipantsForRelease,
+} from '../models/mission.model.js';
+import {
+  addParticipant,
+  getById as getMissionParticipationById,
+} from '../models/mission_participation.model.js';
 
 //Receives missionId, senderId and receiverId, prepares the data, and create it in the model.
 export const createInvitation = async (req, res) => {
-  const { missionId, senderId, receiverId } = req.body;
+  const { missionId, receiverId } = req.body;
+  const senderId = req.user.uid;
 
   if (senderId === receiverId) {
     return res.status(400).json({ error: "You can't invite yourself" });
@@ -80,13 +88,24 @@ export const respondToInvitation = async (req, res) => {
         getParticipantsForRelease(missionId),
       ]);
 
-      if (mission.vacancies <= participants.length) {
+      if (mission.total_vacancies <= participants.length) {
         return res
           .status(409)
           .json({ error: 'There are no vacancies available' });
       }
 
+      const alreadyJoined = await getMissionParticipationById(
+        missionId,
+        invitation.recipient_id,
+      );
+      if (alreadyJoined >= 1) {
+        return res
+          .status(409)
+          .json({ error: 'Adventurer already joined this mission' });
+      }
+
       await addParticipant(missionId, invitation.recipient_id);
+      await adventurerJoined(missionId);
 
       await updateInvitationStatus(invitationId, 'accepted');
 
