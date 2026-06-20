@@ -6,8 +6,7 @@ name: Build and deploy Node.js app to Azure Web App - hermyxbackend
 on:
   push:
     branches:
-      - dev-deploy
-      # - main
+      - main
   workflow_dispatch:
 
 jobs:
