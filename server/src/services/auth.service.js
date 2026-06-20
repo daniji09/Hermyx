@@ -26,3 +26,20 @@ export const deleteFirebaseUser = async (uid) => {
 export const verifyIdToken = async (token) => {
   return await firebaseAdmin.auth().verifyIdToken(token);
 };
+
+export const getFirebaseAuthProviders = async (firebaseUid) => {
+  const firebaseUser = await firebaseAdmin.auth().getUser(firebaseUid);
+  const providers = (firebaseUser.providerData || []).map((p) => p.providerId);
+
+  return {
+    providers,
+    hasGoogleAccountLinked: providers.includes('google.com'),
+    hasEmailPasswordCredential: providers.includes('password'),
+  };
+};
+
+export const updateFirebaseEmail = async (firebaseUid, email) =>
+  firebaseAdmin.auth().updateUser(firebaseUid, { email });
+
+export const updateFirebasePassword = async (firebaseUid, password) =>
+  firebaseAdmin.auth().updateUser(firebaseUid, { password });

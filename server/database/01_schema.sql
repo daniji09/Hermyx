@@ -10,6 +10,8 @@ DROP TABLE IF EXISTS MISSION;
 DROP TABLE IF EXISTS GUILD;
 DROP TABLE IF EXISTS APP_USER;
 
+-- Special options creation
+CREATE EXTENSION IF NOT EXISTS unaccent;
 
 -- Tables creation
 CREATE TABLE APP_USER (
@@ -22,8 +24,9 @@ CREATE TABLE APP_USER (
 	name VARCHAR(50),
 	surnames VARCHAR(100),
 	location VARCHAR(300),
+	avatar VARCHAR(255),
 	stripe_customer_id VARCHAR(255),
-  	stripe_connected_id VARCHAR(255)
+  stripe_connected_id VARCHAR(255)
 );
 
 CREATE TABLE PAYMENT_METHOD (
@@ -39,7 +42,8 @@ CREATE TABLE MISSION (
 	title VARCHAR(100) NOT NULL,
 	description VARCHAR(1000) NOT NULL,
 	difficulty INT NOT NULL,
-	vacancies INT NOT NULL,
+	total_vacancies INT NOT NULL,
+	occupied_vacancies INT NOT NULL,
 	monetary_reward NUMERIC NOT NULL,
 	status VARCHAR(20) NOT NULL CHECK (status IN ('draft','pending_payment',
     'funded',
@@ -53,9 +57,10 @@ CREATE TABLE MISSION (
     'refunded',
     'canceled',
     'in_dispute')),
+	completion_date TIMESTAMP,
 	owner_id INT NOT NULL,
 	stripe_pi_id VARCHAR(255),
-  	stripe_refund_id VARCHAR(255),
+  stripe_refund_id VARCHAR(255),
 	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid)
 );
 
@@ -63,7 +68,8 @@ CREATE TABLE MISSION_PARTICIPATION (
 	mid INT NOT NULL,
 	adventurer_id INT NOT NULL,
 	transfer_id VARCHAR(255),
-  	amount_paid NUMERIC,
+  amount_paid NUMERIC,
+	review VARCHAR(500),
 	FOREIGN KEY (mid) REFERENCES MISSION(mid),
 	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid),
 	PRIMARY KEY (mid, adventurer_id)
@@ -73,6 +79,7 @@ CREATE TABLE INVITATION (
 	iid SERIAL PRIMARY KEY,
 	date TIMESTAMP NOT NULL,
 	type VARCHAR(50) NOT NULL CHECK (type IN ('applicant_to_adventurer','adventurer_to_applicant')),
+	status VARCHAR(20) NOT NULL CHECK (status IN ('pending','accepted','rejected')),
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,
 	associated_mission_id INT NOT NULL,

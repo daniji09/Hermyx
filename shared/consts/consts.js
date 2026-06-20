@@ -1,6 +1,10 @@
 import { messages } from '../messages/messages.js';
 export const consts = {
   /// Common consts
+  PAGINATION: {
+    DEFAULT_PAGE: 1,
+    DEFAULT_LIMIT: 10,
+  },
 
   /// Auth consts
 
@@ -84,5 +88,19 @@ export const consts = {
   PASSWORD_MAX_LENGTH: 4096,
   USERNAME_MAX_LENGTH: 20,
 
-  /// User consts
+  // Account update consts
+  NAME_MAX_LENGTH: 50,
+  SURNAMES_MAX_LENGTH: 100,
+  LOCATION_MAX_LENGTH: 300,
+  DESCRIPTION_MAX_LENGTH: 500,
+
+  /// Missions consts
+  SEARCH_MISSION_TITLE_MAX_LENGTH: 100,
+  MISSION: {
+    TITLE_MAX_LENGTH: 100,
+    DESCRIPTION_MAX_LENGTH: 1000,
+    VACANCIES: { MIN: 1, STEP: 1, MAX: 100 },
+    REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
+    DIFFICULTY: { MIN: 1, STEP: 1, MAX: 5 },
+  },
 };

@@ -34,3 +34,10 @@ export const getUserByUsername = async (username) => {
 
   return data.user;
 };
+
+// Finds user via FirebaseUid
+export const getUserByFirebaseUid = async (firebaseUid) => {
+  // API search
+  const { data } = await api.get(`/users/firebase/${firebaseUid}`);
+  return data.user;
+};

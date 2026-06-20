@@ -1,20 +1,16 @@
 import { useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 export const Home = () => {
-  const { currentUser, logout } = useContext(AuthContext);
-  const navigate = useNavigate();
+  // Current user and logout function are obtained to display
+  const { currentUser } = useContext(AuthContext);
   console.log(currentUser);
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
 
   return (
-    <div>
-      Home {(currentUser && currentUser.email) || 'Invitado'}
-      {currentUser && <button onClick={handleLogout}>Cerrar Sesión</button>}
-    </div>
+    <main>
+      <h1 className='text-3xl p-3'>
+        Welcome again, {(currentUser && currentUser.username) || 'Guest'}!
+      </h1>
+    </main>
   );
 };
