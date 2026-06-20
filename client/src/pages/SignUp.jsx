@@ -9,9 +9,11 @@ import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { FormPasswordInputField } from '../components/custom/form/FormPasswordInputField';
 import { consts } from '@hermyx/shared';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { UseGoogleAuth } from '../hooks/useGoogleAuth';
 
 export const SignUp = () => {
-  // Form action handling
+  // Form action, standard sign up
   const [state, signUpFormAction, isPending] = useActionState(
     signUpAction,
     initialStateUseStateAction,
@@ -22,6 +24,14 @@ export const SignUp = () => {
   useEffect(() => {
     if (state.success) navigate('/login');
   }, [state.success, navigate]);
+
+  // Sign up with Google logic
+  const {
+    isPending: isGoogleAuthPending,
+    isError,
+    error,
+    mutate,
+  } = UseGoogleAuth();
 
   return (
     <main className='flex min-h-screen items-center justify-center p-4'>
@@ -148,15 +158,23 @@ const SignUpForm = ({ state, action, isPending }) => {
         </CardForm.Content>
 
         <CardForm.Footer>
-          <Button
-            className='w-full'
-            id='sendSignUp'
-            type='submit'
-            form='signUpForm'
-            disabled={isPending}
-          >
-            {isPending ? 'Signing up...' : 'Sign up'}
-          </Button>
+          <>
+            <Button
+              className='w-full'
+              id='sendSignUp'
+              type='submit'
+              form='signUpForm'
+              disabled={isPending}
+            >
+              {isPending ? 'Signing up...' : 'Sign up'}
+            </Button>
+            <GoogleSignInButton
+              disabled={isPending || isGoogleAuthPending}
+              onClick={mutate}
+              isPending={isGoogleAuthPending}
+              text='Sign up with Google'
+            ></GoogleSignInButton>
+          </>
         </CardForm.Footer>
       </CardForm>
       {state.errors?.general && !isAlertClosed && (

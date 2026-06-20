@@ -9,6 +9,8 @@ import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { FormPasswordInputField } from '../components/custom/form/FormPasswordInputField.jsx';
 import { messages } from '../messages/messages.js';
 import { consts } from '@hermyx/shared';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { UseGoogleAuth } from '../hooks/useGoogleAuth';
 
 export const LogIn = () => {
   // Form action handling
@@ -22,6 +24,14 @@ export const LogIn = () => {
   useEffect(() => {
     if (state.success) navigate('/');
   }, [state.success, navigate]);
+
+  // Sign up with Google logic
+  const {
+    isPending: isGoogleAuthPending,
+    isError,
+    error,
+    mutate,
+  } = UseGoogleAuth();
 
   return (
     <main className='flex min-h-screen items-center justify-center p-4'>
@@ -105,15 +115,23 @@ const LogInForm = ({ state, action, isPending }) => {
         </CardForm.Content>
 
         <CardForm.Footer>
-          <Button
-            className='w-full'
-            id='sendLogIn'
-            type='submit'
-            form='logInForm'
-            disabled={isPending}
-          >
-            {isPending ? 'Logging in...' : 'Log in'}
-          </Button>
+          <>
+            <Button
+              className='w-full'
+              id='sendLogIn'
+              type='submit'
+              form='logInForm'
+              disabled={isPending}
+            >
+              {isPending ? 'Logging in...' : 'Log in'}
+            </Button>
+            <GoogleSignInButton
+              disabled={isPending || isGoogleAuthPending}
+              onClick={mutate}
+              isPending={isGoogleAuthPending}
+              text='Log in with Google'
+            ></GoogleSignInButton>
+          </>
         </CardForm.Footer>
       </CardForm>
 

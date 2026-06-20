@@ -145,3 +145,11 @@ export const updateMyAccountSchema = z.object({
     'Description',
   ),
 });
+
+// Sync with Google backend validation
+export const syncGoogleSchema = z.object({
+  username: z.string().trim().min(1, messages.FIELD_REQUIRED),
+  email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+  firebaseUid: z.string().trim().min(1, messages.FIELD_REQUIRED),
+  isNewUser: z.boolean(),
+});
