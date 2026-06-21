@@ -9,18 +9,15 @@ import {
   updateMyAccount as updateMyAccountInDb,
 } from '../models/app_user.model.js';
 import {
-  getCompletedMission,
-  getActiveMissionsByOwner,
-  getActiveMissionsByAdventurer,
+  getPublicProfileCreatedMissions,
+  getPublicProfileJoinedMissions,
+  getMissionsByUid,
+  getMissionsJoinedByUser,
 } from '../models/mission.model.js';
 import {
   createFirebaseUser,
   deleteFirebaseUser,
 } from '../services/auth.service.js';
-import {
-  getMissionsByUid,
-  getMissionsJoinedByUser,
-} from '../models/mission.model.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -151,11 +148,12 @@ export const getUserPublicProfile = async (req, res) => {
       avatar: user.avatar,
     };
 
-    const missionsHistory = await getCompletedMission(user.uid);
+    const missionsVisible =
+      user.configuracion?.show_missions_to_others !== false;
 
     return res.status(200).json({
       user: publicProfile,
-      missions: missionsHistory || [],
+      missionsVisible,
     });
   } catch (e) {
     console.error(e);
@@ -165,9 +163,11 @@ export const getUserPublicProfile = async (req, res) => {
   }
 };
 
-export const getUserCompletedMissions = async (req, res) => {
+export const getUserPublicProfileMissions = async (req, res) => {
   try {
     const username = req.params.username.toLowerCase().trim();
+    const { type } = req.query;
+    const pagination = req.pagination;
 
     const user = await getByUsername(username);
 
@@ -177,20 +177,56 @@ export const getUserCompletedMissions = async (req, res) => {
       });
     }
 
-    const missionsHistory = await getCompletedMission(user.uid);
+    const missionsVisible =
+      user.configuracion?.show_missions_to_others !== false;
 
-    if (!missionsHistory || missionsHistory.length === 0) {
+    if (!missionsVisible) {
       return res.status(200).json({
-        username: user.username,
         missions: [],
-        message: 'This user has no completed missions.',
+        pagination: {
+          currentPage: pagination.page,
+          totalPages: 0,
+          totalItems: 0,
+          hasMore: false,
+        },
       });
     }
 
-    return res.status(200).json({
-      username: user.username,
-      missions: missionsHistory,
-    });
+    let missionsResult = { rows: [], totalCount: 0 };
+
+    if (type === 'created') {
+      missionsResult = await getPublicProfileCreatedMissions(
+        user.uid,
+        pagination,
+      );
+    } else if (type === 'joined') {
+      missionsResult = await getPublicProfileJoinedMissions(
+        user.uid,
+        pagination,
+      );
+    }
+
+    const missions = missionsResult.rows;
+    const totalItems = parseInt(missionsResult.totalCount);
+
+    if (missions) {
+      const totalPages = Math.ceil(totalItems / pagination.limit);
+      const hasMore = pagination.page < totalPages;
+
+      return res.status(200).json({
+        missions,
+        pagination: {
+          currentPage: pagination.page,
+          totalPages: totalPages,
+          totalItems: totalItems,
+          hasMore: hasMore,
+        },
+      });
+    } else {
+      return res.status(404).json({
+        errors: { general: [messages.MISSIONS_NOT_FOUND] },
+      });
+    }
   } catch (e) {
     console.error(e);
     return res.status(500).json({
@@ -218,22 +254,8 @@ export const getMyProfile = async (req, res) => {
       avatar: user.avatar,
     };
 
-    const [completedMissions, activeAsRequester, activeAsAdventurer] =
-      await Promise.all([
-        getCompletedMission(user.uid),
-        getActiveMissionsByOwner(user.uid),
-        getActiveMissionsByAdventurer(user.uid),
-      ]);
-
     return res.status(200).json({
       user: profile,
-      missions: {
-        completed: completedMissions || [],
-        active: {
-          asRequester: activeAsRequester || [],
-          asAdventurer: activeAsAdventurer || [],
-        },
-      },
     });
   } catch (e) {
     console.log(e);
@@ -338,7 +360,6 @@ export const updateMyAccount = async (req, res) => {
       username,
       name: req.body.name,
       surnames: req.body.surnames,
-      location: req.body.location,
       description: req.body.description,
     });
 
@@ -348,7 +369,6 @@ export const updateMyAccount = async (req, res) => {
         username: updatedUser.username,
         name: updatedUser.name,
         surnames: updatedUser.surnames,
-        location: updatedUser.location,
         description: updatedUser.description,
       },
     });
@@ -370,33 +390,13 @@ export const getMyAccount = async (req, res) => {
         .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
     }
 
-    const editableDirectFields = [
-      'username',
-      'name',
-      'surnames',
-      'location',
-      'description',
-    ];
-
-    const requiresVerificationFields = [
-      'email',
-      'password',
-      'googleAccount',
-      'paymentMethods',
-    ];
-
     return res.status(200).json({
       account: {
         username: user.username,
         name: user.name,
         surnames: user.surnames,
-        location: user.location,
         description: user.description,
-        email: user.email,
-        googleAccount: user.google_account,
       },
-      editableDirectFields,
-      requiresVerificationFields,
     });
   } catch (e) {
     console.error(e);

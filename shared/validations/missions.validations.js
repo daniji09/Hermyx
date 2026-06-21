@@ -59,13 +59,20 @@ export const publishMissionSchema = z.object({
   isDraft: z.boolean().optional(),
 });
 
+const optionalNumberFromFormSchema = (schema) =>
+  z.preprocess((value) => {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return undefined;
+    return value;
+  }, schema.optional());
+
 // Server and client sign up shared validation
 export const draftMissionSchema = z.object({
   title: z.string().trim().optional(),
   description: z.string().trim().optional(),
-  vacancies: z.coerce.number().int().optional(),
-  reward: z.coerce.number().optional(),
-  difficulty: z.coerce.number().optional(),
+  vacancies: optionalNumberFromFormSchema(z.coerce.number().int()),
+  reward: optionalNumberFromFormSchema(z.coerce.number()),
+  difficulty: optionalNumberFromFormSchema(z.coerce.number()),
   isDraft: z.boolean().optional(),
 });
 
