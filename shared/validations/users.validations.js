@@ -84,6 +84,18 @@ export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
 });
 
+export const getUserByUsernameParamSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.USERNAME_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
+    )
+    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
+});
+
 export const getMissionsFromUserParamSchema = z.object({
   uid: z.coerce
     .number(messages.FIELD_NUMBER('uid'))
@@ -105,20 +117,21 @@ export const getMissionsFromUserQuerySchema = z.object({
     .optional(),
 });
 
-const optionalNullableTrimmedStringSchema = (maxLength, fieldName) =>
-  z.preprocess(
-    (value) => {
-      if (value === undefined || value === null) return null;
-      if (typeof value !== 'string') return value;
-
-      const trimmedValue = value.trim();
-      return trimmedValue.length === 0 ? null : trimmedValue;
-    },
-    z
-      .string()
-      .max(maxLength, messages.FIELD_TOO_LONG(fieldName, maxLength))
-      .nullable(),
-  );
+export const getPublicProfileMissionsQuerySchema = z.object({
+  type: z.enum(['created', 'joined'], {
+    message: messages.INVALID_MISSION_TYPE,
+  }),
+  page: z.coerce
+    .number(messages.FIELD_NUMBER('Page'))
+    .int(messages.FIELD_INTEGER('Page'))
+    .min(0, messages.FIELD_POSITIVE('Page'))
+    .optional(),
+  limit: z.coerce
+    .number(messages.FIELD_NUMBER('Limit'))
+    .int(messages.FIELD_INTEGER('Limit'))
+    .min(0, messages.FIELD_POSITIVE('Limit'))
+    .optional(),
+});
 
 // Server and client account update shared validation
 export const updateMyAccountSchema = z.object({
@@ -131,19 +144,30 @@ export const updateMyAccountSchema = z.object({
       messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
     )
     .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-  name: optionalNullableTrimmedStringSchema(consts.NAME_MAX_LENGTH, 'Name'),
-  surnames: optionalNullableTrimmedStringSchema(
-    consts.SURNAMES_MAX_LENGTH,
-    'Surnames',
-  ),
-  location: optionalNullableTrimmedStringSchema(
-    consts.LOCATION_MAX_LENGTH,
-    'Location',
-  ),
-  description: optionalNullableTrimmedStringSchema(
-    consts.DESCRIPTION_MAX_LENGTH,
-    'Description',
-  ),
+  name: z
+    .string()
+    .trim()
+    .max(
+      consts.NAME_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Name', consts.NAME_MAX_LENGTH),
+    )
+    .optional(),
+  surnames: z
+    .string()
+    .trim()
+    .max(
+      consts.SURNAMES_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Surnames', consts.SURNAMES_MAX_LENGTH),
+    )
+    .optional(),
+  description: z
+    .string()
+    .trim()
+    .max(
+      consts.DESCRIPTION_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Description', consts.DESCRIPTION_MAX_LENGTH),
+    )
+    .optional(),
 });
 
 // Sync with Google backend validation

@@ -7,7 +7,7 @@ import {
   getUsersByFirebaseUid,
   getUserMissions,
   getUserPublicProfile,
-  getUserCompletedMissions,
+  getUserPublicProfileMissions,
   getMyProfile,
   getMyAccount,
   updateMyAccount,
@@ -23,9 +23,11 @@ import {
   signUpSchema,
   updateMyAccountSchema,
   getUsersByFirebaseUidParamSchema,
+  getUserByUsernameParamSchema,
   getMissionsFromUserParamSchema,
   getMissionsFromUserQuerySchema,
   syncGoogleSchema,
+  getPublicProfileMissionsQuerySchema,
 } from '@hermyx/shared';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
@@ -39,10 +41,20 @@ router.get('/', validateQuerySchema(getUsersQuerySchema), getUsers);
 router.get('/me/profile', verifyToken, getMyProfile);
 
 //Get user by username
-router.get('/:username/profile', getUserPublicProfile);
+router.get(
+  '/:username/profile',
+  validateParamsSchema(getUserByUsernameParamSchema),
+  getUserPublicProfile,
+);
 
-// Get completed missions history of a user by username
-router.get('/:username/completed-missions', getUserCompletedMissions);
+// Get public profile missions by username
+router.get(
+  '/:username/profile/missions',
+  validateParamsSchema(getUserByUsernameParamSchema),
+  validateQuerySchema(getPublicProfileMissionsQuerySchema),
+  pagination(),
+  getUserPublicProfileMissions,
+);
 
 // Get users by firebaseUid
 router.get(

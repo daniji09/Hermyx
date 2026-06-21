@@ -325,76 +325,130 @@ export const closeMission = async (mid) => {
   return result.rows[0];
 };
 
-export const getCompletedMission = async (userId) => {
-  const query = `
-    SELECT 
-      m.mid, 
-      m.title, 
-      m.difficulty, 
-      u.username AS requester_name,
-      m.publication_date,
-      m.completion_date,
-      mp.review
-    FROM MISSION m
-    JOIN MISSION_PARTICIPATION mp ON m.mid = mp.mid
-    JOIN APP_USER u ON m.owner_id = u.uid
-    WHERE mp.adventurer_id = $1 
-      AND m.status = 'released'
-    ORDER BY m.completion_date DESC NULLS LAST;
-  `;
-
-  const result = await pool.query(query, [userId]);
-  return result.rows;
-};
-
-// Active missions where the user is the owner
-export const getActiveMissionsByOwner = async (id) => {
-  const query = `SELECT
-      m.mid,
-      m.title,
-      m.difficulty,
-      m.status,
-      m.publication_date,
-      m.monetary_reward
-    FROM mission m
-    WHERE m.owner_id = $1
-      AND m.status IN (
-        'pending_payment',
-        'funded',
-        'in_progress',
-        'delivered',
-        'accepted'
-      )
-    ORDER BY m.publication_date DESC`;
-
-  const result = await pool.query(query, [id]);
-  return result.rows;
-};
-
-// Active missions in which the user participates as an adventurer
-export const getActiveMissionsByAdventurer = async (id) => {
-  const query = `
+// Gets created missions displayed in another user's public profile.
+export const getPublicProfileCreatedMissions = async (
+  userId,
+  pagination = null,
+) => {
+  let query = `
     SELECT
       m.mid,
       m.title,
+      owner_user.username AS requester_name,
+      m.description,
       m.difficulty,
-      m.status,
-      m.publication_date,
+      m.total_vacancies,
+      m.occupied_vacancies,
       m.monetary_reward,
-      owner_user.username AS requester_name
+      CASE
+        WHEN m.status = 'funded' THEN 'looking_for_adventurers'
+        WHEN m.status IN (
+          'in_progress',
+          'delivered',
+          'accepted',
+          'releasing'
+        ) THEN 'in_progress'
+        WHEN m.status IN (
+          'released',
+          'partially_released'
+        ) THEN 'closed'
+      END AS public_status,
+      CASE
+        WHEN m.completion_date IS NULL THEN NULL
+        ELSE m.completion_date - m.publication_date
+      END AS completion_time,
+      m.publication_date,
+      m.completion_date,
+      COUNT(*) OVER() AS total_count
     FROM mission m
-    JOIN mission_participation mp ON mp.mid = m.mid
     JOIN app_user owner_user ON owner_user.uid = m.owner_id
-    WHERE mp.adventurer_id = $1
+    WHERE m.owner_id = $1
       AND m.status IN (
         'funded',
         'in_progress',
         'delivered',
-        'accepted'
+        'accepted',
+        'releasing',
+        'released',
+        'partially_released'
       )
     ORDER BY m.publication_date DESC
   `;
+  const values = [userId];
 
-  const result = await pool.query(query, [id]);
-  return result.rows;
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  const totalCount = parseInt(result.rows[0].total_count);
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
+};
+
+// Gets joined missions displayed in another user's public profile.
+export const getPublicProfileJoinedMissions = async (
+  userId,
+  pagination = null,
+) => {
+  let query = `
+    SELECT
+      m.mid,
+      m.title,
+      owner_user.username AS requester_name,
+      m.difficulty,
+      m.total_vacancies,
+      m.occupied_vacancies,
+      m.monetary_reward,
+      CASE
+        WHEN m.completion_date IS NULL THEN NULL
+        ELSE m.completion_date - m.publication_date
+      END AS completion_time,
+      m.publication_date,
+      m.completion_date,
+      COUNT(*) OVER() AS total_count
+    FROM mission_participation mp
+    JOIN mission m ON m.mid = mp.mid
+    JOIN app_user owner_user ON owner_user.uid = m.owner_id
+    WHERE mp.adventurer_id = $1
+    ORDER BY m.completion_date DESC NULLS LAST, m.publication_date DESC
+  `;
+  const values = [userId];
+
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  const totalCount = parseInt(result.rows[0].total_count);
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
 };
