@@ -2,7 +2,7 @@ import { consts } from '@hermyx/shared';
 
 export const pagination = () => (req, res, next) => {
   // Early exit if there is no pagination to be made
-  if (!req.query.page || !req.query.limit) next();
+  if (!req.query.page || !req.query.limit) return next();
 
   // Page and limit parameters
   const page = parseInt(req.query.page) || consts.PAGINATION.DEFAULT_PAGE;

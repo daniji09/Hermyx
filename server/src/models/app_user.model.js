@@ -56,7 +56,7 @@ export const getByUsernameExcludingUid = async (username, uid) => {
 
 export const updateMyAccount = async (
   uid,
-  { username, name, surnames, location, description },
+  { username, name, surnames, description },
 ) => {
   const query = `
     UPDATE app_user
@@ -64,16 +64,14 @@ export const updateMyAccount = async (
       username = $1,
       name = $2,
       surnames = $3,
-      location = $4,
-      description = $5
-    WHERE uid = $6
+      description = $4
+    WHERE uid = $5
     RETURNING *
   `;
   const result = await pool.query(query, [
     username,
     name,
     surnames,
-    location,
     description,
     uid,
   ]);

@@ -25,6 +25,7 @@ CREATE TABLE APP_USER (
 	surnames VARCHAR(100),
 	location VARCHAR(300),
 	avatar VARCHAR(255),
+	configuracion JSONB NOT NULL DEFAULT '{"show_missions_to_others": true}'::jsonb,
 	stripe_customer_id VARCHAR(255),
   stripe_connected_id VARCHAR(255)
 );
