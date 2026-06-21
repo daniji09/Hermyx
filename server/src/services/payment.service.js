@@ -44,14 +44,19 @@ export async function listCards(customerId) {
   });
 }
 
+//Retrieves a payment method by ID.
+export async function retrievePaymentMethod(paymentMethodId) {
+  return await stripe.paymentMethods.retrieve(paymentMethodId);
+}
+
 //Remove a payment method from a customer
-export function detachCard(paymentMethodId) {
-  stripe.paymentMethods.detach(paymentMethodId);
+export async function detachCard(paymentMethodId) {
+  return await stripe.paymentMethods.detach(paymentMethodId);
 }
 
 //Set a specific card as the default
-export function setDefaultCard(customerId, paymentMethodId) {
-  stripe.customers.update(customerId, {
+export async function setDefaultCard(customerId, paymentMethodId) {
+  return await stripe.customers.update(customerId, {
     invoice_settings: { default_payment_method: paymentMethodId },
   });
 }

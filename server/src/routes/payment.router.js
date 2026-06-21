@@ -15,6 +15,11 @@ import {
   getDashboardLink,
 } from '../controllers/payment.controller.js';
 import { checkStripeCustomer } from '../services/payment.service.js';
+import {
+  validateBodySchema,
+  validateParamsSchema,
+} from '../middlewares/validations.middleware.js';
+import { deleteCardParamSchema, setDefaultCardSchema } from '@hermyx/shared';
 
 //Middleware to require customerId
 const requireCustomer = async (req, res, next) => {
@@ -26,7 +31,9 @@ const requireCustomer = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Error in requireCustomer middleware:', error);
-    return res.status(500).json({ error: 'Error managing payment customer' });
+    return res.status(500).json({
+      errors: { general: ['Error managing payment customer'] },
+    });
   }
 };
 
@@ -37,10 +44,20 @@ router.post('/add-card-to-customer', requireCustomer, addCardToCustomer);
 router.get('/cards', requireCustomer, listCards);
 
 //Set a card as default
-router.post('/cards/default', requireCustomer, setDefaultCard);
+router.post(
+  '/cards/default',
+  requireCustomer,
+  validateBodySchema(setDefaultCardSchema),
+  setDefaultCard,
+);
 
 //Delete a card
-router.delete('/cards/:paymentMethodId', requireCustomer, deleteCard);
+router.delete(
+  '/cards/:paymentMethodId',
+  requireCustomer,
+  validateParamsSchema(deleteCardParamSchema),
+  deleteCard,
+);
 
 //Pay with a predetermined card
 router.post('/pay/default', requireCustomer, payDefault);
