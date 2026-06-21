@@ -1,10 +1,27 @@
 // External modules
 import { messages, consts } from '@hermyx/shared';
-import { getByEmail, getByUsername, create } from '../models/app_user.model.js';
+import {
+  getByEmail,
+  getByUsername,
+  create,
+  getByFirebaseUid,
+  getByUsernameExcludingUid,
+  updateMyAccount as updateMyAccountInDb,
+} from '../models/app_user.model.js';
+import {
+  getCompletedMission,
+  getActiveMissionsByOwner,
+  getActiveMissionsByAdventurer,
+} from '../models/mission.model.js';
 import {
   createFirebaseUser,
   deleteFirebaseUser,
 } from '../services/auth.service.js';
+import {
+  getMissionsByUid,
+  getMissionsJoinedByUser,
+} from '../models/mission.model.js';
+import { stringShortener } from '../utils/strings.utils.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -18,7 +35,7 @@ export const getUsers = async (req, res) => {
       // Returns success or error
       if (!user)
         return res.status(404).json({
-          errors: { general: [messages.EMAIL_NOT_FOUND(email)] },
+          errors: { usernameEmail: [messages.EMAIL_NOT_FOUND(email)] },
         });
 
       return res.status(200).json({ user });
@@ -29,7 +46,7 @@ export const getUsers = async (req, res) => {
       // Returns success or error
       if (!user)
         return res.status(404).json({
-          errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
+          errors: { usernameEmail: [messages.USERNAME_NOT_FOUND(username)] },
         });
 
       return res.status(200).json({ user });
@@ -42,10 +59,197 @@ export const getUsers = async (req, res) => {
   }
 };
 
+export const getUsersByFirebaseUid = async (req, res) => {
+  try {
+    // Gets attributes
+    const { firebaseUid } = req.params;
+
+    if (firebaseUid) {
+      // It searches user by email
+      const user = await getByFirebaseUid(firebaseUid);
+
+      // Returns success or error
+      if (!user)
+        return res.status(404).json({
+          errors: { general: [messages.FIREBASE_UID_NOT_FOUND(firebaseUid)] },
+        });
+
+      return res.status(200).json({ user });
+    }
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const getUserMissions = async (req, res) => {
+  const { uid } = req.params;
+  const { type } = req.query;
+  const pagination = req.pagination;
+
+  // It missions from user of a type
+  try {
+    let result = { rows: [], totalCount: 0 };
+
+    if (type === 'published') {
+      result = await getMissionsByUid(uid, pagination);
+    } else if (type === 'joined') {
+      result = await getMissionsJoinedByUser(uid, pagination);
+    } else {
+      return res
+        .status(400)
+        .json({ errors: { general: [messages.INVALID_MISSION_TYPE] } });
+    }
+    const missions = result.rows;
+    const totalItems = parseInt(result.totalCount);
+
+    if (missions) {
+      const totalPages = Math.ceil(totalItems / pagination.limit);
+      const hasMore = pagination.page < totalPages;
+
+      // Pagination object is built
+      return res.status(200).json({
+        missions,
+        pagination: {
+          currentPage: pagination.page,
+          totalPages: totalPages,
+          totalItems: totalItems,
+          hasMore: hasMore,
+        },
+      });
+    } else
+      return res.status(404).json({
+        errors: { general: [messages.MISSIONS_NOT_FOUND] },
+      });
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const getUserPublicProfile = async (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase().trim();
+
+    const user = await getByUsername(username);
+
+    if (!user) {
+      return res.status(404).json({
+        errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
+      });
+    }
+
+    const publicProfile = {
+      username: user.username,
+      name: user.name,
+      surnames: user.surnames,
+      description: user.description,
+      location: user.location,
+      avatar: user.avatar,
+    };
+
+    const missionsHistory = await getCompletedMission(user.uid);
+
+    return res.status(200).json({
+      user: publicProfile,
+      missions: missionsHistory || [],
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({
+      errors: { general: [messages.UNEXPECTED_ERROR] },
+    });
+  }
+};
+
+export const getUserCompletedMissions = async (req, res) => {
+  try {
+    const username = req.params.username.toLowerCase().trim();
+
+    const user = await getByUsername(username);
+
+    if (!user) {
+      return res.status(404).json({
+        errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
+      });
+    }
+
+    const missionsHistory = await getCompletedMission(user.uid);
+
+    if (!missionsHistory || missionsHistory.length === 0) {
+      return res.status(200).json({
+        username: user.username,
+        missions: [],
+        message: 'This user has no completed missions.',
+      });
+    }
+
+    return res.status(200).json({
+      username: user.username,
+      missions: missionsHistory,
+    });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({
+      errors: { general: [messages.UNEXPECTED_ERROR] },
+    });
+  }
+};
+
+export const getMyProfile = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+    }
+
+    const profile = {
+      username: user.username,
+      name: user.name,
+      surnames: user.surnames,
+      description: user.description,
+      location: user.location,
+      avatar: user.avatar,
+    };
+
+    const [completedMissions, activeAsRequester, activeAsAdventurer] =
+      await Promise.all([
+        getCompletedMission(user.uid),
+        getActiveMissionsByOwner(user.uid),
+        getActiveMissionsByAdventurer(user.uid),
+      ]);
+
+    return res.status(200).json({
+      user: profile,
+      missions: {
+        completed: completedMissions || [],
+        active: {
+          asRequester: activeAsRequester || [],
+          asAdventurer: activeAsAdventurer || [],
+        },
+      },
+    });
+  } catch (e) {
+    console.log(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
 export const signUp = async (req, res) => {
   try {
     // Gets new account attributes
-    const { email, username, password } = req.body;
+    const email = req.body.email.toLowerCase().trim();
+    const username = req.body.username.toLowerCase().trim();
+    const { password } = req.body;
 
     // Checks if the email is already in use
     const userByEmail = await getByEmail(email);
@@ -109,3 +313,163 @@ export const signUp = async (req, res) => {
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
   }
 };
+
+export const updateMyAccount = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) {
+      return res
+        .status(401)
+        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+    }
+
+    const username = req.body.username.toLowerCase().trim();
+
+    const existingUsername = await getByUsernameExcludingUid(
+      username,
+      user.uid,
+    );
+    if (existingUsername) {
+      return res.status(400).json({
+        errors: { username: [messages.USERNAME_ALREADY_EXISTS(username)] },
+      });
+    }
+
+    const updatedUser = await updateMyAccountInDb(user.uid, {
+      username,
+      name: req.body.name,
+      surnames: req.body.surnames,
+      location: req.body.location,
+      description: req.body.description,
+    });
+
+    return res.status(200).json({
+      message: messages.ACCOUNT_UPDATED_SUCCESSFULLY,
+      account: {
+        username: updatedUser.username,
+        name: updatedUser.name,
+        surnames: updatedUser.surnames,
+        location: updatedUser.location,
+        description: updatedUser.description,
+      },
+    });
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const getMyAccount = async (req, res) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+    }
+
+    const editableDirectFields = [
+      'username',
+      'name',
+      'surnames',
+      'location',
+      'description',
+    ];
+
+    const requiresVerificationFields = [
+      'email',
+      'password',
+      'googleAccount',
+      'paymentMethods',
+    ];
+
+    return res.status(200).json({
+      account: {
+        username: user.username,
+        name: user.name,
+        surnames: user.surnames,
+        location: user.location,
+        description: user.description,
+        email: user.email,
+        googleAccount: user.google_account,
+      },
+      editableDirectFields,
+      requiresVerificationFields,
+    });
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const syncGoogle = async (req, res) => {
+  try {
+    // Gets account attributes
+    const { email, username, firebaseUid, isNewUser } = req.body;
+
+    // Checks if user already exist to check if Firebase action was the correct one (determined via isNewUser)
+    const checkedUser = await getByEmail(email);
+
+    if (checkedUser) {
+      // Its a login
+      if (!isNewUser) return res.status(200).json({ checkedUser });
+      else {
+        return res.status(400).json({
+          errors: { general: [messages.COULD_NOT_LOG_IN] },
+        });
+      }
+    } else {
+      // Its a signup
+      if (isNewUser) {
+        // Username was generated by the emails name, so it has to be ensure that is unique
+        const uniqueUsername = generateUniqueUsername(username);
+
+        // The user is created in Hermyx bd
+        const user = await create(email, uniqueUsername, firebaseUid);
+
+        // Returns success or error
+        if (user) return res.status(201).json({ user });
+        return res.status(400).json({
+          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
+        });
+      } else {
+        return res.status(400).json({
+          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
+        });
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+function generateUniqueUsername(username) {
+  let uniqueUsername,
+    isUnique = false;
+
+  // If original username is too long it gets shortened
+  username = stringShortener(username, consts.ORIGINAL_USERNAME_MAX_LENGTH);
+
+  // Tries to get an unique username, it should execute once per signup
+  while (!isUnique) {
+    // Creates username
+    const rand = Math.random();
+    uniqueUsername = username + (rand + '').split('.')[1];
+    console.log('user:', uniqueUsername);
+    // Checks if username is unique
+    isUnique = getByUsername(uniqueUsername);
+  }
+
+  // Username gets shortened again
+  uniqueUsername = stringShortener(uniqueUsername, consts.USERNAME_MAX_LENGTH);
+
+  return uniqueUsername;
+}

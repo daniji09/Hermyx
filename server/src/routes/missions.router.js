@@ -3,12 +3,15 @@ import { Router } from 'express';
 const router = Router();
 import {
   createMission,
-  getAllMissions,
+  getMissions,
   getAllMissionsInDraft,
   getMissionById,
-  updateMission,
+  // UpdateMission,
   deleteMission,
-  close,
+  start,
+  joinMission,
+  closeMission,
+  getMissionsFunded,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -18,50 +21,72 @@ import {
 } from '../middlewares/validations.middleware.js';
 
 import {
-  publishMissionServerSchema,
-  draftMissionServerSchema,
+  publishMissionSchema,
+  draftMissionSchema,
   getMissionSchema,
   getMissionsQuerySchema,
+  joinMissionSchema,
+  closeMissionSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
-import {
-  countMissions,
-  getAllMissions as _getAllMissions,
-} from './../models/mission.model.js';
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
   const isDraft = req.body.isDraft === true || req.body.isDraft === 'true';
-  const schemaToUse = isDraft
-    ? draftMissionServerSchema
-    : publishMissionServerSchema;
+  const schemaToUse = isDraft ? draftMissionSchema : publishMissionSchema;
   return validateBodySchema(schemaToUse)(req, res, next);
 };
 
-//Create mission
-router.post('/', dynamicValidation, createMission);
+/// GET
 
 //List all missions
 router.get(
   '/',
   validateQuerySchema(getMissionsQuerySchema),
-  await pagination(_getAllMissions, countMissions),
-  getAllMissions,
+  await pagination(),
+  getMissions,
 );
 
 //List all draft missions
 router.get('/in-draft', getAllMissionsInDraft);
 
+// List all funded missions
+router.get(
+  '/funded',
+  validateQuerySchema(getMissionsQuerySchema),
+  await pagination(),
+  getMissionsFunded,
+);
+
 //Get mission by id
 router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
 
+/// POST
+
+//Create mission
+router.post('/', dynamicValidation, createMission);
+
+//Starts a mission
+router.post('/:missionId/start', start);
+
+// Joins an adventurer into a mission
+router.post('/:mid/join', validateParamsSchema(joinMissionSchema), joinMission);
+
+// Closes a mission
+router.post(
+  '/:mid/close',
+  validateParamsSchema(closeMissionSchema),
+  closeMission,
+);
+
+/// PUT
+
 //Update mission
-router.put('/:id', dynamicValidation, updateMission);
+//Router.put('/:id', dynamicValidation, updateMission);
+
+/// DELETE
 
 //Delete mission
 router.delete('/:id', deleteMission);
-
-//Close a mission
-router.post('/:missionId/close', close);
 
 export default router;

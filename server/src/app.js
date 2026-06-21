@@ -6,7 +6,11 @@ import express from 'express';
 import cors from 'cors';
 const corsOptions = {
   // Cors configuration for accepting only allowed urls
-  origin: ['http://localhost:5173'],
+  origin: [
+    'http://localhost:5173',
+    'https://hermyx-git-dev-deploy-daniji09s-projects.vercel.app',
+    'https://hermyx-git-main-daniji09s-projects.vercel.app',
+  ],
 };
 
 // Application initialization
@@ -18,16 +22,16 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 // Application routers
-import testRouter from './routes/test.router.js';
 import usersRouter from './routes/users.router.js';
 import paymentRouter from './routes/payment.router.js';
 import missionsRouter from './routes/missions.router.js';
+import invitationRouter from './routes/invitation.router.js';
 import { verifyToken } from './middlewares/auth.middleware.js';
 
 // Application routes
-app.use('/test', testRouter);
 app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
+app.use('/api/invitations', verifyToken, invitationRouter);
 
 export default app;

@@ -1,25 +1,66 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
+import { consts } from '../consts/consts.js';
 
 // Server and client sign up shared validation
-const basePublishSchema = z.object({
-  title: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  description: z.string().trim().min(1, messages.FIELD_REQUIRED),
+export const publishMissionSchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.MISSION.TITLE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Title', consts.MISSION.TITLE_MAX_LENGTH),
+    ),
+  description: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.MISSION.DESCRIPTION_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Description',
+        consts.MISSION.DESCRIPTION_MAX_LENGTH,
+      ),
+    ),
   vacancies: z.coerce
-    .number({ invalid_type_error: 'Must be a valid number' })
-    .int('Vacancies must be an integer')
-    .min(1, 'There must be at least 1 vacancy'),
+    .number(messages.FIELD_NUMBER('Vacancies'))
+    .int(messages.FIELD_INTEGER('Vacancies'))
+    .min(
+      consts.MISSION.VACANCIES.MIN,
+      messages.FIELD_TOO_SMALL('Vacancies', consts.MISSION.VACANCIES.MIN),
+    )
+    .max(
+      consts.MISSION.VACANCIES.MAX,
+      messages.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
+    ),
   reward: z.coerce
-    .number({ invalid_type_error: 'Must be a valid number' })
-    .min(1, 'Price must be greater than 0'),
+    .number(messages.FIELD_NUMBER('Reward'))
+    .int(messages.FIELD_INTEGER('Reward'))
+    .min(
+      consts.MISSION.REWARD.MIN,
+      messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+    )
+    .max(
+      consts.MISSION.REWARD.MAX,
+      messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+    ),
   difficulty: z.coerce
-    .number({ invalid_type_error: 'Must be a valid number' })
-    .min(1, 'Price must be greater than 0'),
+    .number(messages.FIELD_NUMBER('Difficulty'))
+    .int(messages.FIELD_INTEGER('Difficulty'))
+    .min(
+      consts.MISSION.DIFFICULTY.MIN,
+      messages.FIELD_TOO_SMALL('Difficulty', consts.MISSION.DIFFICULTY.MIN),
+    )
+    .max(
+      consts.MISSION.DIFFICULTY.MAX,
+      messages.FIELD_TOO_BIG('Difficulty', consts.MISSION.DIFFICULTY.MAX),
+    ),
   isDraft: z.boolean().optional(),
 });
 
 // Server and client sign up shared validation
-const baseDraftSchema = z.object({
+export const draftMissionSchema = z.object({
   title: z.string().trim().optional(),
   description: z.string().trim().optional(),
   vacancies: z.coerce.number().int().optional(),
@@ -38,14 +79,6 @@ export const getMissionSchema = z.object({
     .min(0, 'Mission id be positive.'),
 });
 
-// Client variant
-export const publishMissionClientSchema = basePublishSchema;
-export const draftMissionClientSchema = baseDraftSchema;
-
-// Server variant
-export const publishMissionServerSchema = basePublishSchema.extend({});
-export const draftMissionServerSchema = baseDraftSchema.extend({});
-
 // Backend endpoint getMissions
 export const getMissionsQuerySchema = z.object({
   page: z.coerce
@@ -58,4 +91,38 @@ export const getMissionsQuerySchema = z.object({
     .int(messages.FIELD_INTEGER('Limit'))
     .min(0, messages.FIELD_POSITIVE('Limit'))
     .optional(),
+  title: z
+    .string()
+    .trim()
+    .max(
+      consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Title'),
+    )
+    .min(1, messages.FIELD_REQUIRED)
+    .optional(),
+});
+
+export const searchMissionByTitleSchema = z.object({
+  searchMissionByTitle_input: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Input'),
+    ),
+});
+
+export const joinMissionSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Id'))
+    .int(messages.FIELD_INTEGER('Id'))
+    .min(0, messages.FIELD_POSITIVE('Id')),
+});
+
+export const closeMissionSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Id'))
+    .int(messages.FIELD_INTEGER('Id'))
+    .min(0, messages.FIELD_POSITIVE('Id')),
 });

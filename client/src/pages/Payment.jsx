@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+/*Import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import {
@@ -69,7 +69,10 @@ function MissionPayInner() {
   );
 
   const errMsg = (e, fallback) =>
-    e?.response?.data?.message || e?.message || fallback;
+    e?.response?.data?.error ||
+    e?.response?.data?.message ||
+    e?.message ||
+    fallback;
 
   const fetchCards = useCallback(async () => {
     setLoadingCards(true);
@@ -120,7 +123,7 @@ function MissionPayInner() {
     if (!cardEl) throw new Error('No se pudo leer la tarjeta.');
 
     const { data } = await api.post('/stripe/pay/new', {
-      missionId: id,
+      missionId: id.trim(),
       saveCard,
     });
 
@@ -158,7 +161,7 @@ function MissionPayInner() {
     }
 
     const { data } = await api.post('/stripe/pay/default', {
-      missionId: id,
+      missionId: id.trim(),
     });
 
     if (!data?.clientSecret)
@@ -197,7 +200,7 @@ function MissionPayInner() {
       if (selectedPmId === 'new') await payWithNewCard();
       else await payWithSavedCard();
 
-      navigate('/home');
+      navigate('/');
     } catch (e) {
       setError(errMsg(e, 'Error de pago'));
     } finally {
@@ -317,11 +320,185 @@ function MissionPayInner() {
     </div>
   );
 }
+*/
+import { initialStateUseStateAction } from '../consts/consts.js';
+import { useActionState, useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { CardForm } from '../components/custom/form/CardForm.jsx';
+import { FormAlert } from '../components/custom/form/FormAlert.jsx';
+import { messages } from '../messages/messages.js';
+import {
+  Elements,
+  useStripe,
+  useElements,
+  CardElement,
+} from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { FormCreditCardField } from '../components/custom/form/FormCreditCardField.jsx';
+import {
+  confirmPayment,
+  establishCardAsDefault,
+  saveNewCard,
+} from '../services/PaymentServices.jsx';
+import { messages as sharedMessages } from '@hermyx/shared';
+
+const STRIPE_KEY =
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+const stripePromise = loadStripe(STRIPE_KEY || '');
 
 export const Payment = () => {
+  const { id } = useParams();
+
   return (
-    <Elements stripe={stripePromise}>
-      <MissionPayInner />
-    </Elements>
+    <main className='flex min-h-screen items-center justify-center p-4'>
+      <Elements stripe={stripePromise} options={{ locale: 'en' }}>
+        <PaymentForm missionId={id} />
+      </Elements>
+    </main>
+  );
+};
+
+const PaymentForm = ({ missionId }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const navigate = useNavigate();
+
+  const [clearedFields, setClearedFields] = useState({});
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+
+  // Payment workflow has to be orchestrated in an only component
+  const [state, paymentFormAction, isPending] = useActionState(
+    // eslint-disable-next-line no-unused-vars
+    async (prevState, formData) => {
+      // Initial validations
+      if (!stripe || !elements) {
+        return {
+          success: false,
+          errors: { general: [messages.PAYMENT.STRIPE_NOT_LOADED] },
+        };
+      }
+      if (!missionId) {
+        return {
+          success: false,
+          errors: { general: [messages.PAYMENT.MISSION_NOT_FOUND] },
+        };
+      }
+
+      try {
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) {
+          return {
+            success: false,
+            errors: { general: [messages.PAYMENT.CARD_NOT_READ] },
+          };
+        }
+
+        // PaymentIntent is requested to backend
+        const data = await saveNewCard(missionId);
+
+        if (data.error) {
+          return { success: false, errors: { general: [data.error] } };
+        }
+
+        // Confirm payment with Stripe
+        const result = await stripe.confirmCardPayment(data.clientSecret, {
+          payment_method: { card: cardElement },
+        });
+
+        if (result.error) {
+          return {
+            success: false,
+            errors: { creditCard: [result.error.message] },
+          };
+        }
+
+        // Confirm to server that payment was successful
+        if (
+          result.paymentIntent &&
+          result.paymentIntent.status === 'succeeded'
+        ) {
+          await confirmPayment(missionId, result);
+
+          // Establish card as default on server
+          await establishCardAsDefault(result);
+
+          return { success: true };
+        }
+        return {
+          success: false,
+          errors: { general: [sharedMessages.UNEXPECTED_ERROR] },
+        };
+      } catch (e) {
+        return {
+          success: false,
+          errors: {
+            general: [
+              e?.response?.data?.message ||
+                e.message ||
+                sharedMessages.UNEXPECTED_ERROR,
+            ],
+          },
+        };
+      }
+    },
+    initialStateUseStateAction,
+  );
+
+  // Effect for navigating to home
+  useEffect(() => {
+    if (state?.success) navigate('/');
+  }, [state?.success, navigate]);
+
+  // Logic for cleaning errors in fields or alerts when modifications are done
+  const [prevServerState, setPrevServerState] = useState(state);
+  if (state !== prevServerState) {
+    setPrevServerState(state);
+    setClearedFields({});
+    setIsAlertClosed(false);
+  }
+
+  const isCardCleared = clearedFields.creditCard;
+  const activeCardError =
+    !isCardCleared && state?.errors?.creditCard
+      ? state.errors.creditCard[0]
+      : undefined;
+  const isCardInvalid = !isCardCleared && !!state?.errors?.creditCard;
+
+  return (
+    <div className='flex flex-col w-full max-w-155 gap-4'>
+      <CardForm id='paymentForm' action={paymentFormAction}>
+        <CardForm.Header>
+          <CardForm.Title>{messages.PAYMENT.FORM_TITLE}</CardForm.Title>
+        </CardForm.Header>
+
+        <CardForm.Content legend='Application payment form.'>
+          <FormCreditCardField
+            id='paymentCard'
+            label='Credit card (required):'
+            error={activeCardError}
+            invalid={isCardInvalid}
+          />
+        </CardForm.Content>
+
+        <CardForm.Footer>
+          <Button
+            className='w-full'
+            id='sendPayment'
+            type='submit'
+            form='paymentForm'
+            disabled={isPending || !stripe}
+          >
+            {isPending ? 'Paying...' : 'Pay'}
+          </Button>
+        </CardForm.Footer>
+      </CardForm>
+      {state?.errors?.general && !isAlertClosed && (
+        <FormAlert onClose={() => setIsAlertClosed(true)}>
+          {state.errors.general[0]}
+        </FormAlert>
+      )}
+    </div>
   );
 };

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 // Hermyx Firebase configuration
 const firebaseConfig = {
@@ -17,3 +17,6 @@ const app = initializeApp(firebaseConfig);
 
 // Auth is got and exported
 export const auth = getAuth(app);
+
+// Google Provider is created and exported
+export const provider = new GoogleAuthProvider();

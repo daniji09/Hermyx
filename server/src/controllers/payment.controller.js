@@ -28,6 +28,7 @@ import {
   lockForRelease,
   getParticipantsForRelease,
   updateStatus,
+  updateReleaseStatus,
   lockForRefund,
   finalizeRefund,
 } from '../models/mission.model.js';
@@ -221,17 +222,21 @@ export async function payDefault(req, res) {
 
     const mission = await _getById(missionId);
     if (!mission) return res.status(404).json({ error: 'Mission not found' });
-
-    if (mission.stripe_pi_id && mission.status !== 'refunded') {
-      return res
-        .status(400)
-        .json({ error: 'This mission already has an associated payment.' });
-    }
+    if (!ensureMissionOwner(mission, req.user.uid, res)) return;
 
     const customer = await retrieveCustomer(customerId);
     const defaultPm = customer.invoice_settings?.default_payment_method;
 
     if (!defaultPm) return res.status(400).json({ error: 'No default card' });
+
+    const reusablePi = await getReusablePaymentIntent(mission, customerId);
+    if (reusablePi) {
+      return res.json({
+        clientSecret: reusablePi.client_secret,
+        paymentIntentId: reusablePi.id,
+        paymentMethodId: defaultPm,
+      });
+    }
 
     const pi = await createPaymentIntentDefault(
       {
@@ -239,9 +244,9 @@ export async function payDefault(req, res) {
         currency: 'eur',
         customer: customerId,
         payment_method: defaultPm,
-        metadata: { missionId },
+        metadata: { missionId, ownerId: req.user.uid },
       },
-      `pay_default_${missionId}`,
+      `pay_default_${missionId}_${Date.now()}`,
     );
 
     await updatePaymentInfo(missionId, pi.id, 'pending_payment');
@@ -252,7 +257,7 @@ export async function payDefault(req, res) {
       paymentMethodId: defaultPm,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handlePaymentError(err, res);
   }
 }
 
@@ -266,11 +271,14 @@ export async function payNew(req, res) {
 
     const mission = await _getById(missionId);
     if (!mission) return res.status(404).json({ error: 'Mission not found' });
+    if (!ensureMissionOwner(mission, req.user.uid, res)) return;
 
-    if (mission.stripe_pi_id && mission.status !== 'refunded') {
-      return res
-        .status(400)
-        .json({ error: 'This mission already has an associated payment.' });
+    const reusablePi = await getReusablePaymentIntent(mission, customerId);
+    if (reusablePi) {
+      return res.json({
+        clientSecret: reusablePi.client_secret,
+        paymentIntentId: reusablePi.id,
+      });
     }
 
     const pi = await createPaymentIntentNew(
@@ -280,16 +288,16 @@ export async function payNew(req, res) {
         customer: customerId,
         automatic_payment_methods: { enabled: true },
         ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
-        metadata: { missionId },
+        metadata: { missionId, ownerId: req.user.uid },
       },
-      `pay_new_${missionId}`,
+      `pay_new_${missionId}_${Date.now()}`,
     );
 
     await updatePaymentInfo(missionId, pi.id, 'pending_payment');
 
     res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handlePaymentError(err, res);
   }
 }
 
@@ -298,8 +306,19 @@ export async function confirmPayment(req, res) {
   try {
     const { missionId } = req.params;
     const { paymentIntentId } = req.body;
+    const customerId = req.user.stripe_customer_id;
+
+    const mission = await _getById(missionId);
+    if (!mission) return res.status(404).json({ error: 'Mission not found' });
+    if (!ensureMissionOwner(mission, req.user.uid, res)) return;
 
     const pi = await retrievePI(paymentIntentId);
+
+    if (pi.customer !== customerId) {
+      return res
+        .status(403)
+        .json({ error: 'Payment does not belong to the logged user.' });
+    }
 
     if (pi.status !== 'succeeded') {
       return res
@@ -430,7 +449,7 @@ export async function releaseMissionPayment(req, res) {
     const allSuccess = transferResults.every((r) => r.success);
     const finalStatus = allSuccess ? 'released' : 'partially_released';
 
-    await updateStatus(missionId, finalStatus);
+    await updateReleaseStatus(missionId, finalStatus);
 
     res.json({ success: allSuccess, transfers: transferResults });
   } catch (err) {

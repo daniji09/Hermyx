@@ -47,3 +47,41 @@ export const getByFirebaseUid = async (firebaseUid) => {
   const result = await pool.query(query, [firebaseUid]);
   return result.rows[0];
 };
+
+export const getByUsernameExcludingUid = async (username, uid) => {
+  const query = 'SELECT * FROM app_user WHERE username = $1 AND uid <> $2';
+  const result = await pool.query(query, [username, uid]);
+  return result.rows[0];
+};
+
+export const updateMyAccount = async (
+  uid,
+  { username, name, surnames, location, description },
+) => {
+  const query = `
+    UPDATE app_user
+    SET
+      username = $1,
+      name = $2,
+      surnames = $3,
+      location = $4,
+      description = $5
+    WHERE uid = $6
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    username,
+    name,
+    surnames,
+    location,
+    description,
+    uid,
+  ]);
+  return result.rows[0];
+};
+
+export const updateUserEmail = async (uid, email) => {
+  const query = 'UPDATE app_user SET email = $1 WHERE uid = $2 RETURNING *';
+  const result = await pool.query(query, [email, uid]);
+  return result.rows[0];
+};
