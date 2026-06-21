@@ -3,6 +3,7 @@ import {
   createSetupIntent,
   checkStripeCustomer,
   retrieveCustomer,
+  retrievePaymentMethod,
   listCards as _listCards,
   setDefaultCard as _setDefaultCard,
   detachCard,
@@ -35,6 +36,80 @@ import { updateTransferInfo } from '../models/mission_participation.model.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
+const ensureMissionOwner = (mission, userId, res) => {
+  if (mission.owner_id !== userId) {
+    res.status(403).json({ error: 'You can only pay your own missions.' });
+    return false;
+  }
+
+  return true;
+};
+
+const getReusablePaymentIntent = async (mission, customerId) => {
+  if (!mission.stripe_pi_id || mission.status === 'refunded') return null;
+
+  const pi = await retrievePI(mission.stripe_pi_id);
+
+  if (pi.customer !== customerId) {
+    const error = new Error('Payment does not belong to the logged user.');
+    error.status = 403;
+    throw error;
+  }
+
+  if (pi.status === 'succeeded') {
+    const error = new Error('This mission is already paid.');
+    error.status = 400;
+    throw error;
+  }
+
+  if (pi.status === 'processing') {
+    const error = new Error('The payment is still being processed.');
+    error.status = 409;
+    throw error;
+  }
+
+  if (pi.status !== 'canceled') return pi;
+
+  return null;
+};
+
+const handlePaymentError = (err, res) => {
+  if (err.status) {
+    return res.status(err.status).json({ error: err.message });
+  }
+
+  return res.status(500).json({ error: err.message });
+};
+
+const getPaymentMethodCustomerId = (paymentMethod) => {
+  if (!paymentMethod.customer) return null;
+  if (typeof paymentMethod.customer === 'string') return paymentMethod.customer;
+  return paymentMethod.customer.id;
+};
+
+const ensurePaymentMethodOwner = async (paymentMethodId, customerId) => {
+  let paymentMethod;
+
+  try {
+    paymentMethod = await retrievePaymentMethod(paymentMethodId);
+  } catch (error) {
+    console.error('Error retrieving payment method:', error);
+    const paymentMethodNotFoundError = new Error('Payment method not found.');
+    paymentMethodNotFoundError.status = 404;
+    throw paymentMethodNotFoundError;
+  }
+
+  if (getPaymentMethodCustomerId(paymentMethod) !== customerId) {
+    const paymentMethodOwnerError = new Error(
+      'Payment method does not belong to the logged user.',
+    );
+    paymentMethodOwnerError.status = 403;
+    throw paymentMethodOwnerError;
+  }
+
+  return paymentMethod;
+};
+
 export async function register(req, res) {
   try {
     const { email, name, stripe_customer_id } = req.user;
@@ -65,7 +140,7 @@ export async function addCardToCustomer(req, res) {
     const setupIntent = await createSetupIntent(customerId);
     res.json({ clientSecret: setupIntent.client_secret });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handlePaymentError(err, res);
   }
 }
 
@@ -91,7 +166,7 @@ export async function listCards(req, res) {
     });
   } catch (err) {
     console.log('Error listing cards');
-    res.status(500).json({ error: err.message });
+    handlePaymentError(err, res);
   }
 }
 
@@ -101,9 +176,7 @@ export async function setDefaultCard(req, res) {
     const customerId = req.user.stripe_customer_id;
     const { paymentMethodId } = req.body;
 
-    if (!paymentMethodId) {
-      return res.status(400).json({ error: 'paymentMethodId is missing' });
-    }
+    await ensurePaymentMethodOwner(paymentMethodId, customerId);
 
     await _setDefaultCard(customerId, paymentMethodId);
     res.json({
@@ -111,7 +184,7 @@ export async function setDefaultCard(req, res) {
       message: 'Card set as default',
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handlePaymentError(err, res);
   }
 }
 
@@ -121,18 +194,20 @@ export async function deleteCard(req, res) {
     const customerId = req.user.stripe_customer_id;
     const { paymentMethodId } = req.params;
 
+    await ensurePaymentMethodOwner(paymentMethodId, customerId);
+
     const customer = await retrieveCustomer(customerId);
     const defaultPm = customer.invoice_settings?.default_payment_method || null;
 
     await detachCard(paymentMethodId);
 
     if (defaultPm === paymentMethodId) {
-      await setDefaultCard(customerId, null);
+      await _setDefaultCard(customerId, null);
     }
 
     res.json({ success: true, message: 'Card deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    handlePaymentError(err, res);
   }
 }
 
