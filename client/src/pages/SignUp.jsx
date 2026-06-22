@@ -9,8 +9,9 @@ import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { FormPasswordInputField } from '../components/custom/form/FormPasswordInputField';
 import { consts } from '@hermyx/shared';
-import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { GoogleSignInButton } from '../components/custom/GoogleSignInButton';
 import { UseGoogleAuth } from '../hooks/useGoogleAuth';
+import { Separator } from '@/components/ui/separator';
 
 export const SignUp = () => {
   // Form action, standard sign up
@@ -179,6 +180,11 @@ const SignUpForm = ({ state, action, isPending }) => {
             >
               {isPending ? 'Signing up...' : 'Sign up'}
             </Button>
+            <div className='grid grid-cols-3 grid-rows-1 justify-items-center'>
+              <Separator className='my-4 w-fit'></Separator>
+              <span className='text-muted-foreground self-center-safe'>o</span>
+              <Separator className='my-4 w-fit'></Separator>
+            </div>
             <GoogleSignInButton
               disabled={isPending || isGoogleAuthPending}
               onClick={mutate}

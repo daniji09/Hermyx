@@ -1,20 +1,25 @@
 import { useMutation } from '@tanstack/react-query';
 import { signInWithGoogle } from '../services/AuthServices';
-import { syncUserWithGoogleAccount } from '../services/UsersServices';
+import {
+  deleteUserByUid,
+  syncUserWithGoogleAccount,
+} from '../services/UsersServices';
 import { getAdditionalUserInfo } from 'firebase/auth';
 import { messages } from '@hermyx/shared';
 import { useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 export const UseGoogleAuth = () => {
-  const { logout, setIsSyncing } = useContext(AuthContext);
+  const { logout, setIsSyncing, setCurrentUser } = useContext(AuthContext);
+  const navigate = useNavigate();
   // Button action, Google sign up using mutation
   return useMutation({
     onMutate: () => {
       setIsSyncing(true);
     },
     mutationFn: async () => {
-      let isNewUser, user;
+      let isNewUser, user, data;
       try {
         // Signs in with Google
         const result = await signInWithGoogle();
@@ -23,19 +28,30 @@ export const UseGoogleAuth = () => {
         // Gets additional info of the user signed in, used for knowing if it is a signup or a login
         const userDetails = getAdditionalUserInfo(result);
         isNewUser = userDetails.isNewUser;
-        console.log(result, userDetails);
+
         // Backend sync
-        const data = await syncUserWithGoogleAccount(
+        data = await syncUserWithGoogleAccount(
           user.email,
           user.email?.split('@')[0],
           user.uid,
           !!isNewUser,
         );
+
+        const dbUser = data.user || data.checkedUser;
+        setCurrentUser({
+          firebaseUid: user.uid,
+          email: user.email,
+          id: dbUser.id || dbUser.uid,
+          username: dbUser.username,
+        });
         return data;
       } catch (error) {
         console.log(error);
         // First of all, rollback of Firebase action is made
         isNewUser ? await user.delete() : await logout();
+
+        // Then, user is deleted from db if it was created
+        if (isNewUser) await deleteUserByUid(data.uid);
 
         // Controlled errors thrown from backend
         if (
@@ -59,6 +75,9 @@ export const UseGoogleAuth = () => {
     },
     onSettled: () => {
       setIsSyncing(false);
+    },
+    onSuccess: () => {
+      navigate('/');
     },
   });
 };

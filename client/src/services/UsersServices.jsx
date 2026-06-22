@@ -66,3 +66,10 @@ export const getMyProfile = async () => {
   const { data } = await api.get('/users/me/profile');
   return data;
 };
+
+// Deletes user via email
+export const deleteUserByUid = async (uid) => {
+  // API search
+  const { data } = await api.delete(`/users/${uid}`);
+  return data;
+};
