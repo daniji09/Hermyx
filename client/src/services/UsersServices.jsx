@@ -42,6 +42,25 @@ export const getUserByFirebaseUid = async (firebaseUid) => {
   return data.user;
 };
 
+//Get public profile by username
+export const getPublicUserProfile = async (username) => {
+  const { data } = await api.get(`/users/${username}/profile`);
+  return data;
+};
+
+//Get public profile missions by username
+export const getPublicUserProfileMissions = async (
+  username,
+  type,
+  page,
+  limit,
+) => {
+  const { data } = await api.get(`/users/${username}/profile/missions`, {
+    params: { type, page, limit },
+  });
+  return data;
+};
+
 // Deletes user via email
 export const deleteUserByUid = async (uid) => {
   // API search
