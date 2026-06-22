@@ -7,6 +7,7 @@ import {
   getByFirebaseUid,
   getByUsernameExcludingUid,
   updateMyAccount as updateMyAccountInDb,
+  deleteByUid as _deleteByUid,
 } from '../models/app_user.model.js';
 import {
   getPublicProfileCreatedMissions,
@@ -451,6 +452,27 @@ export const syncGoogle = async (req, res) => {
   }
 };
 
+// Deletes a user by uid
+export const deleteByUid = async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    const success = await _deleteByUid(uid);
+
+    if (!success)
+      return res
+        .status(500)
+        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+
+    return res.status(200);
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
 function generateUniqueUsername(username) {
   let uniqueUsername,
     isUnique = false;
@@ -463,13 +485,16 @@ function generateUniqueUsername(username) {
     // Creates username
     const rand = Math.random();
     uniqueUsername = username + (rand + '').split('.')[1];
-    console.log('user:', uniqueUsername);
+
+    // Username gets shortened again
+    uniqueUsername = stringShortener(
+      uniqueUsername,
+      consts.USERNAME_MAX_LENGTH,
+    );
+
     // Checks if username is unique
     isUnique = getByUsername(uniqueUsername);
   }
-
-  // Username gets shortened again
-  uniqueUsername = stringShortener(uniqueUsername, consts.USERNAME_MAX_LENGTH);
 
   return uniqueUsername;
 }

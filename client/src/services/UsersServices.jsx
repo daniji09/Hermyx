@@ -41,3 +41,10 @@ export const getUserByFirebaseUid = async (firebaseUid) => {
   const { data } = await api.get(`/users/firebase/${firebaseUid}`);
   return data.user;
 };
+
+// Deletes user via email
+export const deleteUserByUid = async (uid) => {
+  // API search
+  const { data } = await api.delete(`/users/${uid}`);
+  return data;
+};
