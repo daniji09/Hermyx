@@ -60,3 +60,9 @@ export const getPublicUserProfileMissions = async (
   });
   return data;
 };
+
+// Gets logged user's profile
+export const getMyProfile = async () => {
+  const { data } = await api.get('/users/me/profile');
+  return data;
+};

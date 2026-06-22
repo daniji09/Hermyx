@@ -1,5 +1,6 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import {
+  getMyProfile,
   getPublicUserProfile,
   getPublicUserProfileMissions,
 } from '../services/UsersServices';
@@ -30,6 +31,14 @@ export const getPublicUserProfileMissionsInfiniteQueryOptions = (
         : undefined;
     },
     enabled: !!username,
+    ...options,
+  });
+};
+
+export const getMyProfileQueryOptions = (options) => {
+  return queryOptions({
+    queryKey: ['getMyProfile'],
+    queryFn: getMyProfile,
     ...options,
   });
 };
