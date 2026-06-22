@@ -177,3 +177,11 @@ export const syncGoogleSchema = z.object({
   firebaseUid: z.string().trim().min(1, messages.FIELD_REQUIRED),
   isNewUser: z.boolean(),
 });
+
+// Delete user by uid backend validation
+export const deleteUserByUid = z.object({
+  uid: z.coerce
+    .number(messages.FIELD_NUMBER('uid'))
+    .int(messages.FIELD_INTEGER('uid'))
+    .min(0, messages.FIELD_POSITIVE('uid')),
+});

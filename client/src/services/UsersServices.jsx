@@ -60,3 +60,10 @@ export const getPublicUserProfileMissions = async (
   });
   return data;
 };
+
+// Deletes user via email
+export const deleteUserByUid = async (uid) => {
+  // API search
+  const { data } = await api.delete(`/users/${uid}`);
+  return data;
+};

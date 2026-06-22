@@ -12,6 +12,7 @@ import {
   getMyAccount,
   updateMyAccount,
   syncGoogle,
+  deleteByUid,
 } from '../controllers/users.controller.js';
 import {
   validateBodySchema,
@@ -28,6 +29,7 @@ import {
   getMissionsFromUserQuerySchema,
   syncGoogleSchema,
   getPublicProfileMissionsQuerySchema,
+  deleteUserByUid,
 } from '@hermyx/shared';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
@@ -88,6 +90,14 @@ router.patch(
   verifyToken,
   validateBodySchema(updateMyAccountSchema),
   updateMyAccount,
+);
+
+/// DELETE
+router.delete(
+  '/:uid',
+  verifyToken,
+  validateParamsSchema(deleteUserByUid),
+  deleteByUid,
 );
 
 export default router;
