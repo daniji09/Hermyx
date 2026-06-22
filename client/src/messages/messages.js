@@ -22,6 +22,27 @@ export const messages = {
     MISSION_CLOSED: 'Mission already closed!',
     MISSION_FILLED: 'Mission already filled!',
     MISSION_PENDING_PAYMENT: `Mission can't be opened until payment is done.`,
+    JOIN_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to join this mission?',
+      ERROR_TITLE: `Can't join mission`,
+      DESCRIPTION: 'This will occupy one of the available vacancies.',
+      CONFIRM_TEXT: 'Yes, join mission',
+    },
+    START_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to start the mission?',
+      ERROR_TITLE: `Can't start mission`,
+      NO_ADVENTURERS_DESCRIPTION: `You can't start a mission without adventurers.`,
+      AVAILABLE_VACANCIES_DESCRIPTION: `There are still vacant places available.`,
+      START_DESCRIPTION: `This will link the current adventurers to this mission.`,
+      CONFIRM_TEXT: 'Yes, start mission',
+    },
+    CLOSE_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to close the mission?',
+      ERROR_TITLE: `Can't close mission`,
+      DESCRIPTION:
+        'This will state that the mission has been completed by the adventurers and they will receive the payment.',
+      CONFIRM_TEXT: 'Yes, close mission',
+    },
   },
   SEARCH_MISSIONS: {
     LOADING: 'Searching missions...',

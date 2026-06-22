@@ -1,5 +1,5 @@
 import { useActionState, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { logInAction } from '../actions/AuthActions';
 import { initialStateUseStateAction } from '../consts/consts.js';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ export const LogIn = () => {
   }, [state.success, navigate]);
 
   return (
-    <main className='flex min-h-screen items-center justify-center p-4'>
+    <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
       <LogInForm
         state={state}
         action={logInFormAction}
@@ -68,6 +68,16 @@ const LogInForm = ({ state, action, isPending }) => {
       <CardForm id='logInForm' action={action}>
         <CardForm.Header>
           <CardForm.Title>{messages.LOG_IN.FORM_TITLE}</CardForm.Title>
+          <CardForm.Description>
+            {`Doesn't have an account? `}
+            <Link
+              to={'/signup'}
+              className='text-black underline
+            '
+            >
+              {'Sign up!'}
+            </Link>
+          </CardForm.Description>
         </CardForm.Header>
 
         <CardForm.Content legend='Application log in form.'>

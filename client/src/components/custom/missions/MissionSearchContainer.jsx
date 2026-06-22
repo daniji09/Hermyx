@@ -139,7 +139,7 @@ const MissionSearchCard = ({ mission }) => {
           </CardAction>
         </CardHeader>
         <CardContent className='flex flex-1 flex-col'>
-          <div className='mb-4'>{mission.description}</div>
+          <div className='mb-4 line-clamp-4'>{mission.description}</div>
           <div className='mt-auto flex items-center gap-6'>
             <div className='flex items-center gap-2'>
               <span className='sr-only'>Difficulty:</span>

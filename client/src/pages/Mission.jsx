@@ -20,6 +20,7 @@ import {
   closeMission,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
+import { useAlert } from '../contexts/AlertContext';
 
 export const Mission = () => {
   // Mission id
@@ -77,9 +78,7 @@ const MissionPageContainer = ({
         {'Seeking mission...'}
       </MissionLoading>
 
-      <MissionError
-        isError={isError}
-      >{`Error seeking mission: ${error}`}</MissionError>
+      <MissionError isError={isError}>{`${error}`}</MissionError>
 
       <MissionContent
         mission={mission}
@@ -157,9 +156,7 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                     missionId={mission.mid}
                   ></CloseMissionButton>
                 ) : mission.status === 'funded' ? (
-                  <StartMissionButton
-                    missionId={mission.mid}
-                  ></StartMissionButton>
+                  <StartMissionButton mission={mission}></StartMissionButton>
                 ) : mission.status === 'pending_payment' ? (
                   <PayMissionButton missionId={mission.mid}></PayMissionButton>
                 ) : (
@@ -186,11 +183,19 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
 };
 
 const JoinMissionButton = ({ missionId, isJoined }) => {
+  const { showAlert } = useAlert();
   const queryClient = useQueryClient();
-  const { isPending, isError, error, mutate } = useMutation({
+  const { isPending, mutate } = useMutation({
     mutationFn: () => joinMission(missionId),
     onSuccess: () => {
       queryClient.invalidateQueries(['getMissions']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.JOIN_MISSION_ALERT.ERROR_TITLE,
+        description: error?.response.data.error,
+      });
     },
   });
 
@@ -205,13 +210,23 @@ const JoinMissionButton = ({ missionId, isJoined }) => {
     isDisabled = true;
   }
 
-  //If (isError) return <FormAlert>{error}</FormAlert>;
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.JOIN_MISSION_ALERT.TITLE,
+      description: messages.MISSION.JOIN_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.JOIN_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
 
   return (
     <Button
       type='button'
       id='joinMissionButton'
-      onClick={mutate}
+      onClick={handleAttempt}
       disabled={isDisabled || isPending}
     >
       {buttonText}
@@ -219,41 +234,93 @@ const JoinMissionButton = ({ missionId, isJoined }) => {
   );
 };
 
-const StartMissionButton = ({ missionId }) => {
+const StartMissionButton = ({ mission }) => {
+  const { showAlert } = useAlert();
   const queryClient = useQueryClient();
-  const { isPending, isError, error, mutate } = useMutation({
-    mutationFn: () => startMission(missionId),
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => startMission(mission.mid),
     onSuccess: () => {
       queryClient.invalidateQueries(['getMissions']);
     },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.START_MISSION_ALERT.ERROR_TITLE,
+        description: error?.response.data.error,
+      });
+    },
   });
-  //If (isError) return <FormAlert>{error}</FormAlert>;
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title:
+        mission.occupied_vacancies === 0
+          ? messages.MISSION.START_MISSION_ALERT.ERROR_TITLE
+          : messages.MISSION.START_MISSION_ALERT.TITLE,
+      description:
+        mission.occupied_vacancies === 0
+          ? messages.MISSION.START_MISSION_ALERT.NO_ADVENTURERS_DESCRIPTION
+          : mission.total_vacancies > mission.occupied_vacancies
+            ? messages.MISSION.START_MISSION_ALERT
+                .AVAILABLE_VACANCIES_DESCRIPTION
+            : messages.MISSION.START_MISSION_ALERT.START_DESCRIPTION,
+      variant: mission.occupied_vacancies === 0 ? 'info' : 'warning',
+      confirmText:
+        mission.occupied_vacancies === 0
+          ? 'OK'
+          : messages.MISSION.START_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mission.occupied_vacancies === 0 ? null : mutate,
+    });
+  };
+
   return (
     <Button
       type='button'
       id='closeMissionButton'
-      onClick={mutate}
+      onClick={handleAttempt}
       disabled={isPending}
     >
-      {'Open mission'}
+      {'Start mission'}
     </Button>
   );
 };
 
 const CloseMissionButton = ({ missionId }) => {
+  const { showAlert } = useAlert();
   const queryClient = useQueryClient();
-  const { isPending, isError, error, mutate } = useMutation({
+  const { isPending, mutate } = useMutation({
     mutationFn: () => closeMission(missionId),
     onSuccess: () => {
       queryClient.invalidateQueries(['getMissions']);
     },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
+        description: error?.response.data.error,
+      });
+    },
   });
-  //If (isError) return <FormAlert>{error}</FormAlert>;
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
+      description: messages.MISSION.CLOSE_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
   return (
     <Button
       type='button'
       id='closeMissionButton'
-      onClick={mutate}
+      onClick={handleAttempt}
       disabled={isPending}
     >
       {'Close mission'}

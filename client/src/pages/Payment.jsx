@@ -448,8 +448,8 @@ const PaymentForm = ({ missionId }) => {
 
   // Effect for navigating to home
   useEffect(() => {
-    if (state?.success) navigate('/');
-  }, [state?.success, navigate]);
+    if (state?.success) navigate(`/missions/${missionId}`);
+  }, [state?.success, missionId, navigate]);
 
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [prevServerState, setPrevServerState] = useState(state);

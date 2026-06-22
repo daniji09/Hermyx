@@ -65,7 +65,7 @@ export const messages = {
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',
 
   //// Start mission
-  START_WITHOUT_ADVENTURERS: `You can't close a mission without adventurers.`,
+  START_WITHOUT_ADVENTURERS: `You can't start a mission without adventurers.`,
 
   //// Join mission
   JOIN_OWN_MISSION: `You can't join your own mission.`,
