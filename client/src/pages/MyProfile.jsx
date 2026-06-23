@@ -12,6 +12,16 @@ import {
 import { AuthContext } from '../contexts/AuthContext';
 import { consts } from '@hermyx/shared';
 
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { StripeManagement } from '../components/custom/StripeManagement';
+
+const STRIPE_KEY =
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+
+const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
+
 const emptyMessage = 'Nothing registered';
 const initialForm = {
   username: '',
@@ -153,8 +163,9 @@ export const MyProfile = () => {
 
       <section className='rounded-lg border p-4 sm:p-6'>
         <form className='space-y-6'>
-          <div className='flex justify-end'>
-            <div className='flex gap-2'>
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+            <h2 className='text-xl font-semibold'>Profile information</h2>
+            <div className='flex justify-end gap-2'>
               {isEditing && (
                 <Button
                   type='button'
@@ -256,6 +267,21 @@ export const MyProfile = () => {
           )}
         </form>
       </section>
+
+      {stripePromise ? (
+        <Elements stripe={stripePromise} options={{ locale: 'en' }}>
+          <StripeManagement />
+        </Elements>
+      ) : (
+        <section className='mt-6 rounded-lg border p-4 sm:p-6'>
+          <Alert variant='destructive'>
+            <AlertTitle>Stripe is not configured</AlertTitle>
+            <AlertDescription>
+              Missing VITE_STRIPE_PUBLIC_KEY or VITE_STRIPE_PUBLISHABLE_KEY.
+            </AlertDescription>
+          </Alert>
+        </section>
+      )}
     </main>
   );
 };

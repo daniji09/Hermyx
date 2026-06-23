@@ -21,3 +21,26 @@ export const establishCardAsDefault = async (result) => {
     paymentMethodId: result.paymentIntent.payment_method,
   });
 };
+
+export const getSavedCards = async () => {
+  const { data } = await api.get('/stripe/cards');
+  return data;
+};
+
+export const createCardSetupIntent = async () => {
+  const { data } = await api.post('/stripe/add-card-to-customer');
+  return data;
+};
+
+export const setDefaultSavedCard = async (paymentMethodId) => {
+  const { data } = await api.post('/stripe/cards/default', {
+    paymentMethodId,
+  });
+
+  return data;
+};
+
+export const deleteSavedCard = async (paymentMethodId) => {
+  const { data } = await api.delete(`/stripe/cards/${paymentMethodId}`);
+  return data;
+};
