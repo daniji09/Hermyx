@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, X, Menu } from 'lucide-react';
+import { ChevronDown, X, Menu, User } from 'lucide-react';
 import { consts } from '@hermyx/shared';
 import { useNavigate } from 'react-router-dom';
 import { SearchBar } from './form/SearchBar';
@@ -46,29 +46,33 @@ export function Navbar() {
             </section>
 
             {currentUser && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant='outline'
-                    className='border-none bg-transparent gap-1.5 px-2 hover:bg-slate-200/50'
-                    aria-label='Missions menu'
-                  >
-                    Missions{' '}
-                    <ChevronDown
-                      className='h-4 w-4 opacity-50'
-                      aria-hidden='true'
-                    />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align='end' className='w-48'>
-                  <DropdownMenuItem asChild className='cursor-pointer'>
-                    <Link to='/missions/new'>Create mission</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className='cursor-pointer'>
-                    <Link to='/missions/mine'>My missions</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant='outline'
+                      className='border-none bg-transparent gap-1.5 px-2 hover:bg-slate-200/50'
+                      aria-label='Missions menu'
+                    >
+                      Missions{' '}
+                      <ChevronDown
+                        className='h-4 w-4 opacity-50'
+                        aria-hidden='true'
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end' className='w-48'>
+                    <DropdownMenuItem asChild className='cursor-pointer'>
+                      <Link to='/missions/new'>Create mission</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className='cursor-pointer'>
+                      <Link to='/missions/mine'>My missions</Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <ProfileLink currentUser={currentUser} />
+              </>
             )}
 
             <LogButton currentUser={currentUser} logout={logout} />
@@ -118,6 +122,16 @@ export function Navbar() {
                 >
                   My missions
                 </Link>
+                <Link
+                  to='/profile'
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
+                >
+                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+                    <User className='h-4 w-4' aria-hidden='true' />
+                  </span>
+                  {currentUser.username}
+                </Link>
               </div>
             )}
 
@@ -148,6 +162,23 @@ const LogButton = ({ currentUser, logout }) => {
   return (
     <Button className='self-center' onClick={onClick}>
       {currentUser ? 'Log out' : 'Log in'}
+    </Button>
+  );
+};
+
+const ProfileLink = ({ currentUser }) => {
+  return (
+    <Button
+      asChild
+      variant='ghost'
+      className='gap-2 rounded-full px-2 hover:bg-slate-200/50'
+    >
+      <Link to='/profile' aria-label='Go to my profile'>
+        <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+          <User className='h-4 w-4' aria-hidden='true' />
+        </span>
+        <span className='max-w-28 truncate'>{currentUser.username}</span>
+      </Link>
     </Button>
   );
 };

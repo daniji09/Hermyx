@@ -54,7 +54,7 @@ export const getByUsernameExcludingUid = async (username, uid) => {
   return result.rows[0];
 };
 
-export const updateMyAccount = async (
+export const updateMyProfile = async (
   uid,
   { username, name, surnames, description },
 ) => {

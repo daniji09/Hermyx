@@ -1,7 +1,9 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import {
+  getMyProfile,
   getPublicUserProfile,
   getPublicUserProfileMissions,
+  updateMyProfile,
 } from '../services/UsersServices';
 
 export const getPublicUserProfileQueryOptions = (username, options) => {
@@ -32,4 +34,19 @@ export const getPublicUserProfileMissionsInfiniteQueryOptions = (
     enabled: !!username,
     ...options,
   });
+};
+
+export const getMyProfileQueryOptions = (options) => {
+  return queryOptions({
+    queryKey: ['getMyProfile'],
+    queryFn: getMyProfile,
+    ...options,
+  });
+};
+
+export const updateMyProfileMutationOptions = (options) => {
+  return {
+    mutationFn: updateMyProfile,
+    ...options,
+  };
 };

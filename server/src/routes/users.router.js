@@ -9,8 +9,7 @@ import {
   getUserPublicProfile,
   getUserPublicProfileMissions,
   getMyProfile,
-  getMyAccount,
-  updateMyAccount,
+  updateMyProfile,
   syncGoogle,
   deleteByUid,
 } from '../controllers/users.controller.js';
@@ -22,7 +21,7 @@ import {
 import {
   getUsersQuerySchema,
   signUpSchema,
-  updateMyAccountSchema,
+  updateMyProfileSchema,
   getUsersByFirebaseUidParamSchema,
   getUserByUsernameParamSchema,
   getMissionsFromUserParamSchema,
@@ -41,6 +40,13 @@ router.get('/', validateQuerySchema(getUsersQuerySchema), getUsers);
 
 //Get my profile
 router.get('/me/profile', verifyToken, getMyProfile);
+
+router.patch(
+  '/me/profile',
+  verifyToken,
+  validateBodySchema(updateMyProfileSchema),
+  updateMyProfile,
+);
 
 //Get user by username
 router.get(
@@ -82,15 +88,6 @@ router.post('/', validateBodySchema(signUpSchema), signUp);
 
 // Sign in user with Google, handling whether is a signup or a login
 router.post('/sync-google', validateBodySchema(syncGoogleSchema), syncGoogle);
-
-router.get('/me/account', verifyToken, getMyAccount);
-
-router.patch(
-  '/me/account',
-  verifyToken,
-  validateBodySchema(updateMyAccountSchema),
-  updateMyAccount,
-);
 
 /// DELETE
 router.delete(

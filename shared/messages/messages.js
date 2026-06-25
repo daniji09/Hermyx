@@ -73,7 +73,7 @@ export const messages = {
     'There are no vacancies open left in this mission. Try another one!',
   MISSION_ALREADY_JOINED: 'You have already joined this mission!',
 
-  //// Account
+  //// Profile
   ///Info
-  ACCOUNT_UPDATED_SUCCESSFULLY: 'Account updated successfully.',
+  PROFILE_UPDATED_SUCCESSFULLY: 'Profile updated successfully.',
 };

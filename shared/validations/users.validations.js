@@ -133,8 +133,8 @@ export const getPublicProfileMissionsQuerySchema = z.object({
     .optional(),
 });
 
-// Server and client account update shared validation
-export const updateMyAccountSchema = z.object({
+// Server and client profile update shared validation
+export const updateMyProfileSchema = z.object({
   username: z
     .string()
     .trim()

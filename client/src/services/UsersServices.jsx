@@ -61,6 +61,18 @@ export const getPublicUserProfileMissions = async (
   return data;
 };
 
+// Gets logged user's profile
+export const getMyProfile = async () => {
+  const { data } = await api.get('/users/me/profile');
+  return data;
+};
+
+// Updates logged user's profile
+export const updateMyProfile = async (profile) => {
+  const { data } = await api.patch('/users/me/profile', profile);
+  return data;
+};
+
 // Deletes user via email
 export const deleteUserByUid = async (uid) => {
   // API search

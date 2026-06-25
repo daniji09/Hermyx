@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
 import { MapPin, User } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
+import { AuthContext } from '../contexts/AuthContext';
 import {
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
@@ -12,7 +13,10 @@ import {
 
 export const PublicProfile = () => {
   const { username } = useParams();
+  const { currentUser } = useContext(AuthContext);
   const [filter, setFilter] = useState('created');
+  const isOwnProfile =
+    username?.toLowerCase() === currentUser?.username?.toLowerCase();
 
   const retryOption = (failureCount, error) => {
     if (error.response?.status === 404) return false;
@@ -26,6 +30,7 @@ export const PublicProfile = () => {
   } = useQuery(
     getPublicUserProfileQueryOptions(username, {
       retry: retryOption,
+      enabled: !!username && !isOwnProfile,
     }),
   );
 
@@ -43,7 +48,7 @@ export const PublicProfile = () => {
       PAGINATION_LIMIT.MISSIONS,
       {
         retry: retryOption,
-        enabled: !!username && !!profileData?.missionsVisible,
+        enabled: !!username && !isOwnProfile && !!profileData?.missionsVisible,
       },
     ),
   );
@@ -51,6 +56,10 @@ export const PublicProfile = () => {
   const user = profileData?.user;
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
+
+  if (isOwnProfile) {
+    return <Navigate to='/profile' replace />;
+  }
 
   if (isProfileLoading) {
     return (

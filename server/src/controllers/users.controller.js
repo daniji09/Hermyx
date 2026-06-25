@@ -6,7 +6,7 @@ import {
   create,
   getByFirebaseUid,
   getByUsernameExcludingUid,
-  updateMyAccount as updateMyAccountInDb,
+  updateMyProfile as updateMyProfileInDb,
   deleteByUid as _deleteByUid,
 } from '../models/app_user.model.js';
 import {
@@ -337,7 +337,7 @@ export const signUp = async (req, res) => {
   }
 };
 
-export const updateMyAccount = async (req, res) => {
+export const updateMyProfile = async (req, res) => {
   try {
     const user = req.user;
     if (!user) {
@@ -358,7 +358,7 @@ export const updateMyAccount = async (req, res) => {
       });
     }
 
-    const updatedUser = await updateMyAccountInDb(user.uid, {
+    const updatedUser = await updateMyProfileInDb(user.uid, {
       username,
       name: req.body.name,
       surnames: req.body.surnames,
@@ -366,38 +366,12 @@ export const updateMyAccount = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: messages.ACCOUNT_UPDATED_SUCCESSFULLY,
-      account: {
+      message: messages.PROFILE_UPDATED_SUCCESSFULLY,
+      profile: {
         username: updatedUser.username,
         name: updatedUser.name,
         surnames: updatedUser.surnames,
         description: updatedUser.description,
-      },
-    });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getMyAccount = async (req, res) => {
-  try {
-    const user = req.user;
-
-    if (!user) {
-      return res
-        .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
-    }
-
-    return res.status(200).json({
-      account: {
-        username: user.username,
-        name: user.name,
-        surnames: user.surnames,
-        description: user.description,
       },
     });
   } catch (e) {

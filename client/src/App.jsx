@@ -11,6 +11,7 @@ import { UserMissions } from './pages/UserMissions';
 import TestDashboard from './pages/TestDashboard';
 import { Navbar } from './components/custom/Navbar';
 import { PublicProfile } from './pages/PublicProfile';
+import { MyProfile } from './pages/MyProfile';
 
 function App() {
   return (
@@ -92,6 +93,14 @@ function App() {
           element={
             <ProtectedRoute>
               <PublicProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/profile'
+          element={
+            <ProtectedRoute>
+              <MyProfile />
             </ProtectedRoute>
           }
         />
