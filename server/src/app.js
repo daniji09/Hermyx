@@ -4,7 +4,7 @@ import 'dotenv/config';
 // External modules
 import express from 'express';
 import cors from 'cors';
-const corsOptions = {
+export const corsOptions = {
   // Cors configuration for accepting only allowed urls
   origin: [
     'http://localhost:5173',

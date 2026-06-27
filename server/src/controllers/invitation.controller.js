@@ -12,6 +12,7 @@ import {
   addParticipant,
   getById as getMissionParticipationById,
 } from '../models/mission_participation.model.js';
+import { emitToUser } from '../services/socket.service.js';
 
 //Receives missionId, senderId and receiverId, prepares the data, and create it in the model.
 export const createInvitation = async (req, res) => {
@@ -42,6 +43,16 @@ export const createInvitation = async (req, res) => {
     };
 
     const newInvitationId = await _createInvitation(invitationData);
+
+    if (type === 'applicant_to_adventurer') {
+      emitToUser(receiverId, 'invitation:created', {
+        invitationId: newInvitationId,
+        missionId,
+        senderId,
+        receiverId,
+        type,
+      });
+    }
 
     return res.status(201).json(newInvitationId);
   } catch (error) {
