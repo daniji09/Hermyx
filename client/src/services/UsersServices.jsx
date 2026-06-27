@@ -73,18 +73,6 @@ export const updateMyProfile = async (profile) => {
   return data;
 };
 
-// Gets logged user's profile
-export const getMyProfile = async () => {
-  const { data } = await api.get('/users/me/profile');
-  return data;
-};
-
-// Updates logged user's profile
-export const updateMyProfile = async (profile) => {
-  const { data } = await api.patch('/users/me/profile', profile);
-  return data;
-};
-
 // Updates users email on DB and Firebase
 export const updateUserEmail = async (email) => {
   // API search
@@ -103,5 +91,20 @@ export const deleteUserByUid = async (uid) => {
 export const deleteUser = async () => {
   // API search
   const { data } = await api.delete('/users/me');
+  return data;
+};
+
+// Adds email authentication
+export const addEmailAuthentication = async ({
+  email,
+  password,
+  confirmPassword,
+}) => {
+  // API search
+  const { data } = await api.put('/users/me/email', {
+    email,
+    password,
+    confirmPassword,
+  });
   return data;
 };

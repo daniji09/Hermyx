@@ -13,7 +13,7 @@ export const GoogleSignInButton = ({ disabled, onClick, isPending, text }) => {
   );
 };
 
-const GoogleIcon = (props) => {
+export const GoogleIcon = (props) => {
   return (
     <svg
       version='1.1'

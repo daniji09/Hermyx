@@ -76,4 +76,15 @@ export const messages = {
   //// Profile
   ///Info
   PROFILE_UPDATED_SUCCESSFULLY: 'Profile updated successfully.',
+  EMAILS_NOT_MATCH: 'E-mails do not match.',
+  COULD_NOT_UPDATE_EMAIL: 'Could not create update e-mail.',
+  COULD_NOT_UPDATE_PASSWORD: 'Could not create update password.',
+  COULD_NOT_LINK_GOOGLE_ACCOUNT: `Could not link Google account.`,
+  COULD_NOT_UNLINK_GOOGLE_ACCOUNT: `Could not unlink Google account.`,
+  NO_SUCH_PROVIDER: `The user isn't linked to the provider or the provider doesn't exist.`,
+  COULD_NOT_ADD_EMAIL_AUTHENTICATION: `Could not add new e-mail authentication.`,
+  CREDENTIAL_ALREADY_IN_USE:
+    'This Google account is already linked to another Hermyx account',
+  CHANGING_EMAIL_TO_CURRENT:
+    'The new email cannot be the same as your current one.',
 };

@@ -17,11 +17,13 @@ import {
   getPublicProfileJoinedMissions,
   getMissionsByUid,
   getMissionsJoinedByUser,
+  getUserActiveMissions,
 } from '../models/mission.model.js';
 import {
   createFirebaseUser,
   deleteFirebaseUser,
-  updateFirebaseEmail,
+  getUserByEmail,
+  updateFirebaseAccount,
 } from '../services/auth.service.js';
 import { stringShortener } from '../utils/strings.utils.js';
 
@@ -253,6 +255,7 @@ export const getMyProfile = async (req, res) => {
 
     const profile = {
       username: user.username,
+      email: user.email,
       name: user.name,
       surnames: user.surnames,
       description: user.description,
@@ -296,8 +299,34 @@ export const signUp = async (req, res) => {
         errors: { username: [messages.USERNAME_ALREADY_EXISTS(username)] },
       });
 
+    // Lastly, it makes a deep check on Firebase searching for the e-mail
+    try {
+      await await getUserByEmail(email);
+      return res.status(400).json({
+        errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
+      });
+    } catch (error) {
+      // User not found is expected if the email is not in use, so any other error is returned
+      if (error.code !== 'auth/user-not-found') {
+        const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+        if (errorBuilder) {
+          const mappedError = errorBuilder({ email });
+          return res.status(mappedError.status).json({
+            errors: { [mappedError.field]: [mappedError.message] },
+          });
+        }
+
+        if (error.errors) return res.status(500).json(error.errors);
+
+        return res.status(500).json({
+          errors: { general: [messages.UNEXPECTED_ERROR] },
+        });
+      }
+    }
+
     let firebaseUser;
     try {
+      // User is created on Firebase
       firebaseUser = await createFirebaseUser({ email, username, password });
     } catch (error) {
       // Firebase errors and exceptions are treated
@@ -442,7 +471,7 @@ export const deleteByUid = async (req, res) => {
         .status(500)
         .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
 
-    return res.status(200);
+    return res.status(200).json({});
   } catch (e) {
     console.error(e);
     return res
@@ -456,26 +485,34 @@ export const deleteUser = async (req, res) => {
   const user = req.user;
   let anonymize;
   try {
+    // First of all, checks if user has active missions, created or joined
+    const activeMissions = await getUserActiveMissions(user.uid);
+    console.log(activeMissions);
+    if (activeMissions.total_active > 0)
+      return res.status(400).json({
+        missions: activeMissions,
+        errors: {
+          general: [
+            `You cant delete your account while you have active missions.`,
+          ],
+        },
+      });
+
     // Anonymize user in db
     anonymize = await _anonymize(user.uid);
-
-    if (anonymize) {
-      const firebaseDelete = await deleteFirebaseUser(user.firebaseUid);
-
-      if (!firebaseDelete) {
-        await deanonymize(user);
-        return res
-          .status(500)
-          .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-      } else return res.status(200);
-    } else
+    if (anonymize < 1)
       return res
         .status(500)
         .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+
+    // Deletes user from Firebase
+    await deleteFirebaseUser(user.firebase_uid);
+    return res.status(200).json({});
   } catch (e) {
     console.error(e);
+
     // If email was changed on Firebase but not in Hermyx, it should rollback
-    if (anonymize) await deanonymize(user);
+    if (anonymize > 0) await deanonymize(user);
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
@@ -488,32 +525,80 @@ export const updateUserEmail = async (req, res) => {
   const currentEmail = user.email;
   let firebaseChange;
   try {
-    const { email } = req.body;
+    const { email, password } = req.body;
 
-    // First, email is changed on Firebase
-    firebaseChange = await updateFirebaseEmail(user.firebaseUid, email);
+    // First of all, new email is checked to be unique
+    const userByEmail = await getByEmail(email);
 
-    if (firebaseChange) {
-      // Then is changed on Hermyx database
-      const hermyxChange = await _updateUserEmail(user.uid, email);
+    // If it exists, then its a bad request error (unless is a new authentication with the same email)
+    if (
+      (userByEmail && !password) ||
+      (userByEmail && password && userByEmail.uid !== user.uid)
+    )
+      return res.status(400).json({
+        errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
+      });
 
-      if (hermyxChange) return res.status(200).json({ user: hermyxChange });
-      else {
-        // If email was changed on Firebase but not in Hermyx, it should rollback
-        await updateFirebaseEmail(user.firebaseUid, currentEmail);
-        return res
-          .status(500)
-          .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+    // Lastly, it makes a deep check on Firebase searching for the e-mail
+    try {
+      const fbUser = await getUserByEmail(email);
+      if (fbUser.uid !== user.firebase_uid && password) {
+        return res.status(400).json({
+          errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
+        });
       }
-    } else
+    } catch (error) {
+      // User not found is expected if the email is not in use, so any other error is returned
+      if (error.code !== 'auth/user-not-found') {
+        const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+        if (errorBuilder) {
+          const mappedError = errorBuilder({ email });
+          return res.status(mappedError.status).json({
+            errors: { [mappedError.field]: [mappedError.message] },
+          });
+        }
+
+        if (error.errors) return res.status(500).json(error.errors);
+
+        return res.status(500).json({
+          errors: { general: [messages.UNEXPECTED_ERROR] },
+        });
+      }
+    }
+
+    // Prepares user email update
+    const firebaseUpdates = { email };
+    if (password) {
+      firebaseUpdates.password = password; // If there is password, its added
+    }
+
+    // So, email is changed on Firebase
+    firebaseChange = await updateFirebaseAccount(
+      user.firebase_uid,
+      firebaseUpdates,
+    );
+
+    if (!firebaseChange)
       return res
         .status(500)
         .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+
+    // Then is changed on Hermyx database
+    const hermyxChange = await _updateUserEmail(user.uid, email);
+
+    if (hermyxChange) return res.status(200).json({ user: hermyxChange });
+    else {
+      // If email was changed on Firebase but not in Hermyx, it should rollback
+      await updateFirebaseAccount(user.firebase_uid, currentEmail);
+      return res
+        .status(500)
+        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+    }
   } catch (e) {
     console.error(e);
     // If email was changed on Firebase but not in Hermyx, it should rollback
     if (firebaseChange)
-      await updateFirebaseEmail(user.firebaseUid, currentEmail);
+      await updateFirebaseAccount(user.firebase_uid, currentEmail);
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });

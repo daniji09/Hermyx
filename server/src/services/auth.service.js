@@ -38,6 +38,10 @@ export const getFirebaseAuthProviders = async (firebaseUid) => {
   };
 };
 
-export const updateFirebaseEmail = async (firebaseUid, email) => {
-  return await firebaseAdmin.auth().updateUser(firebaseUid, { email });
+export const updateFirebaseAccount = async (firebaseUid, updates) => {
+  return await firebaseAdmin.auth().updateUser(firebaseUid, updates);
+};
+
+export const getUserByEmail = async (email) => {
+  return await firebaseAdmin.auth().getUserByEmail(email);
 };

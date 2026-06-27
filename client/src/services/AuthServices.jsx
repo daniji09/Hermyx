@@ -91,7 +91,7 @@ export const updateUserPassword = async (password) => {
 
     throw {
       errors: {
-        general: [messages.COULD_NOT_LOG_IN],
+        general: [messages.COULD_NOT_UPDATE_PASSWORD],
       },
     };
   }
@@ -102,20 +102,24 @@ export const linkGoogleAccount = async () => {
   try {
     return await linkWithPopup(auth.currentUser, provider);
   } catch (error) {
+    // First special error
+    if (error.code === 'auth/popup-closed-by-user') {
+      throw { isPopupCancel: true };
+    }
     // Firebase errors and exceptions are treated by a map
     const errorBuilder = consts.FIREBASE_ERRORS[error.code];
     if (errorBuilder) {
-      const mappedError = errorBuilder();
+      const mappedError = errorBuilder({ email: error.customData?.email });
       throw {
         errors: {
-          [mappedError.field]: [mappedError.message],
+          general: [mappedError.message],
         },
       };
     }
 
     throw {
       errors: {
-        general: [messages.COULD_NOT_LOG_IN],
+        general: [messages.COULD_NOT_LINK_GOOGLE_ACCOUNT],
       },
     };
   }
@@ -124,8 +128,21 @@ export const linkGoogleAccount = async () => {
 // Unlinks Google account
 export const unlinkGoogleAccount = async () => {
   try {
-    //TODO: Only users with email authentication can unlink Google accounts, check all Firebase errors
-    return await unlink(auth.currentUser, provider.PROVIDER_ID);
+    // To unlink a Google account, user must have provided an email authentication
+    const user = auth.currentUser;
+    const hasPasswordProvider = user.providerData.some(
+      (p) => p.providerId === 'password',
+    );
+    if (!hasPasswordProvider) {
+      throw {
+        errors: {
+          general: [
+            'You must set up an email and password before unlinking your Google account.',
+          ],
+        },
+      };
+    }
+    return await unlink(user, provider.providerId);
   } catch (error) {
     // Firebase errors and exceptions are treated by a map
     const errorBuilder = consts.FIREBASE_ERRORS[error.code];
@@ -140,7 +157,7 @@ export const unlinkGoogleAccount = async () => {
 
     throw {
       errors: {
-        general: [messages.COULD_NOT_LOG_IN],
+        general: [messages.COULD_NOT_UNLINK_GOOGLE_ACCOUNT],
       },
     };
   }

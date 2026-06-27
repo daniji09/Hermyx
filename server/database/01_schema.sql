@@ -19,7 +19,6 @@ CREATE TABLE APP_USER (
 	username VARCHAR(20) NOT NULL UNIQUE,
 	email VARCHAR(100) UNIQUE,
 	firebase_uid VARCHAR(255) NOT NULL UNIQUE,
-	google_account VARCHAR(255),
 	description VARCHAR(500),
 	name VARCHAR(50),
 	surnames VARCHAR(100),

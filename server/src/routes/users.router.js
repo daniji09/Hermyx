@@ -101,13 +101,13 @@ router.put(
 );
 
 /// DELETE
+router.delete('/me', verifyToken, deleteUser);
+
 router.delete(
   '/:uid',
   verifyToken,
   validateParamsSchema(deleteUserByUid),
   deleteByUid,
 );
-
-router.delete('/me', verifyToken, deleteUser);
 
 export default router;

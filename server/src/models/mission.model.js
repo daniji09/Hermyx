@@ -452,3 +452,16 @@ export const getPublicProfileJoinedMissions = async (
 
   return { rows, totalCount };
 };
+
+// Gets user active missions, created or joined
+export const getUserActiveMissions = async (uid) => {
+  const query = `
+  SELECT COUNT(DISTINCT m.mid) AS total_active
+  FROM mission m
+    LEFT JOIN mission_participation ma ON m.mid = ma.mid AND ma.adventurer_id = $1
+  WHERE m.status = 'in_progress' 
+    AND (m.owner_id = $1 OR ma.adventurer_id = $1)
+  `;
+  const result = await pool.query(query, [uid]);
+  return result.rows[0];
+};

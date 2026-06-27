@@ -20,12 +20,16 @@ export const Alert = ({ isAlertOpen, setIsAlertOpen, alertConfig }) => {
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          {alertConfig?.variant === 'warning' && (
+          {(alertConfig?.variant === 'warning' ||
+            alertConfig?.variant === 'danger') && (
             <AlertDialogCancel onClick={alertConfig?.onCancel}>
               {alertConfig?.cancelText || 'Cancel'}
             </AlertDialogCancel>
           )}
-          <AlertDialogAction onClick={alertConfig?.onConfirm}>
+          <AlertDialogAction
+            onClick={alertConfig?.onConfirm}
+            variant={alertConfig?.variant === 'danger' ? 'destructive' : ''}
+          >
             {alertConfig?.confirmText || 'OK'}
           </AlertDialogAction>
         </AlertDialogFooter>
