@@ -26,7 +26,7 @@ export const MissionSearchContainer = ({
   noMissionsMessage = messages.SEARCH_MISSIONS.NO_MISSIONS,
 }) => {
   return (
-    <section className='p-4'>
+    <section className='w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16'>
       <MissionsSearchLoading isLoading={isLoading}>
         {isLoadingMessage}
       </MissionsSearchLoading>

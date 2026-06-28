@@ -13,6 +13,7 @@ import { Navbar } from './components/custom/Navbar';
 import { PublicProfile } from './pages/PublicProfile';
 import { MyProfile } from './pages/MyProfile';
 import { Notifications } from './pages/Notifications';
+import { SearchUsers } from './pages/SearchUsers';
 
 function App() {
   return (
@@ -89,6 +90,14 @@ function App() {
             </ProtectedRoute>
           }
         ></Route>
+        <Route
+          path='/users/search'
+          element={
+            <ProtectedRoute>
+              <SearchUsers />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path='/users/:username'
           element={

@@ -20,12 +20,28 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
   // For search bar
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const trimmedQuery = query.trim();
 
   // No React useAction because is a GET, it's done by Maps
   const handleSearch = (e) => {
     e.preventDefault();
-    if (query.trim()) {
-      navigate(`/missions?title=${encodeURIComponent(query.trim())}`);
+    if (trimmedQuery) {
+      navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
+      setQuery('');
+    }
+  };
+
+  const handleMissionSearch = () => {
+    if (trimmedQuery) {
+      navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
+      setQuery('');
+    }
+  };
+
+  const handleUserSearch = () => {
+    if (trimmedQuery) {
+      navigate(`/users/search?username=${encodeURIComponent(trimmedQuery)}`);
+      setQuery('');
     }
   };
 
@@ -68,6 +84,25 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>
+
+      {trimmedQuery && (
+        <div className='absolute top-full left-0 right-0 z-20 mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm'>
+          <button
+            type='button'
+            onClick={handleMissionSearch}
+            className='block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100'
+          >
+            Search missions
+          </button>
+          <button
+            type='button'
+            onClick={handleUserSearch}
+            className='block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100'
+          >
+            Search users
+          </button>
+        </div>
+      )}
     </form>
   );
 };
