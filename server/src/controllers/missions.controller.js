@@ -7,6 +7,7 @@ import {
   deleteMission as _deleteMission,
   getMissions as _getMissions,
   getById,
+  getParticipantsForDisplay,
   getParticipantsForRelease,
   adventurerJoined,
   updateMissionStatus,
@@ -28,14 +29,22 @@ export const getMissionById = async (req, res) => {
     const uid = req.user.uid;
 
     // Searches mission by id
-    const mission = await _getMissionById(id, uid);
+    const [mission, participants] = await Promise.all([
+      _getMissionById(id, uid),
+      getParticipantsForDisplay(id),
+    ]);
 
     // Returns success or error
     if (!mission) {
       return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
     }
 
-    return res.status(200).json({ mission: mission });
+    return res.status(200).json({
+      mission: {
+        ...mission,
+        participants,
+      },
+    });
   } catch (e) {
     console.error(e);
     res.status(500).end();

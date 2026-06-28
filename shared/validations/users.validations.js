@@ -23,6 +23,18 @@ export const getUsersQuerySchema = z
     path: ['email'],
   });
 
+export const searchUsersByUsernameQuerySchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.USERNAME_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
+    )
+    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
+});
+
 // Server and client sign up shared validation
 export const signUpSchema = z
   .object({

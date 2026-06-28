@@ -3,6 +3,7 @@ import {
   getMyProfile,
   getPublicUserProfile,
   getPublicUserProfileMissions,
+  searchUsersByUsername,
   updateMyProfile,
 } from '../services/UsersServices';
 
@@ -40,6 +41,15 @@ export const getMyProfileQueryOptions = (options) => {
   return queryOptions({
     queryKey: ['getMyProfile'],
     queryFn: getMyProfile,
+    ...options,
+  });
+};
+
+export const searchUsersByUsernameQueryOptions = (username, options) => {
+  return queryOptions({
+    queryKey: ['searchUsersByUsername', username],
+    queryFn: () => searchUsersByUsername(username),
+    enabled: !!username,
     ...options,
   });
 };

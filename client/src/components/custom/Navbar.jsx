@@ -1,19 +1,31 @@
 import * as React from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, X, Menu, User } from 'lucide-react';
+import {
+  Bell,
+  ChevronDown,
+  ChevronRight,
+  Mail,
+  X,
+  Menu,
+  User,
+} from 'lucide-react';
 import { consts } from '@hermyx/shared';
 import { useNavigate } from 'react-router-dom';
 import { SearchBar } from './form/SearchBar';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext, useState } from 'react';
+import { getMyInvitationsQueryOptions } from '../../queries/InvitationsQueries';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
@@ -71,6 +83,7 @@ export function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                <NotificationsButton />
                 <ProfileLink currentUser={currentUser} />
               </>
             )}
@@ -132,6 +145,16 @@ export function Navbar() {
                   </span>
                   {currentUser.username}
                 </Link>
+                <Link
+                  to='/notifications'
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                >
+                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                    <Bell className='h-4 w-4' aria-hidden='true' />
+                  </span>
+                  Notifications
+                </Link>
               </div>
             )}
 
@@ -180,5 +203,98 @@ const ProfileLink = ({ currentUser }) => {
         <span className='max-w-28 truncate'>{currentUser.username}</span>
       </Link>
     </Button>
+  );
+};
+
+const NotificationsButton = () => {
+  const { latestNotification } = useContext(AuthContext);
+  const { data } = useQuery(
+    getMyInvitationsQueryOptions({
+      staleTime: 30000,
+    }),
+  );
+  const invitations = data?.invitations || [];
+  const unseenInvitations = invitations.filter(
+    (invitation) => !invitation.seen,
+  );
+  const previewInvitation = unseenInvitations[0];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant='ghost'
+          size='icon'
+          className='relative rounded-full hover:bg-slate-200/50'
+          aria-label='Open notifications'
+        >
+          <Bell className='h-5 w-5' aria-hidden='true' />
+          {unseenInvitations.length > 0 && (
+            <span className='absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+              {unseenInvitations.length}
+            </span>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='start' sideOffset={8} className='w-80 p-2'>
+        {previewInvitation ? (
+          <>
+            <DropdownMenuLabel className='px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400'>
+              Messages
+            </DropdownMenuLabel>
+
+            <DropdownMenuItem asChild className='p-0 focus:bg-transparent'>
+              <Link
+                to={`/notifications?invitation=${previewInvitation.iid}`}
+                className='flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition-colors hover:border-slate-300 hover:bg-white'
+              >
+                <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white'>
+                  <Mail className='h-3.5 w-3.5' aria-hidden='true' />
+                </span>
+                <span className='flex min-w-0 flex-1 items-center'>
+                  <span className='block text-sm font-semibold text-slate-900'>
+                    Tienes un mensaje de {previewInvitation.sender_username}
+                  </span>
+                </span>
+                <ChevronRight
+                  className='h-4 w-4 shrink-0 text-slate-400'
+                  aria-hidden='true'
+                />
+              </Link>
+            </DropdownMenuItem>
+            {latestNotification?.senderUsername &&
+              latestNotification.senderUsername !==
+                previewInvitation.sender_username && (
+                <DropdownMenuItem
+                  asChild
+                  className='mt-2 rounded-xl border border-dashed border-slate-200 px-3 py-2 text-sm font-medium text-slate-700'
+                >
+                  <Link
+                    to={`/notifications?invitation=${latestNotification.invitationId}`}
+                  >
+                    Tienes un mensaje de {latestNotification.senderUsername}
+                  </Link>
+                </DropdownMenuItem>
+              )}
+            <DropdownMenuSeparator className='mx-0 my-2' />
+            <DropdownMenuItem
+              asChild
+              className='rounded-xl px-3 py-2 text-sm font-semibold text-slate-700'
+            >
+              <Link to='/notifications'>Open messages</Link>
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <>
+            <DropdownMenuLabel className='px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400'>
+              Messages
+            </DropdownMenuLabel>
+            <DropdownMenuItem className='cursor-default rounded-2xl border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500 focus:bg-slate-50 focus:text-slate-500'>
+              No messages yet
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };

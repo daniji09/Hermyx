@@ -12,6 +12,7 @@ import TestDashboard from './pages/TestDashboard';
 import { Navbar } from './components/custom/Navbar';
 import { PublicProfile } from './pages/PublicProfile';
 import { MyProfile } from './pages/MyProfile';
+import { Notifications } from './pages/Notifications';
 
 function App() {
   return (
@@ -101,6 +102,14 @@ function App() {
           element={
             <ProtectedRoute>
               <MyProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/notifications'
+          element={
+            <ProtectedRoute>
+              <Notifications />
             </ProtectedRoute>
           }
         />

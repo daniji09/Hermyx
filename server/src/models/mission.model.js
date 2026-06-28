@@ -29,6 +29,18 @@ export const getParticipantsForRelease = async (mid) => {
   return result.rows;
 };
 
+export const getParticipantsForDisplay = async (mid) => {
+  const query = `
+    SELECT u.uid, u.username, u.avatar
+    FROM app_user u
+    JOIN mission_participation mp ON u.uid = mp.adventurer_id
+    WHERE mp.mid = $1
+    ORDER BY u.username ASC
+  `;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
+};
+
 //Tries to set status to "releasing" only if current status is 'accepted', this prevents double payments. Returns the row if successful.
 export const lockForRelease = async (mid, ownerId) => {
   const query = `

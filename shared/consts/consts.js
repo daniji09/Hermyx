@@ -103,4 +103,7 @@ export const consts = {
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
     DIFFICULTY: { MIN: 1, STEP: 1, MAX: 5 },
   },
+  INVITATION: {
+    MESSAGE_MAX_LENGTH: 500,
+  },
 };
