@@ -158,7 +158,11 @@ export const getMissions = async ({ title = undefined, pagination }) => {
 };
 
 // TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
-export const getMissionsFunded = async ({ title = undefined, pagination }) => {
+export const getMissionsFunded = async ({
+  title = undefined,
+  pagination,
+  excludeOwnerId = undefined,
+}) => {
   // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
     m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
@@ -168,6 +172,10 @@ export const getMissionsFunded = async ({ title = undefined, pagination }) => {
   if (title) {
     values.push(title);
     query += ` AND unaccent(title) ILIKE unaccent('%' || $${values.length} || '%')`;
+    if (excludeOwnerId) {
+      values.push(excludeOwnerId);
+      query += ` AND m.owner_id != $${values.length}`;
+    }
   }
   query += ` ORDER BY m.publication_date DESC`;
   if (pagination) {

@@ -70,10 +70,10 @@ export const createMission = async (missionData) => {
   return mission;
 };
 
-// Joins an adventurer into a mission
-export const joinMission = async (mid) => {
-  const { data } = await api.post(`/missions/${mid}/join`);
-  return data.mission;
+// Sends a join request to a mission owner
+export const joinMission = async (mid, message = '') => {
+  const { data } = await api.post(`/missions/${mid}/join`, { message });
+  return data;
 };
 
 // Finds all missions from user, it may be paginated

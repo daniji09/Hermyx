@@ -39,20 +39,18 @@ export const findByIid = async (id) => {
   return result.rows[0];
 };
 
-export const hasPendingInvitationForRecipient = async (
-  missionId,
-  recipientId,
-) => {
+export const hasPendingInvitation = async (missionId, senderId, recipientId) => {
   const query = `
     SELECT EXISTS (
       SELECT 1
       FROM invitation
       WHERE associated_mission_id = $1
-        AND recipient_id = $2
+        AND sender_id = $2
+        AND recipient_id = $3
         AND status = 'pending'
     ) AS "hasPendingInvitation"
   `;
-  const result = await pool.query(query, [missionId, recipientId]);
+  const result = await pool.query(query, [missionId, senderId, recipientId]);
   return result.rows[0].hasPendingInvitation;
 };
 

@@ -16,7 +16,7 @@ import { timestampToDayMonthYear } from './../utils/date';
 import { Star, Users, HandCoins, Plus, Search, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
-import { useContext, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import {
   startMission,
   joinMission,
@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { consts } from '@hermyx/shared';
 
 export const Mission = () => {
   // Mission id
@@ -479,17 +480,30 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
 
 const JoinMissionButton = ({ missionId, isJoined }) => {
   const { showAlert } = useAlert();
-  const queryClient = useQueryClient();
+  const [hasRequestedToJoin, setHasRequestedToJoin] = useState(false);
+  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
+  const joinRequestMessageRef = useRef(null);
   const { isPending, mutate } = useMutation({
-    mutationFn: () => joinMission(missionId),
+    mutationFn: (message) => joinMission(missionId, message),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      setHasRequestedToJoin(true);
+      setIsJoinDialogOpen(false);
+      if (joinRequestMessageRef.current) {
+        joinRequestMessageRef.current.value = '';
+      }
+      showAlert({
+        title: 'Request sent',
+        description:
+          'The mission owner received your request. You will join the mission only if they accept it.',
+      });
     },
     // Backend error handling
     onError: (error) => {
       showAlert({
         title: messages.MISSION.JOIN_MISSION_ALERT.ERROR_TITLE,
-        description: error?.response.data.errors?.general,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
       });
     },
   });
@@ -500,32 +514,81 @@ const JoinMissionButton = ({ missionId, isJoined }) => {
   if (isJoined) {
     buttonText = 'Joined mission';
     isDisabled = true;
+  } else if (hasRequestedToJoin) {
+    buttonText = 'Request sent';
+    isDisabled = true;
   } else if (isPending) {
-    buttonText = 'Joining...';
+    buttonText = 'Sending request...';
     isDisabled = true;
   }
 
   // Interceptor
   const handleAttempt = () => {
-    // This action needs confirmation
-    showAlert({
-      title: messages.MISSION.JOIN_MISSION_ALERT.TITLE,
-      description: messages.MISSION.JOIN_MISSION_ALERT.DESCRIPTION,
-      variant: 'warning',
-      confirmText: messages.MISSION.JOIN_MISSION_ALERT.CONFIRM_TEXT,
-      onConfirm: mutate,
-    });
+    setIsJoinDialogOpen(true);
   };
 
   return (
-    <Button
-      type='button'
-      id='joinMissionButton'
-      onClick={handleAttempt}
-      disabled={isDisabled || isPending}
-    >
-      {buttonText}
-    </Button>
+    <>
+      <Button
+        type='button'
+        id='joinMissionButton'
+        onClick={handleAttempt}
+        disabled={isDisabled || isPending}
+      >
+        {buttonText}
+      </Button>
+
+      <AlertDialog
+        open={isJoinDialogOpen}
+        onOpenChange={(open) => {
+          setIsJoinDialogOpen(open);
+          if (!open && joinRequestMessageRef.current) {
+            joinRequestMessageRef.current.value = '';
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {messages.MISSION.JOIN_MISSION_ALERT.TITLE}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+
+          <div>
+            <label htmlFor='joinMissionMessage'>Message for the mission owner</label>
+            <Textarea
+              id='joinMissionMessage'
+              ref={joinRequestMessageRef}
+              placeholder='Write a short message explaining why you want to join'
+              maxLength={consts.INVITATION.MESSAGE_MAX_LENGTH}
+              rows={5}
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <Button
+              type='button'
+              variant='outline'
+              onClick={() => {
+                setIsJoinDialogOpen(false);
+                if (joinRequestMessageRef.current) {
+                  joinRequestMessageRef.current.value = '';
+                }
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type='button'
+              onClick={() => mutate(joinRequestMessageRef.current?.value || '')}
+              disabled={isPending}
+            >
+              {messages.MISSION.JOIN_MISSION_ALERT.CONFIRM_TEXT}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

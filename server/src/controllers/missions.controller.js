@@ -9,7 +9,6 @@ import {
   getById,
   getParticipantsForDisplay,
   getParticipantsForRelease,
-  adventurerJoined,
   updateMissionStatus,
   getByUidAndTitle,
   closeMission as _closeMission,
@@ -17,10 +16,13 @@ import {
 } from '../models/mission.model.js';
 
 import {
-  addParticipant,
-  deleteParticipant,
   getById as getMissionParticipationById,
 } from '../models/mission_participation.model.js';
+import {
+  createInvitation as createInvitationRecord,
+  hasPendingInvitation,
+} from '../models/invitation.model.js';
+import { emitToUser } from '../services/socket.service.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -101,12 +103,14 @@ export const getAllMissionsInDraft = async (req, res) => {
 export const getMissionsFunded = async (req, res) => {
   const { title } = req.query;
   const pagination = req.pagination;
+  const excludeOwnerId = title ? req.user?.uid : undefined;
 
   try {
     // Gets all missions filtering what is needed
     const { rows: missions, totalCount } = await _getMissionsFunded({
       title,
       pagination,
+      excludeOwnerId,
     });
 
     const totalItems = parseInt(totalCount);
@@ -207,10 +211,11 @@ export const start = async (req, res) => {
   }
 };
 
-// Joins an adventurer into a mission, verifying its not their own and there are vacancies available
+// Sends a join request to the mission owner instead of joining immediately
 export const joinMission = async (req, res) => {
   const { mid } = req.params;
   const uid = req.user.uid;
+  const message = req.body?.message?.trim() || '';
 
   try {
     // Mission is searched
@@ -234,28 +239,36 @@ export const joinMission = async (req, res) => {
       return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
     }
 
-    // If everything is correct, the user joins the mission, updating it
-    const mission_join = await addParticipant(mid, uid);
-
-    if (!mission_join)
-      return res.status(500).json({
-        error: messages.UNEXPECTED_ERROR,
+    const ownerId = mission.owner_id;
+    const pendingRequest = await hasPendingInvitation(mid, uid, ownerId);
+    if (pendingRequest) {
+      return res.status(409).json({
+        error: 'You already sent a join request for this mission.',
       });
-
-    // So the mission's occupied vacancies are updated
-    const mission_update = await adventurerJoined(mid);
-
-    if (!mission_update) {
-      const deleted_participant = await deleteParticipant(mid, uid);
-
-      if (deleted_participant) {
-        return res.status(500).json({
-          error: messages.UNEXPECTED_ERROR,
-        });
-      }
-    } else {
-      return res.status(200).json({ mission });
     }
+
+    const invitationId = await createInvitationRecord({
+      missionId: mid,
+      senderId: uid,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });
+
+    emitToUser(ownerId, 'invitation:created', {
+      invitationId,
+      missionId: mid,
+      missionTitle: mission.title,
+      senderId: uid,
+      senderUsername: req.user.username,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });
+
+    return res.status(201).json({
+      message: 'Join request sent successfully',
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
