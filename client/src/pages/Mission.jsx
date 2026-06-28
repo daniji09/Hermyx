@@ -489,7 +489,7 @@ const JoinMissionButton = ({ missionId, isJoined }) => {
     onError: (error) => {
       showAlert({
         title: messages.MISSION.JOIN_MISSION_ALERT.ERROR_TITLE,
-        description: error?.response.data.error,
+        description: error?.response.data.errors?.general,
       });
     },
   });
@@ -541,7 +541,7 @@ const StartMissionButton = ({ mission }) => {
     onError: (error) => {
       showAlert({
         title: messages.MISSION.START_MISSION_ALERT.ERROR_TITLE,
-        description: error?.response.data.error,
+        description: error?.response.data.errors?.general,
       });
     },
   });
@@ -594,7 +594,7 @@ const CloseMissionButton = ({ missionId }) => {
     onError: (error) => {
       showAlert({
         title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
-        description: error?.response.data.error,
+        description: error?.response.data.errors?.general,
       });
     },
   });

@@ -13,6 +13,8 @@ import {
   updateMyProfile,
   syncGoogle,
   deleteByUid,
+  updateUserEmail,
+  deleteUser,
 } from '../controllers/users.controller.js';
 import {
   validateBodySchema,
@@ -31,6 +33,7 @@ import {
   syncGoogleSchema,
   getPublicProfileMissionsQuerySchema,
   deleteUserByUid,
+  updateUserEmailSchema,
 } from '@hermyx/shared';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
@@ -98,7 +101,17 @@ router.post('/', validateBodySchema(signUpSchema), signUp);
 // Sign in user with Google, handling whether is a signup or a login
 router.post('/sync-google', validateBodySchema(syncGoogleSchema), syncGoogle);
 
+/// PUT
+router.put(
+  '/me/email',
+  verifyToken,
+  validateBodySchema(updateUserEmailSchema),
+  updateUserEmail,
+);
+
 /// DELETE
+router.delete('/me', verifyToken, deleteUser);
+
 router.delete(
   '/:uid',
   verifyToken,

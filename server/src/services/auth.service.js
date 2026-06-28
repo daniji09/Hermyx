@@ -20,7 +20,7 @@ export const createFirebaseUser = async (user) => {
 };
 
 export const deleteFirebaseUser = async (uid) => {
-  await firebaseAdmin.auth().deleteUser(uid);
+  return await firebaseAdmin.auth().deleteUser(uid);
 };
 
 export const verifyIdToken = async (token) => {
@@ -38,8 +38,10 @@ export const getFirebaseAuthProviders = async (firebaseUid) => {
   };
 };
 
-export const updateFirebaseEmail = async (firebaseUid, email) =>
-  firebaseAdmin.auth().updateUser(firebaseUid, { email });
+export const updateFirebaseAccount = async (firebaseUid, updates) => {
+  return await firebaseAdmin.auth().updateUser(firebaseUid, updates);
+};
 
-export const updateFirebasePassword = async (firebaseUid, password) =>
-  firebaseAdmin.auth().updateUser(firebaseUid, { password });
+export const getUserByEmail = async (email) => {
+  return await firebaseAdmin.auth().getUserByEmail(email);
+};

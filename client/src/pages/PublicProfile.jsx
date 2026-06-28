@@ -99,7 +99,7 @@ export const PublicProfile = () => {
         </div>
 
         <div className='min-w-0 flex-1'>
-          <h1 className='break-words text-3xl font-bold tracking-tight sm:text-4xl'>
+          <h1 className='wrap-break-words text-3xl font-bold tracking-tight sm:text-4xl'>
             {displayName || user.username}
           </h1>
 

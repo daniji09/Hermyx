@@ -16,6 +16,11 @@ export const consts = {
       message: messages.OPERATION_ERROR,
       status: 499,
     }),
+    'auth/credential-already-in-use': () => ({
+      field: 'general',
+      message: messages.CREDENTIAL_ALREADY_IN_USE,
+      status: 400,
+    }),
     'auth/email-already-exists': ({ email }) => ({
       field: 'email',
       message: messages.EMAIL_ALREADY_EXISTS(email),
@@ -55,6 +60,11 @@ export const consts = {
       field: 'general',
       message: messages.CONNECTION_ERROR,
       status: 502,
+    }),
+    'auth/no-such-provider': () => ({
+      field: 'general',
+      message: messages.NO_SUCH_PROVIDER,
+      status: 400,
     }),
     'auth/operation-not-allowed': () => ({
       field: 'general',

@@ -190,6 +190,38 @@ export const syncGoogleSchema = z.object({
   isNewUser: z.boolean(),
 });
 
+// Updates user email
+export const updateUserEmailSchema = z
+  .object({
+    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    password: z
+      .string()
+      .trim()
+      .min(1, messages.FIELD_REQUIRED)
+      .min(
+        consts.PASSWORD_MIN_LENGTH,
+        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
+      )
+      .max(
+        consts.PASSWORD_MAX_LENGTH,
+        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
+      ) // Firebase requirement
+      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
+      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
+      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
+      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL)
+      .optional(),
+    confirmPassword: z
+      .string()
+      .trim()
+      .min(1, messages.CONFIRM_PASSWORD)
+      .optional(),
+  })
+  .refine((val) => val.password === val.confirmPassword, {
+    message: messages.PASSWORDS_NOT_MATCH,
+    path: ['confirmPassword'],
+  });
+
 // Delete user by uid backend validation
 export const deleteUserByUid = z.object({
   uid: z.coerce
@@ -197,3 +229,67 @@ export const deleteUserByUid = z.object({
     .int(messages.FIELD_INTEGER('uid'))
     .min(0, messages.FIELD_POSITIVE('uid')),
 });
+
+// Update email validation
+export const updateEmailValidation = z
+  .object({
+    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    confirmEmail: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+  })
+  .refine((val) => val.email === val.confirmEmail, {
+    message: messages.EMAILS_NOT_MATCH,
+    path: ['confirmEmail'],
+  });
+
+// Update email validation
+export const updatePasswordValidation = z
+  .object({
+    password: z
+      .string()
+      .trim()
+      .min(1, messages.FIELD_REQUIRED)
+      .min(
+        consts.PASSWORD_MIN_LENGTH,
+        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
+      )
+      .max(
+        consts.PASSWORD_MAX_LENGTH,
+        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
+      ) // Firebase requirement
+      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
+      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
+      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
+      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL),
+    confirmPassword: z.string().trim().min(1, messages.CONFIRM_PASSWORD),
+  })
+  .refine((val) => val.password === val.confirmPassword, {
+    message: messages.PASSWORDS_NOT_MATCH,
+    path: ['confirmPassword'],
+  });
+
+// Server and client add email authentication shared validation
+export const addEmailAuthenticationSchema = z
+  .object({
+    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    password: z
+      .string()
+      .trim()
+      .min(1, messages.FIELD_REQUIRED)
+      .min(
+        consts.PASSWORD_MIN_LENGTH,
+        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
+      )
+      .max(
+        consts.PASSWORD_MAX_LENGTH,
+        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
+      ) // Firebase requirement
+      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
+      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
+      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
+      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL),
+    confirmPassword: z.string().trim().min(1, messages.CONFIRM_PASSWORD),
+  })
+  .refine((val) => val.password === val.confirmPassword, {
+    message: messages.PASSWORDS_NOT_MATCH,
+    path: ['confirmPassword'],
+  });

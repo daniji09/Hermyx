@@ -1,6 +1,14 @@
-import { logInSchema, signUpSchema } from '@hermyx/shared';
+import {
+  addEmailAuthenticationSchema,
+  logInSchema,
+  signUpSchema,
+} from '@hermyx/shared';
 import { messages } from '@hermyx/shared';
-import { createUser, getUserByUsername } from '../services/UsersServices';
+import {
+  addEmailAuthentication,
+  createUser,
+  getUserByUsername,
+} from '../services/UsersServices';
 import { firebaseSignIn } from '../services/AuthServices';
 
 // Sign up action, executed when form is sent
@@ -113,6 +121,59 @@ export const logInAction = async (previousState, formData) => {
       return {
         success: false,
         errors: error.errors,
+        data: fieldsData,
+      };
+
+    // Any other error
+    const errorMessage =
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+
+    return {
+      success: false,
+      errors: { general: [errorMessage] },
+      data: fieldsData,
+    };
+  }
+};
+
+// Add e-mail authentication action action, executed when form is sent
+export const addEmailAuthenticationAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedFields = addEmailAuthenticationSchema.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  // API call
+  try {
+    const success = await addEmailAuthentication(fieldsData);
+
+    if (!success)
+      throw {
+        errors: {
+          general: [messages.COULD_NOT_ADD_EMAIL_AUTHENTICATION],
+        },
+      };
+
+    // Success
+    return { success: true, data: null, errors: {} };
+  } catch (error) {
+    // If it some controlled error found in server
+    if (
+      [400, 500].includes(error.response?.status) &&
+      error.response.data?.errors
+    )
+      return {
+        success: false,
+        errors: error.response.data.errors,
         data: fieldsData,
       };
 
