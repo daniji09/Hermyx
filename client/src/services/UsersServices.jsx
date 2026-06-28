@@ -108,3 +108,10 @@ export const addEmailAuthentication = async ({
   });
   return data;
 };
+
+// Updates user configuration (anonymizes it)
+export const userConfiguration = async (configuration) => {
+  // API search
+  const { data } = await api.put('/users/me/configuration', { configuration });
+  return data;
+};

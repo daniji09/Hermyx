@@ -91,25 +91,25 @@ const MissionPageContainer = ({
 
 const MissionLoading = ({ isLoading, children }) => {
   return (
-    <>
+    <main>
       {isLoading && (
         <div className='flex justify-center p-8 text-muted-foreground'>
           {children}
         </div>
       )}
-    </>
+    </main>
   );
 };
 
 const MissionError = ({ isError, children }) => {
   return (
-    <>
+    <main>
       {isError && (
         <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
           {children}
         </div>
       )}
-    </>
+    </main>
   );
 };
 

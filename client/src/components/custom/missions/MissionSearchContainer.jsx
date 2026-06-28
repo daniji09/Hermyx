@@ -133,7 +133,12 @@ const MissionSearchCard = ({ mission }) => {
           <CardTitle asChild>
             <h2>{mission.title}</h2>
           </CardTitle>
-          <CardDescription>By {mission.username}</CardDescription>
+          <CardDescription>
+            By{' '}
+            <Link to={`/users/${mission.username}`} className='hover:underline'>
+              {mission.username}
+            </Link>
+          </CardDescription>
           <CardAction>
             <p>{timestampToDayMonthYear(mission.publication_date)}</p>
           </CardAction>

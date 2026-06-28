@@ -334,7 +334,7 @@ export const getPublicProfileCreatedMissions = async (
     SELECT
       m.mid,
       m.title,
-      owner_user.username AS requester_name,
+      owner_user.username,
       m.description,
       m.difficulty,
       m.total_vacancies,
@@ -409,7 +409,8 @@ export const getPublicProfileJoinedMissions = async (
     SELECT
       m.mid,
       m.title,
-      owner_user.username AS requester_name,
+      owner_user.username,
+      m.description,
       m.difficulty,
       m.total_vacancies,
       m.occupied_vacancies,

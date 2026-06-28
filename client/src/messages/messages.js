@@ -92,5 +92,9 @@ export const messages = {
         `This action will unlink your Google account ${googleEmail} from your Hermyx account, and you will be able to link any other Google account.`,
       CONFIRM_TEXT: 'Yes, unlink account',
     },
+    CONFIGURATION: {
+      SHOW_MISSIONS_TEXT:
+        'Do you want to show your created and joined missions to others in your profile?',
+    },
   },
 };

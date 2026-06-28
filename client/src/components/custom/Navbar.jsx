@@ -21,7 +21,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   return (
     <>
-      <header className='sticky top-0 w-full bg-secondary py-3'>
+      <header className='sticky top-0 w-full bg-secondary py-3 z-10'>
         <nav
           aria-label='Main navigation'
           className='flex w-full items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
@@ -36,7 +36,7 @@ export function Navbar() {
             </Link>
           </div>
 
-          <div className='hidden md:flex items-center gap-6 lg:gap-10'>
+          <div className='hidden md:flex items-center justify-end gap-3 lg:gap-6'>
             <section className='flex items-center'>
               <SearchBar
                 id='searchMissionByTitle'
@@ -54,7 +54,7 @@ export function Navbar() {
                       className='border-none bg-transparent gap-1.5 px-2 hover:bg-slate-200/50'
                       aria-label='Missions menu'
                     >
-                      Missions{' '}
+                      Missions
                       <ChevronDown
                         className='h-4 w-4 opacity-50'
                         aria-hidden='true'
@@ -104,7 +104,17 @@ export function Navbar() {
             />
 
             {currentUser && (
-              <div className='flex flex-col gap-1 pt-2'>
+              <div className='flex flex-col gap-1'>
+                <Link
+                  to='/profile'
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className='flex items-center gap-2 px-2 pt-2 pb-6 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
+                >
+                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+                    <User className='h-4 w-4' aria-hidden='true' />
+                  </span>
+                  {currentUser.username}
+                </Link>
                 <span className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-2'>
                   Missions
                 </span>
@@ -121,16 +131,6 @@ export function Navbar() {
                   className='px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
                 >
                   My missions
-                </Link>
-                <Link
-                  to='/profile'
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
-                >
-                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-                    <User className='h-4 w-4' aria-hidden='true' />
-                  </span>
-                  {currentUser.username}
                 </Link>
               </div>
             )}
@@ -177,7 +177,9 @@ const ProfileLink = ({ currentUser }) => {
         <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
           <User className='h-4 w-4' aria-hidden='true' />
         </span>
-        <span className='max-w-28 truncate'>{currentUser.username}</span>
+        <span className='max-w-20 lg:max-w-28 truncate'>
+          {currentUser.username}
+        </span>
       </Link>
     </Button>
   );

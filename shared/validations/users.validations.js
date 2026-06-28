@@ -281,3 +281,11 @@ export const addEmailAuthenticationSchema = z
     message: messages.PASSWORDS_NOT_MATCH,
     path: ['confirmPassword'],
   });
+
+export const userConfigurationValidation = z.object({
+  show_missions_to_others: z.boolean(),
+});
+
+export const userConfigurationBackendValidation = z.object({
+  configuration: z.json(),
+});

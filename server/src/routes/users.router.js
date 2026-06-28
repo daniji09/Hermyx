@@ -14,6 +14,7 @@ import {
   deleteByUid,
   updateUserEmail,
   deleteUser,
+  updateUserConfiguration,
 } from '../controllers/users.controller.js';
 import {
   validateBodySchema,
@@ -32,6 +33,7 @@ import {
   getPublicProfileMissionsQuerySchema,
   deleteUserByUid,
   updateUserEmailSchema,
+  userConfigurationBackendValidation,
 } from '@hermyx/shared';
 
 import { verifyToken } from '../middlewares/auth.middleware.js';
@@ -98,6 +100,13 @@ router.put(
   verifyToken,
   validateBodySchema(updateUserEmailSchema),
   updateUserEmail,
+);
+
+router.put(
+  '/me/configuration',
+  verifyToken,
+  validateBodySchema(userConfigurationBackendValidation),
+  updateUserConfiguration,
 );
 
 /// DELETE

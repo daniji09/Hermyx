@@ -34,7 +34,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
       id={id}
       onSubmit={handleSearch}
       noValidate
-      className='flex items-center w-full min-w-25 md:min-w-100 lg:min-w-150 max-w-md relative'
+      className='flex items-center w-full min-w-25 md:min-w-75 lg:min-w-100 max-w-md relative'
     >
       <InputGroup className='bg-white flex justify-between'>
         <div className='flex'>
@@ -51,7 +51,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
               aria-label='Search mission'
               aria-describedby={searchId}
               {...props}
-              className='w-full min-w-25 md:min-w-75 lg:min-w-125 max-w-md'
+              className='w-full min-w-25 md:min-w-50 lg:min-w-75 max-w-md'
             />
           </FieldSet>
           <InputGroupAddon>

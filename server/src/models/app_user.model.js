@@ -128,3 +128,9 @@ export const deanonymize = async (user) => {
   ]);
   return result.rows[0];
 };
+
+export const updateConfiguration = async (uid, configuration) => {
+  const query = 'UPDATE app_user SET configuration = $2 WHERE uid = $1';
+  const result = await pool.query(query, [uid, configuration]);
+  return result.rowCount;
+};

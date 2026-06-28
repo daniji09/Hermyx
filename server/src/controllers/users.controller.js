@@ -11,6 +11,7 @@ import {
   updateUserEmail as _updateUserEmail,
   anonymize as _anonymize,
   deanonymize,
+  updateConfiguration,
 } from '../models/app_user.model.js';
 import {
   getPublicProfileCreatedMissions,
@@ -157,7 +158,7 @@ export const getUserPublicProfile = async (req, res) => {
     };
 
     const missionsVisible =
-      user.configuracion?.show_missions_to_others !== false;
+      user.configuration?.show_missions_to_others !== false;
 
     return res.status(200).json({
       user: publicProfile,
@@ -186,7 +187,7 @@ export const getUserPublicProfileMissions = async (req, res) => {
     }
 
     const missionsVisible =
-      user.configuracion?.show_missions_to_others !== false;
+      user.configuration?.show_missions_to_others !== false;
 
     if (!missionsVisible) {
       return res.status(200).json({
@@ -261,6 +262,7 @@ export const getMyProfile = async (req, res) => {
       description: user.description,
       location: user.location,
       avatar: user.avatar,
+      configuration: user.configuration,
     };
 
     return res.status(200).json({
@@ -599,6 +601,27 @@ export const updateUserEmail = async (req, res) => {
     // If email was changed on Firebase but not in Hermyx, it should rollback
     if (firebaseChange)
       await updateFirebaseAccount(user.firebase_uid, currentEmail);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const updateUserConfiguration = async (req, res) => {
+  const user = req.user;
+  const { configuration } = req.body;
+
+  try {
+    const success = await updateConfiguration(user.uid, configuration);
+
+    if (success === 0)
+      return res
+        .status(500)
+        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+
+    return res.status(200).json({});
+  } catch (e) {
+    console.error(e);
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });

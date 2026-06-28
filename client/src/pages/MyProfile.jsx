@@ -18,6 +18,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Card } from '@/components/ui/card';
 import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import {
@@ -50,6 +54,7 @@ import { FormAlert } from '../components/custom/form/FormAlert';
 import {
   updateEmailAction,
   updatePasswordAction,
+  userConfigurationAction,
 } from '../actions/UserActions';
 import { auth } from '../config/firebase';
 import { FormPasswordInputField } from '../components/custom/form/FormPasswordInputField';
@@ -59,6 +64,7 @@ import {
   unlinkGoogleAccount,
 } from '../services/AuthServices';
 import { addEmailAuthenticationAction } from '../actions/AuthActions';
+import { AlertStatic } from '../components/custom/AlertStatic';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -75,22 +81,6 @@ const initialForm = {
 };
 
 export const MyProfile = () => {
-  const hasPasswordProvider = auth.currentUser.providerData.some(
-    (provider) => provider.providerId === 'password',
-  );
-  const hasGoogleProvider = auth.currentUser.providerData.some(
-    (provider) => provider.providerId === 'google.com',
-  );
-  const googleProvider = auth.currentUser.providerData.find(
-    (p) => p.providerId === 'google.com',
-  );
-  const queryClient = useQueryClient();
-  const { setCurrentUser } = useContext(AuthContext);
-  const [form, setForm] = useState(initialForm);
-  const [isEditing, setIsEditing] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState('');
-
   const { data, isLoading, isError } = useQuery(
     getMyProfileQueryOptions({
       retry: (failureCount, error) => {
@@ -99,6 +89,79 @@ export const MyProfile = () => {
       },
     }),
   );
+
+  if (isLoading) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div className='p-8 text-center text-muted-foreground'>
+          Loading profile
+        </div>
+      </main>
+    );
+  }
+
+  if (isError || !data?.user) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'>
+          Could not load your profile
+        </div>
+      </main>
+    );
+  }
+
+  const user = data.user;
+
+  return (
+    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+      <ProfileHeader user={user}></ProfileHeader>
+      <ProfileInformation data={data}></ProfileInformation>
+      <ProfileAccessMethods user={user}></ProfileAccessMethods>
+      <ProfilePaymentMethods></ProfilePaymentMethods>
+      <ProfileConfiguration user={user}></ProfileConfiguration>
+      <ProfileDangerZone></ProfileDangerZone>
+    </main>
+  );
+};
+
+const ProfileHeader = ({ user }) => {
+  const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
+  return (
+    <header className='mb-8 flex flex-col gap-6 border-b pb-8 sm:flex-row sm:items-center'>
+      <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
+        <Avatar size='profile'>
+          <AvatarImage
+            src={user.avatar}
+            alt={`${user.username} avatar`}
+            className='h-full w-full object-cover'
+          />
+          <AvatarFallback>
+            <User className='h-12 w-12 text-muted-foreground' />
+          </AvatarFallback>
+        </Avatar>
+      </div>
+
+      <div className='min-w-0 flex-1'>
+        <h1 className='break-all text-3xl font-bold tracking-tight sm:text-4xl'>
+          {displayName || user.username}
+        </h1>
+
+        <p className='break-all mt-1 text-lg text-muted-foreground'>
+          @{user.username}
+        </p>
+      </div>
+    </header>
+  );
+};
+
+const ProfileInformation = ({ data }) => {
+  const queryClient = useQueryClient();
+  const { setCurrentUser } = useContext(AuthContext);
+  const [form, setForm] = useState(initialForm);
+  const [isEditing, setIsEditing] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
 
   const { mutate, isPending } = useMutation(
     updateMyProfileMutationOptions({
@@ -132,16 +195,6 @@ export const MyProfile = () => {
 
   const profileForm = useMemo(() => buildForm(data?.user || {}), [data?.user]);
 
-  useEffect(() => {
-    if (!successMessage) return undefined;
-
-    const timeoutId = setTimeout(() => {
-      setSuccessMessage('');
-    }, 3000);
-
-    return () => clearTimeout(timeoutId);
-  }, [successMessage]);
-
   const updateField = (field, value) => {
     setForm((currentForm) => ({ ...currentForm, [field]: value }));
     setErrors((currentErrors) => ({ ...currentErrors, [field]: undefined }));
@@ -149,6 +202,7 @@ export const MyProfile = () => {
   };
 
   const handleEdit = () => {
+    setIsAlertClosed(false);
     setForm(profileForm);
     setIsEditing(true);
     setErrors({});
@@ -166,57 +220,11 @@ export const MyProfile = () => {
     if (!isEditing) return;
     mutate(form);
   };
-
-  if (isLoading) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div className='p-8 text-center text-muted-foreground'>
-          Loading profile
-        </div>
-      </main>
-    );
-  }
-
-  if (isError || !data?.user) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'>
-          Could not load your profile
-        </div>
-      </main>
-    );
-  }
-
-  const user = data.user;
-  const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
-
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <section className='mb-8 flex flex-col gap-6 border-b pb-8 sm:flex-row sm:items-center'>
-        <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
-          {user.avatar ? (
-            <img
-              src={user.avatar}
-              alt={`${user.username} avatar`}
-              className='h-full w-full object-cover'
-            />
-          ) : (
-            <User className='h-12 w-12 text-muted-foreground' />
-          )}
-        </div>
-
-        <div className='min-w-0 flex-1'>
-          <h1 className='wrap-break-words text-3xl font-bold tracking-tight sm:text-4xl'>
-            {displayName || user.username}
-          </h1>
-
-          <p className='mt-1 text-lg text-muted-foreground'>@{user.username}</p>
-        </div>
-      </section>
-
-      <section className='rounded-lg border p-4 sm:p-6'>
+    <Card asChild>
+      <section className='p-4 sm:p-6'>
         <form className='space-y-6'>
-          <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+          <div className='flex gap-3 items-start justify-between'>
             <h2 className='text-xl font-semibold'>Profile information</h2>
             <div className='flex justify-end gap-2'>
               {isEditing && (
@@ -259,19 +267,21 @@ export const MyProfile = () => {
               error={errors.username?.[0]}
               onChange={(event) => updateField('username', event.target.value)}
             />
-            <FormInputField
-              id='profileName'
-              label='Name:'
-              value={getFieldValue(
-                isEditing ? form.name : profileForm.name,
-                isEditing,
-              )}
-              maxLength={consts.NAME_MAX_LENGTH}
-              disabled={!isEditing || isPending}
-              invalid={!!errors.name}
-              error={errors.name?.[0]}
-              onChange={(event) => updateField('name', event.target.value)}
-            />
+            <div className='sm:col-start-1'>
+              <FormInputField
+                id='profileName'
+                label='Name:'
+                value={getFieldValue(
+                  isEditing ? form.name : profileForm.name,
+                  isEditing,
+                )}
+                maxLength={consts.NAME_MAX_LENGTH}
+                disabled={!isEditing || isPending}
+                invalid={!!errors.name}
+                error={errors.name?.[0]}
+                onChange={(event) => updateField('name', event.target.value)}
+              />
+            </div>
             <FormInputField
               id='profileSurnames'
               label='Surnames:'
@@ -304,27 +314,39 @@ export const MyProfile = () => {
               />
             </div>
           </div>
-
-          {successMessage && (
-            <Alert>
-              <AlertTitle>Saved</AlertTitle>
-              <AlertDescription>{successMessage}</AlertDescription>
-            </Alert>
+          {successMessage && !isAlertClosed && (
+            <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
+              {successMessage}
+            </AlertStatic>
           )}
-
-          {errors.general?.[0] && (
-            <Alert variant='destructive'>
-              <AlertTitle>Could not save changes</AlertTitle>
-              <AlertDescription>{errors.general[0]}</AlertDescription>
-            </Alert>
+          {errors.general?.[0] && !isAlertClosed && (
+            <FormAlert onClose={() => setIsAlertClosed(true)}>
+              {errors.general[0]}
+            </FormAlert>
           )}
         </form>
       </section>
+    </Card>
+  );
+};
 
-      <section className='rounded-lg border p-4 sm:p-6 mt-6'>
+const ProfileAccessMethods = ({ user }) => {
+  const hasPasswordProvider = auth.currentUser.providerData.some(
+    (provider) => provider.providerId === 'password',
+  );
+  const hasGoogleProvider = auth.currentUser.providerData.some(
+    (provider) => provider.providerId === 'google.com',
+  );
+  const googleProvider = auth.currentUser.providerData.find(
+    (p) => p.providerId === 'google.com',
+  );
+
+  return (
+    <Card asChild>
+      <section className='p-4 sm:p-6 mt-6'>
         <h2 className='text-xl font-semibold'>Access methods</h2>
-        <div className='flex flex-col pt-4 gap-y-2'>
-          <p className='text-lg'>E-mail & password</p>
+        <div className='flex flex-col gap-y-2'>
+          <p className='text-lg font-medium'>E-mail & password</p>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
             <p className='text-sm'>
               {hasPasswordProvider
@@ -349,7 +371,7 @@ export const MyProfile = () => {
               )}
             </div>
           </div>
-          <p className='text-lg mt-3'>Google</p>
+          <p className='text-lg mt-3 font-medium'>Google</p>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
             <p className='text-sm'>
               {hasGoogleProvider
@@ -375,35 +397,7 @@ export const MyProfile = () => {
           )}
         </div>
       </section>
-
-      {stripePromise ? (
-        <Elements stripe={stripePromise} options={{ locale: 'en' }}>
-          <StripeManagement />
-        </Elements>
-      ) : (
-        <section className='mt-6 rounded-lg border p-4 sm:p-6'>
-          <Alert variant='destructive'>
-            <AlertTitle>Stripe is not configured</AlertTitle>
-            <AlertDescription>
-              Missing VITE_STRIPE_PUBLIC_KEY or VITE_STRIPE_PUBLISHABLE_KEY.
-            </AlertDescription>
-          </Alert>
-        </section>
-      )}
-
-      <section className='rounded-lg border p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold text-destructive'>Danger zone</h2>
-        <div className='flex flex-col pt-4'>
-          <p className='text-lg text-destructive'>Delete account</p>
-          <div className='flex items-center justify-between'>
-            <p className='text-sm me-5'>
-              {messages.MY_PROFILE.DELETE_ACCOUNT_TEXT}
-            </p>
-            <DeleteAccountButton>Delete account</DeleteAccountButton>
-          </div>
-        </div>
-      </section>
-    </main>
+    </Card>
   );
 };
 
@@ -666,7 +660,7 @@ const UpdateEmailButton = ({ currentEmail, hasPasswordProvider }) => {
           id='updateEmailButton'
           type='button'
           disabled={isPending || !hasPasswordProvider}
-          className='me-2'
+          className='me-2 mb-2 xs:mb-0'
         >
           <Mail className='w-4 h-4 mr-2' aria-hidden='true' />
           {'Change e-mail'}
@@ -998,6 +992,115 @@ const LinkGoogleButton = ({
       <GoogleIcon className='h-4 w-4 mr-2' />
       {hasGoogleProvider ? 'Unlink Google' : 'Link Google'}
     </Button>
+  );
+};
+
+const ProfilePaymentMethods = () => {
+  return (
+    <>
+      {stripePromise ? (
+        <Elements stripe={stripePromise} options={{ locale: 'en' }}>
+          <StripeManagement />
+        </Elements>
+      ) : (
+        <Card asChild>
+          <section className='mt-6 rounded-lg p-4 sm:p-6'>
+            <Alert variant='destructive'>
+              <AlertTitle>Stripe is not configured</AlertTitle>
+              <AlertDescription>
+                Missing VITE_STRIPE_PUBLIC_KEY or VITE_STRIPE_PUBLISHABLE_KEY.
+              </AlertDescription>
+            </Alert>
+          </section>
+        </Card>
+      )}
+    </>
+  );
+};
+
+const ProfileConfiguration = ({ user }) => {
+  // Action handling for update email form
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+  const [showMissions, setShowMissions] = useState(
+    user.configuration.show_missions_to_others,
+  );
+  const [state, userConfigurationFormAction, isPending] = useActionState(
+    userConfigurationAction,
+    initialStateUseStateAction,
+  );
+
+  return (
+    <Card asChild>
+      <section className='p-4 sm:p-6 mt-6'>
+        <h2 className='text-xl font-semibold'>Configuration</h2>
+        <div className='flex flex-col gap-4'>
+          <form
+            id='userConfigurationForm'
+            action={userConfigurationFormAction}
+            noValidate
+          >
+            <p className='text-lg font-medium'>Show missions to others</p>
+            <div className='flex items-center justify-between mt-2'>
+              <p className='text-sm me-5'>
+                {messages.MY_PROFILE.CONFIGURATION.SHOW_MISSIONS_TEXT}
+              </p>
+              <div className='flex items-center space-x-2'>
+                <Switch
+                  id='show_missions_to_others'
+                  name='show_missions_to_others'
+                  checked={showMissions}
+                  value='true'
+                  onCheckedChange={(checked) => setShowMissions(checked)}
+                />
+                <Label htmlFor='show_missions_mode' className='w-8 justify-end'>
+                  {showMissions ? 'Yes' : 'No'}
+                </Label>
+              </div>
+            </div>
+            <div className='flex justify-end mt-4'>
+              <Button
+                type='submit'
+                id='submitUserConfiguration'
+                disabled={isPending}
+                onClick={() => setIsAlertClosed(false)}
+              >
+                <Save aria-hidden='true' />
+                Save configuration
+              </Button>
+            </div>
+          </form>
+          {state.success && !isAlertClosed && (
+            <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
+              {'Configuration successfully saved'}
+            </AlertStatic>
+          )}
+          {state.errors.general?.[0] && !isAlertClosed && (
+            <FormAlert onClose={() => setIsAlertClosed(true)}>
+              {state.errors.general[0]}
+            </FormAlert>
+          )}
+        </div>
+      </section>
+    </Card>
+  );
+};
+
+const ProfileDangerZone = () => {
+  return (
+    <Card asChild>
+      <section className='p-4 sm:p-6 mt-6'>
+        <h2 className='text-xl font-semibold text-destructive'>Danger zone</h2>
+        <div className='flex flex-col'>
+          <p className='text-lg text-destructive font-medium'>Delete account</p>
+          <div className='flex items-center justify-between'>
+            <p className='text-sm me-5'>
+              {messages.MY_PROFILE.DELETE_ACCOUNT_TEXT}
+            </p>
+            <DeleteAccountButton>Delete account</DeleteAccountButton>
+          </div>
+        </div>
+      </section>
+    </Card>
   );
 };
 
