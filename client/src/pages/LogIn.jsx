@@ -10,7 +10,7 @@ import { FormPasswordInputField } from '../components/custom/form/FormPasswordIn
 import { messages } from '../messages/messages.js';
 import { consts } from '@hermyx/shared';
 import { GoogleSignInButton } from '../components/custom/GoogleSignInButton';
-import { UseGoogleAuth } from '../hooks/useGoogleAuth';
+import { UseGoogleAuth } from '../hooks/UseGoogleAuth.jsx';
 import { Separator } from '../components/ui/separator.jsx';
 
 export const LogIn = () => {
