@@ -3,13 +3,13 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 // Hermyx Firebase configuration
 const firebaseConfig = {
-  apiKey: 'AIzaSyBcbw7qpjFnknWE6nb8dg1euKakirQt0tU',
-  authDomain: 'hermyx-firebase.firebaseapp.com',
-  projectId: 'hermyx-firebase',
-  storageBucket: 'hermyx-firebase.firebasestorage.app',
-  messagingSenderId: '867405017118',
-  appId: '1:867405017118:web:bd66ddcca4cd4842bdfe0f',
-  measurementId: 'G-XVHJ3XSF81',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined,
 };
 
 // App is initialized
