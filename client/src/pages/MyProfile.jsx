@@ -341,6 +341,9 @@ const ProfileAccessMethods = ({ user }) => {
     (p) => p.providerId === 'google.com',
   );
 
+  // eslint-disable-next-line no-unused-vars
+  const [isGoogleLinked, setIsGoogleLinked] = useState(hasGoogleProvider); // For page reloading purposes
+
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6'>
@@ -383,6 +386,7 @@ const ProfileAccessMethods = ({ user }) => {
                 hasPasswordProvider={hasPasswordProvider}
                 hasGoogleProvider={hasGoogleProvider}
                 googleEmail={googleProvider?.email}
+                setIsGoogleLinked={setIsGoogleLinked}
               ></LinkGoogleButton>
             </div>
           </div>
@@ -912,6 +916,7 @@ const LinkGoogleButton = ({
   hasPasswordProvider,
   hasGoogleProvider,
   googleEmail,
+  setIsGoogleLinked,
 }) => {
   const { setIsSyncing } = useContext(AuthContext);
   const { showAlert } = useAlert();
@@ -921,7 +926,8 @@ const LinkGoogleButton = ({
       setIsSyncing(true);
     },
     mutationFn: () => unlinkGoogleAccount(),
-    onSuccess: () => {
+    onSuccess: async () => {
+      setIsGoogleLinked(false);
       queryClient.invalidateQueries(['getMyProfile']);
     },
     // Backend error handling
@@ -946,6 +952,7 @@ const LinkGoogleButton = ({
       setIsSyncing(true);
     },
     onSuccess: () => {
+      setIsGoogleLinked(true);
       queryClient.invalidateQueries(['getMyProfile']);
     },
     // Backend error handling
