@@ -12,6 +12,8 @@ import TestDashboard from './pages/TestDashboard';
 import { Navbar } from './components/custom/Navbar';
 import { PublicProfile } from './pages/PublicProfile';
 import { MyProfile } from './pages/MyProfile';
+import { Notifications } from './pages/Notifications';
+import { SearchUsers } from './pages/SearchUsers';
 
 function App() {
   return (
@@ -89,6 +91,14 @@ function App() {
           }
         ></Route>
         <Route
+          path='/users/search'
+          element={
+            <ProtectedRoute>
+              <SearchUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path='/users/:username'
           element={
             <ProtectedRoute>
@@ -101,6 +111,14 @@ function App() {
           element={
             <ProtectedRoute>
               <MyProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/notifications'
+          element={
+            <ProtectedRoute>
+              <Notifications />
             </ProtectedRoute>
           }
         />

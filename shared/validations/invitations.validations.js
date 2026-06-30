@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
+import { consts } from '../consts/consts.js';
 
 export const createInvitationSchema = z.object({
   missionId: z.coerce
@@ -10,6 +11,18 @@ export const createInvitationSchema = z.object({
     .number(messages.FIELD_NUMBER('Receiver id'))
     .int(messages.FIELD_INTEGER('Receiver id'))
     .min(0, messages.FIELD_POSITIVE('Receiver id')),
+  message: z
+    .string()
+    .trim()
+    .max(
+      consts.INVITATION.MESSAGE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Invitation message',
+        consts.INVITATION.MESSAGE_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .default(''),
 });
 
 export const respondToInvitationParamSchema = z.object({
