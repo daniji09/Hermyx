@@ -94,9 +94,7 @@ export const Notifications = () => {
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
         <Alert variant='destructive'>
           <AlertTitle>Could not load notifications</AlertTitle>
-          <AlertDescription>
-            Try again in a few moments.
-          </AlertDescription>
+          <AlertDescription>Try again in a few moments.</AlertDescription>
         </Alert>
       </main>
     );
@@ -128,7 +126,11 @@ export const Notifications = () => {
         </Card>
       ) : (
         <>
-          <Tabs value={filter} onValueChange={setFilter} className='mb-6 w-full'>
+          <Tabs
+            value={filter}
+            onValueChange={setFilter}
+            className='mb-6 w-full'
+          >
             <TabsList className='grid w-full max-w-90 grid-cols-3'>
               <TabsTrigger value='all'>All</TabsTrigger>
               <TabsTrigger value='accepted'>Accepted</TabsTrigger>
@@ -145,89 +147,89 @@ export const Notifications = () => {
           ) : (
             <section className='space-y-4'>
               {filteredInvitations.map((invitation) => {
-              const isSeen = invitation.seen;
-              const isCurrentInvitationPending =
-                isPending && variables?.invitationId === invitation.iid;
+                const isSeen = invitation.seen;
+                const isCurrentInvitationPending =
+                  isPending && variables?.invitationId === invitation.iid;
 
-              return (
-                <Card
-                  key={invitation.iid}
-                  className={isSeen ? 'opacity-80' : 'border-primary/40'}
-                >
-                  <CardHeader className='pb-3'>
-                    <CardTitle className='flex items-start justify-between gap-4 text-lg'>
-                      <span className='flex items-center gap-3'>
-                        <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-                          <User className='h-5 w-5' aria-hidden='true' />
+                return (
+                  <Card
+                    key={invitation.iid}
+                    className={isSeen ? 'opacity-80' : 'border-primary/40'}
+                  >
+                    <CardHeader className='pb-3'>
+                      <CardTitle className='flex items-start justify-between gap-4 text-lg'>
+                        <span className='flex items-center gap-3'>
+                          <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+                            <User className='h-5 w-5' aria-hidden='true' />
+                          </span>
+                          <span>
+                            Tienes un mensaje de {invitation.sender_username}
+                            {!isSeen && (
+                              <span className='ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
+                                New
+                              </span>
+                            )}
+                          </span>
                         </span>
-                        <span>
-                          Tienes un mensaje de {invitation.sender_username}
-                          {!isSeen && (
-                            <span className='ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
-                              New
-                            </span>
-                          )}
+                        <span className='text-sm font-normal text-muted-foreground'>
+                          {timestampToDayMonthYear(invitation.date)}
                         </span>
-                      </span>
-                      <span className='text-sm font-normal text-muted-foreground'>
-                        {timestampToDayMonthYear(invitation.date)}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className='space-y-4'>
-                    <div className='space-y-1'>
-                      <p className='text-sm text-muted-foreground'>
-                        Mission: {invitation.mission_title}
-                      </p>
-                      {invitation.message ? (
-                        <p className='whitespace-pre-line text-sm leading-6'>
-                          {invitation.message}
-                        </p>
-                      ) : (
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className='space-y-4'>
+                      <div className='space-y-1'>
                         <p className='text-sm text-muted-foreground'>
-                          No message included.
+                          Mission: {invitation.mission_title}
+                        </p>
+                        {invitation.message ? (
+                          <p className='whitespace-pre-line text-sm leading-6'>
+                            {invitation.message}
+                          </p>
+                        ) : (
+                          <p className='text-sm text-muted-foreground'>
+                            No message included.
+                          </p>
+                        )}
+                      </div>
+
+                      {invitation.status === 'pending' ? (
+                        <div className='flex flex-wrap gap-2'>
+                          <Button
+                            type='button'
+                            onClick={() =>
+                              mutate({
+                                invitationId: invitation.iid,
+                                response: 'accepted',
+                              })
+                            }
+                            disabled={isCurrentInvitationPending}
+                          >
+                            <Check aria-hidden='true' />
+                            Accept
+                          </Button>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            onClick={() =>
+                              mutate({
+                                invitationId: invitation.iid,
+                                response: 'rejected',
+                              })
+                            }
+                            disabled={isCurrentInvitationPending}
+                          >
+                            <X aria-hidden='true' />
+                            Reject
+                          </Button>
+                        </div>
+                      ) : (
+                        <p className='text-sm font-medium text-muted-foreground'>
+                          Status: {invitation.status}
                         </p>
                       )}
-                    </div>
-
-                    {invitation.status === 'pending' ? (
-                      <div className='flex flex-wrap gap-2'>
-                        <Button
-                          type='button'
-                          onClick={() =>
-                            mutate({
-                              invitationId: invitation.iid,
-                              response: 'accepted',
-                            })
-                          }
-                          disabled={isCurrentInvitationPending}
-                        >
-                          <Check aria-hidden='true' />
-                          Accept
-                        </Button>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          onClick={() =>
-                            mutate({
-                              invitationId: invitation.iid,
-                              response: 'rejected',
-                            })
-                          }
-                          disabled={isCurrentInvitationPending}
-                        >
-                          <X aria-hidden='true' />
-                          Reject
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className='text-sm font-medium text-muted-foreground'>
-                        Status: {invitation.status}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              );
+                    </CardContent>
+                  </Card>
+                );
               })}
             </section>
           )}

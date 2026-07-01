@@ -96,7 +96,9 @@ export const createInvitation = async (req, res) => {
       type === 'adventurer_to_applicant' ? senderId : receiverId;
 
     if (mission.total_vacancies <= mission.occupied_vacancies) {
-      return res.status(409).json({ error: 'There are no vacancies available' });
+      return res
+        .status(409)
+        .json({ error: 'There are no vacancies available' });
     }
 
     const alreadyJoined = await getMissionParticipationById(
