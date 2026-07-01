@@ -1,8 +1,12 @@
 import {
   createInvitation as _createInvitation,
   findByIid,
+  getByRecipientId,
+  hasPendingInvitation,
+  markAsSeen,
   updateInvitationStatus,
 } from '../models/invitation.model.js';
+import { getById as getUserById } from '../models/app_user.model.js';
 import {
   adventurerJoined,
   getById,
@@ -12,10 +16,45 @@ import {
   addParticipant,
   getById as getMissionParticipationById,
 } from '../models/mission_participation.model.js';
+import { emitToUser } from '../services/socket.service.js';
+
+export const getMyInvitations = async (req, res) => {
+  try {
+    const invitations = await getByRecipientId(req.user.uid);
+    return res.status(200).json({ invitations });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+};
+
+export const markMyInvitationAsSeen = async (req, res) => {
+  const { invitationId } = req.params;
+
+  try {
+    const invitation = await findByIid(invitationId);
+
+    if (!invitation) {
+      return res.status(404).json({ error: 'Invitation not found' });
+    }
+
+    if (invitation.recipient_id !== req.user.uid) {
+      return res.status(403).json({
+        error: 'You do not have permission to update this invitation.',
+      });
+    }
+
+    const updatedInvitation = await markAsSeen(invitationId);
+    return res.status(200).json({ invitation: updatedInvitation });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+};
 
 //Receives missionId, senderId and receiverId, prepares the data, and create it in the model.
 export const createInvitation = async (req, res) => {
-  const { missionId, receiverId } = req.body;
+  const { missionId, receiverId, message } = req.body;
   const senderId = req.user.uid;
 
   if (senderId === receiverId) {
@@ -23,10 +62,17 @@ export const createInvitation = async (req, res) => {
   }
 
   try {
-    const mission = await getById(missionId);
+    const [mission, receiver] = await Promise.all([
+      getById(missionId),
+      getUserById(receiverId),
+    ]);
 
     if (!mission) {
       return res.status(404).json({ error: 'Mission not found' });
+    }
+
+    if (!receiver) {
+      return res.status(404).json({ error: 'Receiver not found' });
     }
 
     const type =
@@ -34,14 +80,57 @@ export const createInvitation = async (req, res) => {
         ? 'applicant_to_adventurer'
         : 'adventurer_to_applicant';
 
+    const hasPending = await hasPendingInvitation(
+      missionId,
+      senderId,
+      receiverId,
+    );
+
+    if (hasPending) {
+      return res.status(409).json({
+        error: 'There is already a pending invitation for this user.',
+      });
+    }
+
+    const adventurerId =
+      type === 'adventurer_to_applicant' ? senderId : receiverId;
+
+    if (mission.total_vacancies <= mission.occupied_vacancies) {
+      return res
+        .status(409)
+        .json({ error: 'There are no vacancies available' });
+    }
+
+    const alreadyJoined = await getMissionParticipationById(
+      missionId,
+      adventurerId,
+    );
+    if (alreadyJoined >= 1) {
+      return res
+        .status(409)
+        .json({ error: 'Adventurer already joined this mission' });
+    }
+
     const invitationData = {
       missionId,
       senderId,
       receiverId,
       type,
+      message,
     };
 
     const newInvitationId = await _createInvitation(invitationData);
+
+    emitToUser(receiverId, 'invitation:created', {
+      invitationId: newInvitationId,
+      missionId,
+      missionTitle: mission.title,
+      senderId,
+      senderUsername: req.user.username,
+      receiverId,
+      type,
+      message,
+    });
 
     return res.status(201).json(newInvitationId);
   } catch (error) {
@@ -79,9 +168,14 @@ export const respondToInvitation = async (req, res) => {
 
     if (response === 'rejected') {
       await updateInvitationStatus(invitationId, 'rejected');
+      await markAsSeen(invitationId);
       return res.status(200).json({ message: 'Invitation rejected' });
     } else if (response === 'accepted' || response === 'accept') {
       const missionId = invitation.associated_mission_id;
+      const adventurerId =
+        invitation.type === 'adventurer_to_applicant'
+          ? invitation.sender_id
+          : invitation.recipient_id;
 
       const [mission, participants] = await Promise.all([
         getById(missionId),
@@ -96,7 +190,7 @@ export const respondToInvitation = async (req, res) => {
 
       const alreadyJoined = await getMissionParticipationById(
         missionId,
-        invitation.recipient_id,
+        adventurerId,
       );
       if (alreadyJoined >= 1) {
         return res
@@ -104,10 +198,11 @@ export const respondToInvitation = async (req, res) => {
           .json({ error: 'Adventurer already joined this mission' });
       }
 
-      await addParticipant(missionId, invitation.recipient_id);
+      await addParticipant(missionId, adventurerId);
       await adventurerJoined(missionId);
 
       await updateInvitationStatus(invitationId, 'accepted');
+      await markAsSeen(invitationId);
 
       return res.status(200).json({ message: 'Adventurer successfully added' });
     } else {

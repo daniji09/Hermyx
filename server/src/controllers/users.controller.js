@@ -3,6 +3,7 @@ import { messages, consts } from '@hermyx/shared';
 import {
   getByEmail,
   getByUsername,
+  searchByUsername,
   create,
   getByFirebaseUid,
   getByUsernameExcludingUid,
@@ -56,6 +57,20 @@ export const getUsers = async (req, res) => {
 
       return res.status(200).json({ user });
     }
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const searchUsersByUsername = async (req, res) => {
+  try {
+    const username = req.query.username.toLowerCase().trim();
+    const users = await searchByUsername(username);
+
+    return res.status(200).json({ users });
   } catch (e) {
     console.error(e);
     return res

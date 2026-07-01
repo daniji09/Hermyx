@@ -33,6 +33,18 @@ export const getByUsername = async (username) => {
   return result.rows[0];
 };
 
+export const searchByUsername = async (username) => {
+  const query = `
+    SELECT uid, username, email, avatar, name, surnames
+    FROM app_user
+    WHERE unaccent(username) ILIKE unaccent('%' || $1 || '%')
+    ORDER BY username ASC
+    LIMIT 10
+  `;
+  const result = await pool.query(query, [username]);
+  return result.rows;
+};
+
 // Creates new user
 export const create = async (email, username, firebaseUid) => {
   const query =

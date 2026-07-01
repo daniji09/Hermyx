@@ -3,6 +3,8 @@ const router = Router();
 
 import {
   createInvitation,
+  getMyInvitations,
+  markMyInvitationAsSeen,
   respondToInvitation,
 } from '../controllers/invitation.controller.js';
 import {
@@ -16,6 +18,9 @@ import {
 } from '@hermyx/shared';
 
 //Create invitation
+router.get('/me', getMyInvitations);
+
+//Create invitation
 router.post('/', validateBodySchema(createInvitationSchema), createInvitation);
 
 //Respond to invitation
@@ -24,6 +29,12 @@ router.post(
   validateParamsSchema(respondToInvitationParamSchema),
   validateBodySchema(respondToInvitationBodySchema),
   respondToInvitation,
+);
+
+router.post(
+  '/:invitationId/seen',
+  validateParamsSchema(respondToInvitationParamSchema),
+  markMyInvitationAsSeen,
 );
 
 export default router;

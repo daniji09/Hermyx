@@ -3,6 +3,7 @@ import { Router } from 'express';
 const router = Router();
 import {
   getUsers,
+  searchUsersByUsername,
   signUp,
   getUsersByFirebaseUid,
   getUserMissions,
@@ -23,6 +24,7 @@ import {
 } from '../middlewares/validations.middleware.js';
 import {
   getUsersQuerySchema,
+  searchUsersByUsernameQuerySchema,
   signUpSchema,
   updateMyProfileSchema,
   getUsersByFirebaseUidParamSchema,
@@ -42,6 +44,13 @@ import { pagination } from '../middlewares/pagination.middleware.js';
 /// GET
 // Get users
 router.get('/', validateQuerySchema(getUsersQuerySchema), getUsers);
+
+// Search users by partial username
+router.get(
+  '/search',
+  validateQuerySchema(searchUsersByUsernameQuerySchema),
+  searchUsersByUsername,
+);
 
 //Get my profile
 router.get('/me/profile', verifyToken, getMyProfile);

@@ -23,10 +23,10 @@ export const messages = {
     MISSION_FILLED: 'Mission already filled!',
     MISSION_PENDING_PAYMENT: `Mission can't be opened until payment is done.`,
     JOIN_MISSION_ALERT: {
-      TITLE: 'Are you sure you want to join this mission?',
+      TITLE: 'Do you want to send a join request for this mission?',
       ERROR_TITLE: `Can't join mission`,
-      DESCRIPTION: 'This will occupy one of the available vacancies.',
-      CONFIRM_TEXT: 'Yes, join mission',
+      DESCRIPTION: '',
+      CONFIRM_TEXT: 'Yes, send request',
     },
     START_MISSION_ALERT: {
       TITLE: 'Are you sure you want to start the mission?',
