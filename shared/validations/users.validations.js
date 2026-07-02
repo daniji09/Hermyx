@@ -180,6 +180,8 @@ export const updateMyProfileSchema = z.object({
       messages.FIELD_TOO_LONG('Description', consts.DESCRIPTION_MAX_LENGTH),
     )
     .optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
 });
 
 // Sync with Google backend validation

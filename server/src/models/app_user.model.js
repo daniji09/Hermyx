@@ -68,26 +68,51 @@ export const getByUsernameExcludingUid = async (username, uid) => {
 
 export const updateMyProfile = async (
   uid,
-  { username, name, surnames, description },
+  { username, name, surnames, description, latitude, longitude },
 ) => {
-  const query = `
+  if (!latitude || !longitude) {
+    const query = `
     UPDATE app_user
     SET
       username = $1,
       name = $2,
       surnames = $3,
-      description = $4
+      description = $4,
+      location = NULL
     WHERE uid = $5
     RETURNING *
   `;
-  const result = await pool.query(query, [
-    username,
-    name,
-    surnames,
-    description,
-    uid,
-  ]);
-  return result.rows[0];
+    const result = await pool.query(query, [
+      username,
+      name,
+      surnames,
+      description,
+      uid,
+    ]);
+    return result.rows[0];
+  } else {
+    const query = `
+    UPDATE app_user
+    SET
+      username = $1,
+      name = $2,
+      surnames = $3,
+      description = $4,
+      location = ST_MakePoint($6, $7)::geography
+    WHERE uid = $5
+    RETURNING *
+  `;
+    const result = await pool.query(query, [
+      username,
+      name,
+      surnames,
+      description,
+      uid,
+      longitude,
+      latitude,
+    ]);
+    return result.rows[0];
+  }
 };
 
 export const updateUserEmail = async (uid, email) => {
@@ -145,4 +170,14 @@ export const updateConfiguration = async (uid, configuration) => {
   const query = 'UPDATE app_user SET configuration = $2 WHERE uid = $1';
   const result = await pool.query(query, [uid, configuration]);
   return result.rowCount;
+};
+
+export const getLocationByUid = async (uid) => {
+  const query = `SELECT 
+    ST_Y(location::geometry) as latitude, 
+    ST_X(location::geometry) as longitude
+    FROM app_user
+    WHERE uid = $1`;
+  const result = await pool.query(query, [uid]);
+  return result.rows[0];
 };

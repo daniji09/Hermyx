@@ -226,7 +226,7 @@ const ProfileInformation = ({ data }) => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6'>
-        <form className='space-y-6'>
+        <form>
           <div className='flex gap-3 items-start justify-between'>
             <h2 className='text-xl font-semibold'>Profile information</h2>
             <div className='flex justify-end gap-2'>
@@ -256,7 +256,7 @@ const ProfileInformation = ({ data }) => {
             </div>
           </div>
 
-          <div className='grid gap-4 sm:grid-cols-2'>
+          <div className='grid gap-4 sm:grid-cols-2 pt-6'>
             <FormInputField
               id='profileUsername'
               label='Username (required):'
@@ -327,9 +327,24 @@ const ProfileInformation = ({ data }) => {
 
         {!isEditing && <Label>Location:</Label>}
         <Map
-          onLocationSelected={(coords) => setMissionCoords(coords)}
+          onLocationSelected={(coords) => {
+            setMissionCoords(coords);
+            updateField('location', {
+              latitude: missionCoords.lat,
+              longitude: missionCoords.lng,
+            });
+            updateField('latitude', missionCoords.lat);
+            updateField('longitude', missionCoords.lng);
+          }}
           readOnly={!isEditing}
           description={messages.MY_PROFILE.LOCATION_DESCRIPTION}
+          initialLocation={
+            profileForm.location?.latitude &&
+            profileForm.location?.longitude && {
+              lat: profileForm.location?.latitude,
+              lng: profileForm.location?.longitude,
+            }
+          }
         ></Map>
 
         {successMessage && !isAlertClosed && (
@@ -1180,6 +1195,9 @@ const buildForm = (profile) => {
     name: profile.name || '',
     surnames: profile.surnames || '',
     description: profile.description || '',
+    location: profile.location || '',
+    latitude: profile.latitude || '',
+    longitude: profile.longitude || '',
   };
 };
 

@@ -78,6 +78,7 @@ export const getMyProfile = async () => {
 
 // Updates logged user's profile
 export const updateMyProfile = async (profile) => {
+  console.log(profile);
   const { data } = await api.patch('/users/me/profile', profile);
   return data;
 };
