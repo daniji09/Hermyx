@@ -92,14 +92,26 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
             onClick={handleMissionSearch}
             className='block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100'
           >
-            Search missions
+            <span className='text-slate-700'>
+              Search for{' '}
+              <span className='font-semibold text-slate-900'>
+                {`"${trimmedQuery}"`}
+              </span>{' '}
+              in missions
+            </span>
           </button>
           <button
             type='button'
             onClick={handleUserSearch}
             className='block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100'
           >
-            Search users
+            <span className='text-slate-700'>
+              Search for{' '}
+              <span className='font-semibold text-slate-900'>
+                {`"${trimmedQuery}"`}
+              </span>{' '}
+              in users
+            </span>
           </button>
         </div>
       )}

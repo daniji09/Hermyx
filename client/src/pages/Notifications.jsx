@@ -101,13 +101,15 @@ export const Notifications = () => {
   }
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <section className='mb-8 flex items-center gap-4 border-b pb-6'>
+    <main className='container mx-auto max-w-4xl p-3 sm:p-6'>
+      <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
         <span className='flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
           <Bell className='h-6 w-6' aria-hidden='true' />
         </span>
-        <div>
-          <h1 className='text-3xl font-bold tracking-tight'>Notifications</h1>
+        <div className='min-w-0'>
+          <h1 className='text-3xl font-bold tracking-tight break-words'>
+            Notifications
+          </h1>
           <p className='text-muted-foreground'>
             {unseenCount > 0
               ? `You have ${unseenCount} unread notification${unseenCount > 1 ? 's' : ''}.`
@@ -129,12 +131,27 @@ export const Notifications = () => {
           <Tabs
             value={filter}
             onValueChange={setFilter}
-            className='mb-6 w-full'
+            className='mb-8 w-full'
           >
-            <TabsList className='grid w-full max-w-90 grid-cols-3'>
-              <TabsTrigger value='all'>All</TabsTrigger>
-              <TabsTrigger value='accepted'>Accepted</TabsTrigger>
-              <TabsTrigger value='rejected'>Rejected</TabsTrigger>
+            <TabsList className='flex h-auto w-full flex-col items-stretch gap-2 bg-transparent p-0 sm:max-w-90 sm:grid sm:grid-cols-3 sm:gap-0 sm:bg-muted sm:p-1'>
+              <TabsTrigger
+                value='all'
+                className='w-full justify-center px-3 text-sm'
+              >
+                All
+              </TabsTrigger>
+              <TabsTrigger
+                value='accepted'
+                className='w-full justify-center px-3 text-sm'
+              >
+                Accepted
+              </TabsTrigger>
+              <TabsTrigger
+                value='rejected'
+                className='w-full justify-center px-3 text-sm'
+              >
+                Rejected
+              </TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -157,13 +174,18 @@ export const Notifications = () => {
                     className={isSeen ? 'opacity-80' : 'border-primary/40'}
                   >
                     <CardHeader className='pb-3'>
-                      <CardTitle className='flex items-start justify-between gap-4 text-lg'>
-                        <span className='flex items-center gap-3'>
+                      <CardTitle className='flex flex-col gap-3 text-lg sm:flex-row sm:items-start sm:justify-between sm:gap-4'>
+                        <span className='flex min-w-0 items-start gap-3'>
                           <span className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
                             <User className='h-5 w-5' aria-hidden='true' />
                           </span>
-                          <span>
-                            Tienes un mensaje de {invitation.sender_username}
+                          <span className='min-w-0'>
+                            <span className='block break-words leading-snug'>
+                              Tienes un mensaje de{' '}
+                              <span className='break-all'>
+                                {invitation.sender_username}
+                              </span>
+                            </span>
                             {!isSeen && (
                               <span className='ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
                                 New
@@ -171,7 +193,7 @@ export const Notifications = () => {
                             )}
                           </span>
                         </span>
-                        <span className='text-sm font-normal text-muted-foreground'>
+                        <span className='self-start text-left text-sm font-normal text-muted-foreground sm:self-auto sm:text-right'>
                           {timestampToDayMonthYear(invitation.date)}
                         </span>
                       </CardTitle>
