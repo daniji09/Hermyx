@@ -10,14 +10,14 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-import { FormInputField } from '../form/FormInputField';
+import { FormInputField } from './form/FormInputField';
 import { Button } from '@/components/ui/button';
 import { useMutation } from '@tanstack/react-query';
-import { messages } from '../../../messages/messages';
+import { messages } from '../../messages/messages';
 import { messages as sharedMessages } from '@hermyx/shared';
 
 // Main component
-export const MissionMap = ({
+export const Map = ({
   onLocationSelected,
   initialLocation,
   readOnly = false,

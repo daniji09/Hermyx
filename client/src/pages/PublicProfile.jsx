@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
+import { Map } from '../components/custom/Map';
 import {
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
@@ -117,6 +118,7 @@ export const PublicProfile = () => {
               {user.description}
             </p>
           )}
+          <Map></Map>
         </div>
       </section>
 

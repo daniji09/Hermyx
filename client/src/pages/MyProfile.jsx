@@ -38,7 +38,7 @@ import { useAlert } from '../contexts/AlertContext';
 import { deleteUser } from '../services/UsersServices';
 import { useNavigate } from 'react-router-dom';
 import { messages } from '../messages/messages';
-
+import { Map } from '../components/custom/Map';
 import {
   Dialog,
   DialogClose,
@@ -314,6 +314,7 @@ const ProfileInformation = ({ data }) => {
               />
             </div>
           </div>
+
           {successMessage && !isAlertClosed && (
             <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
               {successMessage}
@@ -325,6 +326,7 @@ const ProfileInformation = ({ data }) => {
             </FormAlert>
           )}
         </form>
+        <Map></Map>
       </section>
     </Card>
   );

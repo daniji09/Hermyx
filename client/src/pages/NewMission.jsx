@@ -9,7 +9,7 @@ import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { consts } from '@hermyx/shared';
-import { MissionMap } from '../components/custom/missions/MissionMap';
+import { Map } from '../components/custom/Map';
 
 export const NewMission = () => {
   // Form action handling
@@ -190,9 +190,7 @@ const NewMissionForm = ({ state, action, isPending }) => {
             </>
           )}
         </CardForm.Content>
-        <MissionMap
-          onLocationSelected={(coords) => setMissionCoords(coords)}
-        ></MissionMap>
+        <Map onLocationSelected={(coords) => setMissionCoords(coords)}></Map>
         <CardForm.Footer>
           <Button
             id='sendNewMission'

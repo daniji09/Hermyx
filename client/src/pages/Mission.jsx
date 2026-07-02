@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { consts } from '@hermyx/shared';
-import { MissionMap } from '../components/custom/missions/MissionMap';
+import { Map } from '../components/custom/Map';
 
 export const Mission = () => {
   // Mission id
@@ -179,13 +179,13 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                   </div>
                 </div>
                 {mission.location && (
-                  <MissionMap
+                  <Map
                     readOnly={true}
                     initialLocation={{
                       lat: mission.latitude,
                       lng: mission.longitude,
                     }}
-                  ></MissionMap>
+                  ></Map>
                 )}
               </CardContent>
               <CardFooter>
