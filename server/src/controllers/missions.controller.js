@@ -15,9 +15,7 @@ import {
   getMissionsFunded as _getMissionsFunded,
 } from '../models/mission.model.js';
 
-import {
-  getById as getMissionParticipationById,
-} from '../models/mission_participation.model.js';
+import { getById as getMissionParticipationById } from '../models/mission_participation.model.js';
 import {
   createInvitation as createInvitationRecord,
   hasPendingInvitation,
@@ -145,8 +143,16 @@ export const createMission = async (req, res) => {
   try {
     const { uid } = req.user;
 
-    const { title, description, vacancies, reward, difficulty, isDraft } =
-      req.body;
+    const {
+      title,
+      description,
+      vacancies,
+      reward,
+      difficulty,
+      latitude,
+      longitude,
+      isDraft,
+    } = req.body;
 
     const missionData = {
       title: title || 'Mission not titled',
@@ -154,10 +160,12 @@ export const createMission = async (req, res) => {
       vacancies: vacancies || 0,
       reward: reward || 0,
       difficulty: difficulty || 0,
+      latitude: latitude || null,
+      longitude: longitude || null,
       status: isDraft ? 'draft' : 'pending_payment',
       ownerId: uid,
     };
-
+    console.log(missionData);
     // Checks if user has a mission already with the same title
     const { hasDuplicate } = await getByUidAndTitle(uid, title);
 

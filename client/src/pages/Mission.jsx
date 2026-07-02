@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { consts } from '@hermyx/shared';
+import { MissionMap } from '../components/custom/missions/MissionMap';
 
 export const Mission = () => {
   // Mission id
@@ -177,6 +178,15 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                     <HandCoins className='h-6 w-6' aria-hidden='true' />
                   </div>
                 </div>
+                {mission.location && (
+                  <MissionMap
+                    readOnly={true}
+                    initialLocation={{
+                      lat: mission.latitude,
+                      lng: mission.longitude,
+                    }}
+                  ></MissionMap>
+                )}
               </CardContent>
               <CardFooter>
                 {isCreator ? (
@@ -555,7 +565,9 @@ const JoinMissionButton = ({ missionId, isJoined }) => {
           </AlertDialogHeader>
 
           <div>
-            <label htmlFor='joinMissionMessage'>Message for the mission owner</label>
+            <label htmlFor='joinMissionMessage'>
+              Message for the mission owner
+            </label>
             <Textarea
               id='joinMissionMessage'
               ref={joinRequestMessageRef}

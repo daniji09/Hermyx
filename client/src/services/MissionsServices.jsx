@@ -61,6 +61,8 @@ export const createMission = async (missionData) => {
     vacancies: missionData.vacancies,
     reward: missionData.reward,
     difficulty: missionData.difficulty,
+    longitude: missionData.longitude || null,
+    latitude: missionData.latitude || null,
     isDraft: missionData.status === 'draft',
   };
 

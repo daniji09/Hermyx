@@ -9,6 +9,7 @@ import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { consts } from '@hermyx/shared';
+import { MissionMap } from '../components/custom/missions/MissionMap';
 
 export const NewMission = () => {
   // Form action handling
@@ -38,6 +39,9 @@ export const NewMission = () => {
 };
 
 const NewMissionForm = ({ state, action, isPending }) => {
+  // State for map
+  const [missionCoords, setMissionCoords] = useState(null);
+
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [clearedFields, setClearedFields] = useState({});
   const [prevServerState, setPrevServerState] = useState(state);
@@ -62,7 +66,10 @@ const NewMissionForm = ({ state, action, isPending }) => {
           <CardForm.Title>{messages.NEW_MISSION.FORM_TITLE}</CardForm.Title>
         </CardForm.Header>
 
-        <CardForm.Content legend='Application new mission form.'>
+        <CardForm.Content
+          legend='Application new mission form.'
+          className={'-mb-2'}
+        >
           <FormInputField
             id='newMissionTitle'
             label='Title (required):'
@@ -175,8 +182,17 @@ const NewMissionForm = ({ state, action, isPending }) => {
             disabled={isPending}
             onChange={handleFieldChange}
           ></FormInputField>
-        </CardForm.Content>
 
+          {missionCoords && (
+            <>
+              <input type='hidden' name='latitude' value={missionCoords.lat} />
+              <input type='hidden' name='longitude' value={missionCoords.lng} />
+            </>
+          )}
+        </CardForm.Content>
+        <MissionMap
+          onLocationSelected={(coords) => setMissionCoords(coords)}
+        ></MissionMap>
         <CardForm.Footer>
           <Button
             id='sendNewMission'

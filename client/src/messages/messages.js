@@ -17,6 +17,8 @@ export const messages = {
       'Define how many adventurers you need for this mission.',
     DIFFICULTY_DESCRIPTION:
       'Higher difficulty implies higher rewards for adventurers.',
+    LOCATION_NOT_FOUND: `Couldn't find results for this location.`,
+    MAP_SERVICE_ERROR: `Error while connecting to map service.`,
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
