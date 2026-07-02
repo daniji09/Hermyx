@@ -33,7 +33,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   return (
     <>
-      <header className='sticky top-0 w-full bg-secondary py-3 z-10'>
+      <header className='sticky top-0 w-full bg-secondary py-3 z-10000'>
         <nav
           aria-label='Main navigation'
           className='flex w-full items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
@@ -73,7 +73,7 @@ export function Navbar() {
                       />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end' className='w-48'>
+                  <DropdownMenuContent align='end' className='w-48 z-10000'>
                     <DropdownMenuItem asChild className='cursor-pointer'>
                       <Link to='/missions/new'>Create mission</Link>
                     </DropdownMenuItem>

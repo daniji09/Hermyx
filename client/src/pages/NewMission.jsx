@@ -190,7 +190,12 @@ const NewMissionForm = ({ state, action, isPending }) => {
             </>
           )}
         </CardForm.Content>
-        <Map onLocationSelected={(coords) => setMissionCoords(coords)}></Map>
+        <div className='px-8'>
+          <Map
+            onLocationSelected={(coords) => setMissionCoords(coords)}
+            description={messages.NEW_MISSION.LOCATION_DESCRIPTION}
+          ></Map>
+        </div>
         <CardForm.Footer>
           <Button
             id='sendNewMission'

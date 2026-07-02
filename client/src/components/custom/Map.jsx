@@ -21,6 +21,7 @@ export const Map = ({
   onLocationSelected,
   initialLocation,
   readOnly = false,
+  description,
 }) => {
   const [pin, setPin] = useState(initialLocation || null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,7 +45,7 @@ export const Map = ({
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryText)}&limit=1`,
       );
-      if (!response.ok) throw new Error(messages.NEW_MISSION.MAP_SERVICE_ERROR);
+      if (!response.ok) throw new Error(messages.MAP.MAP_SERVICE_ERROR);
       return response.json();
     },
     onSuccess: (data) => {
@@ -58,7 +59,7 @@ export const Map = ({
         setPin(coords);
         if (onLocationSelected) onLocationSelected(coords);
       } else {
-        setErrors(new Error(messages.NEW_MISSION.LOCATION_NOT_FOUND));
+        setErrors(new Error(messages.MAP.LOCATION_NOT_FOUND));
       }
     },
     onError: (error) => {
@@ -87,7 +88,7 @@ export const Map = ({
   };
 
   return (
-    <div className='w-full space-y-4 px-8'>
+    <div className='w-full space-y-4'>
       {!readOnly && (
         <form
           onSubmit={handleSearch}
@@ -95,9 +96,9 @@ export const Map = ({
           className='flex items-center space-x-2'
         >
           <FormInputField
-            id='missionLocation'
+            id='mapLocation'
             label='Location:'
-            description={'Add a real location if it is needed!'}
+            description={description}
             error={!clearedFields.location && (errors?.message || error)}
             invalid={!clearedFields.location && (isError || !!errors)}
             type='text'

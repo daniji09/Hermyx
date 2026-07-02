@@ -17,8 +17,7 @@ export const messages = {
       'Define how many adventurers you need for this mission.',
     DIFFICULTY_DESCRIPTION:
       'Higher difficulty implies higher rewards for adventurers.',
-    LOCATION_NOT_FOUND: `Couldn't find results for this location.`,
-    MAP_SERVICE_ERROR: `Error while connecting to map service.`,
+    LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
@@ -58,6 +57,8 @@ export const messages = {
     CARD_NOT_READ: `Credit card couldn't be read.`,
   },
   MY_PROFILE: {
+    LOCATION_DESCRIPTION:
+      'Add your location if you want to find missions near you!',
     DELETE_ACCOUNT_TEXT: 'This will remove your account forever. Are you sure?',
     DELETE_ACCOUNT_ALERT: {
       TITLE: 'Are you sure you want to delete your account?',
@@ -98,5 +99,9 @@ export const messages = {
       SHOW_MISSIONS_TEXT:
         'Do you want to show your created and joined missions to others in your profile?',
     },
+  },
+  MAP: {
+    LOCATION_NOT_FOUND: `Couldn't find results for this location.`,
+    MAP_SERVICE_ERROR: `Error while connecting to map service.`,
   },
 };

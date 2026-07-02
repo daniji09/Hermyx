@@ -163,6 +163,9 @@ const ProfileInformation = ({ data }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [isAlertClosed, setIsAlertClosed] = useState(false);
 
+  // State for map
+  const [missionCoords, setMissionCoords] = useState(null);
+
   const { mutate, isPending } = useMutation(
     updateMyProfileMutationOptions({
       onSuccess: (response) => {
@@ -314,19 +317,31 @@ const ProfileInformation = ({ data }) => {
               />
             </div>
           </div>
-
-          {successMessage && !isAlertClosed && (
-            <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
-              {successMessage}
-            </AlertStatic>
-          )}
-          {errors.general?.[0] && !isAlertClosed && (
-            <FormAlert onClose={() => setIsAlertClosed(true)}>
-              {errors.general[0]}
-            </FormAlert>
+          {missionCoords && (
+            <>
+              <input type='hidden' name='latitude' value={missionCoords.lat} />
+              <input type='hidden' name='longitude' value={missionCoords.lng} />
+            </>
           )}
         </form>
-        <Map></Map>
+
+        {!isEditing && <Label>Location:</Label>}
+        <Map
+          onLocationSelected={(coords) => setMissionCoords(coords)}
+          readOnly={!isEditing}
+          description={messages.MY_PROFILE.LOCATION_DESCRIPTION}
+        ></Map>
+
+        {successMessage && !isAlertClosed && (
+          <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
+            {successMessage}
+          </AlertStatic>
+        )}
+        {errors.general?.[0] && !isAlertClosed && (
+          <FormAlert onClose={() => setIsAlertClosed(true)}>
+            {errors.general[0]}
+          </FormAlert>
+        )}
       </section>
     </Card>
   );
