@@ -297,8 +297,8 @@ export const getMyProfile = async (req, res) => {
 export const signUp = async (req, res) => {
   try {
     // Gets new account attributes
-    const email = req.body.email.toLowerCase().trim();
-    const username = req.body.username.toLowerCase().trim();
+    const email = req.body.email;
+    const username = req.body.username;
     const { password } = req.body;
 
     // Checks if the email is already in use

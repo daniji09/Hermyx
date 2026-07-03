@@ -163,9 +163,6 @@ const ProfileInformation = ({ data }) => {
   const [successMessage, setSuccessMessage] = useState('');
   const [isAlertClosed, setIsAlertClosed] = useState(false);
 
-  // State for map
-  const [missionCoords, setMissionCoords] = useState(null);
-
   const { mutate, isPending } = useMutation(
     updateMyProfileMutationOptions({
       onSuccess: (response) => {
@@ -223,6 +220,13 @@ const ProfileInformation = ({ data }) => {
     if (!isEditing) return;
     mutate(form);
   };
+
+  // State for map
+  const [missionCoords, setMissionCoords] = useState({
+    lat: profileForm.location?.latitude || '',
+    lng: profileForm.location?.longitude || '',
+  });
+
   return (
     <Card asChild>
       <section className='p-4 sm:p-6'>
@@ -330,11 +334,11 @@ const ProfileInformation = ({ data }) => {
           onLocationSelected={(coords) => {
             setMissionCoords(coords);
             updateField('location', {
-              latitude: missionCoords.lat,
-              longitude: missionCoords.lng,
+              latitude: coords.lat,
+              longitude: coords.lng,
             });
-            updateField('latitude', missionCoords.lat);
-            updateField('longitude', missionCoords.lng);
+            updateField('latitude', coords.lat);
+            updateField('longitude', coords.lng);
           }}
           readOnly={!isEditing}
           description={messages.MY_PROFILE.LOCATION_DESCRIPTION}
@@ -346,6 +350,11 @@ const ProfileInformation = ({ data }) => {
             }
           }
         ></Map>
+
+        <div className='flex items-center self-end me-3'>
+          <Info className='w-4 h-4 mr-1' aria-hidden='true' />
+          <small>{messages.MY_PROFILE.LOCATION_INFO}</small>
+        </div>
 
         {successMessage && !isAlertClosed && (
           <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
@@ -425,10 +434,7 @@ const ProfileAccessMethods = ({ user }) => {
           {hasGoogleProvider && !hasPasswordProvider && (
             <div className='flex items-center self-end me-3'>
               <Info className='w-4 h-4 mr-1' aria-hidden='true' />
-              <small>
-                {`Can't unlink Google account if there is no e-mail
-                authentication added.`}
-              </small>
+              <small>{messages.MY_PROFILE.UNLINK_GOOGLE_INFO}</small>
             </div>
           )}
         </div>
@@ -484,7 +490,11 @@ const AddEmailAuthenticationButton = ({ hasPasswordProvider }) => {
             queryClient.clear();
             navigate('/login');
           } catch (error) {
-            console.error('Error logging out:', error);
+            showAlert({
+              title: messages.MY_PROFILE.ADD_EMAIL_AUTHENTICATION_ALERT.TITLE,
+              description:
+                error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+            });
           }
         },
       });
@@ -989,7 +999,6 @@ const LinkGoogleButton = ({
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error);
       showAlert({
         title: messages.MY_PROFILE.LINK_GOOGLE_ALERT.ERROR_TITLE,
         description:
@@ -1155,7 +1164,6 @@ const DeleteAccountButton = () => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error.response.data.errors);
       showAlert({
         title: messages.MY_PROFILE.DELETE_ACCOUNT_ALERT.ERROR_TITLE,
         description: error?.response.data.errors?.general,

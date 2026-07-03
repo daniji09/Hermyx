@@ -59,6 +59,9 @@ export const messages = {
   MY_PROFILE: {
     LOCATION_DESCRIPTION:
       'Add your location if you want to find missions near you!',
+    LOCATION_INFO: `Your location is only visible to you.`,
+    UNLINK_GOOGLE_INFO: `Can't unlink Google account if there is no e-mail
+                authentication added.`,
     DELETE_ACCOUNT_TEXT: 'This will remove your account forever. Are you sure?',
     DELETE_ACCOUNT_ALERT: {
       TITLE: 'Are you sure you want to delete your account?',

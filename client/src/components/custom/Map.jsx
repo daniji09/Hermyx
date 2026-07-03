@@ -23,10 +23,11 @@ export const Map = ({
   readOnly = false,
   description,
 }) => {
+  const DEFAULT_MAP_CENTER = { lat: 40.4168, lng: -3.7038 };
   const [pin, setPin] = useState(initialLocation || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [mapCenter, setMapCenter] = useState(
-    initialLocation || { lat: 40.4168, lng: -3.7038 },
+    initialLocation || DEFAULT_MAP_CENTER,
   );
   const [errors, setErrors] = useState('');
 
@@ -38,6 +39,13 @@ export const Map = ({
     setPin(coords);
     setMapCenter(coords);
     if (onLocationSelected) onLocationSelected(coords);
+  };
+
+  const handleClearLocation = () => {
+    setPin(null);
+    setSearchQuery('');
+    setMapCenter(DEFAULT_MAP_CENTER);
+    if (onLocationSelected) onLocationSelected({ lat: '', lng: '' });
   };
 
   const { mutate, isError, error, isPending } = useMutation({
@@ -123,7 +131,32 @@ export const Map = ({
         </form>
       )}
 
-      <div className='w-full h-100 rounded-lg overflow-hidden border border-gray-300 z-0'>
+      <div className='relative w-full h-100 rounded-lg overflow-hidden border border-gray-300 z-0'>
+        {pin && !readOnly && (
+          <button
+            type='button' // Vital para no enviar el formulario sin querer
+            onClick={handleClearLocation}
+            className='absolute top-4 right-4 z-1000 flex items-center gap-2 bg-white text-red-600 px-3 py-2 rounded-md shadow-lg border border-gray-200 hover:bg-red-50 font-medium text-sm transition-colors'
+          >
+            <svg
+              xmlns='http://www.w3.org/2000/svg'
+              width='16'
+              height='16'
+              viewBox='0 0 24 24'
+              fill='none'
+              stroke='currentColor'
+              strokeWidth='2'
+              strokeLinecap='round'
+              strokeLinejoin='round'
+            >
+              <path d='M3 6h18' />
+              <path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6' />
+              <path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2' />
+            </svg>
+            Quitar ubicación
+          </button>
+        )}
+
         <MapContainer
           center={[mapCenter.lat, mapCenter.lng]}
           zoom={13}
