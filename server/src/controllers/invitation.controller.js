@@ -1,6 +1,7 @@
+import { messages } from '@hermyx/shared';
 import {
   createInvitation as _createInvitation,
-  findByIid,
+  findById,
   getByRecipientId,
   hasPendingInvitation,
   markAsSeen,
@@ -20,8 +21,8 @@ import { emitToUser } from '../services/socket.service.js';
 
 export const getMyInvitations = async (req, res) => {
   try {
-    const invitations = await getByRecipientId(req.user.uid);
-    return res.status(200).json({ invitations });
+    const notifications = await getByRecipientId(req.user.uid);
+    return res.status(200).json({ notifications });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Database error' });
@@ -29,23 +30,23 @@ export const getMyInvitations = async (req, res) => {
 };
 
 export const markMyInvitationAsSeen = async (req, res) => {
-  const { invitationId } = req.params;
+  const { notificationId } = req.params;
 
   try {
-    const invitation = await findByIid(invitationId);
+    const notification = await findById(notificationId);
 
-    if (!invitation) {
-      return res.status(404).json({ error: 'Invitation not found' });
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
     }
 
-    if (invitation.recipient_id !== req.user.uid) {
+    if (notification.recipient_id !== req.user.uid) {
       return res.status(403).json({
-        error: 'You do not have permission to update this invitation.',
+        error: 'You do not have permission to update this notification.',
       });
     }
 
-    const updatedInvitation = await markAsSeen(invitationId);
-    return res.status(200).json({ invitation: updatedInvitation });
+    const updatedNotification = await markAsSeen(notificationId);
+    return res.status(200).json({ notification: updatedNotification });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Database error' });
@@ -75,10 +76,13 @@ export const createInvitation = async (req, res) => {
       return res.status(404).json({ error: 'Receiver not found' });
     }
 
-    const type =
-      mission.owner_id === senderId
-        ? 'applicant_to_adventurer'
-        : 'adventurer_to_applicant';
+    if (mission.status !== 'funded') {
+      return res.status(409).json({
+        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
+      });
+    }
+
+    const type = 'invitation';
 
     const hasPending = await hasPendingInvitation(
       missionId,
@@ -92,8 +96,7 @@ export const createInvitation = async (req, res) => {
       });
     }
 
-    const adventurerId =
-      type === 'adventurer_to_applicant' ? senderId : receiverId;
+    const adventurerId = mission.owner_id === senderId ? receiverId : senderId;
 
     if (mission.total_vacancies <= mission.occupied_vacancies) {
       return res
@@ -105,7 +108,7 @@ export const createInvitation = async (req, res) => {
       missionId,
       adventurerId,
     );
-    if (alreadyJoined >= 1) {
+    if (alreadyJoined) {
       return res
         .status(409)
         .json({ error: 'Adventurer already joined this mission' });
@@ -119,10 +122,10 @@ export const createInvitation = async (req, res) => {
       message,
     };
 
-    const newInvitationId = await _createInvitation(invitationData);
+    const newNotificationId = await _createInvitation(invitationData);
 
     emitToUser(receiverId, 'invitation:created', {
-      invitationId: newInvitationId,
+      notificationId: newNotificationId,
       missionId,
       missionTitle: mission.title,
       senderId,
@@ -132,7 +135,7 @@ export const createInvitation = async (req, res) => {
       message,
     });
 
-    return res.status(201).json(newInvitationId);
+    return res.status(201).json(newNotificationId);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Database error' });
@@ -142,13 +145,13 @@ export const createInvitation = async (req, res) => {
 /*Receive invitationId and the response (accepted or rejected). The invitation must exist, the recipient must be logged in, and the mission must be pending. 
 If rejected, simply update the status. If not, check that there is a vacancy. If there is, add it to the list and update the status of the invitation.*/
 export const respondToInvitation = async (req, res) => {
-  const { invitationId } = req.params;
+  const { notificationId } = req.params;
   const { response } = req.body;
 
   const userId = req.user.uid;
 
   try {
-    const invitation = await findByIid(invitationId);
+    const invitation = await findById(notificationId);
 
     if (!invitation) {
       return res.status(404).json({ error: 'Invitation not found' });
@@ -167,20 +170,27 @@ export const respondToInvitation = async (req, res) => {
     }
 
     if (response === 'rejected') {
-      await updateInvitationStatus(invitationId, 'rejected');
-      await markAsSeen(invitationId);
+      await updateInvitationStatus(notificationId, 'rejected');
+      await markAsSeen(notificationId);
       return res.status(200).json({ message: 'Invitation rejected' });
     } else if (response === 'accepted' || response === 'accept') {
       const missionId = invitation.associated_mission_id;
-      const adventurerId =
-        invitation.type === 'adventurer_to_applicant'
-          ? invitation.sender_id
-          : invitation.recipient_id;
 
       const [mission, participants] = await Promise.all([
         getById(missionId),
         getParticipantsForRelease(missionId),
       ]);
+
+      const adventurerId =
+        mission.owner_id === invitation.sender_id
+          ? invitation.recipient_id
+          : invitation.sender_id;
+
+      if (mission.status !== 'funded') {
+        return res.status(409).json({
+          error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
+        });
+      }
 
       if (mission.total_vacancies <= participants.length) {
         return res
@@ -192,7 +202,7 @@ export const respondToInvitation = async (req, res) => {
         missionId,
         adventurerId,
       );
-      if (alreadyJoined >= 1) {
+      if (alreadyJoined) {
         return res
           .status(409)
           .json({ error: 'Adventurer already joined this mission' });
@@ -201,8 +211,8 @@ export const respondToInvitation = async (req, res) => {
       await addParticipant(missionId, adventurerId);
       await adventurerJoined(missionId);
 
-      await updateInvitationStatus(invitationId, 'accepted');
-      await markAsSeen(invitationId);
+      await updateInvitationStatus(notificationId, 'accepted');
+      await markAsSeen(notificationId);
 
       return res.status(200).json({ message: 'Adventurer successfully added' });
     } else {

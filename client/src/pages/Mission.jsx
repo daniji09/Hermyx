@@ -21,6 +21,7 @@ import {
   startMission,
   joinMission,
   closeMission,
+  completeMission,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -130,6 +131,7 @@ const MissionError = ({ isError, children }) => {
 
 const MissionContent = ({ mission, isCreator, isFull }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const canAddAdventurers = isCreator && mission.status === 'funded';
   return (
     <>
       {mission && (
@@ -161,9 +163,11 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                   </div>
                   {isCreator && (
                     <div className='flex flex-wrap items-center gap-2 pt-1'>
-                      <AddAdventurerButton
-                        onClick={() => setIsSearchModalOpen(true)}
-                      />
+                      {canAddAdventurers && (
+                        <AddAdventurerButton
+                          onClick={() => setIsSearchModalOpen(true)}
+                        />
+                      )}
                       {mission.participants?.map((participant) => (
                         <AddedAdventurerBadge
                           key={participant.uid}
@@ -205,6 +209,15 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                       {messages.MISSION.MISSION_CLOSED}
                     </p>
                   )
+                ) : mission.status === 'in_progress' && mission.is_joined ? (
+                  <CompleteMissionButton
+                    missionId={mission.mid}
+                    isCompleted={mission.is_completed}
+                  />
+                ) : mission.status !== 'funded' ? (
+                  <p className='text-muted-foreground bg-muted/20'>
+                    {messages.MISSION.MISSION_NOT_ACCEPTING_ADVENTURERS}
+                  </p>
                 ) : isFull ? (
                   <p className='text-muted-foreground bg-muted/20'>
                     {messages.MISSION.MISSION_FILLED}
@@ -213,6 +226,7 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                   <JoinMissionButton
                     missionId={mission.mid}
                     isJoined={mission.is_joined}
+                    hasPendingJoinRequest={mission.has_pending_join_request}
                   />
                 )}
               </CardFooter>
@@ -242,7 +256,11 @@ const AddedAdventurerBadge = ({ participant }) => {
   return (
     <Badge
       variant='outline'
-      className='gap-2 border-slate-900 bg-slate-900 text-white hover:bg-slate-900'
+      className={`gap-2 text-white ${
+        participant.completed
+          ? 'border-green-700 bg-green-700 hover:bg-green-700'
+          : 'border-slate-900 bg-slate-900 hover:bg-slate-900'
+      }`}
     >
       <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
         {participant.avatar ? (
@@ -488,16 +506,29 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
   );
 };
 
-const JoinMissionButton = ({ missionId, isJoined }) => {
+const JoinMissionButton = ({
+  missionId,
+  isJoined,
+  hasPendingJoinRequest = false,
+}) => {
   const { showAlert } = useAlert();
-  const [hasRequestedToJoin, setHasRequestedToJoin] = useState(false);
+  const [hasRequestedToJoin, setHasRequestedToJoin] = useState(
+    hasPendingJoinRequest,
+  );
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const joinRequestMessageRef = useRef(null);
+  const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
     mutationFn: (message) => joinMission(missionId, message),
     onSuccess: () => {
       setHasRequestedToJoin(true);
       setIsJoinDialogOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(missionId)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', missionId],
+      });
       if (joinRequestMessageRef.current) {
         joinRequestMessageRef.current.value = '';
       }
@@ -694,6 +725,51 @@ const CloseMissionButton = ({ missionId }) => {
       disabled={isPending}
     >
       {'Close mission'}
+    </Button>
+  );
+};
+
+const CompleteMissionButton = ({ missionId, isCompleted }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => completeMission(missionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(missionId)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', missionId],
+      });
+    },
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.COMPLETE_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  const handleAttempt = () => {
+    showAlert({
+      title: messages.MISSION.COMPLETE_MISSION_ALERT.TITLE,
+      description: messages.MISSION.COMPLETE_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.COMPLETE_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='completeMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending || isCompleted}
+    >
+      {isCompleted ? 'Part completed' : 'Complete my part'}
     </Button>
   );
 };

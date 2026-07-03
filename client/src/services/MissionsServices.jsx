@@ -117,3 +117,9 @@ export const closeMission = async (mid) => {
   const { data } = await api.post(`/missions/${mid}/close`);
   return data.mission;
 };
+
+// Marks current adventurer participation as completed
+export const completeMission = async (mid) => {
+  const { data } = await api.post(`/missions/${mid}/complete`);
+  return data;
+};

@@ -15,9 +15,13 @@ import {
   getMissionsFunded as _getMissionsFunded,
 } from '../models/mission.model.js';
 
-import { getById as getMissionParticipationById } from '../models/mission_participation.model.js';
+import {
+  getById as getMissionParticipationById,
+  markAsCompleted as markMissionParticipationAsCompleted,
+} from '../models/mission_participation.model.js';
 import {
   createInvitation as createInvitationRecord,
+  createMissionNotification as createMissionNotificationRecord,
   hasPendingInvitation,
 } from '../models/invitation.model.js';
 import { emitToUser } from '../services/socket.service.js';
@@ -235,6 +239,12 @@ export const joinMission = async (req, res) => {
     if (mission.owner_id === uid)
       return res.status(403).json({ error: messages.JOIN_OWN_MISSION });
 
+    if (mission.status !== 'funded') {
+      return res.status(409).json({
+        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
+      });
+    }
+
     // Checks if mission is already full
     if (mission.occupied_vacancies === mission.total_vacancies)
       return res.status(409).json({
@@ -242,8 +252,8 @@ export const joinMission = async (req, res) => {
       });
 
     // Checks if user has already joined that mission
-    const already_joined = await getMissionParticipationById(mid, uid);
-    if (already_joined >= 1) {
+    const alreadyJoined = await getMissionParticipationById(mid, uid);
+    if (alreadyJoined) {
       return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
     }
 
@@ -255,27 +265,95 @@ export const joinMission = async (req, res) => {
       });
     }
 
-    const invitationId = await createInvitationRecord({
+    const notificationId = await createInvitationRecord({
       missionId: mid,
       senderId: uid,
       receiverId: ownerId,
-      type: 'adventurer_to_applicant',
+      type: 'invitation',
       message,
     });
 
     emitToUser(ownerId, 'invitation:created', {
-      invitationId,
+      notificationId,
       missionId: mid,
       missionTitle: mission.title,
       senderId: uid,
       senderUsername: req.user.username,
       receiverId: ownerId,
-      type: 'adventurer_to_applicant',
+      type: 'invitation',
       message,
     });
 
     return res.status(201).json({
       message: 'Join request sent successfully',
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const completeMission = async (req, res) => {
+  const { mid } = req.params;
+  const adventurerId = req.user.uid;
+
+  try {
+    const mission = await getById(mid);
+    if (!mission) {
+      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
+    }
+
+    if (mission.status !== 'in_progress') {
+      return res.status(400).json({
+        error: messages.MISSION_NOT_IN_PROGRESS,
+      });
+    }
+
+    const participation = await getMissionParticipationById(mid, adventurerId);
+    if (!participation) {
+      return res.status(403).json({
+        error: messages.MISSION_PARTICIPATION_REQUIRED,
+      });
+    }
+
+    if (participation.completed) {
+      return res.status(409).json({
+        error: messages.MISSION_PART_ALREADY_COMPLETED,
+      });
+    }
+
+    const updatedParticipation = await markMissionParticipationAsCompleted(
+      mid,
+      adventurerId,
+    );
+
+    if (!updatedParticipation) {
+      return res
+        .status(409)
+        .json({ error: messages.MISSION_PART_ALREADY_COMPLETED });
+    }
+
+    const missionCompletionMessage = `The mission "${mission.title}" was completed by ${req.user.username}.`;
+    const notificationId = await createMissionNotificationRecord({
+      missionId: Number(mid),
+      senderId: adventurerId,
+      receiverId: mission.owner_id,
+      message: missionCompletionMessage,
+    });
+
+    emitToUser(mission.owner_id, 'mission:participant-completed', {
+      notificationId,
+      type: 'mission',
+      missionId: Number(mid),
+      missionTitle: mission.title,
+      adventurerId,
+      adventurerUsername: req.user.username,
+      message: missionCompletionMessage,
+    });
+
+    return res.status(200).json({
+      message: messages.MISSION_PART_COMPLETED_SUCCESSFULLY,
+      participation: updatedParticipation,
     });
   } catch (error) {
     console.error(error);

@@ -11,6 +11,7 @@ import {
   start,
   joinMission,
   closeMission,
+  completeMission,
   getMissionsFunded,
 } from '../controllers/missions.controller.js';
 
@@ -27,6 +28,7 @@ import {
   getMissionsQuerySchema,
   joinMissionSchema,
   closeMissionSchema,
+  completeMissionSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -77,6 +79,13 @@ router.post(
   '/:mid/close',
   validateParamsSchema(closeMissionSchema),
   closeMission,
+);
+
+// Marks current adventurer participation as completed
+router.post(
+  '/:mid/complete',
+  validateParamsSchema(completeMissionSchema),
+  completeMission,
 );
 
 /// PUT

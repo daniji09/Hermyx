@@ -83,7 +83,18 @@ export const AuthProvider = ({ children }) => {
         socketRef.current.on('invitation:created', (payload) => {
           console.log('New invitation notification:', payload);
           setLatestNotification(payload);
-          queryClient.invalidateQueries({ queryKey: ['getMyInvitations'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+        });
+
+        socketRef.current.on('mission:participant-completed', (payload) => {
+          console.log('Mission completion notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
         });
       } catch (error) {
         console.error('Could not connect socket:', error);

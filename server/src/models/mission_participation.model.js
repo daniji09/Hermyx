@@ -26,7 +26,22 @@ export const deleteParticipant = async (mid, adventurerId) => {
 };
 
 export const getById = async (mid, adventurerId) => {
-  const query = `SELECT COUNT(*) FROM mission_participation WHERE mid = $1 AND adventurer_id = $2`;
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE mid = $1 AND adventurer_id = $2
+  `;
   const result = await pool.query(query, [mid, adventurerId]);
-  return result.rows[0].count;
+  return result.rows[0] || null;
+};
+
+export const markAsCompleted = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET completed = TRUE
+    WHERE mid = $1 AND adventurer_id = $2 AND completed = FALSE
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
 };

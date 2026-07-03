@@ -25,11 +25,11 @@ export const createInvitationSchema = z.object({
     .default(''),
 });
 
-export const respondToInvitationParamSchema = z.object({
-  invitationId: z.coerce
-    .number(messages.FIELD_NUMBER('Invitation id'))
-    .int(messages.FIELD_INTEGER('Invitation id'))
-    .min(0, messages.FIELD_POSITIVE('Invitation id')),
+export const respondToNotificationParamSchema = z.object({
+  notificationId: z.coerce
+    .number(messages.FIELD_NUMBER('Notification id'))
+    .int(messages.FIELD_INTEGER('Notification id'))
+    .min(0, messages.FIELD_POSITIVE('Notification id')),
 });
 
 export const respondToInvitationBodySchema = z.object({

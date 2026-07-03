@@ -60,6 +60,15 @@ export const messages = {
   NO_MISSIONS: 'There is no missions yet.',
 
   MISSIONS_NOT_FOUND: 'Missions not found.',
+  MISSION_NOT_IN_PROGRESS: 'Mission is not in progress.',
+  MISSION_NOT_ACCEPTING_ADVENTURERS:
+    'This mission is no longer accepting adventurers.',
+  MISSION_PARTICIPATION_REQUIRED:
+    'You must be part of this mission to complete it.',
+  MISSION_PART_ALREADY_COMPLETED:
+    'Your part of the mission is already marked as completed.',
+  MISSION_PART_COMPLETED_SUCCESSFULLY:
+    'Mission part marked as completed successfully.',
 
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',

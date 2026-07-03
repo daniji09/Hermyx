@@ -31,7 +31,7 @@ export const getParticipantsForRelease = async (mid) => {
 
 export const getParticipantsForDisplay = async (mid) => {
   const query = `
-    SELECT u.uid, u.username, u.avatar
+    SELECT u.uid, u.username, u.avatar, mp.completed
     FROM app_user u
     JOIN mission_participation mp ON u.uid = mp.adventurer_id
     WHERE mp.mid = $1
@@ -250,7 +250,23 @@ export const getMissionById = async (id, uid) => {
       SELECT 1 
       FROM mission_participation ma 
       WHERE ma.mid = m.mid AND ma.adventurer_id = $2
-    ) AS is_joined FROM mission m WHERE mid = $1`;
+    ) AS is_joined,
+    COALESCE((
+      SELECT ma.completed
+      FROM mission_participation ma
+      WHERE ma.mid = m.mid AND ma.adventurer_id = $2
+      LIMIT 1
+    ), FALSE) AS is_completed,
+    EXISTS (
+      SELECT 1
+      FROM notification n
+      WHERE n.associated_mission_id = m.mid
+        AND n.sender_id = $2
+        AND n.recipient_id = m.owner_id
+        AND n.type = 'invitation'
+        AND n.status = 'pending'
+    ) AS has_pending_join_request
+    FROM mission m WHERE mid = $1`;
   const result = await pool.query(query, [id, uid]);
   return result.rows[0];
 };

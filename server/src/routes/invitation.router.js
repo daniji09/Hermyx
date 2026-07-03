@@ -14,7 +14,7 @@ import {
 import {
   createInvitationSchema,
   respondToInvitationBodySchema,
-  respondToInvitationParamSchema,
+  respondToNotificationParamSchema,
 } from '@hermyx/shared';
 
 //Create invitation
@@ -25,15 +25,15 @@ router.post('/', validateBodySchema(createInvitationSchema), createInvitation);
 
 //Respond to invitation
 router.post(
-  '/:invitationId/respond',
-  validateParamsSchema(respondToInvitationParamSchema),
+  '/:notificationId/respond',
+  validateParamsSchema(respondToNotificationParamSchema),
   validateBodySchema(respondToInvitationBodySchema),
   respondToInvitation,
 );
 
 router.post(
-  '/:invitationId/seen',
-  validateParamsSchema(respondToInvitationParamSchema),
+  '/:notificationId/seen',
+  validateParamsSchema(respondToNotificationParamSchema),
   markMyInvitationAsSeen,
 );
 

@@ -22,6 +22,8 @@ export const messages = {
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
     MISSION_FILLED: 'Mission already filled!',
+    MISSION_NOT_ACCEPTING_ADVENTURERS:
+      'This mission is no longer accepting adventurers.',
     MISSION_PENDING_PAYMENT: `Mission can't be opened until payment is done.`,
     JOIN_MISSION_ALERT: {
       TITLE: 'Do you want to send a join request for this mission?',
@@ -43,6 +45,13 @@ export const messages = {
       DESCRIPTION:
         'This will state that the mission has been completed by the adventurers and they will receive the payment.',
       CONFIRM_TEXT: 'Yes, close mission',
+    },
+    COMPLETE_MISSION_ALERT: {
+      TITLE: 'Mark your part as completed?',
+      ERROR_TITLE: `Can't complete mission`,
+      DESCRIPTION:
+        'This will notify the mission owner that your part of the mission is done.',
+      CONFIRM_TEXT: 'Yes, mark as completed',
     },
   },
   SEARCH_MISSIONS: {

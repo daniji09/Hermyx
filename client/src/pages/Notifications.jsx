@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  getMyInvitationsQueryOptions,
-  markInvitationAsSeenMutationOptions,
+  getMyNotificationsQueryOptions,
+  markNotificationAsSeenMutationOptions,
   respondToInvitationMutationOptions,
 } from '../queries/InvitationsQueries';
 import { timestampToDayMonthYear } from '../utils/date';
@@ -20,7 +20,7 @@ export const Notifications = () => {
   const { setLatestNotification } = useContext(AuthContext);
   const [filter, setFilter] = useState('all');
   const { data, isLoading, isError } = useQuery(
-    getMyInvitationsQueryOptions({
+    getMyNotificationsQueryOptions({
       onSuccess: () => {
         setLatestNotification(null);
       },
@@ -30,7 +30,9 @@ export const Notifications = () => {
   const { mutate, isPending, variables } = useMutation(
     respondToInvitationMutationOptions({
       onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: ['getMyInvitations'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['getMyNotifications'],
+        });
         await queryClient.invalidateQueries({ queryKey: ['getMission'] });
         await queryClient.invalidateQueries({ queryKey: ['getMissions'] });
         await queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
@@ -38,46 +40,51 @@ export const Notifications = () => {
     }),
   );
   const { mutate: markAsSeen } = useMutation(
-    markInvitationAsSeenMutationOptions({
+    markNotificationAsSeenMutationOptions({
       onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: ['getMyInvitations'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['getMyNotifications'],
+        });
       },
     }),
   );
 
-  const invitations = data?.invitations || [];
+  const notifications = data?.notifications || [];
   const unseenCount = useMemo(() => {
-    return invitations.filter((invitation) => !invitation.seen).length;
-  }, [invitations]);
-  const filteredInvitations = useMemo(() => {
-    if (filter === 'all') return invitations;
-    return invitations.filter((invitation) => invitation.status === filter);
-  }, [filter, invitations]);
+    return notifications.filter((notification) => !notification.seen).length;
+  }, [notifications]);
+  const filteredNotifications = useMemo(() => {
+    if (filter === 'all') return notifications;
+    return notifications.filter(
+      (notification) => notification.status === filter,
+    );
+  }, [filter, notifications]);
 
   useEffect(() => {
-    const invitationId = searchParams.get('invitation');
+    const notificationId = searchParams.get('notification');
 
-    if (!invitationId) return;
+    if (!notificationId) return;
 
-    const targetInvitation = invitations.find(
-      (invitation) => invitation.iid === Number(invitationId),
+    const targetNotification = notifications.find(
+      (notification) => notification.nid === Number(notificationId),
     );
 
-    if (targetInvitation && !targetInvitation.seen) {
-      markAsSeen(Number(invitationId));
+    if (targetNotification && !targetNotification.seen) {
+      markAsSeen(Number(notificationId));
     }
 
     setSearchParams((currentParams) => {
       const nextParams = new URLSearchParams(currentParams);
-      nextParams.delete('invitation');
+      nextParams.delete('notification');
       return nextParams;
     });
-  }, [invitations, markAsSeen, searchParams, setSearchParams]);
+  }, [notifications, markAsSeen, searchParams, setSearchParams]);
 
   const actionableCount = useMemo(() => {
-    return invitations.filter((invitation) => invitation.status === 'pending')
-      .length;
-  }, [invitations]);
+    return notifications.filter(
+      (notification) => notification.status === 'pending',
+    ).length;
+  }, [notifications]);
 
   if (isLoading) {
     return (
@@ -120,7 +127,7 @@ export const Notifications = () => {
         </div>
       </section>
 
-      {invitations.length === 0 ? (
+      {notifications.length === 0 ? (
         <Card>
           <CardContent className='p-8 text-center text-muted-foreground'>
             No notifications yet.
@@ -155,7 +162,7 @@ export const Notifications = () => {
             </TabsList>
           </Tabs>
 
-          {filteredInvitations.length === 0 ? (
+          {filteredNotifications.length === 0 ? (
             <Card>
               <CardContent className='p-8 text-center text-muted-foreground'>
                 No notifications for this filter.
@@ -163,14 +170,15 @@ export const Notifications = () => {
             </Card>
           ) : (
             <section className='space-y-4'>
-              {filteredInvitations.map((invitation) => {
-                const isSeen = invitation.seen;
+              {filteredNotifications.map((notification) => {
+                const isSeen = notification.seen;
+                const isMissionNotification = notification.type === 'mission';
                 const isCurrentInvitationPending =
-                  isPending && variables?.invitationId === invitation.iid;
+                  isPending && variables?.notificationId === notification.nid;
 
                 return (
                   <Card
-                    key={invitation.iid}
+                    key={notification.nid}
                     className={isSeen ? 'opacity-80' : 'border-primary/40'}
                   >
                     <CardHeader className='pb-3'>
@@ -181,10 +189,21 @@ export const Notifications = () => {
                           </span>
                           <span className='min-w-0'>
                             <span className='block break-words leading-snug'>
-                              Tienes un mensaje de{' '}
-                              <span className='break-all'>
-                                {invitation.sender_username}
-                              </span>
+                              {isMissionNotification ? (
+                                <>
+                                  Mission update from{' '}
+                                  <span className='break-all'>
+                                    {notification.sender_username}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  Tienes un mensaje de{' '}
+                                  <span className='break-all'>
+                                    {notification.sender_username}
+                                  </span>
+                                </>
+                              )}
                             </span>
                             {!isSeen && (
                               <span className='ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
@@ -194,18 +213,18 @@ export const Notifications = () => {
                           </span>
                         </span>
                         <span className='self-start text-left text-sm font-normal text-muted-foreground sm:self-auto sm:text-right'>
-                          {timestampToDayMonthYear(invitation.date)}
+                          {timestampToDayMonthYear(notification.date)}
                         </span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className='space-y-4'>
                       <div className='space-y-1'>
                         <p className='text-sm text-muted-foreground'>
-                          Mission: {invitation.mission_title}
+                          Mission: {notification.mission_title}
                         </p>
-                        {invitation.message ? (
+                        {notification.message ? (
                           <p className='whitespace-pre-line text-sm leading-6'>
-                            {invitation.message}
+                            {notification.message}
                           </p>
                         ) : (
                           <p className='text-sm text-muted-foreground'>
@@ -214,13 +233,13 @@ export const Notifications = () => {
                         )}
                       </div>
 
-                      {invitation.status === 'pending' ? (
+                      {notification.status === 'pending' ? (
                         <div className='flex flex-wrap gap-2'>
                           <Button
                             type='button'
                             onClick={() =>
                               mutate({
-                                invitationId: invitation.iid,
+                                notificationId: notification.nid,
                                 response: 'accepted',
                               })
                             }
@@ -234,7 +253,7 @@ export const Notifications = () => {
                             variant='outline'
                             onClick={() =>
                               mutate({
-                                invitationId: invitation.iid,
+                                notificationId: notification.nid,
                                 response: 'rejected',
                               })
                             }
@@ -244,9 +263,13 @@ export const Notifications = () => {
                             Reject
                           </Button>
                         </div>
+                      ) : notification.status ? (
+                        <p className='text-sm font-medium text-muted-foreground'>
+                          Status: {notification.status}
+                        </p>
                       ) : (
                         <p className='text-sm font-medium text-muted-foreground'>
-                          Status: {invitation.status}
+                          Informational notification
                         </p>
                       )}
                     </CardContent>

@@ -1,15 +1,15 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
   createInvitation,
-  getMyInvitations,
-  markInvitationAsSeen,
+  getMyNotifications,
+  markNotificationAsSeen,
   respondToInvitation,
 } from '../services/InvitationsServices';
 
-export const getMyInvitationsQueryOptions = (options) => {
+export const getMyNotificationsQueryOptions = (options) => {
   return queryOptions({
-    queryKey: ['getMyInvitations'],
-    queryFn: getMyInvitations,
+    queryKey: ['getMyNotifications'],
+    queryFn: getMyNotifications,
     ...options,
   });
 };
@@ -28,9 +28,9 @@ export const respondToInvitationMutationOptions = (options) => {
   };
 };
 
-export const markInvitationAsSeenMutationOptions = (options) => {
+export const markNotificationAsSeenMutationOptions = (options) => {
   return {
-    mutationFn: markInvitationAsSeen,
+    mutationFn: markNotificationAsSeen,
     ...options,
   };
 };
