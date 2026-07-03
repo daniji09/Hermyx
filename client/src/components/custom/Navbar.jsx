@@ -36,7 +36,7 @@ export function Navbar() {
       <header className='sticky top-0 w-full bg-secondary py-3 z-10000'>
         <nav
           aria-label='Main navigation'
-          className='flex w-full items-center justify-between max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'
+          className='flex w-full items-center justify-between max-w-7xl mx-auto px-3 sm:px-6 lg:px-8'
         >
           <div className='flex shrink-0'>
             <Link
@@ -109,7 +109,7 @@ export function Navbar() {
         </nav>
 
         {isMobileMenuOpen && (
-          <div className='md:hidden border-t border-slate-200 mt-3 px-4 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200'>
+          <div className='md:hidden border-t border-slate-200 mt-3 px-3 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200'>
             <SearchBar
               id='searchMissionByTitleMobile'
               legend='Search mission by title bar.'
@@ -239,12 +239,12 @@ const NotificationsButton = () => {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={8} className='w-80 p-2'>
+        <DropdownMenuLabel className='px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-900'>
+          Notifications
+        </DropdownMenuLabel>
+
         {previewInvitation ? (
           <>
-            <DropdownMenuLabel className='px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400'>
-              Messages
-            </DropdownMenuLabel>
-
             <DropdownMenuItem asChild className='p-0 focus:bg-transparent'>
               <Link
                 to={`/notifications?invitation=${previewInvitation.iid}`}
@@ -254,8 +254,8 @@ const NotificationsButton = () => {
                   <Mail className='h-3.5 w-3.5' aria-hidden='true' />
                 </span>
                 <span className='flex min-w-0 flex-1 items-center'>
-                  <span className='block text-sm font-semibold text-slate-900'>
-                    Tienes un mensaje de {previewInvitation.sender_username}
+                  <span className='block text-sm font-medium text-slate-700'>
+                    Message from {previewInvitation.sender_username}
                   </span>
                 </span>
                 <ChevronRight
@@ -274,28 +274,26 @@ const NotificationsButton = () => {
                   <Link
                     to={`/notifications?invitation=${latestNotification.invitationId}`}
                   >
-                    Tienes un mensaje de {latestNotification.senderUsername}
+                    New message from {latestNotification.senderUsername}
                   </Link>
                 </DropdownMenuItem>
               )}
-            <DropdownMenuSeparator className='mx-0 my-2' />
-            <DropdownMenuItem
-              asChild
-              className='rounded-xl px-3 py-2 text-sm font-semibold text-slate-700'
-            >
-              <Link to='/notifications'>Open messages</Link>
-            </DropdownMenuItem>
           </>
         ) : (
           <>
-            <DropdownMenuLabel className='px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400'>
-              Messages
-            </DropdownMenuLabel>
-            <DropdownMenuItem className='cursor-default rounded-2xl border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500 focus:bg-slate-50 focus:text-slate-500'>
-              No messages yet
+            <DropdownMenuItem className='cursor-default rounded-xl px-3 py-3 text-sm text-slate-900 focus:bg-transparent focus:text-slate-900'>
+              No notifications yet.
             </DropdownMenuItem>
           </>
         )}
+
+        <DropdownMenuSeparator className='mx-0 my-2' />
+        <DropdownMenuItem
+          asChild
+          className='rounded-xl px-3 py-2 text-sm font-medium text-slate-900'
+        >
+          <Link to='/notifications'>All messages</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
