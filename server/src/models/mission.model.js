@@ -96,24 +96,54 @@ export const finalizeRefund = async (mid, refundId) => {
 };
 
 export const createMission = async (missionData) => {
-  const { title, description, vacancies, reward, difficulty, status, ownerId } =
-    missionData;
-
-  const query = `
-    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id)
-    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7)
-    RETURNING *
-  `;
-  const result = await pool.query(query, [
+  const {
     title,
     description,
     vacancies,
     reward,
     difficulty,
     status,
+    latitude,
+    longitude,
     ownerId,
-  ]);
-  return result.rows[0];
+  } = missionData;
+
+  // If there is no location, is saved as NULL
+  if (!latitude || !longitude) {
+    const query = `
+    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id, location)
+    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7, NULL)
+    RETURNING *
+  `;
+    const result = await pool.query(query, [
+      title,
+      description,
+      vacancies,
+      reward,
+      difficulty,
+      status,
+      ownerId,
+    ]);
+    return result.rows[0];
+  } else {
+    const query = `
+    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id, location)
+    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7, ST_MakePoint($8, $9)::geography)
+    RETURNING *
+  `;
+    const result = await pool.query(query, [
+      title,
+      description,
+      vacancies,
+      reward,
+      difficulty,
+      status,
+      ownerId,
+      longitude,
+      latitude,
+    ]);
+    return result.rows[0];
+  }
 };
 
 // TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
@@ -213,7 +243,10 @@ export const getAllMissionsInDraft = async () => {
 };
 
 export const getMissionById = async (id, uid) => {
-  const query = `SELECT *, EXISTS (
+  const query = `SELECT *, 
+    ST_Y(m.location::geometry) as latitude, 
+    ST_X(m.location::geometry) as longitude, 
+    EXISTS (
       SELECT 1 
       FROM mission_participation ma 
       WHERE ma.mid = m.mid AND ma.adventurer_id = $2

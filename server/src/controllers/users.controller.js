@@ -13,6 +13,7 @@ import {
   anonymize as _anonymize,
   deanonymize,
   updateConfiguration,
+  getLocationByUid,
 } from '../models/app_user.model.js';
 import {
   getPublicProfileCreatedMissions,
@@ -269,13 +270,15 @@ export const getMyProfile = async (req, res) => {
         .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
     }
 
+    const location = await getLocationByUid(req.user.uid);
+
     const profile = {
       username: user.username,
       email: user.email,
       name: user.name,
       surnames: user.surnames,
       description: user.description,
-      location: user.location,
+      location: location,
       avatar: user.avatar,
       configuration: user.configuration,
     };
@@ -294,8 +297,8 @@ export const getMyProfile = async (req, res) => {
 export const signUp = async (req, res) => {
   try {
     // Gets new account attributes
-    const email = req.body.email.toLowerCase().trim();
-    const username = req.body.username.toLowerCase().trim();
+    const email = req.body.email;
+    const username = req.body.username;
     const { password } = req.body;
 
     // Checks if the email is already in use
@@ -413,6 +416,8 @@ export const updateMyProfile = async (req, res) => {
       name: req.body.name,
       surnames: req.body.surnames,
       description: req.body.description,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
     });
 
     return res.status(200).json({

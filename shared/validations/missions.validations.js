@@ -57,6 +57,8 @@ export const publishMissionSchema = z.object({
       messages.FIELD_TOO_BIG('Difficulty', consts.MISSION.DIFFICULTY.MAX),
     ),
   isDraft: z.boolean().optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
 });
 
 const optionalNumberFromFormSchema = (schema) =>

@@ -47,7 +47,7 @@ export const signUpSchema = z
         messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
       )
       .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    email: z.email(messages.FIELD_NOT_VALID('email')).trim().toLowerCase(),
     password: z
       .string()
       .trim()
@@ -180,6 +180,8 @@ export const updateMyProfileSchema = z.object({
       messages.FIELD_TOO_LONG('Description', consts.DESCRIPTION_MAX_LENGTH),
     )
     .optional(),
+  latitude: z.coerce.number().optional(),
+  longitude: z.coerce.number().optional(),
 });
 
 // Sync with Google backend validation

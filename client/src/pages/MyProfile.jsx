@@ -38,7 +38,7 @@ import { useAlert } from '../contexts/AlertContext';
 import { deleteUser } from '../services/UsersServices';
 import { useNavigate } from 'react-router-dom';
 import { messages } from '../messages/messages';
-
+import { Map } from '../components/custom/Map';
 import {
   Dialog,
   DialogClose,
@@ -220,10 +220,17 @@ const ProfileInformation = ({ data }) => {
     if (!isEditing) return;
     mutate(form);
   };
+
+  // State for map
+  const [missionCoords, setMissionCoords] = useState({
+    lat: profileForm.location?.latitude || '',
+    lng: profileForm.location?.longitude || '',
+  });
+
   return (
     <Card asChild>
       <section className='p-4 sm:p-6'>
-        <form className='space-y-6'>
+        <form>
           <div className='flex gap-3 items-start justify-between'>
             <h2 className='text-xl font-semibold'>Profile information</h2>
             <div className='flex justify-end gap-2'>
@@ -253,7 +260,7 @@ const ProfileInformation = ({ data }) => {
             </div>
           </div>
 
-          <div className='grid gap-4 sm:grid-cols-2'>
+          <div className='grid gap-4 sm:grid-cols-2 pt-6'>
             <FormInputField
               id='profileUsername'
               label='Username (required):'
@@ -314,17 +321,51 @@ const ProfileInformation = ({ data }) => {
               />
             </div>
           </div>
-          {successMessage && !isAlertClosed && (
-            <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
-              {successMessage}
-            </AlertStatic>
-          )}
-          {errors.general?.[0] && !isAlertClosed && (
-            <FormAlert onClose={() => setIsAlertClosed(true)}>
-              {errors.general[0]}
-            </FormAlert>
+          {missionCoords && (
+            <>
+              <input type='hidden' name='latitude' value={missionCoords.lat} />
+              <input type='hidden' name='longitude' value={missionCoords.lng} />
+            </>
           )}
         </form>
+
+        {!isEditing && <Label>Location:</Label>}
+        <Map
+          onLocationSelected={(coords) => {
+            setMissionCoords(coords);
+            updateField('location', {
+              latitude: coords.lat,
+              longitude: coords.lng,
+            });
+            updateField('latitude', coords.lat);
+            updateField('longitude', coords.lng);
+          }}
+          readOnly={!isEditing}
+          description={messages.MY_PROFILE.LOCATION_DESCRIPTION}
+          initialLocation={
+            profileForm.location?.latitude &&
+            profileForm.location?.longitude && {
+              lat: profileForm.location?.latitude,
+              lng: profileForm.location?.longitude,
+            }
+          }
+        ></Map>
+
+        <div className='flex items-center self-end me-3'>
+          <Info className='w-4 h-4 mr-1' aria-hidden='true' />
+          <small>{messages.MY_PROFILE.LOCATION_INFO}</small>
+        </div>
+
+        {successMessage && !isAlertClosed && (
+          <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
+            {successMessage}
+          </AlertStatic>
+        )}
+        {errors.general?.[0] && !isAlertClosed && (
+          <FormAlert onClose={() => setIsAlertClosed(true)}>
+            {errors.general[0]}
+          </FormAlert>
+        )}
       </section>
     </Card>
   );
@@ -393,10 +434,7 @@ const ProfileAccessMethods = ({ user }) => {
           {hasGoogleProvider && !hasPasswordProvider && (
             <div className='flex items-center self-end me-3'>
               <Info className='w-4 h-4 mr-1' aria-hidden='true' />
-              <small>
-                {`Can't unlink Google account if there is no e-mail
-                authentication added.`}
-              </small>
+              <small>{messages.MY_PROFILE.UNLINK_GOOGLE_INFO}</small>
             </div>
           )}
         </div>
@@ -452,7 +490,11 @@ const AddEmailAuthenticationButton = ({ hasPasswordProvider }) => {
             queryClient.clear();
             navigate('/login');
           } catch (error) {
-            console.error('Error logging out:', error);
+            showAlert({
+              title: messages.MY_PROFILE.ADD_EMAIL_AUTHENTICATION_ALERT.TITLE,
+              description:
+                error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+            });
           }
         },
       });
@@ -957,7 +999,6 @@ const LinkGoogleButton = ({
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error);
       showAlert({
         title: messages.MY_PROFILE.LINK_GOOGLE_ALERT.ERROR_TITLE,
         description:
@@ -1123,7 +1164,6 @@ const DeleteAccountButton = () => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error.response.data.errors);
       showAlert({
         title: messages.MY_PROFILE.DELETE_ACCOUNT_ALERT.ERROR_TITLE,
         description: error?.response.data.errors?.general,
@@ -1163,6 +1203,9 @@ const buildForm = (profile) => {
     name: profile.name || '',
     surnames: profile.surnames || '',
     description: profile.description || '',
+    location: profile.location || '',
+    latitude: profile.latitude || '',
+    longitude: profile.longitude || '',
   };
 };
 

@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS APP_USER;
 
 -- Special options creation
 CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Tables creation
 CREATE TABLE APP_USER (
@@ -22,7 +23,7 @@ CREATE TABLE APP_USER (
 	description VARCHAR(500),
 	name VARCHAR(50),
 	surnames VARCHAR(100),
-	location VARCHAR(300),
+	location geography(Point, 4326),
 	avatar VARCHAR(255),
 	configuration JSONB NOT NULL DEFAULT '{"show_missions_to_others": true}'::jsonb,
 	stripe_customer_id VARCHAR(255),
@@ -45,6 +46,7 @@ CREATE TABLE MISSION (
 	total_vacancies INT NOT NULL,
 	occupied_vacancies INT NOT NULL,
 	monetary_reward NUMERIC NOT NULL,
+	location geography(Point, 4326),
 	status VARCHAR(20) NOT NULL CHECK (status IN ('draft','pending_payment',
     'funded',
     'in_progress',
