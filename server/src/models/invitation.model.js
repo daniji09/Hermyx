@@ -18,7 +18,13 @@ export const createInvitation = async (invitationData) => {
 };
 
 export const createMissionNotification = async (notificationData) => {
-  const { missionId, senderId, receiverId, message } = notificationData;
+  const {
+    missionId,
+    senderId,
+    receiverId,
+    message,
+    status = null,
+  } = notificationData;
   const query = `
     INSERT INTO notification (
       date,
@@ -29,13 +35,14 @@ export const createMissionNotification = async (notificationData) => {
       status,
       message
     )
-    VALUES (NOW(), 'mission', $1, $2, $3, NULL, $4)
+    VALUES (NOW(), 'mission', $1, $2, $3, $4, $5)
     RETURNING nid
   `;
   const result = await pool.query(query, [
     missionId,
     senderId,
     receiverId,
+    status,
     message,
   ]);
   return result.rows[0].nid;

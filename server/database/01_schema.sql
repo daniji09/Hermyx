@@ -72,7 +72,12 @@ CREATE TABLE MISSION_PARTICIPATION (
 	adventurer_id INT NOT NULL,
 	transfer_id VARCHAR(255),
   amount_paid NUMERIC,
-	completed BOOLEAN NOT NULL DEFAULT FALSE,
+	status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN (
+		'in_progress',
+		'submitted',
+		'approved',
+		'rejected'
+	)),
 	review VARCHAR(500),
 	FOREIGN KEY (mid) REFERENCES MISSION(mid),
 	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid),

@@ -1,6 +1,7 @@
 import { messages } from '@hermyx/shared';
 import {
   createInvitation as _createInvitation,
+  createMissionNotification,
   findById,
   getByRecipientId,
   hasPendingInvitation,
@@ -12,10 +13,13 @@ import {
   adventurerJoined,
   getById,
   getParticipantsForRelease,
+  updateStatus as updateMissionStatus,
 } from '../models/mission.model.js';
 import {
   addParticipant,
+  approveParticipation,
   getById as getMissionParticipationById,
+  rejectParticipation,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
 
@@ -166,6 +170,89 @@ export const respondToInvitation = async (req, res) => {
     if (invitation.status !== 'pending') {
       return res.status(400).json({
         error: `This invitation has already been ${invitation.status}.`,
+      });
+    }
+
+    if (invitation.type === 'mission') {
+      const missionId = invitation.associated_mission_id;
+      const mission = await getById(missionId);
+
+      if (!mission) {
+        return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+      }
+
+      if (mission.owner_id !== userId) {
+        return res.status(403).json({
+          error: messages.UNAUTHORIZED_ERROR,
+        });
+      }
+
+      if (mission.status !== 'in_progress') {
+        return res.status(409).json({
+          error: messages.MISSION_NOT_IN_PROGRESS,
+        });
+      }
+
+      const participation = await getMissionParticipationById(
+        missionId,
+        invitation.sender_id,
+      );
+
+      if (!participation) {
+        return res.status(404).json({
+          error: messages.MISSION_PARTICIPATION_NOT_FOUND,
+        });
+      }
+
+      if (participation.status !== 'submitted') {
+        return res.status(409).json({
+          error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED,
+        });
+      }
+
+      if (response === 'rejected') {
+        await rejectParticipation(missionId, invitation.sender_id);
+        await updateMissionStatus(missionId, 'in_dispute');
+      } else {
+        await approveParticipation(missionId, invitation.sender_id);
+      }
+
+      await updateInvitationStatus(notificationId, response);
+      await markAsSeen(notificationId);
+
+      const missionNotificationMessage =
+        response === 'rejected'
+          ? `Your participation in "${mission.title}" was rejected by ${req.user.username}. The mission is now in dispute.`
+          : `Your participation in "${mission.title}" was approved by ${req.user.username}.`;
+
+      const followUpNotificationId = await createMissionNotification({
+        missionId,
+        senderId: userId,
+        receiverId: invitation.sender_id,
+        message: missionNotificationMessage,
+      });
+
+      emitToUser(
+        invitation.sender_id,
+        response === 'rejected'
+          ? 'mission:participation-rejected'
+          : 'mission:participation-approved',
+        {
+          notificationId: followUpNotificationId,
+          type: 'mission',
+          missionId,
+          missionTitle: mission.title,
+          ownerId: userId,
+          ownerUsername: req.user.username,
+          message: missionNotificationMessage,
+        },
+      );
+
+      return res.status(200).json({
+        message:
+          response === 'rejected'
+            ? messages.MISSION_PARTICIPATION_REJECTED_SUCCESSFULLY
+            : messages.MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY,
       });
     }
 

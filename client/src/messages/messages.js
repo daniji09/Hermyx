@@ -21,7 +21,9 @@ export const messages = {
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
+    MISSION_IN_DISPUTE: 'Mission is currently in dispute.',
     MISSION_FILLED: 'Mission already filled!',
+    MISSION_JOINED: 'You are already part of this mission.',
     MISSION_NOT_ACCEPTING_ADVENTURERS:
       'This mission is no longer accepting adventurers.',
     MISSION_PENDING_PAYMENT: `Mission can't be opened until payment is done.`,
@@ -43,15 +45,49 @@ export const messages = {
       TITLE: 'Are you sure you want to close the mission?',
       ERROR_TITLE: `Can't close mission`,
       DESCRIPTION:
-        'This will state that the mission has been completed by the adventurers and they will receive the payment.',
+        'This will mark the mission as accepted after all participations have been approved.',
       CONFIRM_TEXT: 'Yes, close mission',
     },
-    COMPLETE_MISSION_ALERT: {
-      TITLE: 'Mark your part as completed?',
-      ERROR_TITLE: `Can't complete mission`,
+    SUBMIT_PARTICIPATION_ALERT: {
+      TITLE: 'Submit your participation?',
+      ERROR_TITLE: `Can't submit participation`,
       DESCRIPTION:
-        'This will notify the mission owner that your part of the mission is done.',
-      CONFIRM_TEXT: 'Yes, mark as completed',
+        'This will notify the mission owner that your part is ready for review.',
+      CONFIRM_TEXT: 'Yes, submit participation',
+    },
+    APPROVE_PARTICIPATION_ALERT: {
+      TITLE: 'Approve participation?',
+      ERROR_TITLE: `Can't approve participation`,
+      DESCRIPTION:
+        'This will mark this adventurer participation as approved.',
+      CONFIRM_TEXT: 'Yes, approve',
+    },
+    REJECT_PARTICIPATION_ALERT: {
+      TITLE: 'Reject participation?',
+      ERROR_TITLE: `Can't reject participation`,
+      DESCRIPTION:
+        'This will reject this participation and move the mission into dispute.',
+      CONFIRM_TEXT: 'Yes, reject',
+    },
+    STATUS_LABELS: {
+      draft: 'Draft',
+      pending_payment: 'Pending payment',
+      funded: 'Looking for adventurers',
+      in_progress: 'In progress',
+      delivered: 'Delivered',
+      accepted: 'Accepted',
+      releasing: 'Releasing payment',
+      released: 'Released',
+      partially_released: 'Partially released',
+      refunding: 'Refunding',
+      refunded: 'Refunded',
+      canceled: 'Canceled',
+      in_dispute: 'In dispute',
+      looking_for_adventurers: 'Looking for adventurers',
+      closed: 'Closed',
+      submitted: 'Submitted',
+      approved: 'Approved',
+      rejected: 'Rejected',
     },
   },
   SEARCH_MISSIONS: {

@@ -9,6 +9,7 @@ import {
   getById,
   getParticipantsForDisplay,
   getParticipantsForRelease,
+  hasAllParticipantsApproved,
   updateMissionStatus,
   getByUidAndTitle,
   closeMission as _closeMission,
@@ -17,7 +18,7 @@ import {
 
 import {
   getById as getMissionParticipationById,
-  markAsCompleted as markMissionParticipationAsCompleted,
+  submitParticipation as submitMissionParticipationRecord,
 } from '../models/mission_participation.model.js';
 import {
   createInvitation as createInvitationRecord,
@@ -293,7 +294,7 @@ export const joinMission = async (req, res) => {
   }
 };
 
-export const completeMission = async (req, res) => {
+export const submitMissionParticipation = async (req, res) => {
   const { mid } = req.params;
   const adventurerId = req.user.uid;
 
@@ -316,13 +317,13 @@ export const completeMission = async (req, res) => {
       });
     }
 
-    if (participation.completed) {
+    if (participation.status !== 'in_progress') {
       return res.status(409).json({
-        error: messages.MISSION_PART_ALREADY_COMPLETED,
+        error: messages.MISSION_PART_ALREADY_SUBMITTED,
       });
     }
 
-    const updatedParticipation = await markMissionParticipationAsCompleted(
+    const updatedParticipation = await submitMissionParticipationRecord(
       mid,
       adventurerId,
     );
@@ -330,18 +331,19 @@ export const completeMission = async (req, res) => {
     if (!updatedParticipation) {
       return res
         .status(409)
-        .json({ error: messages.MISSION_PART_ALREADY_COMPLETED });
+        .json({ error: messages.MISSION_PART_ALREADY_SUBMITTED });
     }
 
-    const missionCompletionMessage = `The mission "${mission.title}" was completed by ${req.user.username}.`;
+    const missionCompletionMessage = `The participation in "${mission.title}" was submitted by ${req.user.username}.`;
     const notificationId = await createMissionNotificationRecord({
       missionId: Number(mid),
       senderId: adventurerId,
       receiverId: mission.owner_id,
+      status: 'pending',
       message: missionCompletionMessage,
     });
 
-    emitToUser(mission.owner_id, 'mission:participant-completed', {
+    emitToUser(mission.owner_id, 'mission:participation-submitted', {
       notificationId,
       type: 'mission',
       missionId: Number(mid),
@@ -352,7 +354,7 @@ export const completeMission = async (req, res) => {
     });
 
     return res.status(200).json({
-      message: messages.MISSION_PART_COMPLETED_SUCCESSFULLY,
+      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
       participation: updatedParticipation,
     });
   } catch (error) {
@@ -374,6 +376,23 @@ export const closeMission = async (req, res) => {
 
     if (mission.owner_id !== userId) {
       return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
+    }
+
+    if (mission.status !== 'in_progress') {
+      return res.status(409).json({
+        error: messages.MISSION_NOT_IN_PROGRESS,
+      });
+    }
+
+    const approvalStatus = await hasAllParticipantsApproved(mid);
+    if (
+      !approvalStatus ||
+      approvalStatus.participant_count === 0 ||
+      !approvalStatus.all_approved
+    ) {
+      return res.status(409).json({
+        error: messages.MISSION_REQUIRES_ALL_PARTS_APPROVED,
+      });
     }
 
     const updatedMission = await _closeMission(mid);

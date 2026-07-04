@@ -64,11 +64,21 @@ export const messages = {
   MISSION_NOT_ACCEPTING_ADVENTURERS:
     'This mission is no longer accepting adventurers.',
   MISSION_PARTICIPATION_REQUIRED:
-    'You must be part of this mission to complete it.',
-  MISSION_PART_ALREADY_COMPLETED:
-    'Your part of the mission is already marked as completed.',
-  MISSION_PART_COMPLETED_SUCCESSFULLY:
-    'Mission part marked as completed successfully.',
+    'You must be part of this mission to submit your participation.',
+  MISSION_PARTICIPATION_NOT_FOUND: 'Mission participation not found.',
+  MISSION_PART_ALREADY_SUBMITTED:
+    'Your participation has already been submitted.',
+  MISSION_PART_SUBMITTED_SUCCESSFULLY: 'Participation submitted successfully.',
+  MISSION_PARTICIPATION_NOT_SUBMITTED:
+    'This participation has not been submitted yet.',
+  MISSION_PARTICIPATION_ALREADY_REVIEWED:
+    'This participation has already been reviewed.',
+  MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY:
+    'Participation approved successfully.',
+  MISSION_PARTICIPATION_REJECTED_SUCCESSFULLY:
+    'Participation rejected successfully.',
+  MISSION_REQUIRES_ALL_PARTS_APPROVED:
+    'All adventurer participations must be approved before closing the mission.',
 
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',

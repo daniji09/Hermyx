@@ -35,11 +35,33 @@ export const getById = async (mid, adventurerId) => {
   return result.rows[0] || null;
 };
 
-export const markAsCompleted = async (mid, adventurerId) => {
+export const submitParticipation = async (mid, adventurerId) => {
   const query = `
     UPDATE mission_participation
-    SET completed = TRUE
-    WHERE mid = $1 AND adventurer_id = $2 AND completed = FALSE
+    SET status = 'submitted'
+    WHERE mid = $1 AND adventurer_id = $2 AND status = 'in_progress'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
+export const approveParticipation = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'approved'
+    WHERE mid = $1 AND adventurer_id = $2 AND status = 'submitted'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
+export const rejectParticipation = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'rejected'
+    WHERE mid = $1 AND adventurer_id = $2 AND status = 'submitted'
     RETURNING *
   `;
   const result = await pool.query(query, [mid, adventurerId]);

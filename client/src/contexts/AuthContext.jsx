@@ -86,8 +86,30 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
         });
 
-        socketRef.current.on('mission:participant-completed', (payload) => {
-          console.log('Mission completion notification:', payload);
+        socketRef.current.on('mission:participation-submitted', (payload) => {
+          console.log('Participation submitted notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        });
+
+        socketRef.current.on('mission:participation-approved', (payload) => {
+          console.log('Participation approved notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        });
+
+        socketRef.current.on('mission:participation-rejected', (payload) => {
+          console.log('Participation rejected notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({

@@ -173,6 +173,8 @@ export const Notifications = () => {
               {filteredNotifications.map((notification) => {
                 const isSeen = notification.seen;
                 const isMissionNotification = notification.type === 'mission';
+                const isPendingMissionReview =
+                  isMissionNotification && notification.status === 'pending';
                 const isCurrentInvitationPending =
                   isPending && variables?.notificationId === notification.nid;
 
@@ -191,7 +193,9 @@ export const Notifications = () => {
                             <span className='block break-words leading-snug'>
                               {isMissionNotification ? (
                                 <>
-                                  Mission update from{' '}
+                                  {isPendingMissionReview
+                                    ? 'Participation review from '
+                                    : 'Mission update from '}
                                   <span className='break-all'>
                                     {notification.sender_username}
                                   </span>
@@ -246,7 +250,7 @@ export const Notifications = () => {
                             disabled={isCurrentInvitationPending}
                           >
                             <Check aria-hidden='true' />
-                            Accept
+                            {isPendingMissionReview ? 'Approve' : 'Accept'}
                           </Button>
                           <Button
                             type='button'

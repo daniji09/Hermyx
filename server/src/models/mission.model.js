@@ -31,7 +31,11 @@ export const getParticipantsForRelease = async (mid) => {
 
 export const getParticipantsForDisplay = async (mid) => {
   const query = `
-    SELECT u.uid, u.username, u.avatar, mp.completed
+    SELECT
+      u.uid,
+      u.username,
+      u.avatar,
+      mp.status
     FROM app_user u
     JOIN mission_participation mp ON u.uid = mp.adventurer_id
     WHERE mp.mid = $1
@@ -39,6 +43,18 @@ export const getParticipantsForDisplay = async (mid) => {
   `;
   const result = await pool.query(query, [mid]);
   return result.rows;
+};
+
+export const hasAllParticipantsApproved = async (mid) => {
+  const query = `
+    SELECT
+      COUNT(*)::int AS participant_count,
+      COALESCE(BOOL_AND(status = 'approved'), FALSE) AS all_approved
+    FROM mission_participation
+    WHERE mid = $1
+  `;
+  const result = await pool.query(query, [mid]);
+  return result.rows[0];
 };
 
 //Tries to set status to "releasing" only if current status is 'accepted', this prevents double payments. Returns the row if successful.
@@ -146,9 +162,9 @@ export const createMission = async (missionData) => {
   }
 };
 
-// TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
+// TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
 export const getMissions = async ({ title = undefined, pagination }) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
     m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft'`;
@@ -169,7 +185,7 @@ export const getMissions = async ({ title = undefined, pagination }) => {
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -177,7 +193,7 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -187,13 +203,13 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   return { rows, totalCount };
 };
 
-// TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
+// TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
 export const getMissionsFunded = async ({
   title = undefined,
   pagination,
   excludeOwnerId = undefined,
 }) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
     m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status = 'funded'`;
@@ -218,7 +234,7 @@ export const getMissionsFunded = async ({
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -226,7 +242,7 @@ export const getMissionsFunded = async ({
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -252,11 +268,11 @@ export const getMissionById = async (id, uid) => {
       WHERE ma.mid = m.mid AND ma.adventurer_id = $2
     ) AS is_joined,
     COALESCE((
-      SELECT ma.completed
+      SELECT ma.status
       FROM mission_participation ma
       WHERE ma.mid = m.mid AND ma.adventurer_id = $2
       LIMIT 1
-    ), FALSE) AS is_completed,
+    ), NULL) AS participation_status,
     EXISTS (
       SELECT 1
       FROM notification n
@@ -302,7 +318,7 @@ export const adventurerJoined = async (mid) => {
 };
 
 export const getMissionsByUid = async (uid, pagination = null) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, m.occupied_vacancies, 
     m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft' AND m.owner_id = $1 
@@ -319,7 +335,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -327,7 +343,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -338,10 +354,12 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 };
 
 export const getMissionsJoinedByUser = async (uid, pagination = null) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
-    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM (mission_participation AS ma JOIN app_user AS a ON (ma.adventurer_id = a.uid)) JOIN mission AS m ON (m.mid = ma.mid) 
+    m.occupied_vacancies, m.monetary_reward, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
+    FROM mission_participation AS ma
+    JOIN mission AS m ON (m.mid = ma.mid)
+    JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
     WHERE adventurer_id = $1 ORDER BY m.publication_date DESC`;
   const values = [uid];
 
@@ -355,7 +373,7 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -363,7 +381,7 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -415,7 +433,8 @@ export const getPublicProfileCreatedMissions = async (
           'in_progress',
           'delivered',
           'accepted',
-          'releasing'
+          'releasing',
+          'in_dispute'
         ) THEN 'in_progress'
         WHEN m.status IN (
           'released',
@@ -438,6 +457,7 @@ export const getPublicProfileCreatedMissions = async (
         'delivered',
         'accepted',
         'releasing',
+        'in_dispute',
         'released',
         'partially_released'
       )
@@ -529,7 +549,7 @@ export const getUserActiveMissions = async (uid) => {
   SELECT COUNT(DISTINCT m.mid) AS total_active
   FROM mission m
     LEFT JOIN mission_participation ma ON m.mid = ma.mid AND ma.adventurer_id = $1
-  WHERE m.status = 'in_progress' 
+  WHERE m.status = 'in_progress'
     AND (m.owner_id = $1 OR ma.adventurer_id = $1)
   `;
   const result = await pool.query(query, [uid]);
