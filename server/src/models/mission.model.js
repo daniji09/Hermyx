@@ -100,49 +100,83 @@ export const createMission = async (missionData) => {
     title,
     description,
     vacancies,
-    reward,
-    difficulty,
+    vacanciesData,
     status,
     latitude,
     longitude,
     ownerId,
   } = missionData;
 
-  // If there is no location, is saved as NULL
-  if (!latitude || !longitude) {
-    const query = `
-    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id, location)
-    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7, NULL)
-    RETURNING *
-  `;
-    const result = await pool.query(query, [
-      title,
-      description,
-      vacancies,
-      reward,
-      difficulty,
-      status,
-      ownerId,
-    ]);
-    return result.rows[0];
-  } else {
-    const query = `
-    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id, location)
-    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7, ST_MakePoint($8, $9)::geography)
-    RETURNING *
-  `;
-    const result = await pool.query(query, [
-      title,
-      description,
-      vacancies,
-      reward,
-      difficulty,
-      status,
-      ownerId,
-      longitude,
-      latitude,
-    ]);
-    return result.rows[0];
+  // This operation has to steps, so a transaction is needed. So a connection is taken.
+  const client = await pool.connect();
+
+  try {
+    // Transaction begins
+    await client.query('BEGIN');
+
+    // First step, saving mission info
+    let result;
+    if (!latitude || !longitude) {
+      const query = `
+        INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, status, owner_id, location)
+        VALUES (NOW(), $1, $2, $3, 0, $4, $5, NULL)
+        RETURNING *
+      `;
+      result = await client.query(query, [
+        title,
+        description,
+        vacancies,
+        status,
+        ownerId,
+      ]);
+    } else {
+      const query = `
+        INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, status, owner_id, location)
+        VALUES (NOW(), $1, $2, $3, 0, $4, $5, ST_MakePoint($6, $7)::geography)
+        RETURNING *
+      `;
+      result = await client.query(query, [
+        title,
+        description,
+        vacancies,
+        status,
+        ownerId,
+        longitude,
+        latitude,
+      ]);
+    }
+
+    const newMission = result.rows[0];
+    const missionId = newMission.mid; // New mission info saved is taken
+
+    // Second step, save mission vacancies info
+    const participationQuery = `
+      INSERT INTO MISSION_PARTICIPATION (mid, monetary_reward, title, description)
+      VALUES ($1, $2, $3, $4)
+    `;
+
+    // Promises array, one per vacancy
+    const insertPromises = vacanciesData.map((vacancy) => {
+      return client.query(participationQuery, [
+        missionId,
+        vacancy.reward,
+        vacancy.title || null,
+        vacancy.description || null,
+      ]);
+    });
+
+    // All promises are executed at the same time
+    await Promise.all(insertPromises);
+
+    // Last step, confirm every operation was successful
+    await client.query('COMMIT');
+
+    return newMission;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
 };
 

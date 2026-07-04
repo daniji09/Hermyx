@@ -18,6 +18,7 @@ export const messages = {
     DIFFICULTY_DESCRIPTION:
       'Higher difficulty implies higher rewards for adventurers.',
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
+    LOCATION_ERROR: 'Please, select a valid location on the map.',
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',

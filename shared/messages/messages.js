@@ -1,3 +1,5 @@
+import { consts } from '../consts/consts.js';
+
 export const messages = {
   ///// Common messages
   //// Error
@@ -58,11 +60,11 @@ export const messages = {
 
   //// Get all paginated
   NO_MISSIONS: 'There is no missions yet.',
-
   MISSIONS_NOT_FOUND: 'Missions not found.',
 
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',
+  MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
 
   //// Start mission
   START_WITHOUT_ADVENTURERS: `You can't start a mission without adventurers.`,

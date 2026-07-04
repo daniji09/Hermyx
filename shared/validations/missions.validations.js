@@ -2,6 +2,44 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
+const vacancySchema = z.object({
+  id: z.string().min(1, messages.FIELD_REQUIRED),
+  reward: z.coerce
+    .number(messages.FIELD_NUMBER('Reward'))
+    .min(
+      consts.MISSION.REWARD.MIN,
+      messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+    )
+    .max(
+      consts.MISSION.REWARD.MAX,
+      messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+    ),
+  title: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Title',
+        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .or(z.literal('')),
+  description: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Description',
+        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .or(z.literal('')),
+});
+
 // Server and client sign up shared validation
 export const publishMissionSchema = z.object({
   title: z
@@ -34,7 +72,22 @@ export const publishMissionSchema = z.object({
       consts.MISSION.VACANCIES.MAX,
       messages.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
     ),
-  reward: z.coerce
+  vacanciesData: z
+    .string()
+    .transform((str, ctx) => {
+      try {
+        return JSON.parse(str);
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Vacancy format is corrupt: ' + error,
+        });
+        return z.NEVER;
+      }
+    })
+    .pipe(z.array(vacancySchema)),
+  /*
+  Reward: z.coerce
     .number(messages.FIELD_NUMBER('Reward'))
     .int(messages.FIELD_INTEGER('Reward'))
     .min(
@@ -55,7 +108,7 @@ export const publishMissionSchema = z.object({
     .max(
       consts.MISSION.DIFFICULTY.MAX,
       messages.FIELD_TOO_BIG('Difficulty', consts.MISSION.DIFFICULTY.MAX),
-    ),
+    ),*/
   isDraft: z.boolean().optional(),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
@@ -134,4 +187,95 @@ export const closeMissionSchema = z.object({
     .number(messages.FIELD_NUMBER('Id'))
     .int(messages.FIELD_INTEGER('Id'))
     .min(0, messages.FIELD_POSITIVE('Id')),
+});
+
+export const addVacanciesSchema = z
+  .object({
+    vacanciesQuantity: z.coerce
+      .number(messages.FIELD_NUMBER('Quantity'))
+      .int(messages.FIELD_INTEGER('Quantity'))
+      .min(
+        consts.MISSION.VACANCIES.MIN,
+        messages.FIELD_TOO_SMALL('Quantity', consts.MISSION.VACANCIES.MIN),
+      )
+      .max(
+        consts.MISSION.VACANCIES.MAX,
+        messages.FIELD_TOO_BIG('Quantity', consts.MISSION.VACANCIES.MAX),
+      ),
+    vacanciesTotalQuantity: z.coerce
+      .number(messages.FIELD_NUMBER('Total quantity'))
+      .int(messages.FIELD_INTEGER('Total quantity')),
+    vacanciesReward: z.coerce
+      .number(messages.FIELD_NUMBER('Reward'))
+      .min(
+        consts.MISSION.REWARD.MIN,
+        messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+      )
+      .max(
+        consts.MISSION.REWARD.MAX,
+        messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+      ),
+    vacanciesTitle: z
+      .string()
+      .trim()
+      .max(
+        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+        messages.FIELD_TOO_LONG(
+          'Title',
+          consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+        ),
+      )
+      .optional(),
+    vacanciesDescription: z
+      .string()
+      .trim()
+      .max(
+        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+        messages.FIELD_TOO_LONG(
+          'Description',
+          consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+        ),
+      )
+      .optional(),
+  })
+  .refine((val) => val.vacanciesQuantity + val.vacanciesTotalQuantity <= 100, {
+    message: messages.MISSION_VACANCIES_SURPASSED,
+    path: ['vacanciesQuantity'],
+  });
+
+export const editVacancySchema = z.object({
+  vacanciesReward: z.coerce
+    .number(messages.FIELD_NUMBER('Reward'))
+    .min(
+      consts.MISSION.REWARD.MIN,
+      messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+    )
+    .max(
+      consts.MISSION.REWARD.MAX,
+      messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+    ),
+  vacanciesTitle: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Title',
+        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .or(z.literal('')),
+  vacanciesDescription: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Description',
+        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .or(z.literal('')),
 });

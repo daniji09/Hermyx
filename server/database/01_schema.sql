@@ -27,7 +27,7 @@ CREATE TABLE APP_USER (
 	avatar VARCHAR(255),
 	configuration JSONB NOT NULL DEFAULT '{"show_missions_to_others": true}'::jsonb,
 	stripe_customer_id VARCHAR(255),
-  stripe_connected_id VARCHAR(255)
+  	stripe_connected_id VARCHAR(255)
 );
 
 CREATE TABLE PAYMENT_METHOD (
@@ -42,10 +42,8 @@ CREATE TABLE MISSION (
 	publication_date TIMESTAMP NOT NULL,
 	title VARCHAR(100) NOT NULL,
 	description VARCHAR(1000) NOT NULL,
-	difficulty INT NOT NULL,
 	total_vacancies INT NOT NULL,
 	occupied_vacancies INT NOT NULL,
-	monetary_reward NUMERIC NOT NULL,
 	location geography(Point, 4326),
 	status VARCHAR(20) NOT NULL CHECK (status IN ('draft','pending_payment',
     'funded',
@@ -62,19 +60,20 @@ CREATE TABLE MISSION (
 	completion_date TIMESTAMP,
 	owner_id INT NOT NULL,
 	stripe_pi_id VARCHAR(255),
-  stripe_refund_id VARCHAR(255),
+  	stripe_refund_id VARCHAR(255),
 	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid)
 );
 
 CREATE TABLE MISSION_PARTICIPATION (
+	id SERIAL PRIMARY KEY,
 	mid INT NOT NULL,
-	adventurer_id INT NOT NULL,
+	adventurer_id INT,
+  	monetary_reward NUMERIC NOT NULL,
+	title VARCHAR(50),
+	description VARCHAR(500),
 	transfer_id VARCHAR(255),
-  amount_paid NUMERIC,
-	review VARCHAR(500),
 	FOREIGN KEY (mid) REFERENCES MISSION(mid),
-	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid),
-	PRIMARY KEY (mid, adventurer_id)
+	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid)
 );
 
 CREATE TABLE INVITATION (

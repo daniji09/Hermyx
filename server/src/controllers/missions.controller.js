@@ -147,8 +147,7 @@ export const createMission = async (req, res) => {
       title,
       description,
       vacancies,
-      reward,
-      difficulty,
+      vacanciesData,
       latitude,
       longitude,
       isDraft,
@@ -158,14 +157,13 @@ export const createMission = async (req, res) => {
       title: title || 'Mission not titled',
       description: description || 'No description',
       vacancies: vacancies || 0,
-      reward: reward || 0,
-      difficulty: difficulty || 0,
+      vacanciesData: vacanciesData || '',
       latitude: latitude || null,
       longitude: longitude || null,
       status: isDraft ? 'draft' : 'pending_payment',
       ownerId: uid,
     };
-    console.log(missionData);
+
     // Checks if user has a mission already with the same title
     const { hasDuplicate } = await getByUidAndTitle(uid, title);
 

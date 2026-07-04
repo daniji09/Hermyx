@@ -2,6 +2,8 @@ import {
   publishMissionSchema,
   draftMissionSchema,
   searchMissionByTitleSchema,
+  addVacanciesSchema,
+  editVacancySchema,
 } from '@hermyx/shared';
 
 import { messages } from '@hermyx/shared';
@@ -104,6 +106,42 @@ export const searchMissionByTitleAction = async (previousState, formData) => {
 
   // Fields validation
   const validatedFields = searchMissionByTitleSchema.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  return { success: true, data: fieldsData, errors: {} };
+};
+
+export const addVacanciesAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedFields = addVacanciesSchema.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  return { success: true, data: fieldsData, errors: {} };
+};
+
+export const editVacancyAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedFields = editVacancySchema.safeParse(fieldsData);
 
   if (!validatedFields.success) {
     return {
