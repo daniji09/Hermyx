@@ -20,6 +20,16 @@ export const messages = {
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
     LOCATION_ERROR: 'Please, select a valid location on the map.',
   },
+  EDIT_MISSION: {
+    FORM_TITLE: 'Edit your mission',
+    DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
+    VACANCIES_DESCRIPTION:
+      'Define how many adventurers you need for this mission.',
+    DIFFICULTY_DESCRIPTION:
+      'Higher difficulty implies higher rewards for adventurers.',
+    LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
+    LOCATION_ERROR: 'Please, select a valid location on the map.',
+  },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
     MISSION_FILLED: 'Mission already filled!',

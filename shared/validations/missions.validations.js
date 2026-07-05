@@ -3,7 +3,10 @@ import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
 const vacancySchema = z.object({
-  id: z.string().min(1, messages.FIELD_REQUIRED),
+  id: z.union([
+    z.string().min(1, messages.FIELD_REQUIRED),
+    z.number().min(1, messages.FIELD_REQUIRED),
+  ]),
   reward: z.coerce
     .number(messages.FIELD_NUMBER('Reward'))
     .min(
@@ -40,7 +43,7 @@ const vacancySchema = z.object({
     .or(z.literal('')),
 });
 
-// Server and client sign up shared validation
+// Server and client publish mission shared validation
 export const publishMissionSchema = z.object({
   title: z
     .string()
@@ -85,7 +88,9 @@ export const publishMissionSchema = z.object({
         return z.NEVER;
       }
     })
-    .pipe(z.array(vacancySchema)),
+    .pipe(
+      z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
+    ),
   /*
   Reward: z.coerce
     .number(messages.FIELD_NUMBER('Reward'))
@@ -110,8 +115,81 @@ export const publishMissionSchema = z.object({
       messages.FIELD_TOO_BIG('Difficulty', consts.MISSION.DIFFICULTY.MAX),
     ),*/
   isDraft: z.boolean().optional(),
-  latitude: z.coerce.number().optional(),
-  longitude: z.coerce.number().optional(),
+  latitude: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.coerce.number().optional(),
+  ),
+  longitude: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.coerce.number().optional(),
+  ),
+});
+
+// Server and client edit mission shared validation
+export const editMissionBodySchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Id'))
+    .int(messages.FIELD_INTEGER('Id'))
+    .min(0, messages.FIELD_POSITIVE('Id')),
+  title: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.MISSION.TITLE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG('Title', consts.MISSION.TITLE_MAX_LENGTH),
+    ),
+  description: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.MISSION.DESCRIPTION_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Description',
+        consts.MISSION.DESCRIPTION_MAX_LENGTH,
+      ),
+    ),
+  vacancies: z.coerce
+    .number(messages.FIELD_NUMBER('Vacancies'))
+    .int(messages.FIELD_INTEGER('Vacancies'))
+    .min(
+      consts.MISSION.VACANCIES.MIN,
+      messages.FIELD_TOO_SMALL('Vacancies', consts.MISSION.VACANCIES.MIN),
+    )
+    .max(
+      consts.MISSION.VACANCIES.MAX,
+      messages.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
+    ),
+  vacanciesData: z
+    .string()
+    .transform((str, ctx) => {
+      try {
+        return JSON.parse(str);
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Vacancy format is corrupt: ' + error,
+        });
+        return z.NEVER;
+      }
+    })
+    .pipe(z.array(vacancySchema)),
+  latitude: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.coerce.number().optional(),
+  ),
+  longitude: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.coerce.number().optional(),
+  ),
+});
+
+export const editMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
 });
 
 const optionalNumberFromFormSchema = (schema) =>
@@ -177,9 +255,9 @@ export const searchMissionByTitleSchema = z.object({
 
 export const joinMissionParamSchema = z.object({
   mid: z.coerce
-    .number(messages.FIELD_NUMBER('Id'))
-    .int(messages.FIELD_INTEGER('Id'))
-    .min(0, messages.FIELD_POSITIVE('Id')),
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
 });
 
 export const joinMissionBodySchema = z.object({

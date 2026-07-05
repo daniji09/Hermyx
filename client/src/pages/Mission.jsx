@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getMissionByIdQueryOptions } from './../queries/MissionsQueries';
 import { createInvitationMutationOptions } from '../queries/InvitationsQueries';
 import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
@@ -195,6 +195,11 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     <HandCoins className='h-6 w-6' aria-hidden='true' />
                   </div>
                 </div>
+                <MissionVacancies
+                  mission={mission}
+                  isCreator={isCreator}
+                  currentUser={currentUser}
+                ></MissionVacancies>
                 {mission.location && (
                   <Map
                     readOnly={true}
@@ -204,38 +209,44 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     }}
                   ></Map>
                 )}
-                <MissionVacancies
-                  mission={mission}
-                  isCreator={isCreator}
-                  currentUser={currentUser}
-                ></MissionVacancies>
               </CardContent>
               <CardFooter>
-                {isCreator ? (
-                  mission.status === 'in_progress' ? (
-                    <CloseMissionButton
-                      missionId={mission.mid}
-                    ></CloseMissionButton>
-                  ) : mission.status === 'funded' ? (
-                    <StartMissionButton mission={mission}></StartMissionButton>
-                  ) : mission.status === 'pending_payment' ? (
-                    <PayMissionButton
-                      missionId={mission.mid}
-                    ></PayMissionButton>
+                <>
+                  {isCreator ? (
+                    mission.status === 'in_progress' ? (
+                      <CloseMissionButton
+                        missionId={mission.mid}
+                      ></CloseMissionButton>
+                    ) : mission.status === 'funded' ? (
+                      <StartMissionButton
+                        mission={mission}
+                      ></StartMissionButton>
+                    ) : mission.status === 'pending_payment' ? (
+                      <PayMissionButton
+                        missionId={mission.mid}
+                      ></PayMissionButton>
+                    ) : (
+                      <p className='text-muted-foreground bg-muted/20'>
+                        {messages.MISSION.MISSION_CLOSED}
+                      </p>
+                    )
+                  ) : isFull ? (
+                    <p className='text-muted-foreground bg-muted/20'>
+                      {messages.MISSION.MISSION_FILLED}
+                    </p>
                   ) : (
                     <p className='text-muted-foreground bg-muted/20'>
-                      {messages.MISSION.MISSION_CLOSED}
+                      {messages.MISSION.MISSION_OPEN}
                     </p>
-                  )
-                ) : isFull ? (
-                  <p className='text-muted-foreground bg-muted/20'>
-                    {messages.MISSION.MISSION_FILLED}
-                  </p>
-                ) : (
-                  <p className='text-muted-foreground bg-muted/20'>
-                    {messages.MISSION.MISSION_OPEN}
-                  </p>
-                )}
+                  )}
+                  {isCreator ? (
+                    <Button asChild>
+                      <Link to={`/missions/${mission.mid}/edit`}>
+                        Edit mission
+                      </Link>
+                    </Button>
+                  ) : null}
+                </>
               </CardFooter>
             </section>
           </Card>

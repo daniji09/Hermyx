@@ -43,3 +43,65 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
   const result = await pool.query(query, [uid, mid, vacancyId]);
   return result.rowCount;
 };
+
+export const deleteUnoccupiedVacancies = async (mid, existingIds) => {
+  let query, result;
+  if (existingIds.length > 0) {
+    // Vacancies that are deleted have to be unoccupied
+    query = `
+      DELETE FROM mission_participation 
+      WHERE mid = $1 AND id != ALL($2::int[]) AND adventurer_id IS NULL
+    `;
+    result = await pool.query(query, [mid, existingIds]);
+  } else {
+    // If there is no vacancies that stayed the same, all of them are deleted
+    query = `
+      DELETE FROM mission_participation 
+      WHERE mid = $1 AND adventurer_id IS NULL
+    `;
+    result = await pool.query(query, [mid]);
+  }
+  return result.rowCount;
+};
+
+export const updateVacancy = async (mid, vacancy) => {
+  // Only makes update if its actually different
+  const updateQuery = `
+    UPDATE mission_participation 
+    SET monetary_reward = $1, title = $2, description = $3
+    WHERE id = $4 AND mid = $5
+      AND (
+        monetary_reward != $1 OR 
+        title IS DISTINCT FROM $2 OR 
+        description IS DISTINCT FROM $3
+      )
+    RETURNING id, adventurer_id, title, description;
+  `;
+
+  const result = await pool.query(updateQuery, [
+    vacancy.reward,
+    vacancy.title || null,
+    vacancy.description || null,
+    vacancy.id,
+    mid,
+  ]);
+
+  return result.rows[0];
+};
+
+export const insertVacancies = async (mid, vacancies) => {
+  const insertPromises = vacancies.map((vacancy) => {
+    const insertQuery = `
+      INSERT INTO mission_participation (mid, monetary_reward, title, description)
+      VALUES ($1, $2, $3, $4)
+    `;
+    return pool.query(insertQuery, [
+      mid,
+      vacancy.reward,
+      vacancy.title || null,
+      vacancy.description || null,
+    ]);
+  });
+  const result = await Promise.all([...insertPromises]);
+  return result;
+};

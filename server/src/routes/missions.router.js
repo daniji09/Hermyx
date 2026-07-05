@@ -12,6 +12,7 @@ import {
   joinMission,
   closeMission,
   getMissionsFunded,
+  editMission,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -28,6 +29,8 @@ import {
   closeMissionSchema,
   joinMissionParamSchema,
   joinMissionBodySchema,
+  editMissionParamSchema,
+  editMissionBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -83,6 +86,14 @@ router.post(
   '/:mid/close',
   validateParamsSchema(closeMissionSchema),
   closeMission,
+);
+
+//Edit mission
+router.post(
+  '/:mid',
+  validateParamsSchema(editMissionParamSchema),
+  validateBodySchema(editMissionBodySchema),
+  editMission,
 );
 
 /// PUT

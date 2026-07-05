@@ -190,6 +190,35 @@ export const createMission = async (missionData) => {
   }
 };
 
+export const updateMission = async (missionData) => {
+  const {
+    mid,
+    title,
+    description,
+    vacancies,
+    longitude,
+    latitude,
+    totalPayment,
+  } = missionData;
+
+  const query = `
+    UPDATE mission 
+    SET title = $2, description = $3, total_vacancies = $4, location = ST_MakePoint($5, $6)::geography, total_payment = $7
+    WHERE mid = $1 
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    mid,
+    title,
+    description,
+    vacancies,
+    longitude,
+    latitude,
+    totalPayment,
+  ]);
+  return result.rows[0];
+};
+
 // TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
 export const getMissions = async ({ title = undefined, pagination }) => {
   // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
@@ -403,8 +432,11 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
 };
 
 // Gets mission by uid and title
-export const getByUidAndTitle = async (uid, title) => {
-  const query = `
+export const getByUidAndTitle = async (uid, title, mid = undefined) => {
+  // If mid is not undefined, then the mission has to be different than that one
+  let query, result;
+  if (!mid) {
+    query = `
     SELECT EXISTS (
       SELECT 1 
       FROM mission 
@@ -412,7 +444,19 @@ export const getByUidAndTitle = async (uid, title) => {
         AND LOWER(TRIM(title)) = LOWER($2)
     ) AS "hasDuplicate";
   `;
-  const result = await pool.query(query, [uid, title]);
+    result = await pool.query(query, [uid, title]);
+  } else {
+    query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM mission 
+      WHERE owner_id = $1 
+        AND LOWER(TRIM(title)) = LOWER($2) AND mid <> $3
+    ) AS "hasDuplicate";
+  `;
+    result = await pool.query(query, [uid, title, mid]);
+  }
+
   return result.rows[0];
 };
 

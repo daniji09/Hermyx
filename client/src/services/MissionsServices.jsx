@@ -71,6 +71,21 @@ export const createMission = async (missionData) => {
   return mission;
 };
 
+// Edits a mission in data base
+export const editMission = async (missionData) => {
+  const data = {
+    mid: missionData.mid,
+    title: missionData.title,
+    description: missionData.description,
+    vacancies: missionData.vacancies,
+    vacanciesData: JSON.stringify(missionData.vacanciesData),
+    longitude: missionData.longitude || null,
+    latitude: missionData.latitude || null,
+  };
+  const response = await api.post(`/missions/${data.mid}`, data);
+  return response.data;
+};
+
 // Sends a join request to a mission owner
 export const joinMission = async (mid, vacancyId, message = '') => {
   const { data } = await api.post(`/missions/${mid}/join`, {

@@ -13,17 +13,25 @@ import {
   getByUidAndTitle,
   closeMission as _closeMission,
   getMissionsFunded as _getMissionsFunded,
+  updateMission,
 } from '../models/mission.model.js';
 
 import {
+  deleteUnoccupiedVacancies,
   getById as getMissionParticipationById,
   getVacancy,
+  insertVacancies,
+  updateVacancy,
 } from '../models/mission_participation.model.js';
 import {
   createInvitation as createInvitationRecord,
   hasPendingInvitation,
 } from '../models/invitation.model.js';
 import { emitToUser } from '../services/socket.service.js';
+import {
+  createPaymentIntentNew,
+  createRefund,
+} from '../services/payment.service.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -185,6 +193,136 @@ export const createMission = async (req, res) => {
     return res.status(201).json({ mission: newMission });
   } catch (e) {
     console.error(e);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const editMission = async (req, res) => {
+  try {
+    const { uid } = req.user;
+    const mission = req.body;
+
+    // Updates new payment
+    mission.totalPayment =
+      mission.vacanciesData.reduce(
+        (sum, vacancy) => sum + Number(vacancy.reward),
+        0,
+      ) || 0;
+
+    // Gets current mission info
+    const currentMission = await _getMissionById(mission.mid);
+
+    // Checks if user has a mission already with the same title and different id
+    const { hasDuplicate } = await getByUidAndTitle(
+      uid,
+      mission.title,
+      mission.mid,
+    );
+
+    if (hasDuplicate)
+      return res.status(400).json({
+        errors: { general: [messages.MISSION_SAME_TITLE] },
+      });
+
+    // Updates mission
+    const updatedMission = await updateMission(mission);
+
+    // Updates each vacancy of the mission, first, new and existing vacancies are selected
+    const newVacancies = mission.vacanciesData.filter(
+      (v) => typeof v.id === 'string',
+    );
+    const existingVacancies = mission.vacanciesData.filter(
+      (v) => typeof v.id === 'number',
+    );
+
+    // Id array including existing vacancies that stayed
+    const existingIds = existingVacancies.map((v) => v.id);
+
+    // First operation, deleting vacancies that are not occupied
+    await deleteUnoccupiedVacancies(mission.mid, existingIds);
+
+    // After that, updating existing vacancies
+    const updatePromises = existingVacancies.map((vacancy) =>
+      updateVacancy(mission.mid, vacancy),
+    );
+    const updateResults = await Promise.all(updatePromises);
+    const vacanciesToNotify = updateResults.filter(
+      (res) => res !== undefined && res.adventurer_id !== null,
+    );
+
+    for (const vacancy of vacanciesToNotify) {
+      const invitationId = await createInvitationRecord({
+        missionId: mission.mid,
+        vacancyId: vacancy.id,
+        senderId: uid,
+        receiverId: vacancy.adventurer_id,
+        type: 'adventurer_to_applicant',
+        message: 'Your vacant has been modified!',
+      });
+      emitToUser(mission.owner_id, 'invitation:updated', {
+        invitationId,
+        missionId: mission.mid,
+        vacancyId: vacancy.id,
+        missionTitle: mission.title,
+        senderId: uid,
+        senderUsername: req.user.username,
+        receiverId: vacancy.adventurer_id,
+        type: 'adventurer_to_applicant',
+        message: 'Your vacant has been modified!',
+      });
+    }
+
+    // Lastly, inserting new vacancies
+    await insertVacancies(mission.mid, newVacancies);
+
+    // Now, checks monetary reward differences, for a possible payment
+    if (currentMission.total_payment < mission.totalPayment) {
+      const extraAmount = mission.totalPayment - currentMission.total_payment;
+
+      const pi = await createPaymentIntentNew(
+        {
+          amount: Math.round(extraAmount * 100),
+          currency: 'eur',
+          customer: req.user.stripe_customer_id,
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            missionId: mission.mid,
+            ownerId: req.user.uid,
+            action: 'edit_extra_charge',
+          },
+        },
+        `edit_extra_${mission.mid}_${Date.now()}`,
+      );
+
+      return res.status(200).json({
+        mission: updatedMission,
+        requiresExtraPayment: true,
+        clientSecret: pi.client_secret,
+        paymentIntentId: pi.id,
+      });
+    } else if (currentMission.total_payment > mission.totalPayment) {
+      const amountToRefund = Math.round(
+        Math.abs(currentMission.total_payment - mission.totalPayment) * 100,
+      );
+
+      const refund = await createRefund(
+        {
+          payment_intent: currentMission.stripe_pi_id,
+          amount: amountToRefund,
+          reason: 'requested_by_customer',
+        },
+        `refund_edit_${mission.mid}_${Date.now()}`,
+      );
+      console.log(refund);
+      return res.status(200).json({
+        mission: updatedMission,
+        refunded_amount: refund.amount * 100,
+      });
+    }
+
+    return res.status(200).json({ mission: updatedMission });
+  } catch (e) {
+    console.log(e);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
