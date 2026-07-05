@@ -72,8 +72,12 @@ export const createMission = async (missionData) => {
 };
 
 // Sends a join request to a mission owner
-export const joinMission = async (mid, message = '') => {
-  const { data } = await api.post(`/missions/${mid}/join`, { message });
+export const joinMission = async (mid, vacancyId, message = '') => {
+  const { data } = await api.post(`/missions/${mid}/join`, {
+    vacancyId,
+    message,
+  });
+
   return data;
 };
 

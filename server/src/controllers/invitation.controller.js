@@ -13,10 +13,11 @@ import {
   getParticipantsForRelease,
 } from '../models/mission.model.js';
 import {
-  addParticipant,
   getById as getMissionParticipationById,
+  joinVacancy,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
+import { messages } from '@hermyx/shared';
 
 export const getMyInvitations = async (req, res) => {
   try {
@@ -172,6 +173,7 @@ export const respondToInvitation = async (req, res) => {
       return res.status(200).json({ message: 'Invitation rejected' });
     } else if (response === 'accepted' || response === 'accept') {
       const missionId = invitation.associated_mission_id;
+      const vacancyId = invitation.associated_vacancy_id;
       const adventurerId =
         invitation.type === 'adventurer_to_applicant'
           ? invitation.sender_id
@@ -198,8 +200,19 @@ export const respondToInvitation = async (req, res) => {
           .json({ error: 'Adventurer already joined this mission' });
       }
 
-      await addParticipant(missionId, adventurerId);
-      await adventurerJoined(missionId);
+      // Joins vacancy
+      const join_vacancy = await joinVacancy(
+        missionId,
+        vacancyId,
+        adventurerId,
+      );
+      if (join_vacancy < 1)
+        return res.status(409).json({ error: messages.VACANCY_NOT_JOINED });
+
+      // If everything is ok, joins mission
+      const adventurer_joined = await adventurerJoined(missionId);
+      if (adventurer_joined < 1)
+        return res.status(409).json({ error: messages.MISSION_NOT_JOINED });
 
       await updateInvitationStatus(invitationId, 'accepted');
       await markAsSeen(invitationId);

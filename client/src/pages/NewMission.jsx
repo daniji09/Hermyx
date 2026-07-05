@@ -135,77 +135,6 @@ const NewMissionForm = ({ state, action, isPending }) => {
             disabled={isPending}
             onChange={handleFieldChange}
           ></FormTextareaField>
-          {/*
-          <FormInputField
-            id='newMissionVacancies'
-            label='Vacancies (required):'
-            description={messages.NEW_MISSION.VACANCIES_DESCRIPTION}
-            error={
-              !clearedFields.vacancies && state.errors?.vacancies
-                ? state.errors.vacancies[0]
-                : undefined
-            }
-            invalid={!clearedFields.vacancies && !!state.errors?.vacancies}
-            type='number'
-            name='vacancies'
-            defaultValue={state.data?.vacancies || ''}
-            autoComplete='off'
-            required
-            min={consts.MISSION.VACANCIES.MIN}
-            step={consts.MISSION.VACANCIES.STEP}
-            max={consts.MISSION.VACANCIES.MAX}
-            aria-invalid={!clearedFields.vacancies && !!state.errors?.vacancies}
-            disabled={isPending}
-            onChange={handleFieldChange}
-          ></FormInputField>
-
-          <FormInputField
-            id='newMissionReward'
-            label='Reward (required):'
-            error={
-              !clearedFields.reward && state.errors?.reward
-                ? state.errors.reward[0]
-                : undefined
-            }
-            invalid={!clearedFields.reward && !!state.errors?.reward}
-            type='number'
-            name='reward'
-            defaultValue={state.data?.reward || ''}
-            autoComplete='off'
-            required
-            min={consts.MISSION.REWARD.MIN}
-            step={consts.MISSION.REWARD.STEP}
-            max={consts.MISSION.REWARD.MAX}
-            aria-invalid={!clearedFields.reward && !!state.errors?.reward}
-            disabled={isPending}
-            onChange={handleFieldChange}
-          ></FormInputField>
-
-          <FormInputField
-            id='newMissionDifficulty'
-            label='Difficulty (required):'
-            description={messages.NEW_MISSION.DIFFICULTY_DESCRIPTION}
-            error={
-              !clearedFields.difficulty && state.errors?.difficulty
-                ? state.errors.difficulty[0]
-                : undefined
-            }
-            invalid={!clearedFields.difficulty && !!state.errors?.difficulty}
-            type='number'
-            name='difficulty'
-            defaultValue={state.data?.difficulty || ''}
-            autoComplete='off'
-            required
-            min={consts.MISSION.DIFFICULTY.MIN}
-            step={consts.MISSION.DIFFICULTY.STEP}
-            max={consts.MISSION.DIFFICULTY.MAX}
-            aria-invalid={
-              !clearedFields.difficulty && !!state.errors?.difficulty
-            }
-            disabled={isPending}
-            onChange={handleFieldChange}
-          ></FormInputField>
-*/}
           {missionCoords && (
             <>
               <input type='hidden' name='latitude' value={missionCoords.lat} />
@@ -260,9 +189,18 @@ const NewMissionForm = ({ state, action, isPending }) => {
 };
 
 const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick(vacancy.id);
+    }
+  };
   return (
     <Card
-      className='relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all hover:shadow-lg hover:cursor-pointer'
+      role='button'
+      tabIndex={0}
+      className='relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 group'
+      onKeyDown={handleKeyDown}
       onClick={() => onClick(vacancy.id)}
     >
       <Button

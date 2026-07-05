@@ -1,10 +1,11 @@
 import pool from '../config/db.config.js';
 
 export const createInvitation = async (invitationData) => {
-  const { missionId, senderId, receiverId, type, message } = invitationData;
+  const { missionId, senderId, receiverId, type, message, vacancyId } =
+    invitationData;
   const query = `
-    INSERT INTO invitation (date, type, associated_mission_id, sender_id, recipient_id, status, message)
-    VALUES (NOW(), $1, $2, $3, $4, 'pending', $5)
+    INSERT INTO invitation (date, type, associated_mission_id, sender_id, recipient_id, status, message, associated_vacancy_id)
+    VALUES (NOW(), $1, $2, $3, $4, 'pending', $5, $6)
     RETURNING iid
   `;
   const result = await pool.query(query, [
@@ -13,6 +14,7 @@ export const createInvitation = async (invitationData) => {
     senderId,
     receiverId,
     message,
+    vacancyId,
   ]);
   return result.rows[0].iid;
 };
@@ -39,7 +41,11 @@ export const findByIid = async (id) => {
   return result.rows[0];
 };
 
-export const hasPendingInvitation = async (missionId, senderId, recipientId) => {
+export const hasPendingInvitation = async (
+  missionId,
+  senderId,
+  recipientId,
+) => {
   const query = `
     SELECT EXISTS (
       SELECT 1

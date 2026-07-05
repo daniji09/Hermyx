@@ -40,7 +40,9 @@ export const SearchMission = () => {
       <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
         <div className='mb-6 border-b pb-4'>
           <h1 className='text-3xl font-bold tracking-tight'>Missions</h1>
-          <p className='text-muted-foreground'>Results for "{title.trim()}"</p>
+          <p className='text-muted-foreground'>
+            Results for &quot;{title.trim()}&quot;
+          </p>
         </div>
       </section>
       <MissionSearchContainer

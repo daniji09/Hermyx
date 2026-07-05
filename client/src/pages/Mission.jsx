@@ -13,10 +13,18 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { timestampToDayMonthYear } from './../utils/date';
-import { Star, Users, HandCoins, Plus, Search, User } from 'lucide-react';
+import {
+  Star,
+  Users,
+  HandCoins,
+  Plus,
+  Search,
+  User,
+  UserPlus,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
-import { useContext, useRef, useState } from 'react';
+import { useCallback, useContext, useRef, useState } from 'react';
 import {
   startMission,
   joinMission,
@@ -33,6 +41,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
@@ -66,7 +82,7 @@ export const Mission = () => {
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
   }
-
+  console.log(mission);
   return (
     <MissionPageContainer
       mission={mission}
@@ -99,6 +115,7 @@ const MissionPageContainer = ({
         mission={mission}
         isCreator={isCreator}
         isFull={isFull}
+        currentUser={currentUser}
       ></MissionContent>
     </main>
   );
@@ -128,7 +145,7 @@ const MissionError = ({ isError, children }) => {
   );
 };
 
-const MissionContent = ({ mission, isCreator, isFull }) => {
+const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   return (
     <>
@@ -166,7 +183,7 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                       />
                       {mission.participants?.map((participant) => (
                         <AddedAdventurerBadge
-                          key={participant.uid}
+                          key={participant.vacancy_id}
                           participant={participant}
                         />
                       ))}
@@ -187,6 +204,11 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                     }}
                   ></Map>
                 )}
+                <MissionVacancies
+                  mission={mission}
+                  isCreator={isCreator}
+                  currentUser={currentUser}
+                ></MissionVacancies>
               </CardContent>
               <CardFooter>
                 {isCreator ? (
@@ -210,10 +232,9 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                     {messages.MISSION.MISSION_FILLED}
                   </p>
                 ) : (
-                  <JoinMissionButton
-                    missionId={mission.mid}
-                    isJoined={mission.is_joined}
-                  />
+                  <p className='text-muted-foreground bg-muted/20'>
+                    {messages.MISSION.MISSION_OPEN}
+                  </p>
                 )}
               </CardFooter>
             </section>
@@ -226,6 +247,174 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
         </>
       )}
     </>
+  );
+};
+
+const VacancyCard = ({ vacancy, onClick }) => {
+  const isAssigned = !!vacancy.adventurer_id;
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick(vacancy.id);
+    }
+  };
+  return (
+    <Card
+      role='button'
+      tabIndex={0}
+      className='relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 group'
+      onClick={() => onClick(vacancy.vacancy_id)}
+      onKeyDown={handleKeyDown}
+    >
+      <h3 className='font-semibold text-sm truncate min-h-5 mb-3 text-center mx-8'>
+        {vacancy.vacancy_title || 'Adventurer'}
+      </h3>
+
+      <div className='flex justify-center mb-4'>
+        {isAssigned ? (
+          // TODO: avatar del usuario
+          <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
+            <User size={24} />
+          </div>
+        ) : (
+          <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>
+            <UserPlus size={24} />
+          </div>
+        )}
+      </div>
+
+      <div className='flex justify-between items-center text-xs font-medium mb-2'>
+        <span
+          className={`truncate w-2/3 ${isAssigned ? 'text-primary font-bold' : 'italic '}`}
+        >
+          {isAssigned ? vacancy.username : 'Unassigned'}
+        </span>
+        <span className='w-1/3 text-right text-primary font-bold text-sm'>
+          {vacancy.reward}€
+        </span>
+      </div>
+
+      <p className='text-xs line-clamp-3 leading-relaxed grow'>
+        {vacancy.vacancy_description || 'No additional description.'}
+      </p>
+    </Card>
+  );
+};
+
+const ViewVacancyDialog = ({
+  mission,
+  vacancy,
+  isOpen,
+  onClose,
+  isCreator,
+  currentUser,
+}) => {
+  if (!vacancy) return null;
+
+  const isAssigned = !!vacancy.adventurer_id;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className='sm:max-w-md'>
+        <DialogHeader>
+          <DialogTitle className='text-xl'>
+            {vacancy.vacancy_title || 'Adventurer needed'}
+          </DialogTitle>
+          <DialogDescription>
+            Vacancy details can be seen below.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className='space-y-4'>
+          <div className='space-y-2'>
+            <h4 className='text-sm font-semibold'>Monetary reward</h4>
+            <div className='flex justify-between items-center p-3 rounded-lg border'>
+              <span className='text-sm font-bold text-primary'>
+                {vacancy.reward}€
+              </span>
+            </div>
+          </div>
+
+          <div className='space-y-2'>
+            <h4 className='text-sm font-semibold'>Vacancy description</h4>
+            <p className='text-sm leading-relaxed p-3 rounded-lg border'>
+              {vacancy.vacancy_description || 'No additional description.'}
+            </p>
+          </div>
+
+          <div className='space-y-2'>
+            <h4 className='text-sm font-semibold'>Current state</h4>
+            {isAssigned ? (
+              <div className='flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm'>
+                <User size={16} />
+                <span>
+                  Assigned to{' '}
+                  <strong>
+                    {vacancy.adventurer_id === currentUser?.id
+                      ? 'you!'
+                      : vacancy.username}
+                  </strong>
+                </span>
+              </div>
+            ) : (
+              <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm font-medium'>
+                This vacancy is open and seeking for an adventurer!
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter className='sm:justify-end gap-2'>
+          <Button variant='outline' onClick={onClose}>
+            Close
+          </Button>
+
+          {!isCreator && !isAssigned && (
+            <JoinMissionButton
+              missionId={mission.mid}
+              vacancyId={vacancy.vacancy_id}
+              isJoined={mission.is_joined}
+            />
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const MissionVacancies = ({ mission, isCreator, currentUser }) => {
+  const [selectedVacancyId, setSelectedVacancyId] = useState(null);
+
+  const handleClickVacancy = useCallback((id) => {
+    setSelectedVacancyId(id);
+  }, []);
+
+  const selectedVacancy = mission.participants.find(
+    (v) => v.vacancy_id === selectedVacancyId,
+  );
+
+  return (
+    <div className='w-full space-y-2'>
+      <h3 className='font-semibold text-lg'>Mission vacancies</h3>
+
+      <div className='flex overflow-x-auto gap-4 p-2 snap-x snap-mandatory hide-scrollbar items-center'>
+        {mission.participants.map((vac) => (
+          <div key={vac.vacancy_id} className='snap-start'>
+            <VacancyCard vacancy={vac} onClick={handleClickVacancy} />
+          </div>
+        ))}
+      </div>
+
+      <ViewVacancyDialog
+        key={selectedVacancy ? selectedVacancy.vacancy_id : 'empty'}
+        vacancy={selectedVacancy}
+        isOpen={!!selectedVacancyId}
+        onClose={() => setSelectedVacancyId(null)}
+        isCreator={isCreator}
+        mission={mission}
+        currentUser={currentUser}
+      />
+    </div>
   );
 };
 
@@ -331,7 +520,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className='w-[min(92vw,42rem)] max-w-[42rem]'>
+      <AlertDialogContent className='w-[min(92vw,42rem)] max-w-2xl'>
         <AlertDialogHeader>
           <AlertDialogTitle>Search adventurer</AlertDialogTitle>
           <AlertDialogDescription>
@@ -488,13 +677,13 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
   );
 };
 
-const JoinMissionButton = ({ missionId, isJoined }) => {
+const JoinMissionButton = ({ missionId, vacancyId, isJoined }) => {
   const { showAlert } = useAlert();
   const [hasRequestedToJoin, setHasRequestedToJoin] = useState(false);
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const joinRequestMessageRef = useRef(null);
   const { isPending, mutate } = useMutation({
-    mutationFn: (message) => joinMission(missionId, message),
+    mutationFn: (message) => joinMission(missionId, vacancyId, message),
     onSuccess: () => {
       setHasRequestedToJoin(true);
       setIsJoinDialogOpen(false);

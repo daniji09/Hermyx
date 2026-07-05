@@ -74,6 +74,9 @@ export const messages = {
   MISSION_FILLED:
     'There are no vacancies open left in this mission. Try another one!',
   MISSION_ALREADY_JOINED: 'You have already joined this mission!',
+  VACANCY_NOT_FOUND: 'Vacancy not found.',
+  VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
+  MISSION_NOT_JOINED: `Couldn't join mission.`,
 
   //// Profile
   ///Info

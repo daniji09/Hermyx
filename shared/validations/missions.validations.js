@@ -175,11 +175,18 @@ export const searchMissionByTitleSchema = z.object({
     ),
 });
 
-export const joinMissionSchema = z.object({
+export const joinMissionParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Id'))
     .int(messages.FIELD_INTEGER('Id'))
     .min(0, messages.FIELD_POSITIVE('Id')),
+});
+
+export const joinMissionBodySchema = z.object({
+  vacancyId: z.coerce
+    .number(messages.FIELD_NUMBER('Vacancy id'))
+    .int(messages.FIELD_INTEGER('Vacancy id'))
+    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
 });
 
 export const closeMissionSchema = z.object({

@@ -15,7 +15,10 @@ import {
   getMissionsFunded as _getMissionsFunded,
 } from '../models/mission.model.js';
 
-import { getById as getMissionParticipationById } from '../models/mission_participation.model.js';
+import {
+  getById as getMissionParticipationById,
+  getVacancy,
+} from '../models/mission_participation.model.js';
 import {
   createInvitation as createInvitationRecord,
   hasPendingInvitation,
@@ -158,6 +161,11 @@ export const createMission = async (req, res) => {
       description: description || 'No description',
       vacancies: vacancies || 0,
       vacanciesData: vacanciesData || '',
+      totalPayment:
+        vacanciesData.reduce(
+          (sum, vacancy) => sum + Number(vacancy.reward),
+          0,
+        ) || 0,
       latitude: latitude || null,
       longitude: longitude || null,
       status: isDraft ? 'draft' : 'pending_payment',
@@ -222,6 +230,7 @@ export const joinMission = async (req, res) => {
   const { mid } = req.params;
   const uid = req.user.uid;
   const message = req.body?.message?.trim() || '';
+  const vacancyId = req.body?.vacancyId;
 
   try {
     // Mission is searched
@@ -240,10 +249,14 @@ export const joinMission = async (req, res) => {
       });
 
     // Checks if user has already joined that mission
-    const already_joined = await getMissionParticipationById(mid, uid);
-    if (already_joined >= 1) {
+    const alreadyJoined = await getMissionParticipationById(mid, uid);
+    if (alreadyJoined >= 1)
       return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
-    }
+
+    // Checks if vacancy exists
+    const vacancyExists = await getVacancy(mid, vacancyId);
+    if (vacancyExists < 1)
+      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
 
     const ownerId = mission.owner_id;
     const pendingRequest = await hasPendingInvitation(mid, uid, ownerId);
@@ -255,6 +268,7 @@ export const joinMission = async (req, res) => {
 
     const invitationId = await createInvitationRecord({
       missionId: mid,
+      vacancyId: vacancyId,
       senderId: uid,
       receiverId: ownerId,
       type: 'adventurer_to_applicant',
@@ -264,6 +278,7 @@ export const joinMission = async (req, res) => {
     emitToUser(ownerId, 'invitation:created', {
       invitationId,
       missionId: mid,
+      vacancyId: vacancyId,
       missionTitle: mission.title,
       senderId: uid,
       senderUsername: req.user.username,

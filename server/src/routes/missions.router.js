@@ -25,8 +25,9 @@ import {
   draftMissionSchema,
   getMissionSchema,
   getMissionsQuerySchema,
-  joinMissionSchema,
   closeMissionSchema,
+  joinMissionParamSchema,
+  joinMissionBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -70,7 +71,12 @@ router.post('/', dynamicValidation, createMission);
 router.post('/:missionId/start', start);
 
 // Joins an adventurer into a mission
-router.post('/:mid/join', validateParamsSchema(joinMissionSchema), joinMission);
+router.post(
+  '/:mid/join',
+  validateParamsSchema(joinMissionParamSchema),
+  validateBodySchema(joinMissionBodySchema),
+  joinMission,
+);
 
 // Closes a mission
 router.post(
