@@ -267,6 +267,20 @@ export const joinMissionBodySchema = z.object({
     .min(0, messages.FIELD_POSITIVE('Vacancy id')),
 });
 
+export const unjoinMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const unjoinMissionBodySchema = z.object({
+  vacancyId: z.coerce
+    .number(messages.FIELD_NUMBER('Vacancy id'))
+    .int(messages.FIELD_INTEGER('Vacancy id'))
+    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
+});
+
 export const closeMissionSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Id'))

@@ -96,6 +96,15 @@ export const joinMission = async (mid, vacancyId, message = '') => {
   return data;
 };
 
+// Unjoin mission
+export const unjoinMission = async (mid, vacancyId) => {
+  const { data } = await api.delete(`/missions/${mid}/unjoin`, {
+    data: { vacancyId },
+  });
+
+  return data;
+};
+
 // Finds all missions from user, it may be paginated
 export const getUserMissions = async (
   uid,

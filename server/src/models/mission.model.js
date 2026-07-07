@@ -359,6 +359,13 @@ export const adventurerJoined = async (mid) => {
   return result.rowCount;
 };
 
+export const adventurerUnjoined = async (mid) => {
+  const query =
+    'UPDATE mission SET occupied_vacancies = occupied_vacancies - 1 WHERE mid = $1 RETURNING occupied_vacancies';
+  const result = await pool.query(query, [mid]);
+  return result.rowCount;
+};
+
 export const getMissionsByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, m.occupied_vacancies, 
@@ -607,4 +614,11 @@ export const getUserActiveMissions = async (uid) => {
   `;
   const result = await pool.query(query, [uid]);
   return result.rows[0];
+};
+
+// Gets number of participants in mission
+export const getMissionParticipation = async (mid) => {
+  const query = `SELECT count(*) FROM mission_participation WHERE mid = $1`;
+  const result = await pool.query(query, [mid]);
+  return result.rows[0].count;
 };

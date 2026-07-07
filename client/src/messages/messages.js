@@ -41,6 +41,13 @@ export const messages = {
       DESCRIPTION: '',
       CONFIRM_TEXT: 'Yes, send request',
     },
+    UNJOIN_MISSION_ALERT: {
+      TITLE: 'Do you want to unjoin this mission?',
+      ERROR_TITLE: `Can't unjoin mission`,
+      DESCRIPTION:
+        'Unjoining this mission will unlink it from you, and you will no longer be part of it.',
+      CONFIRM_TEXT: 'Yes, unjoin mission',
+    },
     START_MISSION_ALERT: {
       TITLE: 'Are you sure you want to start the mission?',
       ERROR_TITLE: `Can't start mission`,

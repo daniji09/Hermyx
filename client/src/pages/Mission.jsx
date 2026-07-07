@@ -29,6 +29,7 @@ import {
   startMission,
   joinMission,
   closeMission,
+  unjoinMission,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -147,6 +148,13 @@ const MissionError = ({ isError, children }) => {
 
 const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const isEditable =
+    mission?.status !== 'refunding' &&
+    mission?.status !== 'refunded' &&
+    mission?.status !== 'cancelling' &&
+    mission?.status !== 'cancelled' &&
+    mission?.status !== 'finished';
+
   return (
     <>
       {mission && (
@@ -239,7 +247,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       {messages.MISSION.MISSION_OPEN}
                     </p>
                   )}
-                  {isCreator ? (
+                  {isCreator && isEditable ? (
                     <Button asChild>
                       <Link to={`/missions/${mission.mid}/edit`}>
                         Edit mission
@@ -323,6 +331,7 @@ const ViewVacancyDialog = ({
   if (!vacancy) return null;
 
   const isAssigned = !!vacancy.adventurer_id;
+  const isAssignedToUser = vacancy.adventurer_id === currentUser.uid;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -387,6 +396,15 @@ const ViewVacancyDialog = ({
               isJoined={mission.is_joined}
             />
           )}
+
+          {!isCreator &&
+            isAssignedToUser &&
+            mission.status !== 'in_progress' && (
+              <UnjoinMissionButton
+                missionId={mission.mid}
+                vacancyId={vacancy.vacancy_id}
+              />
+            )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -801,6 +819,50 @@ const JoinMissionButton = ({ missionId, vacancyId, isJoined }) => {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+};
+
+const UnjoinMissionButton = ({ missionId, vacancyId }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => unjoinMission(missionId, vacancyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      console.log(error.response);
+      showAlert({
+        title: messages.MISSION.UNJOIN_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.UNJOIN_MISSION_ALERT.TITLE,
+      description: messages.MISSION.UNJOIN_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.UNJOIN_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='unjoinMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Unjoin mission'}
+    </Button>
   );
 };
 

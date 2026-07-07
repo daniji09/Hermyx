@@ -66,6 +66,9 @@ export const messages = {
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',
   MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
 
+  //// Edit mission
+  CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
+
   //// Start mission
   START_WITHOUT_ADVENTURERS: `You can't start a mission without adventurers.`,
 
@@ -77,6 +80,10 @@ export const messages = {
   VACANCY_NOT_FOUND: 'Vacancy not found.',
   VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
   MISSION_NOT_JOINED: `Couldn't join mission.`,
+
+  /// Unjoin mission
+  VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
+  CANNOT_UNJOIN_IN_PROGRESS_MISSION: `You can't unjoin a mission that is already in progress.`,
 
   //// Profile
   ///Info

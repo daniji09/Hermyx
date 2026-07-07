@@ -44,6 +44,12 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
   return result.rowCount;
 };
 
+export const unjoinVacancy = async (mid, vacancyId) => {
+  const query = `UPDATE mission_participation SET adventurer_id = NULL WHERE mid = $1 AND id = $2`;
+  const result = await pool.query(query, [mid, vacancyId]);
+  return result.rowCount;
+};
+
 export const deleteUnoccupiedVacancies = async (mid, existingIds) => {
   let query, result;
   if (existingIds.length > 0) {

@@ -233,6 +233,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         <div className='px-8'>
           <MissionVacanciesCreator
             initialVacancies={mission?.participants || []}
+            canDelete={mission.status === 'opened'}
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
             <FormAlert onClose={() => setIsAlertClosed(true)}>
@@ -285,7 +286,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
   );
 };
 
-const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
+const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
   const isAssigned = !!vacancy.adventurer_id;
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -301,20 +302,22 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
       onKeyDown={handleKeyDown}
       onClick={() => onClick(vacancy.id)}
     >
-      <Button
-        id={`deleteVacancy${vacancy.id}`}
-        type='button'
-        variant='outline'
-        onClick={(e) => {
-          e.stopPropagation(); //
-          onDelete(vacancy.id);
-        }}
-        className='absolute top-2 right-2 hover:text-red-500 transition-colors'
-        title='Delete vacancy'
-        aria-label='Delete vacancy'
-      >
-        <Trash2 size={24} />
-      </Button>
+      {canDelete && (
+        <Button
+          id={`deleteVacancy${vacancy.id}`}
+          type='button'
+          variant='outline'
+          onClick={(e) => {
+            e.stopPropagation(); //
+            onDelete(vacancy.id);
+          }}
+          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
+          title='Delete vacancy'
+          aria-label='Delete vacancy'
+        >
+          <Trash2 size={24} />
+        </Button>
+      )}
 
       <h3 className='font-semibold text-sm truncate min-h-5 mb-3 text-center mx-8'>
         {vacancy.title || 'Adventurer'}
@@ -356,6 +359,7 @@ const CreateVacanciesDialog = ({
   handleDeleteVacancy,
   handleClickVacancy,
   onConfirm,
+  canDelete,
 }) => {
   // Action handling for create vacancy form
   const [state, addVacanciesFormAction, isPending] = useActionState(
@@ -432,6 +436,7 @@ const CreateVacanciesDialog = ({
               vacancy={vac}
               onDelete={handleDeleteVacancy}
               onClick={handleClickVacancy}
+              canDelete={canDelete}
             />
           </div>
         ))}
@@ -756,7 +761,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
   );
 };
 
-export const MissionVacanciesCreator = ({ initialVacancies }) => {
+export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
   const formattedVacancies = initialVacancies.map((vac) => ({
     adventurer_id: vac.adventurer_id,
     avatar: vac.avatar,
@@ -832,6 +837,7 @@ export const MissionVacanciesCreator = ({ initialVacancies }) => {
         handleDeleteVacancy={handleDeleteVacancy}
         handleClickVacancy={handleClickVacancy}
         vacancies={vacancies}
+        canDelete={canDelete}
       />
 
       <EditVacancyDialog
