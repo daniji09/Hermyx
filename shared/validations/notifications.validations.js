@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
-export const createInvitationSchema = z.object({
+export const createNotificationSchema = z.object({
   missionId: z.coerce
     .number(messages.FIELD_NUMBER('Mission id'))
     .int(messages.FIELD_INTEGER('Mission id'))
@@ -15,10 +15,10 @@ export const createInvitationSchema = z.object({
     .string()
     .trim()
     .max(
-      consts.INVITATION.MESSAGE_MAX_LENGTH,
+      consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
       messages.FIELD_TOO_LONG(
-        'Invitation message',
-        consts.INVITATION.MESSAGE_MAX_LENGTH,
+        'Notification message',
+        consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
       ),
     )
     .optional()
@@ -32,6 +32,6 @@ export const respondToNotificationParamSchema = z.object({
     .min(0, messages.FIELD_POSITIVE('Notification id')),
 });
 
-export const respondToInvitationBodySchema = z.object({
+export const respondToNotificationBodySchema = z.object({
   response: z.enum(['accepted', 'accept', 'rejected', 'disputed']),
 });

@@ -9,8 +9,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   getMyNotificationsQueryOptions,
   markNotificationAsSeenMutationOptions,
-  respondToInvitationMutationOptions,
-} from '../queries/InvitationsQueries';
+  respondToNotificationMutationOptions,
+} from '../queries/NotificationsQueries';
 import { timestampToDayMonthYear } from '../utils/date';
 import { AuthContext } from '../contexts/AuthContext';
 
@@ -28,7 +28,7 @@ export const Notifications = () => {
   );
 
   const { mutate, isPending, variables } = useMutation(
-    respondToInvitationMutationOptions({
+    respondToNotificationMutationOptions({
       onSuccess: async () => {
         await queryClient.invalidateQueries({
           queryKey: ['getMyNotifications'],
@@ -186,7 +186,7 @@ export const Notifications = () => {
                 const canOwnerDispute =
                   isPendingMissionReview &&
                   Number(notification.payload?.attempt || 1) > 1;
-                const isCurrentInvitationPending =
+                const isCurrentNotificationPending =
                   isPending && variables?.notificationId === notification.nid;
 
                 return (
@@ -260,7 +260,7 @@ export const Notifications = () => {
                                 response: 'accepted',
                               })
                             }
-                            disabled={isCurrentInvitationPending}
+                            disabled={isCurrentNotificationPending}
                           >
                             <Check aria-hidden='true' />
                             {isPendingMissionReview
@@ -280,7 +280,7 @@ export const Notifications = () => {
                                   : 'rejected',
                               })
                             }
-                            disabled={isCurrentInvitationPending}
+                            disabled={isCurrentNotificationPending}
                           >
                             <X aria-hidden='true' />
                             {isPendingRevisionResponse ? 'Dispute' : 'Reject'}
@@ -295,7 +295,7 @@ export const Notifications = () => {
                                   response: 'disputed',
                                 })
                               }
-                              disabled={isCurrentInvitationPending}
+                              disabled={isCurrentNotificationPending}
                             >
                               <ShieldAlert aria-hidden='true' />
                               Dispute

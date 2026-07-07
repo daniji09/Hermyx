@@ -25,7 +25,7 @@ import { useNavigate } from 'react-router-dom';
 import { SearchBar } from './form/SearchBar';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext, useState } from 'react';
-import { getMyNotificationsQueryOptions } from '../../queries/InvitationsQueries';
+import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueries';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
@@ -219,10 +219,10 @@ const NotificationsButton = () => {
   const unseenNotifications = notifications.filter(
     (notification) => !notification.seen,
   );
-  const previewInvitation = unseenNotifications.find(
+  const previewPendingNotification = unseenNotifications.find(
     (notification) => notification.status === 'pending',
   );
-  const previewNotification = previewInvitation || unseenNotifications[0];
+  const previewNotification = previewPendingNotification || unseenNotifications[0];
   const hasMissionCompletionNotification =
     latestNotification?.type === 'mission';
   const latestNotificationAlreadyPersisted = notifications.some(

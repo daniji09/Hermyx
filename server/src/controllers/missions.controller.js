@@ -22,11 +22,11 @@ import {
   submitParticipation as submitMissionParticipationRecord,
 } from '../models/mission_participation.model.js';
 import {
-  createInvitation as createInvitationRecord,
+  createNotification as createNotificationRecord,
   createMissionNotification as createMissionNotificationRecord,
   countParticipationReviewAttempts,
-  hasPendingInvitation,
-} from '../models/invitation.model.js';
+  hasPendingJoinNotification,
+} from '../models/notification.model.js';
 import { emitToUser } from '../services/socket.service.js';
 
 export const getMissionById = async (req, res) => {
@@ -262,7 +262,7 @@ export const joinMission = async (req, res) => {
     }
 
     const ownerId = mission.owner_id;
-    const pendingRequest = await hasPendingInvitation(mid, uid, ownerId);
+    const pendingRequest = await hasPendingJoinNotification(mid, uid, ownerId);
     if (pendingRequest) {
       return res.status(409).json({
         error: 'You already sent a join request for this mission.',
@@ -270,7 +270,7 @@ export const joinMission = async (req, res) => {
     }
 
     const action = mission.owner_id === uid ? 'mission_invite' : 'join_request';
-    const notificationId = await createInvitationRecord({
+    const notificationId = await createNotificationRecord({
       missionId: mid,
       senderId: uid,
       receiverId: ownerId,
@@ -279,7 +279,7 @@ export const joinMission = async (req, res) => {
       message,
     });
 
-    emitToUser(ownerId, 'invitation:created', {
+    emitToUser(ownerId, 'notification:created', {
       notificationId,
       missionId: mid,
       missionTitle: mission.title,

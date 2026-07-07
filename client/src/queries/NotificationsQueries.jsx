@@ -1,10 +1,10 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
-  createInvitation,
+  createNotification,
   getMyNotifications,
   markNotificationAsSeen,
-  respondToInvitation,
-} from '../services/InvitationsServices';
+  respondToNotification,
+} from '../services/NotificationsServices';
 
 export const getMyNotificationsQueryOptions = (options) => {
   return queryOptions({
@@ -14,16 +14,16 @@ export const getMyNotificationsQueryOptions = (options) => {
   });
 };
 
-export const createInvitationMutationOptions = (options) => {
+export const createNotificationMutationOptions = (options) => {
   return {
-    mutationFn: createInvitation,
+    mutationFn: createNotification,
     ...options,
   };
 };
 
-export const respondToInvitationMutationOptions = (options) => {
+export const respondToNotificationMutationOptions = (options) => {
   return {
-    mutationFn: respondToInvitation,
+    mutationFn: respondToNotification,
     ...options,
   };
 };

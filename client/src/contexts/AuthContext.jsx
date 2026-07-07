@@ -80,8 +80,8 @@ export const AuthProvider = ({ children }) => {
           console.log('Socket disconnected:', reason);
         });
 
-        socketRef.current.on('invitation:created', (payload) => {
-          console.log('New invitation notification:', payload);
+        socketRef.current.on('notification:created', (payload) => {
+          console.log('New notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
         });

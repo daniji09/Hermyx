@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getMissionByIdQueryOptions } from './../queries/MissionsQueries';
-import { createInvitationMutationOptions } from '../queries/InvitationsQueries';
+import { createNotificationMutationOptions } from '../queries/NotificationsQueries';
 import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
 import {
   Card,
@@ -307,13 +307,13 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
   const [username, setUsername] = useState('');
   const [foundUsers, setFoundUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [invitationMessage, setInvitationMessage] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const { showAlert } = useAlert();
-  const { isPending: isSendingInvitation, mutate: sendInvitation } =
+  const { isPending: isSendingNotification, mutate: sendNotification } =
     useMutation(
-      createInvitationMutationOptions({
+      createNotificationMutationOptions({
         onSuccess: () => {
           showAlert({
             title: 'Invitation sent',
@@ -365,7 +365,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
     setUsername('');
     setFoundUsers([]);
     setSelectedUser(null);
-    setInvitationMessage('');
+    setNotificationMessage('');
     setErrorMessage('');
     setIsSearching(false);
     onClose();
@@ -437,7 +437,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
                           variant='outline'
                           onClick={() => {
                             setSelectedUser(foundUser);
-                            setInvitationMessage('');
+                            setNotificationMessage('');
                             setErrorMessage('');
                           }}
                         >
@@ -468,16 +468,16 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
               </div>
 
               <label
-                htmlFor='invitationMessage'
+                htmlFor='notificationMessage'
                 className='text-sm font-medium text-slate-900'
               >
                 Invitation message
               </label>
               <Textarea
                 className='min-h-40 w-full min-w-0 resize-y'
-                id='invitationMessage'
-                value={invitationMessage}
-                onChange={(event) => setInvitationMessage(event.target.value)}
+                id='notificationMessage'
+                value={notificationMessage}
+                onChange={(event) => setNotificationMessage(event.target.value)}
                 placeholder='Write a short message for the adventurer'
                 rows={5}
               />
@@ -499,7 +499,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
                 variant='outline'
                 onClick={() => {
                   setSelectedUser(null);
-                  setInvitationMessage('');
+                  setNotificationMessage('');
                   setErrorMessage('');
                 }}
               >
@@ -508,15 +508,15 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
               <Button
                 type='button'
                 onClick={() =>
-                  sendInvitation({
+                  sendNotification({
                     missionId,
                     receiverId: selectedUser.uid,
-                    message: invitationMessage,
+                    message: notificationMessage,
                   })
                 }
-                disabled={isSendingInvitation}
+                disabled={isSendingNotification}
               >
-                {isSendingInvitation ? 'Sending...' : 'Send invitation'}
+                {isSendingNotification ? 'Sending...' : 'Send invitation'}
               </Button>
             </>
           ) : (
@@ -627,7 +627,7 @@ const JoinMissionButton = ({
               id='joinMissionMessage'
               ref={joinRequestMessageRef}
               placeholder='Write a short message explaining why you want to join'
-              maxLength={consts.INVITATION.MESSAGE_MAX_LENGTH}
+              maxLength={consts.NOTIFICATION.MESSAGE_MAX_LENGTH}
               rows={5}
             />
           </div>

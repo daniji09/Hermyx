@@ -25,13 +25,13 @@ app.use(express.json());
 import usersRouter from './routes/users.router.js';
 import paymentRouter from './routes/payment.router.js';
 import missionsRouter from './routes/missions.router.js';
-import invitationRouter from './routes/invitation.router.js';
+import notificationRouter from './routes/notification.router.js';
 import { verifyToken } from './middlewares/auth.middleware.js';
 
 // Application routes
 app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
-app.use('/api/notifications', verifyToken, invitationRouter);
+app.use('/api/notifications', verifyToken, notificationRouter);
 
 export default app;

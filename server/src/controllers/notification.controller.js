@@ -1,13 +1,13 @@
 import { messages } from '@hermyx/shared';
 import {
-  createInvitation as _createInvitation,
+  createNotification as _createNotification,
   createMissionNotification,
   findById,
   getByRecipientId,
-  hasPendingInvitation,
+  hasPendingJoinNotification,
   markAsSeen,
-  updateInvitationStatus,
-} from '../models/invitation.model.js';
+  updateNotificationStatus,
+} from '../models/notification.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
 import {
   adventurerJoined,
@@ -25,7 +25,7 @@ import {
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
 
-export const getMyInvitations = async (req, res) => {
+export const getMyNotifications = async (req, res) => {
   try {
     const notifications = await getByRecipientId(req.user.uid);
     return res.status(200).json({ notifications });
@@ -35,7 +35,7 @@ export const getMyInvitations = async (req, res) => {
   }
 };
 
-export const markMyInvitationAsSeen = async (req, res) => {
+export const markMyNotificationAsSeen = async (req, res) => {
   const { notificationId } = req.params;
 
   try {
@@ -59,8 +59,8 @@ export const markMyInvitationAsSeen = async (req, res) => {
   }
 };
 
-//Receives missionId, senderId and receiverId, prepares the data, and create it in the model.
-export const createInvitation = async (req, res) => {
+// Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
+export const createNotification = async (req, res) => {
   const { missionId, receiverId, message } = req.body;
   const senderId = req.user.uid;
 
@@ -92,7 +92,7 @@ export const createInvitation = async (req, res) => {
     const action =
       mission.owner_id === senderId ? 'mission_invite' : 'join_request';
 
-    const hasPending = await hasPendingInvitation(
+    const hasPending = await hasPendingJoinNotification(
       missionId,
       senderId,
       receiverId,
@@ -100,7 +100,7 @@ export const createInvitation = async (req, res) => {
 
     if (hasPending) {
       return res.status(409).json({
-        error: 'There is already a pending invitation for this user.',
+        error: 'There is already a pending notification for this user.',
       });
     }
 
@@ -122,7 +122,7 @@ export const createInvitation = async (req, res) => {
         .json({ error: 'Adventurer already joined this mission' });
     }
 
-    const invitationData = {
+    const notificationData = {
       missionId,
       senderId,
       receiverId,
@@ -131,9 +131,9 @@ export const createInvitation = async (req, res) => {
       message,
     };
 
-    const newNotificationId = await _createInvitation(invitationData);
+    const newNotificationId = await _createNotification(notificationData);
 
-    emitToUser(receiverId, 'invitation:created', {
+    emitToUser(receiverId, 'notification:created', {
       notificationId: newNotificationId,
       missionId,
       missionTitle: mission.title,
@@ -201,7 +201,7 @@ const respondToParticipationReview = async ({
 
     await disputeParticipation(missionId, notification.sender_id);
     await syncMissionCompletionStatus(missionId);
-    await updateInvitationStatus(notificationId, 'disputed');
+    await updateNotificationStatus(notificationId, 'disputed');
     await markAsSeen(notificationId);
 
     const disputeMessage = `Your participation in "${mission.title}" was disputed by ${username}.`;
@@ -233,7 +233,7 @@ const respondToParticipationReview = async ({
   if (response === 'rejected') {
     await requestParticipationRevision(missionId, notification.sender_id);
     await syncMissionCompletionStatus(missionId);
-    await updateInvitationStatus(notificationId, 'rejected');
+    await updateNotificationStatus(notificationId, 'rejected');
     await markAsSeen(notificationId);
 
     const revisionMessage = `Your participation in "${mission.title}" was rejected by ${username}. Please accept the revision or open a dispute.`;
@@ -265,7 +265,7 @@ const respondToParticipationReview = async ({
 
   await approveParticipation(missionId, notification.sender_id);
   await syncMissionCompletionStatus(missionId);
-  await updateInvitationStatus(notificationId, 'accepted');
+  await updateNotificationStatus(notificationId, 'accepted');
   await markAsSeen(notificationId);
 
   const approvedMessage = `Your participation in "${mission.title}" was approved by ${username}.`;
@@ -326,7 +326,7 @@ const respondToParticipationRejection = async ({
   if (response === 'disputed') {
     await disputeParticipation(missionId, userId);
     const missionAfterSync = await syncMissionCompletionStatus(missionId);
-    await updateInvitationStatus(notificationId, 'disputed');
+    await updateNotificationStatus(notificationId, 'disputed');
     await markAsSeen(notificationId);
 
     const disputeMessage = `${username} opened a dispute for "${mission.title}".`;
@@ -362,7 +362,7 @@ const respondToParticipationRejection = async ({
 
   await reopenParticipation(missionId, userId);
   await syncMissionCompletionStatus(missionId);
-  await updateInvitationStatus(notificationId, 'accepted');
+  await updateNotificationStatus(notificationId, 'accepted');
   await markAsSeen(notificationId);
 
   return res.status(200).json({
@@ -370,16 +370,16 @@ const respondToParticipationRejection = async ({
   });
 };
 
-const respondToMissionInvitation = async ({
+const respondToMissionJoinNotification = async ({
   notification,
   response,
   notificationId,
   res,
 }) => {
   if (response === 'rejected') {
-    await updateInvitationStatus(notificationId, 'rejected');
+    await updateNotificationStatus(notificationId, 'rejected');
     await markAsSeen(notificationId);
-    return res.status(200).json({ message: 'Invitation rejected' });
+    return res.status(200).json({ message: 'Notification rejected' });
   }
 
   if (response !== 'accepted' && response !== 'accept') {
@@ -425,14 +425,14 @@ const respondToMissionInvitation = async ({
   await addParticipant(missionId, adventurerId);
   await adventurerJoined(missionId);
 
-  await updateInvitationStatus(notificationId, 'accepted');
+  await updateNotificationStatus(notificationId, 'accepted');
   await markAsSeen(notificationId);
 
   return res.status(200).json({ message: 'Adventurer successfully added' });
 };
 
 /*Receives a notification id and response. Business behavior is selected by action.*/
-export const respondToInvitation = async (req, res) => {
+export const respondToNotification = async (req, res) => {
   const { notificationId } = req.params;
   const { response } = req.body;
 
@@ -483,7 +483,7 @@ export const respondToInvitation = async (req, res) => {
       notification.action === 'join_request' ||
       notification.action === 'mission_invite'
     ) {
-      return await respondToMissionInvitation({
+      return await respondToMissionJoinNotification({
         notification,
         response,
         notificationId,

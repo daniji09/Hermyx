@@ -1,6 +1,6 @@
 import pool from '../config/db.config.js';
 
-export const createInvitation = async (invitationData) => {
+export const createNotification = async (notificationData) => {
   const {
     missionId,
     senderId,
@@ -9,7 +9,7 @@ export const createInvitation = async (invitationData) => {
     action = 'mission_invite',
     message,
     payload = {},
-  } = invitationData;
+  } = notificationData;
   const query = `
     INSERT INTO notification (
       date,
@@ -78,7 +78,7 @@ export const createMissionNotification = async (notificationData) => {
   return result.rows[0].nid;
 };
 
-export const updateInvitationStatus = async (notificationId, status) => {
+export const updateNotificationStatus = async (notificationId, status) => {
   const query = 'UPDATE notification SET status = $1 WHERE nid = $2';
   await pool.query(query, [status, notificationId]);
 };
@@ -100,7 +100,7 @@ export const findById = async (id) => {
   return result.rows[0];
 };
 
-export const hasPendingInvitation = async (
+export const hasPendingJoinNotification = async (
   missionId,
   senderId,
   recipientId,
@@ -114,10 +114,10 @@ export const hasPendingInvitation = async (
         AND recipient_id = $3
         AND status = 'pending'
         AND action IN ('join_request', 'mission_invite')
-    ) AS "hasPendingInvitation"
+    ) AS "hasPendingJoinNotification"
   `;
   const result = await pool.query(query, [missionId, senderId, recipientId]);
-  return result.rows[0].hasPendingInvitation;
+  return result.rows[0].hasPendingJoinNotification;
 };
 
 export const getByRecipientId = async (recipientId) => {
