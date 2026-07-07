@@ -199,6 +199,13 @@ const optionalNumberFromFormSchema = (schema) =>
     return value;
   }, schema.optional());
 
+export const cancelMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
 // Server and client sign up shared validation
 export const draftMissionSchema = z.object({
   title: z.string().trim().optional(),

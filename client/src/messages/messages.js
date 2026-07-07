@@ -63,6 +63,14 @@ export const messages = {
         'This will state that the mission has been completed by the adventurers and they will receive the payment.',
       CONFIRM_TEXT: 'Yes, close mission',
     },
+    CANCEL_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to cancel the mission?',
+      ERROR_TITLE: `Can't cancel mission`,
+      DESCRIPTION_DELETE:
+        'This will delete the mission forever, unlinking adventurers for it and acknowledging them.',
+      DESCRIPTION_CANCEL: `This will cancel the mission, but a refund of your money won't be made, adventurers will be payed.`,
+      CONFIRM_TEXT: 'Yes, close mission',
+    },
   },
   SEARCH_MISSIONS: {
     LOADING: 'Searching missions...',

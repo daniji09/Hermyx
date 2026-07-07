@@ -341,7 +341,8 @@ export const updateMissionStatus = async (id, updateData) => {
 };
 
 export const deleteMission = async (id) => {
-  const query = 'DELETE FROM mission WHERE mid = $1 RETURNING *';
+  const query =
+    'UPDATE mission SET status =  FROM mission WHERE mid = $1 RETURNING *';
   const result = await pool.query(query, [id]);
   return result.rows[0];
 };

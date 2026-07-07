@@ -105,6 +105,12 @@ export const unjoinMission = async (mid, vacancyId) => {
   return data;
 };
 
+// Cancels mission
+export const cancelMission = async (mid) => {
+  const { data } = await api.post(`/missions/${mid}/cancel`);
+  return data;
+};
+
 // Finds all missions from user, it may be paginated
 export const getUserMissions = async (
   uid,

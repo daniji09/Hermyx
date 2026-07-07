@@ -30,6 +30,7 @@ import {
   joinMission,
   closeMission,
   unjoinMission,
+  cancelMission,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -155,6 +156,13 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
     mission?.status !== 'cancelled' &&
     mission?.status !== 'finished';
 
+  const isCancelable =
+    mission?.status === 'opened' ||
+    mission?.status === 'pending_payment' ||
+    mission?.status === 'in_progress' ||
+    mission?.status === 'in_dispute' ||
+    mission?.status === 'reopened';
+
   return (
     <>
       {mission && (
@@ -247,13 +255,16 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       {messages.MISSION.MISSION_OPEN}
                     </p>
                   )}
-                  {isCreator && isEditable ? (
+                  {isCreator && isEditable && (
                     <Button asChild>
                       <Link to={`/missions/${mission.mid}/edit`}>
                         Edit mission
                       </Link>
                     </Button>
-                  ) : null}
+                  )}
+                  {isCreator && isCancelable && (
+                    <CancelMissionButton mission={mission} />
+                  )}
                 </>
               </CardFooter>
             </section>
@@ -972,6 +983,55 @@ const PayMissionButton = ({ missionId }) => {
       }}
     >
       {'Pay mission'}
+    </Button>
+  );
+};
+
+const CancelMissionButton = ({ mission }) => {
+  const deleteMission =
+    mission.status === 'opened' || mission.status === 'pending_payment';
+
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => cancelMission(mission.mid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      console.log(error.response);
+      showAlert({
+        title: messages.MISSION.CANCEL_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.CANCEL_MISSION_ALERT.TITLE,
+      description: deleteMission
+        ? messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_DELETE
+        : messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_CANCEL,
+      variant: 'warning',
+      confirmText: messages.MISSION.CANCEL_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='cancelMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Cancel mission'}
     </Button>
   );
 };

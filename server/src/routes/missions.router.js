@@ -14,6 +14,7 @@ import {
   getMissionsFunded,
   editMission,
   unjoinMission,
+  cancelMission,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -34,6 +35,7 @@ import {
   editMissionBodySchema,
   unjoinMissionParamSchema,
   unjoinMissionBodySchema,
+  cancelMissionParamSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -84,19 +86,18 @@ router.post(
   joinMission,
 );
 
-// Joins an adventurer into a mission
-router.delete(
-  '/:mid/unjoin',
-  validateParamsSchema(unjoinMissionParamSchema),
-  validateBodySchema(unjoinMissionBodySchema),
-  unjoinMission,
-);
-
 // Closes a mission
 router.post(
   '/:mid/close',
   validateParamsSchema(closeMissionSchema),
   closeMission,
+);
+
+// Cancels a mission
+router.post(
+  '/:mid/cancel',
+  validateParamsSchema(cancelMissionParamSchema),
+  cancelMission,
 );
 
 //Edit mission
@@ -116,5 +117,13 @@ router.post(
 
 //Delete mission
 router.delete('/:id', deleteMission);
+
+// Joins an adventurer into a mission
+router.delete(
+  '/:mid/unjoin',
+  validateParamsSchema(unjoinMissionParamSchema),
+  validateBodySchema(unjoinMissionBodySchema),
+  unjoinMission,
+);
 
 export default router;

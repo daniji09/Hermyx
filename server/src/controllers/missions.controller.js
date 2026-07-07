@@ -457,7 +457,7 @@ export const unjoinMission = async (req, res) => {
   const { mid } = req.params;
   const uid = req.user.uid;
   const vacancyId = req.body?.vacancyId;
-  console.log(mid, uid, vacancyId);
+
   try {
     // Mission is searched
     const mission = await getById(mid);
@@ -487,6 +487,71 @@ export const unjoinMission = async (req, res) => {
     await adventurerUnjoined(mid);
 
     /* TODO: enviar notificación al creador de la misión para informarle que ha perdido un participante
+    Const invitationId = await createInvitationRecord({
+      missionId: mid,
+      vacancyId: vacancyId,
+      senderId: uid,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });
+
+    emitToUser(ownerId, 'invitation:created', {
+      invitationId,
+      missionId: mid,
+      vacancyId: vacancyId,
+      missionTitle: mission.title,
+      senderId: uid,
+      senderUsername: req.user.username,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });*/
+
+    return res.status(200).json({});
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Sends a join request to the mission owner instead of joining immediately
+export const cancelMission = async (req, res) => {
+  const { mid } = req.params;
+  const uid = req.user.uid;
+
+  try {
+    // Mission is searched
+    const mission = await getById(mid);
+    if (!mission)
+      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
+
+    // Checks if mission was created by the current user
+    if (mission.owner_id !== uid)
+      return res.status(403).json({ error: messages.CANNOT_DELETE_MISSION });
+
+    // If mission has to be "deleted", it will be
+    if (mission.status === 'opened' || mission.status === 'pending_payment') {
+      await updateMissionStatus(mid, 'deleted');
+    }
+    // If mission has to be cancelled, it will be
+    else if (
+      mission.status === 'in_progress' ||
+      mission.status === 'in_dispute' ||
+      mission.status === 'reopened'
+    ) {
+      await updateMissionStatus(mid, 'cancelled'); // TODO: primero a cancelling pero eso depende de lo de stripe
+      // TODO: pagar a todos los aventureros
+    }
+    // Otherwise, mission can't be deleted or cancelled
+    else
+      return res.status(400).json({
+        errors: {
+          general: [messages.CANNOT_DELETE_MISSION_STATE],
+        },
+      });
+
+    /* TODO: enviar notificación a todos los aventureros de que la misión ha sido cancelada
     Const invitationId = await createInvitationRecord({
       missionId: mid,
       vacancyId: vacancyId,

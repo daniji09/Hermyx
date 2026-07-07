@@ -85,6 +85,10 @@ export const messages = {
   VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
   CANNOT_UNJOIN_IN_PROGRESS_MISSION: `You can't unjoin a mission that is already in progress.`,
 
+  /// Delete mission
+  CANNOT_DELETE_MISSION: `Can't delete mission.`,
+  CANNOT_DELETE_MISSION_STATE: `Can't delete finished missions.`,
+
   //// Profile
   ///Info
   PROFILE_UPDATED_SUCCESSFULLY: 'Profile updated successfully.',
