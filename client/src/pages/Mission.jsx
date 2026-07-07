@@ -12,21 +12,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { timestampToDayMonthYear } from './../utils/date';
-import {
-  Star,
-  Users,
-  HandCoins,
-  Plus,
-  Search,
-  User,
-} from 'lucide-react';
+import { Star, Users, HandCoins, Plus, Search, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
 import { useContext, useRef, useState } from 'react';
 import {
   startMission,
   joinMission,
-  closeMission,
   submitMissionParticipation,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
@@ -138,14 +130,6 @@ const MissionError = ({ isError, children }) => {
 const MissionContent = ({ mission, isCreator, isFull }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const canAddAdventurers = isCreator && mission?.status === 'funded';
-  const hasRejectedParticipation = mission?.participants?.some(
-    (participant) => participant.status === 'rejected',
-  );
-  const canCloseMission =
-    isCreator &&
-    mission?.status === 'in_progress' &&
-    mission?.participants?.length > 0 &&
-    mission.participants.every((participant) => participant.status === 'approved');
   return (
     <>
       {mission && (
@@ -201,21 +185,10 @@ const MissionContent = ({ mission, isCreator, isFull }) => {
                 {isCreator ? (
                   mission.status === 'in_progress' ? (
                     <div className='flex flex-wrap gap-2'>
-                      {canCloseMission ? (
-                        <CloseMissionButton
-                          missionId={mission.mid}
-                        ></CloseMissionButton>
-                      ) : mission.status === 'in_dispute' ||
-                        hasRejectedParticipation ? (
-                        <p className='text-muted-foreground bg-muted/20'>
-                          {messages.MISSION.MISSION_IN_DISPUTE}
-                        </p>
-                      ) : (
-                        <p className='text-muted-foreground bg-muted/20'>
-                          Close mission becomes available when all participations
-                          are approved.
-                        </p>
-                      )}
+                      <p className='text-muted-foreground bg-muted/20'>
+                        Mission will finish automatically when every
+                        participation is reviewed.
+                      </p>
                     </div>
                   ) : mission.status === 'funded' ? (
                     <StartMissionButton mission={mission}></StartMissionButton>
@@ -297,10 +270,7 @@ const ParticipantSection = ({
         <AddAdventurerButton onClick={onAddAdventurer} />
       )}
       {(mission.participants || []).map((participant) => (
-        <ParticipantRow
-          key={participant.uid}
-          participant={participant}
-        />
+        <ParticipantRow key={participant.uid} participant={participant} />
       ))}
     </div>
   );
@@ -742,54 +712,6 @@ const StartMissionButton = ({ mission }) => {
   );
 };
 
-const CloseMissionButton = ({ missionId }) => {
-  const { showAlert } = useAlert();
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationFn: () => closeMission(missionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
-      queryClient.invalidateQueries({
-        queryKey: ['getMission', String(missionId)],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['getMission', missionId],
-      });
-      queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
-    },
-    // Backend error handling
-    onError: (error) => {
-      showAlert({
-        title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
-        description: error?.response.data.errors?.general,
-      });
-    },
-  });
-
-  // Interceptor
-  const handleAttempt = () => {
-    // This action needs confirmation
-    showAlert({
-      title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
-      description: messages.MISSION.CLOSE_MISSION_ALERT.DESCRIPTION,
-      variant: 'warning',
-      confirmText: messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
-      onConfirm: mutate,
-    });
-  };
-
-  return (
-    <Button
-      type='button'
-      id='closeMissionButton'
-      onClick={handleAttempt}
-      disabled={isPending}
-    >
-      {'Close mission'}
-    </Button>
-  );
-};
-
 const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
@@ -823,7 +745,8 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
     });
   };
 
-  const isSubmitted = participationStatus && participationStatus !== 'in_progress';
+  const isSubmitted =
+    participationStatus && participationStatus !== 'in_progress';
   const buttonLabel =
     participationStatus && participationStatus !== 'in_progress'
       ? getParticipationStatusLabel(participationStatus)
@@ -878,8 +801,5 @@ const getParticipationStatusLabel = (status) => {
     return messages.MISSION.MISSION_JOINED;
   }
 
-  return (
-    messages.MISSION.STATUS_LABELS[status] ||
-    status.replaceAll('_', ' ')
-  );
+  return messages.MISSION.STATUS_LABELS[status] || status.replaceAll('_', ' ');
 };

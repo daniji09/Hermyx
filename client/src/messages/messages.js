@@ -58,24 +58,23 @@ export const messages = {
     APPROVE_PARTICIPATION_ALERT: {
       TITLE: 'Approve participation?',
       ERROR_TITLE: `Can't approve participation`,
-      DESCRIPTION:
-        'This will mark this adventurer participation as approved.',
+      DESCRIPTION: 'This will mark this adventurer participation as approved.',
       CONFIRM_TEXT: 'Yes, approve',
     },
     REJECT_PARTICIPATION_ALERT: {
       TITLE: 'Reject participation?',
       ERROR_TITLE: `Can't reject participation`,
-      DESCRIPTION:
-        'This will reject this participation and move the mission into dispute.',
+      DESCRIPTION: 'This will request a revision from the adventurer.',
       CONFIRM_TEXT: 'Yes, reject',
     },
     STATUS_LABELS: {
       draft: 'Draft',
       pending_payment: 'Pending payment',
       funded: 'Looking for adventurers',
+      joined: 'Joined',
       in_progress: 'In progress',
-      delivered: 'Delivered',
       accepted: 'Accepted',
+      finished: 'Finished',
       releasing: 'Releasing payment',
       released: 'Released',
       partially_released: 'Partially released',
@@ -86,8 +85,7 @@ export const messages = {
       looking_for_adventurers: 'Looking for adventurers',
       closed: 'Closed',
       submitted: 'Submitted',
-      approved: 'Approved',
-      rejected: 'Rejected',
+      revision_requested: 'Revision requested',
     },
   },
   SEARCH_MISSIONS: {

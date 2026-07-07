@@ -49,7 +49,7 @@ export const hasAllParticipantsApproved = async (mid) => {
   const query = `
     SELECT
       COUNT(*)::int AS participant_count,
-      COALESCE(BOOL_AND(status = 'approved'), FALSE) AS all_approved
+      COALESCE(BOOL_AND(status = 'accepted'), FALSE) AS all_approved
     FROM mission_participation
     WHERE mid = $1
   `;
@@ -64,7 +64,7 @@ export const lockForRelease = async (mid, ownerId) => {
     SET status = 'releasing' 
     WHERE mid = $1 
     AND owner_id = $2 
-    AND status = 'accepted' 
+    AND status = 'finished'
     RETURNING *
   `;
   const result = await pool.query(query, [mid, ownerId]);
@@ -78,7 +78,7 @@ export const lockForRefund = async (mid, ownerId) => {
     SET status = 'refunding' 
     WHERE mid = $1 
     AND owner_id = $2 
-    AND status IN ('funded', 'in_progress', 'delivered', 'accepted')
+    AND status IN ('funded', 'in_progress', 'finished', 'accepted')
     RETURNING *
   `;
   const result = await pool.query(query, [mid, ownerId]);
@@ -298,6 +298,55 @@ export const updateMissionStatus = async (id, updateData) => {
   return result.rows[0];
 };
 
+export const syncMissionCompletionStatus = async (mid) => {
+  const summaryQuery = `
+    SELECT
+      COUNT(*)::int AS participant_count,
+      COUNT(*) FILTER (
+        WHERE status IN ('in_progress', 'submitted', 'revision_requested')
+      )::int AS active_count,
+      COUNT(*) FILTER (WHERE status = 'in_dispute')::int AS dispute_count,
+      COUNT(*) FILTER (WHERE status = 'accepted')::int AS accepted_count
+    FROM mission_participation
+    WHERE mid = $1
+  `;
+  const summaryResult = await pool.query(summaryQuery, [mid]);
+  const summary = summaryResult.rows[0];
+
+  if (!summary || summary.participant_count === 0) {
+    return null;
+  }
+
+  let nextStatus = null;
+
+  if (summary.active_count > 0) {
+    nextStatus = 'in_progress';
+  } else if (summary.dispute_count > 0) {
+    nextStatus = 'in_dispute';
+  } else if (summary.accepted_count === summary.participant_count) {
+    nextStatus = 'finished';
+  }
+
+  if (!nextStatus) {
+    return null;
+  }
+
+  const updateQuery = `
+    UPDATE mission
+    SET
+      status = $2::varchar,
+      completion_date = CASE
+        WHEN $2::varchar IN ('finished', 'in_dispute') THEN COALESCE(completion_date, NOW())
+        ELSE NULL
+      END
+    WHERE mid = $1
+      AND status IN ('in_progress', 'finished', 'in_dispute')
+    RETURNING *
+  `;
+  const updateResult = await pool.query(updateQuery, [mid, nextStatus]);
+  return updateResult.rows[0] || null;
+};
+
 export const deleteMission = async (id) => {
   const query = 'DELETE FROM mission WHERE mid = $1 RETURNING *';
   const result = await pool.query(query, [id]);
@@ -407,7 +456,7 @@ export const getByUidAndTitle = async (uid, title) => {
 
 // Closes mission
 export const closeMission = async (mid) => {
-  const query = `UPDATE mission SET status = 'accepted' WHERE mid = $1 RETURNING *`;
+  const query = `UPDATE mission SET status = 'finished' WHERE mid = $1 RETURNING *`;
   const result = await pool.query(query, [mid]);
   return result.rows[0];
 };
@@ -431,8 +480,8 @@ export const getPublicProfileCreatedMissions = async (
         WHEN m.status = 'funded' THEN 'looking_for_adventurers'
         WHEN m.status IN (
           'in_progress',
-          'delivered',
           'accepted',
+          'finished',
           'releasing',
           'in_dispute'
         ) THEN 'in_progress'
@@ -454,8 +503,8 @@ export const getPublicProfileCreatedMissions = async (
       AND m.status IN (
         'funded',
         'in_progress',
-        'delivered',
         'accepted',
+        'finished',
         'releasing',
         'in_dispute',
         'released',

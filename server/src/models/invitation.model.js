@@ -1,14 +1,35 @@
 import pool from '../config/db.config.js';
 
 export const createInvitation = async (invitationData) => {
-  const { missionId, senderId, receiverId, type, message } = invitationData;
+  const {
+    missionId,
+    senderId,
+    receiverId,
+    type,
+    action = 'mission_invite',
+    message,
+    payload = {},
+  } = invitationData;
   const query = `
-    INSERT INTO notification (date, type, associated_mission_id, sender_id, recipient_id, status, message)
-    VALUES (NOW(), $1, $2, $3, $4, 'pending', $5)
+    INSERT INTO notification (
+      date,
+      type,
+      kind,
+      action,
+      payload,
+      associated_mission_id,
+      sender_id,
+      recipient_id,
+      status,
+      message
+    )
+    VALUES (NOW(), $1, 'actionable', $2, $3, $4, $5, $6, 'pending', $7)
     RETURNING nid
   `;
   const result = await pool.query(query, [
     type,
+    action,
+    payload,
     missionId,
     senderId,
     receiverId,
@@ -23,22 +44,31 @@ export const createMissionNotification = async (notificationData) => {
     senderId,
     receiverId,
     message,
+    kind = 'informational',
+    action = 'participation_approved',
+    payload = {},
     status = null,
   } = notificationData;
   const query = `
     INSERT INTO notification (
       date,
       type,
+      kind,
+      action,
+      payload,
       associated_mission_id,
       sender_id,
       recipient_id,
       status,
       message
     )
-    VALUES (NOW(), 'mission', $1, $2, $3, $4, $5)
+    VALUES (NOW(), 'mission', $1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING nid
   `;
   const result = await pool.query(query, [
+    kind,
+    action,
+    payload,
     missionId,
     senderId,
     receiverId,
@@ -83,6 +113,7 @@ export const hasPendingInvitation = async (
         AND sender_id = $2
         AND recipient_id = $3
         AND status = 'pending'
+        AND action IN ('join_request', 'mission_invite')
     ) AS "hasPendingInvitation"
   `;
   const result = await pool.query(query, [missionId, senderId, recipientId]);
@@ -96,6 +127,9 @@ export const getByRecipientId = async (recipientId) => {
       n.date,
       n.seen,
       n.type,
+      n.kind,
+      n.action,
+      n.payload,
       n.status,
       n.message,
       n.sender_id,
@@ -115,4 +149,20 @@ export const getByRecipientId = async (recipientId) => {
   `;
   const result = await pool.query(query, [recipientId]);
   return result.rows;
+};
+
+export const countParticipationReviewAttempts = async (
+  missionId,
+  adventurerId,
+) => {
+  const query = `
+    SELECT COUNT(*)::int AS attempts
+    FROM notification
+    WHERE associated_mission_id = $1
+      AND sender_id = $2
+      AND type = 'mission'
+      AND action = 'participation_review'
+  `;
+  const result = await pool.query(query, [missionId, adventurerId]);
+  return result.rows[0].attempts;
 };

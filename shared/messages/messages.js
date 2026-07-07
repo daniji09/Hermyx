@@ -77,6 +77,14 @@ export const messages = {
     'Participation approved successfully.',
   MISSION_PARTICIPATION_REJECTED_SUCCESSFULLY:
     'Participation rejected successfully.',
+  MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY:
+    'Participation revision requested successfully.',
+  MISSION_PARTICIPATION_REVISION_ACCEPTED_SUCCESSFULLY:
+    'Participation revision accepted successfully.',
+  MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY:
+    'Participation disputed successfully.',
+  MISSION_PARTICIPATION_DISPUTE_REQUIRES_RETRY:
+    'Participation can only be disputed by the owner after a retry.',
   MISSION_REQUIRES_ALL_PARTS_APPROVED:
     'All adventurer participations must be approved before closing the mission.',
 

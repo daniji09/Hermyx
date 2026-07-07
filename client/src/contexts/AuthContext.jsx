@@ -108,8 +108,19 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
         });
 
-        socketRef.current.on('mission:participation-rejected', (payload) => {
-          console.log('Participation rejected notification:', payload);
+        socketRef.current.on('mission:participation-revision', (payload) => {
+          console.log('Participation revision notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        });
+
+        socketRef.current.on('mission:participation-disputed', (payload) => {
+          console.log('Participation disputed notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
@@ -129,7 +140,7 @@ export const AuthProvider = ({ children }) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [currentUser]);
+  }, [currentUser, queryClient]);
 
   // Function to logout
   const logout = async () => {

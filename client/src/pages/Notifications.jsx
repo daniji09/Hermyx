@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, Check, User, X } from 'lucide-react';
+import { Bell, Check, ShieldAlert, User, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,7 +49,7 @@ export const Notifications = () => {
     }),
   );
 
-  const notifications = data?.notifications || [];
+  const notifications = useMemo(() => data?.notifications || [], [data]);
   const unseenCount = useMemo(() => {
     return notifications.filter((notification) => !notification.seen).length;
   }, [notifications]);
@@ -82,7 +82,8 @@ export const Notifications = () => {
 
   const actionableCount = useMemo(() => {
     return notifications.filter(
-      (notification) => notification.status === 'pending',
+      (notification) =>
+        notification.kind === 'actionable' && notification.status === 'pending',
     ).length;
   }, [notifications]);
 
@@ -121,7 +122,7 @@ export const Notifications = () => {
             {unseenCount > 0
               ? `You have ${unseenCount} unread notification${unseenCount > 1 ? 's' : ''}.`
               : actionableCount > 0
-                ? `You have ${actionableCount} invitation${actionableCount > 1 ? 's' : ''} waiting for your response.`
+                ? `You have ${actionableCount} notification${actionableCount > 1 ? 's' : ''} waiting for your response.`
                 : 'You have no unread notifications right now.'}
           </p>
         </div>
@@ -173,8 +174,18 @@ export const Notifications = () => {
               {filteredNotifications.map((notification) => {
                 const isSeen = notification.seen;
                 const isMissionNotification = notification.type === 'mission';
+                const isPendingAction =
+                  notification.kind === 'actionable' &&
+                  notification.status === 'pending';
                 const isPendingMissionReview =
-                  isMissionNotification && notification.status === 'pending';
+                  notification.action === 'participation_review' &&
+                  isPendingAction;
+                const isPendingRevisionResponse =
+                  notification.action === 'participation_rejection_response' &&
+                  isPendingAction;
+                const canOwnerDispute =
+                  isPendingMissionReview &&
+                  Number(notification.payload?.attempt || 1) > 1;
                 const isCurrentInvitationPending =
                   isPending && variables?.notificationId === notification.nid;
 
@@ -195,7 +206,9 @@ export const Notifications = () => {
                                 <>
                                   {isPendingMissionReview
                                     ? 'Participation review from '
-                                    : 'Mission update from '}
+                                    : isPendingRevisionResponse
+                                      ? 'Revision request from '
+                                      : 'Mission update from '}
                                   <span className='break-all'>
                                     {notification.sender_username}
                                   </span>
@@ -237,7 +250,7 @@ export const Notifications = () => {
                         )}
                       </div>
 
-                      {notification.status === 'pending' ? (
+                      {isPendingAction ? (
                         <div className='flex flex-wrap gap-2'>
                           <Button
                             type='button'
@@ -250,7 +263,11 @@ export const Notifications = () => {
                             disabled={isCurrentInvitationPending}
                           >
                             <Check aria-hidden='true' />
-                            {isPendingMissionReview ? 'Approve' : 'Accept'}
+                            {isPendingMissionReview
+                              ? 'Approve'
+                              : isPendingRevisionResponse
+                                ? 'Accept revision'
+                                : 'Accept'}
                           </Button>
                           <Button
                             type='button'
@@ -258,14 +275,32 @@ export const Notifications = () => {
                             onClick={() =>
                               mutate({
                                 notificationId: notification.nid,
-                                response: 'rejected',
+                                response: isPendingRevisionResponse
+                                  ? 'disputed'
+                                  : 'rejected',
                               })
                             }
                             disabled={isCurrentInvitationPending}
                           >
                             <X aria-hidden='true' />
-                            Reject
+                            {isPendingRevisionResponse ? 'Dispute' : 'Reject'}
                           </Button>
+                          {canOwnerDispute && (
+                            <Button
+                              type='button'
+                              variant='destructive'
+                              onClick={() =>
+                                mutate({
+                                  notificationId: notification.nid,
+                                  response: 'disputed',
+                                })
+                              }
+                              disabled={isCurrentInvitationPending}
+                            >
+                              <ShieldAlert aria-hidden='true' />
+                              Dispute
+                            </Button>
+                          )}
                         </div>
                       ) : notification.status ? (
                         <p className='text-sm font-medium text-muted-foreground'>

@@ -33,5 +33,5 @@ export const respondToNotificationParamSchema = z.object({
 });
 
 export const respondToInvitationBodySchema = z.object({
-  response: z.enum(['accepted', 'accept', 'rejected']),
+  response: z.enum(['accepted', 'accept', 'rejected', 'disputed']),
 });

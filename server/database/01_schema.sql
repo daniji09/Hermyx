@@ -51,8 +51,8 @@ CREATE TABLE MISSION (
 	status VARCHAR(20) NOT NULL CHECK (status IN ('draft','pending_payment',
     'funded',
     'in_progress',
-    'delivered',
     'accepted',
+    'finished',
     'releasing',
     'released',
 	'partially_released',
@@ -72,11 +72,15 @@ CREATE TABLE MISSION_PARTICIPATION (
 	adventurer_id INT NOT NULL,
 	transfer_id VARCHAR(255),
   amount_paid NUMERIC,
-	status VARCHAR(20) NOT NULL DEFAULT 'in_progress' CHECK (status IN (
+	status VARCHAR(20) NOT NULL DEFAULT 'joined' CHECK (status IN (
+		'joined',
 		'in_progress',
 		'submitted',
-		'approved',
-		'rejected'
+		'revision_requested',
+		'accepted',
+		'in_dispute',
+		'releasing',
+		'released'
 	)),
 	review VARCHAR(500),
 	FOREIGN KEY (mid) REFERENCES MISSION(mid),
@@ -89,7 +93,17 @@ CREATE TABLE NOTIFICATION (
 	date TIMESTAMP NOT NULL,
 	seen BOOLEAN NOT NULL DEFAULT FALSE,
 	type VARCHAR(50) NOT NULL CHECK (type IN ('invitation', 'mission')),
-	status VARCHAR(20) CHECK (status IS NULL OR status IN ('pending','accepted','rejected')),
+	kind VARCHAR(20) NOT NULL DEFAULT 'actionable' CHECK (kind IN ('informational', 'actionable')),
+	action VARCHAR(50) NOT NULL DEFAULT 'mission_invite' CHECK (action IN (
+		'join_request',
+		'mission_invite',
+		'participation_review',
+		'participation_rejection_response',
+		'participation_approved',
+		'participation_disputed'
+	)),
+	payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+	status VARCHAR(20) CHECK (status IS NULL OR status IN ('pending','accepted','rejected','disputed')),
 	message VARCHAR(500),
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,

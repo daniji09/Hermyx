@@ -18,11 +18,13 @@ import {
 
 import {
   getById as getMissionParticipationById,
+  startParticipants,
   submitParticipation as submitMissionParticipationRecord,
 } from '../models/mission_participation.model.js';
 import {
   createInvitation as createInvitationRecord,
   createMissionNotification as createMissionNotificationRecord,
+  countParticipationReviewAttempts,
   hasPendingInvitation,
 } from '../models/invitation.model.js';
 import { emitToUser } from '../services/socket.service.js';
@@ -213,6 +215,7 @@ export const start = async (req, res) => {
     }
 
     await updateMissionStatus(missionId, 'in_progress');
+    await startParticipants(missionId);
 
     return res.status(200).json({
       status: 'in_progress',
@@ -266,11 +269,13 @@ export const joinMission = async (req, res) => {
       });
     }
 
+    const action = mission.owner_id === uid ? 'mission_invite' : 'join_request';
     const notificationId = await createInvitationRecord({
       missionId: mid,
       senderId: uid,
       receiverId: ownerId,
       type: 'invitation',
+      action,
       message,
     });
 
@@ -334,11 +339,16 @@ export const submitMissionParticipation = async (req, res) => {
         .json({ error: messages.MISSION_PART_ALREADY_SUBMITTED });
     }
 
+    const attempts =
+      (await countParticipationReviewAttempts(mid, adventurerId)) + 1;
     const missionCompletionMessage = `The participation in "${mission.title}" was submitted by ${req.user.username}.`;
     const notificationId = await createMissionNotificationRecord({
       missionId: Number(mid),
       senderId: adventurerId,
       receiverId: mission.owner_id,
+      kind: 'actionable',
+      action: 'participation_review',
+      payload: { attempt: attempts },
       status: 'pending',
       message: missionCompletionMessage,
     });

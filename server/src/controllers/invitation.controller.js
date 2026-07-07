@@ -13,13 +13,15 @@ import {
   adventurerJoined,
   getById,
   getParticipantsForRelease,
-  updateStatus as updateMissionStatus,
+  syncMissionCompletionStatus,
 } from '../models/mission.model.js';
 import {
   addParticipant,
   approveParticipation,
+  disputeParticipation,
   getById as getMissionParticipationById,
-  rejectParticipation,
+  reopenParticipation,
+  requestParticipationRevision,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
 
@@ -87,6 +89,8 @@ export const createInvitation = async (req, res) => {
     }
 
     const type = 'invitation';
+    const action =
+      mission.owner_id === senderId ? 'mission_invite' : 'join_request';
 
     const hasPending = await hasPendingInvitation(
       missionId,
@@ -123,6 +127,7 @@ export const createInvitation = async (req, res) => {
       senderId,
       receiverId,
       type,
+      action,
       message,
     };
 
@@ -146,8 +151,287 @@ export const createInvitation = async (req, res) => {
   }
 };
 
-/*Receive invitationId and the response (accepted or rejected). The invitation must exist, the recipient must be logged in, and the mission must be pending. 
-If rejected, simply update the status. If not, check that there is a vacancy. If there is, add it to the list and update the status of the invitation.*/
+const respondToParticipationReview = async ({
+  notification,
+  response,
+  userId,
+  username,
+  notificationId,
+  res,
+}) => {
+  const missionId = notification.associated_mission_id;
+  const mission = await getById(missionId);
+
+  if (!mission) {
+    return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+  }
+
+  if (mission.owner_id !== userId) {
+    return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
+  }
+
+  if (mission.status !== 'in_progress') {
+    return res.status(409).json({ error: messages.MISSION_NOT_IN_PROGRESS });
+  }
+
+  const participation = await getMissionParticipationById(
+    missionId,
+    notification.sender_id,
+  );
+
+  if (!participation) {
+    return res
+      .status(404)
+      .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
+  }
+
+  if (participation.status !== 'submitted') {
+    return res
+      .status(409)
+      .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
+  }
+
+  if (response === 'disputed') {
+    const attempt = Number(notification.payload?.attempt || 1);
+    if (attempt <= 1) {
+      return res.status(409).json({
+        error: messages.MISSION_PARTICIPATION_DISPUTE_REQUIRES_RETRY,
+      });
+    }
+
+    await disputeParticipation(missionId, notification.sender_id);
+    await syncMissionCompletionStatus(missionId);
+    await updateInvitationStatus(notificationId, 'disputed');
+    await markAsSeen(notificationId);
+
+    const disputeMessage = `Your participation in "${mission.title}" was disputed by ${username}.`;
+    const followUpNotificationId = await createMissionNotification({
+      missionId,
+      senderId: userId,
+      receiverId: notification.sender_id,
+      kind: 'informational',
+      action: 'participation_disputed',
+      message: disputeMessage,
+    });
+
+    emitToUser(notification.sender_id, 'mission:participation-disputed', {
+      notificationId: followUpNotificationId,
+      type: 'mission',
+      action: 'participation_disputed',
+      missionId,
+      missionTitle: mission.title,
+      ownerId: userId,
+      ownerUsername: username,
+      message: disputeMessage,
+    });
+
+    return res.status(200).json({
+      message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY,
+    });
+  }
+
+  if (response === 'rejected') {
+    await requestParticipationRevision(missionId, notification.sender_id);
+    await syncMissionCompletionStatus(missionId);
+    await updateInvitationStatus(notificationId, 'rejected');
+    await markAsSeen(notificationId);
+
+    const revisionMessage = `Your participation in "${mission.title}" was rejected by ${username}. Please accept the revision or open a dispute.`;
+    const followUpNotificationId = await createMissionNotification({
+      missionId,
+      senderId: userId,
+      receiverId: notification.sender_id,
+      kind: 'actionable',
+      action: 'participation_rejection_response',
+      status: 'pending',
+      message: revisionMessage,
+    });
+
+    emitToUser(notification.sender_id, 'mission:participation-revision', {
+      notificationId: followUpNotificationId,
+      type: 'mission',
+      action: 'participation_rejection_response',
+      missionId,
+      missionTitle: mission.title,
+      ownerId: userId,
+      ownerUsername: username,
+      message: revisionMessage,
+    });
+
+    return res.status(200).json({
+      message: messages.MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY,
+    });
+  }
+
+  await approveParticipation(missionId, notification.sender_id);
+  await syncMissionCompletionStatus(missionId);
+  await updateInvitationStatus(notificationId, 'accepted');
+  await markAsSeen(notificationId);
+
+  const approvedMessage = `Your participation in "${mission.title}" was approved by ${username}.`;
+  const followUpNotificationId = await createMissionNotification({
+    missionId,
+    senderId: userId,
+    receiverId: notification.sender_id,
+    kind: 'informational',
+    action: 'participation_approved',
+    message: approvedMessage,
+  });
+
+  emitToUser(notification.sender_id, 'mission:participation-approved', {
+    notificationId: followUpNotificationId,
+    type: 'mission',
+    action: 'participation_approved',
+    missionId,
+    missionTitle: mission.title,
+    ownerId: userId,
+    ownerUsername: username,
+    message: approvedMessage,
+  });
+
+  return res.status(200).json({
+    message: messages.MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY,
+  });
+};
+
+const respondToParticipationRejection = async ({
+  notification,
+  response,
+  userId,
+  username,
+  notificationId,
+  res,
+}) => {
+  const missionId = notification.associated_mission_id;
+  const mission = await getById(missionId);
+
+  if (!mission) {
+    return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+  }
+
+  const participation = await getMissionParticipationById(missionId, userId);
+
+  if (!participation) {
+    return res
+      .status(404)
+      .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
+  }
+
+  if (participation.status !== 'revision_requested') {
+    return res
+      .status(409)
+      .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
+  }
+
+  if (response === 'disputed') {
+    await disputeParticipation(missionId, userId);
+    const missionAfterSync = await syncMissionCompletionStatus(missionId);
+    await updateInvitationStatus(notificationId, 'disputed');
+    await markAsSeen(notificationId);
+
+    const disputeMessage = `${username} opened a dispute for "${mission.title}".`;
+    const followUpNotificationId = await createMissionNotification({
+      missionId,
+      senderId: userId,
+      receiverId: mission.owner_id,
+      kind: 'informational',
+      action: 'participation_disputed',
+      message: disputeMessage,
+    });
+
+    emitToUser(mission.owner_id, 'mission:participation-disputed', {
+      notificationId: followUpNotificationId,
+      type: 'mission',
+      action: 'participation_disputed',
+      missionId,
+      missionTitle: mission.title,
+      adventurerId: userId,
+      adventurerUsername: username,
+      missionStatus: missionAfterSync?.status,
+      message: disputeMessage,
+    });
+
+    return res.status(200).json({
+      message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY,
+    });
+  }
+
+  if (response !== 'accepted' && response !== 'accept') {
+    return res.status(400).json({ error: 'Invalid response action' });
+  }
+
+  await reopenParticipation(missionId, userId);
+  await syncMissionCompletionStatus(missionId);
+  await updateInvitationStatus(notificationId, 'accepted');
+  await markAsSeen(notificationId);
+
+  return res.status(200).json({
+    message: messages.MISSION_PARTICIPATION_REVISION_ACCEPTED_SUCCESSFULLY,
+  });
+};
+
+const respondToMissionInvitation = async ({
+  notification,
+  response,
+  notificationId,
+  res,
+}) => {
+  if (response === 'rejected') {
+    await updateInvitationStatus(notificationId, 'rejected');
+    await markAsSeen(notificationId);
+    return res.status(200).json({ message: 'Invitation rejected' });
+  }
+
+  if (response !== 'accepted' && response !== 'accept') {
+    return res.status(400).json({ error: 'Invalid response action' });
+  }
+
+  const missionId = notification.associated_mission_id;
+
+  const [mission, participants] = await Promise.all([
+    getById(missionId),
+    getParticipantsForRelease(missionId),
+  ]);
+
+  if (!mission) {
+    return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+  }
+
+  const adventurerId =
+    mission.owner_id === notification.sender_id
+      ? notification.recipient_id
+      : notification.sender_id;
+
+  if (mission.status !== 'funded') {
+    return res.status(409).json({
+      error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
+    });
+  }
+
+  if (mission.total_vacancies <= participants.length) {
+    return res.status(409).json({ error: 'There are no vacancies available' });
+  }
+
+  const alreadyJoined = await getMissionParticipationById(
+    missionId,
+    adventurerId,
+  );
+  if (alreadyJoined) {
+    return res
+      .status(409)
+      .json({ error: 'Adventurer already joined this mission' });
+  }
+
+  await addParticipant(missionId, adventurerId);
+  await adventurerJoined(missionId);
+
+  await updateInvitationStatus(notificationId, 'accepted');
+  await markAsSeen(notificationId);
+
+  return res.status(200).json({ message: 'Adventurer successfully added' });
+};
+
+/*Receives a notification id and response. Business behavior is selected by action.*/
 export const respondToInvitation = async (req, res) => {
   const { notificationId } = req.params;
   const { response } = req.body;
@@ -155,156 +439,59 @@ export const respondToInvitation = async (req, res) => {
   const userId = req.user.uid;
 
   try {
-    const invitation = await findById(notificationId);
+    const notification = await findById(notificationId);
 
-    if (!invitation) {
-      return res.status(404).json({ error: 'Invitation not found' });
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
     }
 
-    if (invitation.recipient_id !== userId) {
+    if (notification.recipient_id !== userId) {
       return res.status(403).json({
-        error: 'You do not have permission to respond to this invitation.',
+        error: 'You do not have permission to respond to this notification.',
       });
     }
 
-    if (invitation.status !== 'pending') {
+    if (notification.status !== 'pending') {
       return res.status(400).json({
-        error: `This invitation has already been ${invitation.status}.`,
+        error: `This notification has already been ${notification.status}.`,
       });
     }
 
-    if (invitation.type === 'mission') {
-      const missionId = invitation.associated_mission_id;
-      const mission = await getById(missionId);
-
-      if (!mission) {
-        return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
-      }
-
-      if (mission.owner_id !== userId) {
-        return res.status(403).json({
-          error: messages.UNAUTHORIZED_ERROR,
-        });
-      }
-
-      if (mission.status !== 'in_progress') {
-        return res.status(409).json({
-          error: messages.MISSION_NOT_IN_PROGRESS,
-        });
-      }
-
-      const participation = await getMissionParticipationById(
-        missionId,
-        invitation.sender_id,
-      );
-
-      if (!participation) {
-        return res.status(404).json({
-          error: messages.MISSION_PARTICIPATION_NOT_FOUND,
-        });
-      }
-
-      if (participation.status !== 'submitted') {
-        return res.status(409).json({
-          error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED,
-        });
-      }
-
-      if (response === 'rejected') {
-        await rejectParticipation(missionId, invitation.sender_id);
-        await updateMissionStatus(missionId, 'in_dispute');
-      } else {
-        await approveParticipation(missionId, invitation.sender_id);
-      }
-
-      await updateInvitationStatus(notificationId, response);
-      await markAsSeen(notificationId);
-
-      const missionNotificationMessage =
-        response === 'rejected'
-          ? `Your participation in "${mission.title}" was rejected by ${req.user.username}. The mission is now in dispute.`
-          : `Your participation in "${mission.title}" was approved by ${req.user.username}.`;
-
-      const followUpNotificationId = await createMissionNotification({
-        missionId,
-        senderId: userId,
-        receiverId: invitation.sender_id,
-        message: missionNotificationMessage,
-      });
-
-      emitToUser(
-        invitation.sender_id,
-        response === 'rejected'
-          ? 'mission:participation-rejected'
-          : 'mission:participation-approved',
-        {
-          notificationId: followUpNotificationId,
-          type: 'mission',
-          missionId,
-          missionTitle: mission.title,
-          ownerId: userId,
-          ownerUsername: req.user.username,
-          message: missionNotificationMessage,
-        },
-      );
-
-      return res.status(200).json({
-        message:
-          response === 'rejected'
-            ? messages.MISSION_PARTICIPATION_REJECTED_SUCCESSFULLY
-            : messages.MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY,
+    if (notification.action === 'participation_review') {
+      return await respondToParticipationReview({
+        notification,
+        response,
+        userId,
+        username: req.user.username,
+        notificationId,
+        res,
       });
     }
 
-    if (response === 'rejected') {
-      await updateInvitationStatus(notificationId, 'rejected');
-      await markAsSeen(notificationId);
-      return res.status(200).json({ message: 'Invitation rejected' });
-    } else if (response === 'accepted' || response === 'accept') {
-      const missionId = invitation.associated_mission_id;
-
-      const [mission, participants] = await Promise.all([
-        getById(missionId),
-        getParticipantsForRelease(missionId),
-      ]);
-
-      const adventurerId =
-        mission.owner_id === invitation.sender_id
-          ? invitation.recipient_id
-          : invitation.sender_id;
-
-      if (mission.status !== 'funded') {
-        return res.status(409).json({
-          error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-        });
-      }
-
-      if (mission.total_vacancies <= participants.length) {
-        return res
-          .status(409)
-          .json({ error: 'There are no vacancies available' });
-      }
-
-      const alreadyJoined = await getMissionParticipationById(
-        missionId,
-        adventurerId,
-      );
-      if (alreadyJoined) {
-        return res
-          .status(409)
-          .json({ error: 'Adventurer already joined this mission' });
-      }
-
-      await addParticipant(missionId, adventurerId);
-      await adventurerJoined(missionId);
-
-      await updateInvitationStatus(notificationId, 'accepted');
-      await markAsSeen(notificationId);
-
-      return res.status(200).json({ message: 'Adventurer successfully added' });
-    } else {
-      return res.status(400).json({ error: 'Invalid response action' });
+    if (notification.action === 'participation_rejection_response') {
+      return await respondToParticipationRejection({
+        notification,
+        response,
+        userId,
+        username: req.user.username,
+        notificationId,
+        res,
+      });
     }
+
+    if (
+      notification.action === 'join_request' ||
+      notification.action === 'mission_invite'
+    ) {
+      return await respondToMissionInvitation({
+        notification,
+        response,
+        notificationId,
+        res,
+      });
+    }
+
+    return res.status(400).json({ error: 'Invalid notification action' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Error processing the request' });
