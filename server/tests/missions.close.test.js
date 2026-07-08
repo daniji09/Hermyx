@@ -132,6 +132,18 @@ const getMissionStatus = async (missionId) => {
 describe('POST /api/missions/:missionId/close', () => {
   it('should close an in progress mission when the authenticated user is the owner', async () => {
     const missionId = await createMission();
+    const adventurerResult = await pool.query(
+      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3) RETURNING uid',
+      [
+        testUsers.adventurers[0].email,
+        testUsers.adventurers[0].username,
+        testUsers.adventurers[0].firebaseUid,
+      ],
+    );
+    await pool.query(
+      "INSERT INTO mission_participation (mid, adventurer_id, status) VALUES ($1, $2, 'accepted')",
+      [missionId, adventurerResult.rows[0].uid],
+    );
 
     const response = await request(app).post(
       `/api/missions/${missionId}/close`,
@@ -150,13 +162,13 @@ describe('POST /api/missions/:missionId/close', () => {
       difficulty: testMission.difficulty,
       total_vacancies: testMission.totalVacancies,
       occupied_vacancies: testMission.occupiedVacancies,
-      status: 'accepted',
+      status: 'finished',
       owner_id: ownerId,
     });
     expect(Number(response.body.mission.monetary_reward)).toBe(
       testMission.monetaryReward,
     );
-    expect(updatedStatus).toBe('accepted');
+    expect(updatedStatus).toBe('finished');
   });
 
   it('should not close a mission if the authenticated user is not the owner', async () => {

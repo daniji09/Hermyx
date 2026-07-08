@@ -18,19 +18,19 @@ const testMission = vi.hoisted(() => {
 const testUsers = vi.hoisted(() => {
   return {
     owner: {
-      email: 'owner-invitation@email.com',
-      username: 'invitationOwner',
-      firebaseUid: 'invitation-owner-firebase-uid',
+      email: 'owner-notification@email.com',
+      username: 'notifOwner',
+      firebaseUid: 'notification-owner-firebase-uid',
     },
     adventurer: {
-      email: 'adventurer-invitation@email.com',
-      username: 'invitationAdventurer',
-      firebaseUid: 'invitation-adventurer-firebase-uid',
+      email: 'adventurer-notification@email.com',
+      username: 'notifAdventurer',
+      firebaseUid: 'notification-adventurer-firebase-uid',
     },
     anotherAdventurer: {
-      email: 'another-adventurer-invitation@email.com',
-      username: 'otherInvAdventurer',
-      firebaseUid: 'another-invitation-adventurer-firebase-uid',
+      email: 'another-adventurer-notification@email.com',
+      username: 'otherNotifAdv',
+      firebaseUid: 'another-notification-adventurer-firebase-uid',
     },
   };
 });
@@ -51,7 +51,7 @@ vi.mock('../src/middlewares/auth.middleware.js', () => {
 
 beforeEach(async () => {
   await pool.query('TRUNCATE TABLE mission_participation CASCADE');
-  await pool.query('TRUNCATE TABLE invitation CASCADE');
+  await pool.query('TRUNCATE TABLE notification CASCADE');
   await pool.query('TRUNCATE TABLE mission CASCADE');
   await pool.query('TRUNCATE TABLE app_user CASCADE');
 
@@ -99,17 +99,17 @@ const createMission = async ({
   return result.rows[0].mid;
 };
 
-const createInvitation = async ({
+const createNotificationRecord = async ({
   missionId,
   senderId = ownerId,
   recipientId = adventurerId,
 }) => {
   const result = await pool.query(
-    "INSERT INTO invitation (date, type, status, sender_id, recipient_id, associated_mission_id) VALUES (NOW(), 'applicant_to_adventurer', 'pending', $1, $2, $3) RETURNING iid",
+    "INSERT INTO notification (date, type, status, sender_id, recipient_id, associated_mission_id) VALUES (NOW(), 'invitation', 'pending', $1, $2, $3) RETURNING nid",
     [senderId, recipientId, missionId],
   );
 
-  return result.rows[0].iid;
+  return result.rows[0].nid;
 };
 
 const getParticipationCount = async (missionId) => {
@@ -130,31 +130,31 @@ const getOccupiedVacancies = async (missionId) => {
   return result.rows[0].occupied_vacancies;
 };
 
-const getInvitationStatus = async (invitationId) => {
+const getNotificationStatus = async (notificationId) => {
   const result = await pool.query(
-    'SELECT status FROM invitation WHERE iid = $1',
-    [invitationId],
+    'SELECT status FROM notification WHERE nid = $1',
+    [notificationId],
   );
 
   return result.rows[0].status;
 };
 
-const getInvitationType = async (invitationId) => {
+const getNotificationType = async (notificationId) => {
   const result = await pool.query(
-    'SELECT type FROM invitation WHERE iid = $1',
-    [invitationId],
+    'SELECT type FROM notification WHERE nid = $1',
+    [notificationId],
   );
 
   return result.rows[0].type;
 };
 
 describe('HY-004 add adventurer to mission vacancy', () => {
-  it('should add the adventurer to the mission vacancy when the invitation is accepted and there are vacancies', async () => {
+  it('should add the adventurer to the mission vacancy when the notification is accepted and there are vacancies', async () => {
     const missionId = await createMission();
 
     authenticatedUserId = ownerId;
 
-    const createResponse = await request(app).post('/api/invitations').send({
+    const createResponse = await request(app).post('/api/notifications').send({
       missionId,
       senderId: ownerId,
       receiverId: adventurerId,
@@ -163,41 +163,41 @@ describe('HY-004 add adventurer to mission vacancy', () => {
     authenticatedUserId = adventurerId;
 
     const response = await request(app)
-      .post(`/api/invitations/${createResponse.body}/respond`)
+      .post(`/api/notifications/${createResponse.body}/respond`)
       .send({ response: 'accepted' });
 
     const participationCount = await getParticipationCount(missionId);
     const occupiedVacancies = await getOccupiedVacancies(missionId);
-    const invitationStatus = await getInvitationStatus(createResponse.body);
-    const invitationType = await getInvitationType(createResponse.body);
+    const notificationStatus = await getNotificationStatus(createResponse.body);
+    const notificationType = await getNotificationType(createResponse.body);
 
     expect(createResponse.status).toBe(201);
     expect(response.status).toBe(200);
     expect(response.body.message).toBe('Adventurer successfully added');
     expect(participationCount).toBe(1);
     expect(occupiedVacancies).toBe(1);
-    expect(invitationStatus).toBe('accepted');
-    expect(invitationType).toBe('applicant_to_adventurer');
+    expect(notificationStatus).toBe('accepted');
+    expect(notificationType).toBe('invitation');
   });
 
-  it('should create an adventurer to applicant invitation when the sender is not the mission owner', async () => {
+  it('should create an adventurer to applicant notification when the sender is not the mission owner', async () => {
     const missionId = await createMission();
 
-    const response = await request(app).post('/api/invitations').send({
+    const response = await request(app).post('/api/notifications').send({
       missionId,
       senderId: adventurerId,
       receiverId: ownerId,
     });
 
-    const invitationType = await getInvitationType(response.body);
+    const notificationType = await getNotificationType(response.body);
 
     expect(response.status).toBe(201);
-    expect(invitationType).toBe('adventurer_to_applicant');
+    expect(notificationType).toBe('invitation');
   });
 
-  it('should not add the adventurer when the invitation is accepted but there are no vacancies available', async () => {
+  it('should not add the adventurer when the notification is accepted but there are no vacancies available', async () => {
     const missionId = await createMission();
-    const invitationId = await createInvitation({ missionId });
+    const notificationId = await createNotificationRecord({ missionId });
 
     await pool.query(
       'INSERT INTO mission_participation (mid, adventurer_id) VALUES ($1, $2)',
@@ -205,21 +205,21 @@ describe('HY-004 add adventurer to mission vacancy', () => {
     );
 
     const response = await request(app)
-      .post(`/api/invitations/${invitationId}/respond`)
+      .post(`/api/notifications/${notificationId}/respond`)
       .send({ response: 'accepted' });
 
     const participationCount = await getParticipationCount(missionId);
-    const invitationStatus = await getInvitationStatus(invitationId);
+    const notificationStatus = await getNotificationStatus(notificationId);
 
     expect(response.status).toBe(409);
     expect(response.body.error).toBe('There are no vacancies available');
     expect(participationCount).toBe(1);
-    expect(invitationStatus).toBe('pending');
+    expect(notificationStatus).toBe('pending');
   });
 
   it('should not add the adventurer when they are already joined to the mission', async () => {
     const missionId = await createMission({ totalVacancies: 2 });
-    const invitationId = await createInvitation({ missionId });
+    const notificationId = await createNotificationRecord({ missionId });
 
     await pool.query(
       'INSERT INTO mission_participation (mid, adventurer_id) VALUES ($1, $2)',
@@ -227,50 +227,96 @@ describe('HY-004 add adventurer to mission vacancy', () => {
     );
 
     const response = await request(app)
-      .post(`/api/invitations/${invitationId}/respond`)
+      .post(`/api/notifications/${notificationId}/respond`)
       .send({ response: 'accepted' });
 
     const participationCount = await getParticipationCount(missionId);
-    const invitationStatus = await getInvitationStatus(invitationId);
+    const notificationStatus = await getNotificationStatus(notificationId);
 
     expect(response.status).toBe(409);
     expect(response.body.error).toBe('Adventurer already joined this mission');
     expect(participationCount).toBe(1);
-    expect(invitationStatus).toBe('pending');
+    expect(notificationStatus).toBe('pending');
   });
 
-  it('should not add the adventurer when the invitation is rejected', async () => {
+  it('should not add the adventurer when the notification is rejected', async () => {
     const missionId = await createMission();
-    const invitationId = await createInvitation({ missionId });
+    const notificationId = await createNotificationRecord({ missionId });
 
     const response = await request(app)
-      .post(`/api/invitations/${invitationId}/respond`)
+      .post(`/api/notifications/${notificationId}/respond`)
       .send({ response: 'rejected' });
 
     const participationCount = await getParticipationCount(missionId);
-    const invitationStatus = await getInvitationStatus(invitationId);
+    const notificationStatus = await getNotificationStatus(notificationId);
 
     expect(response.status).toBe(200);
-    expect(response.body.message).toBe('Invitation rejected');
+    expect(response.body.message).toBe('Notification rejected');
     expect(participationCount).toBe(0);
-    expect(invitationStatus).toBe('rejected');
+    expect(notificationStatus).toBe('rejected');
   });
 
-  it('should not create an invitation to oneself', async () => {
+  it('should not create an notification to oneself', async () => {
     const missionId = await createMission();
 
     authenticatedUserId = ownerId;
 
-    const response = await request(app).post('/api/invitations').send({
+    const response = await request(app).post('/api/notifications').send({
       missionId,
       senderId: ownerId,
       receiverId: ownerId,
     });
 
-    const result = await pool.query('SELECT COUNT(*) FROM invitation');
+    const result = await pool.query('SELECT COUNT(*) FROM notification');
 
     expect(response.status).toBe(400);
     expect(response.body.error).toBe("You can't invite yourself");
     expect(Number(result.rows[0].count)).toBe(0);
+  });
+
+  it('should not create an notification when the mission is already in progress', async () => {
+    const missionId = await createMission();
+
+    await pool.query(
+      "UPDATE mission SET status = 'in_progress' WHERE mid = $1",
+      [missionId],
+    );
+
+    authenticatedUserId = ownerId;
+
+    const response = await request(app).post('/api/notifications').send({
+      missionId,
+      senderId: ownerId,
+      receiverId: adventurerId,
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe(
+      'This mission is no longer accepting adventurers.',
+    );
+  });
+
+  it('should not accept an notification when the mission is already in progress', async () => {
+    const missionId = await createMission();
+    const notificationId = await createNotificationRecord({ missionId });
+
+    await pool.query(
+      "UPDATE mission SET status = 'in_progress' WHERE mid = $1",
+      [missionId],
+    );
+
+    const response = await request(app)
+      .post(`/api/notifications/${notificationId}/respond`)
+      .send({ response: 'accepted' });
+
+    const notificationStatus = await getNotificationStatus(notificationId);
+    const participationCount = await getParticipationCount(missionId);
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe(
+      'This mission is no longer accepting adventurers.',
+    );
+    expect(notificationStatus).toBe('pending');
+    expect(participationCount).toBe(0);
   });
 });

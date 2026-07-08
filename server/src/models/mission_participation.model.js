@@ -18,6 +18,17 @@ export const addParticipant = async (mid, adventurerId) => {
   return result.rowCount;
 };
 
+export const startParticipants = async (mid) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'in_progress'
+    WHERE mid = $1 AND status = 'joined'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
+};
+
 export const deleteParticipant = async (mid, adventurerId) => {
   const query = `
     DROP * FROM mission_participation WHERE mid = $1 AND adventurer_id = $2`;
@@ -26,7 +37,68 @@ export const deleteParticipant = async (mid, adventurerId) => {
 };
 
 export const getById = async (mid, adventurerId) => {
-  const query = `SELECT COUNT(*) FROM mission_participation WHERE mid = $1 AND adventurer_id = $2`;
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE mid = $1 AND adventurer_id = $2
+  `;
   const result = await pool.query(query, [mid, adventurerId]);
-  return result.rows[0].count;
+  return result.rows[0] || null;
+};
+
+export const submitParticipation = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'submitted'
+    WHERE mid = $1 AND adventurer_id = $2 AND status = 'in_progress'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
+export const approveParticipation = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'accepted'
+    WHERE mid = $1 AND adventurer_id = $2 AND status = 'submitted'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
+export const requestParticipationRevision = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'revision_requested'
+    WHERE mid = $1 AND adventurer_id = $2 AND status = 'submitted'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
+export const reopenParticipation = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'in_progress'
+    WHERE mid = $1 AND adventurer_id = $2 AND status = 'revision_requested'
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
+export const disputeParticipation = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = 'in_dispute'
+    WHERE mid = $1
+      AND adventurer_id = $2
+      AND status IN ('submitted', 'revision_requested')
+    RETURNING *
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
 };

@@ -18,6 +18,7 @@ export async function setup() {
 
     // Then all tables are truncated
     await pool.query('TRUNCATE TABLE app_user CASCADE');
+    await pool.query('TRUNCATE TABLE notification CASCADE');
     await pool.query('TRUNCATE TABLE mission CASCADE');
   } catch (error) {
     console.error('Error creating test database:', error);

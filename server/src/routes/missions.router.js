@@ -11,6 +11,7 @@ import {
   start,
   joinMission,
   closeMission,
+  submitMissionParticipation,
   getMissionsFunded,
 } from '../controllers/missions.controller.js';
 
@@ -27,6 +28,7 @@ import {
   getMissionsQuerySchema,
   joinMissionSchema,
   closeMissionSchema,
+  submitMissionParticipationSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -77,6 +79,13 @@ router.post(
   '/:mid/close',
   validateParamsSchema(closeMissionSchema),
   closeMission,
+);
+
+// Submits current adventurer participation for owner review
+router.post(
+  '/:mid/submit',
+  validateParamsSchema(submitMissionParticipationSchema),
+  submitMissionParticipation,
 );
 
 /// PUT

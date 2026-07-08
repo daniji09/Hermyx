@@ -25,7 +25,7 @@ import { useNavigate } from 'react-router-dom';
 import { SearchBar } from './form/SearchBar';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext, useState } from 'react';
-import { getMyInvitationsQueryOptions } from '../../queries/InvitationsQueries';
+import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueries';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
@@ -211,15 +211,25 @@ const ProfileLink = ({ currentUser }) => {
 const NotificationsButton = () => {
   const { latestNotification } = useContext(AuthContext);
   const { data } = useQuery(
-    getMyInvitationsQueryOptions({
+    getMyNotificationsQueryOptions({
       staleTime: 30000,
     }),
   );
-  const invitations = data?.invitations || [];
-  const unseenInvitations = invitations.filter(
-    (invitation) => !invitation.seen,
+  const notifications = data?.notifications || [];
+  const unseenNotifications = notifications.filter(
+    (notification) => !notification.seen,
   );
-  const previewInvitation = unseenInvitations[0];
+  const previewPendingNotification = unseenNotifications.find(
+    (notification) => notification.status === 'pending',
+  );
+  const previewNotification = previewPendingNotification || unseenNotifications[0];
+  const hasMissionCompletionNotification =
+    latestNotification?.type === 'mission';
+  const latestNotificationAlreadyPersisted = notifications.some(
+    (notification) => notification.nid === latestNotification?.notificationId,
+  );
+  const hasTransientLatestNotification =
+    !!latestNotification && !latestNotificationAlreadyPersisted;
 
   return (
     <DropdownMenu>
@@ -231,9 +241,11 @@ const NotificationsButton = () => {
           aria-label='Open notifications'
         >
           <Bell className='h-5 w-5' aria-hidden='true' />
-          {unseenInvitations.length > 0 && (
+          {(unseenNotifications.length > 0 ||
+            (hasMissionCompletionNotification &&
+              !latestNotificationAlreadyPersisted)) && (
             <span className='absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
-              {unseenInvitations.length}
+              {unseenNotifications.length > 0 ? unseenNotifications.length : 1}
             </span>
           )}
         </Button>
@@ -243,47 +255,71 @@ const NotificationsButton = () => {
           Notifications
         </DropdownMenuLabel>
 
-        {previewInvitation ? (
+        {previewNotification || hasTransientLatestNotification ? (
           <>
-            <DropdownMenuItem asChild className='p-0 focus:bg-transparent'>
-              <Link
-                to={`/notifications?invitation=${previewInvitation.iid}`}
-                className='flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition-colors hover:border-slate-300 hover:bg-white'
-              >
-                <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white'>
-                  <Mail className='h-3.5 w-3.5' aria-hidden='true' />
-                </span>
-                <span className='flex min-w-0 flex-1 items-center'>
-                  <span className='block text-sm font-medium text-slate-700'>
-                    Message from {previewInvitation.sender_username}
-                  </span>
-                </span>
-                <ChevronRight
-                  className='h-4 w-4 shrink-0 text-slate-400'
-                  aria-hidden='true'
-                />
-              </Link>
-            </DropdownMenuItem>
             {latestNotification?.senderUsername &&
-              latestNotification.senderUsername !==
-                previewInvitation.sender_username && (
-                <DropdownMenuItem
-                  asChild
-                  className='mt-2 rounded-xl border border-dashed border-slate-200 px-3 py-2 text-sm font-medium text-slate-700'
-                >
+              hasTransientLatestNotification && (
+                <DropdownMenuItem asChild className='p-0 focus:bg-transparent'>
                   <Link
-                    to={`/notifications?invitation=${latestNotification.invitationId}`}
+                    to={`/notifications?notification=${latestNotification.notificationId}`}
+                    className='flex w-full items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-white'
                   >
-                    New message from {latestNotification.senderUsername}
+                    <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white'>
+                      <Mail className='h-3.5 w-3.5' aria-hidden='true' />
+                    </span>
+                    <span className='flex min-w-0 flex-1 items-center'>
+                      <span className='block text-sm font-medium text-slate-700'>
+                        New message from {latestNotification.senderUsername}
+                      </span>
+                    </span>
                   </Link>
                 </DropdownMenuItem>
               )}
+            {hasMissionCompletionNotification &&
+              hasTransientLatestNotification && (
+                <DropdownMenuItem className='cursor-default rounded-xl border border-dashed border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 focus:bg-transparent focus:text-slate-700'>
+                  The mission {latestNotification.missionTitle} was completed by{' '}
+                  {latestNotification.adventurerUsername}
+                </DropdownMenuItem>
+              )}
+            {previewNotification && (
+              <DropdownMenuItem
+                asChild
+                className={`${hasTransientLatestNotification ? 'mt-2' : ''} p-0 focus:bg-transparent`}
+              >
+                <Link
+                  to={`/notifications?notification=${previewNotification.nid}`}
+                  className='flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition-colors hover:border-slate-300 hover:bg-white'
+                >
+                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white'>
+                    <Mail className='h-3.5 w-3.5' aria-hidden='true' />
+                  </span>
+                  <span className='flex min-w-0 flex-1 items-center'>
+                    <span className='block text-sm font-medium text-slate-700'>
+                      {`Message from ${previewNotification.sender_username}`}
+                    </span>
+                  </span>
+                  <ChevronRight
+                    className='h-4 w-4 shrink-0 text-slate-400'
+                    aria-hidden='true'
+                  />
+                </Link>
+              </DropdownMenuItem>
+            )}
           </>
         ) : (
           <>
-            <DropdownMenuItem className='cursor-default rounded-xl px-3 py-3 text-sm text-slate-900 focus:bg-transparent focus:text-slate-900'>
-              No notifications yet.
-            </DropdownMenuItem>
+            {hasMissionCompletionNotification &&
+            hasTransientLatestNotification ? (
+              <DropdownMenuItem className='cursor-default rounded-xl px-3 py-3 text-sm text-slate-900 focus:bg-transparent focus:text-slate-900'>
+                The mission {latestNotification.missionTitle} was completed by{' '}
+                {latestNotification.adventurerUsername}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem className='cursor-default rounded-xl px-3 py-3 text-sm text-slate-900 focus:bg-transparent focus:text-slate-900'>
+                No notifications yet.
+              </DropdownMenuItem>
+            )}
           </>
         )}
 
