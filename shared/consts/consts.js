@@ -109,7 +109,13 @@ export const consts = {
   MISSION: {
     TITLE_MAX_LENGTH: 100,
     DESCRIPTION_MAX_LENGTH: 1000,
-    VACANCIES: { MIN: 1, STEP: 1, MAX: 100 },
+    VACANCIES: {
+      MIN: 1,
+      STEP: 1,
+      MAX: 100,
+      TITLE_MAX_LENGTH: 50,
+      DESCRIPTION_MAX_LENGTH: 500,
+    },
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
     DIFFICULTY: { MIN: 1, STEP: 1, MAX: 5 },
   },

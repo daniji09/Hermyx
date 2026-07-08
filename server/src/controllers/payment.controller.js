@@ -283,7 +283,7 @@ export async function payNew(req, res) {
 
     const pi = await createPaymentIntentNew(
       {
-        amount: Math.round(mission.monetary_reward * 100),
+        amount: Math.round(mission.total_payment * 100),
         currency: 'eur',
         customer: customerId,
         automatic_payment_methods: { enabled: true },

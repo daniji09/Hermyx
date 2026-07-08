@@ -222,7 +222,8 @@ const NotificationsButton = () => {
   const previewPendingNotification = unseenNotifications.find(
     (notification) => notification.status === 'pending',
   );
-  const previewNotification = previewPendingNotification || unseenNotifications[0];
+  const previewNotification =
+    previewPendingNotification || unseenNotifications[0];
   const hasMissionCompletionNotification =
     latestNotification?.type === 'mission';
   const latestNotificationAlreadyPersisted = notifications.some(
@@ -250,7 +251,11 @@ const NotificationsButton = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align='start' sideOffset={8} className='w-80 p-2'>
+      <DropdownMenuContent
+        align='start'
+        sideOffset={8}
+        className='w-80 p-2 z-1000000'
+      >
         <DropdownMenuLabel className='px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-900'>
           Notifications
         </DropdownMenuLabel>

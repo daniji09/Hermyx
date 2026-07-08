@@ -18,11 +18,23 @@ export const messages = {
     DIFFICULTY_DESCRIPTION:
       'Higher difficulty implies higher rewards for adventurers.',
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
+    LOCATION_ERROR: 'Please, select a valid location on the map.',
+  },
+  EDIT_MISSION: {
+    FORM_TITLE: 'Edit your mission',
+    DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
+    VACANCIES_DESCRIPTION:
+      'Define how many adventurers you need for this mission.',
+    DIFFICULTY_DESCRIPTION:
+      'Higher difficulty implies higher rewards for adventurers.',
+    LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
+    LOCATION_ERROR: 'Please, select a valid location on the map.',
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
     MISSION_IN_DISPUTE: 'Mission is currently in dispute.',
     MISSION_FILLED: 'Mission already filled!',
+    MISSION_OPEN: 'Join any open vacancy of this mission!',
     MISSION_JOINED: 'You are already part of this mission.',
     MISSION_NOT_ACCEPTING_ADVENTURERS:
       'This mission is no longer accepting adventurers.',
@@ -32,6 +44,13 @@ export const messages = {
       ERROR_TITLE: `Can't join mission`,
       DESCRIPTION: '',
       CONFIRM_TEXT: 'Yes, send request',
+    },
+    UNJOIN_MISSION_ALERT: {
+      TITLE: 'Do you want to unjoin this mission?',
+      ERROR_TITLE: `Can't unjoin mission`,
+      DESCRIPTION:
+        'Unjoining this mission will unlink it from you, and you will no longer be part of it.',
+      CONFIRM_TEXT: 'Yes, unjoin mission',
     },
     START_MISSION_ALERT: {
       TITLE: 'Are you sure you want to start the mission?',
@@ -46,6 +65,14 @@ export const messages = {
       ERROR_TITLE: `Can't close mission`,
       DESCRIPTION:
         'This will mark the mission as accepted after all participations have been approved.',
+      CONFIRM_TEXT: 'Yes, close mission',
+    },
+    CANCEL_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to cancel the mission?',
+      ERROR_TITLE: `Can't cancel mission`,
+      DESCRIPTION_DELETE:
+        'This will delete the mission forever, unlinking adventurers for it and acknowledging them.',
+      DESCRIPTION_CANCEL: `This will cancel the mission, but a refund of your money won't be made, adventurers will be payed.`,
       CONFIRM_TEXT: 'Yes, close mission',
     },
     SUBMIT_PARTICIPATION_ALERT: {

@@ -2,10 +2,13 @@ import {
   publishMissionSchema,
   draftMissionSchema,
   searchMissionByTitleSchema,
+  addVacanciesSchema,
+  editVacancySchema,
+  editMissionBodySchema,
 } from '@hermyx/shared';
 
 import { messages } from '@hermyx/shared';
-import { createMission } from '../services/MissionsServices';
+import { createMission, editMission } from '../services/MissionsServices';
 
 //New mission action, executed when form is sent
 export const createMissionAction = async (previousState, formData) => {
@@ -98,12 +101,118 @@ export const createMissionAction = async (previousState, formData) => {
   }
 };
 
+// Edit mission action, executed when form is sent
+export const editMissionAction = async (previousState, formData) => {
+  const fieldsData = Object.fromEntries(formData);
+  const validatedFields = editMissionBodySchema.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  // API call
+  try {
+    const success = await editMission({
+      ...validatedFields.data,
+    });
+    console.log(success);
+    if (!success?.mission?.mid) {
+      throw {
+        response: {
+          status: 500,
+          data: { message: messages.UNEXPECTED_ERROR },
+        },
+      };
+    }
+
+    if (!success) {
+      throw {
+        response: {
+          status: 500,
+          data: { message: messages.UNEXPECTED_ERROR },
+        },
+      };
+    }
+
+    //Success
+    return {
+      success: true,
+      redirectTo: success.requiresExtraPayment
+        ? `/missions/${success.mission.mid}/pay`
+        : `/missions/${success.mission.mid}`,
+      errors: {},
+      data: null,
+    };
+  } catch (error) {
+    // If it some controlled error found in server
+    if (
+      [400, 500].includes(error.response?.status) &&
+      error.response.data?.errors
+    )
+      return {
+        success: false,
+        errors: error.response.data.errors,
+        data: fieldsData,
+      };
+
+    // Any other error
+    const errorMessage =
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+
+    return {
+      success: false,
+      errors: { general: [errorMessage] },
+      data: fieldsData,
+    };
+  }
+};
+
 export const searchMissionByTitleAction = async (previousState, formData) => {
   // Data is collected
   const fieldsData = Object.fromEntries(formData);
 
   // Fields validation
   const validatedFields = searchMissionByTitleSchema.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  return { success: true, data: fieldsData, errors: {} };
+};
+
+export const addVacanciesAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedFields = addVacanciesSchema.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  return { success: true, data: fieldsData, errors: {} };
+};
+
+export const editVacancyAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedFields = editVacancySchema.safeParse(fieldsData);
 
   if (!validatedFields.success) {
     return {

@@ -14,12 +14,20 @@ import {
   getByUidAndTitle,
   closeMission as _closeMission,
   getMissionsFunded as _getMissionsFunded,
+  updateMission,
+  getMissionParticipation,
+  adventurerUnjoined,
 } from '../models/mission.model.js';
 
 import {
   getById as getMissionParticipationById,
   startParticipants,
   submitParticipation as submitMissionParticipationRecord,
+  getVacancy,
+  insertVacancies,
+  unjoinVacancy,
+  updateVacancy,
+  deleteUnoccupiedVacancies,
 } from '../models/mission_participation.model.js';
 import {
   createNotification as createNotificationRecord,
@@ -28,6 +36,10 @@ import {
   hasPendingJoinNotification,
 } from '../models/notification.model.js';
 import { emitToUser } from '../services/socket.service.js';
+import {
+  createPaymentIntentNew,
+  createRefund,
+} from '../services/payment.service.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -154,8 +166,7 @@ export const createMission = async (req, res) => {
       title,
       description,
       vacancies,
-      reward,
-      difficulty,
+      vacanciesData,
       latitude,
       longitude,
       isDraft,
@@ -165,14 +176,18 @@ export const createMission = async (req, res) => {
       title: title || 'Mission not titled',
       description: description || 'No description',
       vacancies: vacancies || 0,
-      reward: reward || 0,
-      difficulty: difficulty || 0,
+      vacanciesData: vacanciesData || '',
+      totalPayment:
+        vacanciesData.reduce(
+          (sum, vacancy) => sum + Number(vacancy.reward),
+          0,
+        ) || 0,
       latitude: latitude || null,
       longitude: longitude || null,
       status: isDraft ? 'draft' : 'pending_payment',
       ownerId: uid,
     };
-    console.log(missionData);
+
     // Checks if user has a mission already with the same title
     const { hasDuplicate } = await getByUidAndTitle(uid, title);
 
@@ -186,6 +201,151 @@ export const createMission = async (req, res) => {
     return res.status(201).json({ mission: newMission });
   } catch (e) {
     console.error(e);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const editMission = async (req, res) => {
+  try {
+    const { uid } = req.user;
+    const mission = req.body;
+
+    // Updates new payment
+    mission.totalPayment =
+      mission.vacanciesData.reduce(
+        (sum, vacancy) => sum + Number(vacancy.reward),
+        0,
+      ) || 0;
+
+    // Gets current mission info
+    const currentMission = await _getMissionById(mission.mid);
+
+    // Checks if user has a mission already with the same title and different id
+    const { hasDuplicate } = await getByUidAndTitle(
+      uid,
+      mission.title,
+      mission.mid,
+    );
+
+    if (hasDuplicate)
+      return res.status(400).json({
+        errors: { general: [messages.MISSION_SAME_TITLE] },
+      });
+
+    // Updates each vacancy of the mission, first, new and existing vacancies are selected
+    const newVacancies = mission.vacanciesData.filter(
+      (v) => typeof v.id === 'string',
+    );
+    const existingVacancies = mission.vacanciesData.filter(
+      (v) => typeof v.id === 'number',
+    );
+
+    // Id array including existing vacancies that stayed
+    const existingIds = existingVacancies.map((v) => v.id);
+
+    // New mission info can delete existing vacancies only in opened state
+    if (currentMission.status !== 'opened') {
+      const originalVacancies = await getMissionParticipation(mission.mid);
+      if (existingIds.length < originalVacancies) {
+        return res.status(400).json({
+          errors: {
+            general: [messages.CANNOT_DELETE_EXISTING_VACANCIES],
+          },
+        });
+      }
+    }
+
+    // Updates mission
+    const updatedMission = await updateMission(mission);
+
+    // First operation, deleting vacancies that are not occupied
+    await deleteUnoccupiedVacancies(mission.mid, existingIds);
+
+    // After that, updating existing vacancies
+    const updatePromises = existingVacancies.map((vacancy) =>
+      updateVacancy(mission.mid, vacancy),
+    );
+    const updateResults = await Promise.all(updatePromises);
+    const vacanciesToNotify = updateResults.filter(
+      (res) => res !== undefined && res.adventurer_id !== null,
+    );
+
+    // TODO: cuando las notificaciones estén hechas cambiar esto, que esta con invitaciones.
+    // La notificación será distinta si se cambia el dinero estando en progreso o cambiando otras en otros estados
+    /* For (const vacancy of vacanciesToNotify) {
+      const invitationId = await createInvitationRecord({
+        missionId: mission.mid,
+        vacancyId: vacancy.id,
+        senderId: uid,
+        receiverId: vacancy.adventurer_id,
+        type: 'adventurer_to_applicant',
+        message: 'Your vacant has been modified!',
+      });
+      emitToUser(mission.owner_id, 'invitation:updated', {
+        invitationId,
+        missionId: mission.mid,
+        vacancyId: vacancy.id,
+        missionTitle: mission.title,
+        senderId: uid,
+        senderUsername: req.user.username,
+        receiverId: vacancy.adventurer_id,
+        type: 'adventurer_to_applicant',
+        message: 'Your vacant has been modified!',
+      });
+    }*/
+
+    // Lastly, inserting new vacancies
+    await insertVacancies(mission.mid, newVacancies);
+    /*TODO: transacciones bancarias (y realmente mejorar las cosas de arriba porque los bucles tienen que 
+    estar fuera, pero bueno, eso es de transacciones de bd)
+    // Now, checks monetary reward differences, for a possible payment
+    if (currentMission.total_payment < mission.totalPayment) {
+      const extraAmount = mission.totalPayment - currentMission.total_payment;
+
+      const pi = await createPaymentIntentNew(
+        {
+          amount: Math.round(extraAmount * 100),
+          currency: 'eur',
+          customer: req.user.stripe_customer_id,
+          automatic_payment_methods: { enabled: true },
+          metadata: {
+            missionId: mission.mid,
+            ownerId: req.user.uid,
+            action: 'edit_extra_charge',
+          },
+        },
+        `edit_extra_${mission.mid}_${Date.now()}`,
+      );
+
+      return res.status(200).json({
+        mission: updatedMission,
+        requiresExtraPayment: true,
+        clientSecret: pi.client_secret,
+        paymentIntentId: pi.id,
+      });
+    } else if (currentMission.total_payment > mission.totalPayment) {
+      const amountToRefund = Math.round(
+        Math.abs(currentMission.total_payment - mission.totalPayment) * 100,
+      );
+
+      const refund = await createRefund(
+        {
+          payment_intent: currentMission.stripe_pi_id,
+          amount: amountToRefund,
+          reason: 'requested_by_customer',
+        },
+        `refund_edit_${mission.mid}_${Date.now()}`,
+      );
+      console.log(refund);
+      return res.status(200).json({
+        mission: updatedMission,
+        refunded_amount: refund.amount * 100,
+      });
+    }
+*/
+    return res.status(200).json({ mission: updatedMission });
+  } catch (e) {
+    console.log(e);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
@@ -232,6 +392,7 @@ export const joinMission = async (req, res) => {
   const { mid } = req.params;
   const uid = req.user.uid;
   const message = req.body?.message?.trim() || '';
+  const vacancyId = req.body?.vacancyId;
 
   try {
     // Mission is searched
@@ -260,6 +421,10 @@ export const joinMission = async (req, res) => {
     if (alreadyJoined) {
       return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
     }
+    // Checks if vacancy exists
+    const vacancyExists = await getVacancy(mid, vacancyId);
+    if (vacancyExists < 1)
+      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
 
     const ownerId = mission.owner_id;
     const pendingRequest = await hasPendingJoinNotification(mid, uid, ownerId);
@@ -272,6 +437,7 @@ export const joinMission = async (req, res) => {
     const action = mission.owner_id === uid ? 'mission_invite' : 'join_request';
     const notificationId = await createNotificationRecord({
       missionId: mid,
+      vacancyId: vacancyId,
       senderId: uid,
       receiverId: ownerId,
       type: 'invitation',
@@ -282,6 +448,7 @@ export const joinMission = async (req, res) => {
     emitToUser(ownerId, 'notification:created', {
       notificationId,
       missionId: mid,
+      vacancyId: vacancyId,
       missionTitle: mission.title,
       senderId: uid,
       senderUsername: req.user.username,
@@ -367,6 +534,134 @@ export const submitMissionParticipation = async (req, res) => {
       message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
       participation: updatedParticipation,
     });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Sends a join request to the mission owner instead of joining immediately
+export const unjoinMission = async (req, res) => {
+  const { mid } = req.params;
+  const uid = req.user.uid;
+  const vacancyId = req.body?.vacancyId;
+
+  try {
+    // Mission is searched
+    const mission = await getById(mid);
+    if (!mission)
+      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
+
+    // Checks if mission is opened, so unjoin can be done
+    if (mission.status === 'in_progress') {
+      return res.status(400).json({
+        errors: {
+          general: [messages.CANNOT_UNJOIN_IN_PROGRESS_MISSION],
+        },
+      });
+    }
+
+    // Checks if user has actually joined that mission
+    const alreadyJoined = await getMissionParticipationById(mid, uid);
+    if (alreadyJoined < 1)
+      return res
+        .status(409)
+        .json({ error: messages.VACANCY_NOT_JOINED_BY_USER });
+
+    // Unjoin is done
+    await unjoinVacancy(mid, vacancyId);
+
+    // Mission info is update
+    await adventurerUnjoined(mid);
+
+    /* TODO: enviar notificación al creador de la misión para informarle que ha perdido un participante
+    Const invitationId = await createInvitationRecord({
+      missionId: mid,
+      vacancyId: vacancyId,
+      senderId: uid,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });
+
+    emitToUser(ownerId, 'invitation:created', {
+      invitationId,
+      missionId: mid,
+      vacancyId: vacancyId,
+      missionTitle: mission.title,
+      senderId: uid,
+      senderUsername: req.user.username,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });*/
+
+    return res.status(200).json({});
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Sends a join request to the mission owner instead of joining immediately
+export const cancelMission = async (req, res) => {
+  const { mid } = req.params;
+  const uid = req.user.uid;
+
+  try {
+    // Mission is searched
+    const mission = await getById(mid);
+    if (!mission)
+      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
+
+    // Checks if mission was created by the current user
+    if (mission.owner_id !== uid)
+      return res.status(403).json({ error: messages.CANNOT_DELETE_MISSION });
+
+    // If mission has to be "deleted", it will be
+    if (mission.status === 'opened' || mission.status === 'pending_payment') {
+      await updateMissionStatus(mid, 'deleted');
+    }
+    // If mission has to be cancelled, it will be
+    else if (
+      mission.status === 'in_progress' ||
+      mission.status === 'in_dispute' ||
+      mission.status === 'reopened'
+    ) {
+      await updateMissionStatus(mid, 'cancelled'); // TODO: primero a cancelling pero eso depende de lo de stripe
+      // TODO: pagar a todos los aventureros
+    }
+    // Otherwise, mission can't be deleted or cancelled
+    else
+      return res.status(400).json({
+        errors: {
+          general: [messages.CANNOT_DELETE_MISSION_STATE],
+        },
+      });
+
+    /* TODO: enviar notificación a todos los aventureros de que la misión ha sido cancelada
+    Const invitationId = await createInvitationRecord({
+      missionId: mid,
+      vacancyId: vacancyId,
+      senderId: uid,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });
+
+    emitToUser(ownerId, 'invitation:created', {
+      invitationId,
+      missionId: mid,
+      vacancyId: vacancyId,
+      missionTitle: mission.title,
+      senderId: uid,
+      senderUsername: req.user.username,
+      receiverId: ownerId,
+      type: 'adventurer_to_applicant',
+      message,
+    });*/
+
+    return res.status(200).json({});
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });

@@ -31,15 +31,19 @@ export const getParticipantsForRelease = async (mid) => {
 
 export const getParticipantsForDisplay = async (mid) => {
   const query = `
-    SELECT
-      u.uid,
+    SELECT 
+      mp.id AS vacancy_id,
+      mp.title AS vacancy_title,
+      mp.description AS vacancy_description,
+      mp.monetary_reward AS reward,
+      mp.status,
+      u.uid AS adventurer_id,
       u.username,
-      u.avatar,
-      mp.status
-    FROM app_user u
-    JOIN mission_participation mp ON u.uid = mp.adventurer_id
+      u.avatar
+    FROM mission_participation mp
+    LEFT JOIN app_user u ON mp.adventurer_id = u.uid
     WHERE mp.mid = $1
-    ORDER BY u.username ASC
+    ORDER BY mp.id ASC
   `;
   const result = await pool.query(query, [mid]);
   return result.rows;
@@ -116,50 +120,116 @@ export const createMission = async (missionData) => {
     title,
     description,
     vacancies,
-    reward,
-    difficulty,
+    vacanciesData,
+    totalPayment,
     status,
     latitude,
     longitude,
     ownerId,
   } = missionData;
 
-  // If there is no location, is saved as NULL
-  if (!latitude || !longitude) {
-    const query = `
-    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id, location)
-    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7, NULL)
-    RETURNING *
-  `;
-    const result = await pool.query(query, [
-      title,
-      description,
-      vacancies,
-      reward,
-      difficulty,
-      status,
-      ownerId,
-    ]);
-    return result.rows[0];
-  } else {
-    const query = `
-    INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, monetary_reward, difficulty, status, owner_id, location)
-    VALUES (NOW(), $1, $2, $3, 0, $4, $5, $6, $7, ST_MakePoint($8, $9)::geography)
-    RETURNING *
-  `;
-    const result = await pool.query(query, [
-      title,
-      description,
-      vacancies,
-      reward,
-      difficulty,
-      status,
-      ownerId,
-      longitude,
-      latitude,
-    ]);
-    return result.rows[0];
+  // This operation has to steps, so a transaction is needed. So a connection is taken.
+  const client = await pool.connect();
+
+  try {
+    // Transaction begins
+    await client.query('BEGIN');
+
+    // First step, saving mission info
+    let result;
+    if (!latitude || !longitude) {
+      const query = `
+        INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, status, owner_id, location, total_payment)
+        VALUES (NOW(), $1, $2, $3, 0, $4, $5, NULL, $6)
+        RETURNING *
+      `;
+      result = await client.query(query, [
+        title,
+        description,
+        vacancies,
+        status,
+        ownerId,
+        totalPayment,
+      ]);
+    } else {
+      const query = `
+        INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, status, owner_id, location, total_payment)
+        VALUES (NOW(), $1, $2, $3, 0, $4, $5, ST_MakePoint($6, $7)::geography, $8)
+        RETURNING *
+      `;
+      result = await client.query(query, [
+        title,
+        description,
+        vacancies,
+        status,
+        ownerId,
+        longitude,
+        latitude,
+        totalPayment,
+      ]);
+    }
+
+    const newMission = result.rows[0];
+    const missionId = newMission.mid; // New mission info saved is taken
+
+    // Second step, save mission vacancies info
+    const participationQuery = `
+      INSERT INTO MISSION_PARTICIPATION (mid, monetary_reward, title, description)
+      VALUES ($1, $2, $3, $4)
+    `;
+
+    // Promises array, one per vacancy
+    const insertPromises = vacanciesData.map((vacancy) => {
+      return client.query(participationQuery, [
+        missionId,
+        vacancy.reward,
+        vacancy.title || null,
+        vacancy.description || null,
+      ]);
+    });
+
+    // All promises are executed at the same time
+    await Promise.all(insertPromises);
+
+    // Last step, confirm every operation was successful
+    await client.query('COMMIT');
+
+    return newMission;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
+};
+
+export const updateMission = async (missionData) => {
+  const {
+    mid,
+    title,
+    description,
+    vacancies,
+    longitude,
+    latitude,
+    totalPayment,
+  } = missionData;
+
+  const query = `
+    UPDATE mission 
+    SET title = $2, description = $3, total_vacancies = $4, location = ST_MakePoint($5, $6)::geography, total_payment = $7
+    WHERE mid = $1 
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    mid,
+    title,
+    description,
+    vacancies,
+    longitude,
+    latitude,
+    totalPayment,
+  ]);
+  return result.rows[0];
 };
 
 // TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
@@ -209,10 +279,11 @@ export const getMissionsFunded = async ({
   pagination,
   excludeOwnerId = undefined,
 }) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
-    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status = 'funded'`;
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
+    m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) 
+    WHERE status = 'funded'`;
   const values = [];
 
   if (title) {
@@ -348,7 +419,8 @@ export const syncMissionCompletionStatus = async (mid) => {
 };
 
 export const deleteMission = async (id) => {
-  const query = 'DELETE FROM mission WHERE mid = $1 RETURNING *';
+  const query =
+    'UPDATE mission SET status =  FROM mission WHERE mid = $1 RETURNING *';
   const result = await pool.query(query, [id]);
   return result.rows[0];
 };
@@ -363,13 +435,20 @@ export const adventurerJoined = async (mid) => {
   const query =
     'UPDATE mission SET occupied_vacancies = occupied_vacancies + 1 WHERE mid = $1 RETURNING occupied_vacancies';
   const result = await pool.query(query, [mid]);
-  return result.rows[0];
+  return result.rowCount;
+};
+
+export const adventurerUnjoined = async (mid) => {
+  const query =
+    'UPDATE mission SET occupied_vacancies = occupied_vacancies - 1 WHERE mid = $1 RETURNING occupied_vacancies';
+  const result = await pool.query(query, [mid]);
+  return result.rowCount;
 };
 
 export const getMissionsByUid = async (uid, pagination = null) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, m.occupied_vacancies, 
-    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, m.occupied_vacancies, 
+    m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft' AND m.owner_id = $1 
     ORDER BY m.publication_date DESC`;
   const values = [uid];
@@ -403,7 +482,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 };
 
 export const getMissionsJoinedByUser = async (uid, pagination = null) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
     m.occupied_vacancies, m.monetary_reward, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
     FROM mission_participation AS ma
@@ -441,8 +520,11 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
 };
 
 // Gets mission by uid and title
-export const getByUidAndTitle = async (uid, title) => {
-  const query = `
+export const getByUidAndTitle = async (uid, title, mid = undefined) => {
+  // If mid is not undefined, then the mission has to be different than that one
+  let query, result;
+  if (!mid) {
+    query = `
     SELECT EXISTS (
       SELECT 1 
       FROM mission 
@@ -450,7 +532,19 @@ export const getByUidAndTitle = async (uid, title) => {
         AND LOWER(TRIM(title)) = LOWER($2)
     ) AS "hasDuplicate";
   `;
-  const result = await pool.query(query, [uid, title]);
+    result = await pool.query(query, [uid, title]);
+  } else {
+    query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM mission 
+      WHERE owner_id = $1 
+        AND LOWER(TRIM(title)) = LOWER($2) AND mid <> $3
+    ) AS "hasDuplicate";
+  `;
+    result = await pool.query(query, [uid, title, mid]);
+  }
+
   return result.rows[0];
 };
 
@@ -603,4 +697,11 @@ export const getUserActiveMissions = async (uid) => {
   `;
   const result = await pool.query(query, [uid]);
   return result.rows[0];
+};
+
+// Gets number of participants in mission
+export const getMissionParticipation = async (mid) => {
+  const query = `SELECT count(*) FROM mission_participation WHERE mid = $1`;
+  const result = await pool.query(query, [mid]);
+  return result.rows[0].count;
 };

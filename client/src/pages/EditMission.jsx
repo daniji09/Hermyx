@@ -5,10 +5,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   addVacanciesAction,
-  createMissionAction,
+  editMissionAction,
   editVacancyAction,
 } from '../actions/MissionActions';
 import { initialStateUseStateAction } from '../consts/consts';
@@ -21,7 +21,7 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, UserPlus } from 'lucide-react';
+import { Plus, Trash2, User, UserPlus } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -33,11 +33,40 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { useQuery } from '@tanstack/react-query';
+import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
 
-export const NewMission = () => {
+export const EditMission = () => {
+  // Mission id
+  const { id } = useParams();
+
+  // Initial data retrieving
+  const enabledOption = !!id;
+  const retryOption = (failureCount, error) => {
+    if (error.response?.status === 404) return false; // So Axios won't try to search again the data if there is none
+    return failureCount < 3;
+  };
+
+  // API call using React Query (if the same query is used in more than one componente it should be isolated)
+  const {
+    data: mission,
+    isLoading,
+    isError,
+    error,
+  } = useQuery(
+    getMissionByIdQueryOptions(id, {
+      enabled: enabledOption,
+      retry: retryOption,
+    }),
+  );
+
+  let errorMessage = error?.message;
+  if (error?.response?.status === 404) {
+    errorMessage = 'Oops! This mission does not exist or it has been deleted.';
+  }
   // Form action handling
-  const [state, newMissionFormAction, isPending] = useActionState(
-    createMissionAction,
+  const [state, editMissionFormAction, isPending] = useActionState(
+    editMissionAction,
     initialStateUseStateAction,
   );
 
@@ -51,19 +80,77 @@ export const NewMission = () => {
   }, [state.success, state.redirectTo, navigate]);
 
   return (
+    <EditMissionPageContainer
+      state={state}
+      action={editMissionFormAction}
+      isPending={isPending}
+      isLoading={isLoading}
+      isError={isError}
+      error={errorMessage}
+      mission={mission}
+    ></EditMissionPageContainer>
+  );
+};
+
+const EditMissionPageContainer = ({
+  isLoading,
+  isError,
+  error,
+  state,
+  action,
+  isPending,
+  mission,
+}) => {
+  return (
     <main className='flex min-h-screen items-center justify-center p-4'>
-      <NewMissionForm
-        state={state}
-        action={newMissionFormAction}
-        isPending={isPending}
-      ></NewMissionForm>
+      <EditMissionLoading isLoading={isLoading}>
+        {'Seeking mission...'}
+      </EditMissionLoading>
+
+      <EditMissionError isError={isError}>{`${error}`}</EditMissionError>
+
+      {!isLoading && !isError && mission && (
+        <EditMissionForm
+          state={state}
+          action={action}
+          isPending={isPending}
+          mission={mission}
+        ></EditMissionForm>
+      )}
     </main>
   );
 };
 
-const NewMissionForm = ({ state, action, isPending }) => {
+const EditMissionLoading = ({ isLoading, children }) => {
+  return (
+    <>
+      {isLoading && (
+        <div className='flex justify-center p-8 text-muted-foreground'>
+          {children}
+        </div>
+      )}
+    </>
+  );
+};
+
+const EditMissionError = ({ isError, children }) => {
+  return (
+    <>
+      {isError && (
+        <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
+          {children}
+        </div>
+      )}
+    </>
+  );
+};
+
+const EditMissionForm = ({ state, action, isPending, mission }) => {
   // State for map
-  const [missionCoords, setMissionCoords] = useState(null);
+  const [missionCoords, setMissionCoords] = useState({
+    lat: mission.latitude || '',
+    lng: mission.longitude || '',
+  });
 
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [clearedFields, setClearedFields] = useState({});
@@ -82,19 +169,20 @@ const NewMissionForm = ({ state, action, isPending }) => {
     const fieldName = e.target.name;
     setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
   };
+  //Console.log(mission);
   return (
     <div className='flex flex-col w-full max-w-4xl gap-4'>
-      <CardForm id='newMissionForm' action={action}>
+      <CardForm id='editMissionForm' action={action}>
         <CardForm.Header>
-          <CardForm.Title>{messages.NEW_MISSION.FORM_TITLE}</CardForm.Title>
+          <CardForm.Title>{messages.EDIT_MISSION.FORM_TITLE}</CardForm.Title>
         </CardForm.Header>
 
         <CardForm.Content
-          legend='Application new mission form.'
+          legend='Application edit mission form.'
           className={'-mb-2'}
         >
           <FormInputField
-            id='newMissionTitle'
+            id='editMissionTitle'
             label='Title (required):'
             error={
               !clearedFields.title && state.errors?.title
@@ -104,7 +192,7 @@ const NewMissionForm = ({ state, action, isPending }) => {
             invalid={!clearedFields.title && !!state.errors?.title}
             type='text'
             name='title'
-            defaultValue={state.data?.title || ''}
+            defaultValue={state.data?.title || mission?.title || ''}
             autoComplete='off'
             required
             maxLength={consts.MISSION.TITLE_MAX_LENGTH}
@@ -114,9 +202,9 @@ const NewMissionForm = ({ state, action, isPending }) => {
           ></FormInputField>
 
           <FormTextareaField
-            id='newMissionDescription'
+            id='editMissionDescription'
             label='Description (required):'
-            description={messages.NEW_MISSION.DESCRIPTION_DESCRIPTION}
+            description={messages.EDIT_MISSION.DESCRIPTION_DESCRIPTION}
             error={
               !clearedFields.description && state.errors?.description
                 ? state.errors.description[0]
@@ -125,7 +213,7 @@ const NewMissionForm = ({ state, action, isPending }) => {
             invalid={!clearedFields.description && !!state.errors?.description}
             type='text'
             name='description'
-            defaultValue={state.data?.description || ''}
+            defaultValue={state.data?.description || mission?.description || ''}
             autoComplete='off'
             required
             maxLength={consts.MISSION.DESCRIPTION_MAX_LENGTH}
@@ -135,6 +223,9 @@ const NewMissionForm = ({ state, action, isPending }) => {
             disabled={isPending}
             onChange={handleFieldChange}
           ></FormTextareaField>
+
+          <input type='hidden' name='mid' value={mission?.mid} />
+
           {missionCoords && (
             <>
               <input type='hidden' name='latitude' value={missionCoords.lat} />
@@ -143,7 +234,10 @@ const NewMissionForm = ({ state, action, isPending }) => {
           )}
         </CardForm.Content>
         <div className='px-8'>
-          <MissionVacanciesCreator></MissionVacanciesCreator>
+          <MissionVacanciesCreator
+            initialVacancies={mission?.participants || []}
+            canDelete={mission.status === 'opened'}
+          ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
             <FormAlert onClose={() => setIsAlertClosed(true)}>
               {state.errors.vacanciesData[0]}
@@ -158,21 +252,28 @@ const NewMissionForm = ({ state, action, isPending }) => {
         <div className='px-8 py-2'>
           <Map
             onLocationSelected={(coords) => setMissionCoords(coords)}
-            description={messages.NEW_MISSION.LOCATION_DESCRIPTION}
+            description={messages.EDIT_MISSION.LOCATION_DESCRIPTION}
+            initialLocation={
+              mission?.latitude &&
+              mission?.longitude && {
+                lat: mission?.latitude,
+                lng: mission?.longitude,
+              }
+            }
           ></Map>
           {(state.errors?.latitude || state.errors?.longitude) &&
             !isAlertClosed && (
               <FormAlert onClose={() => setIsAlertClosed(true)}>
-                {messages.NEW_MISSION.LOCATION_ERROR}
+                {messages.EDIT_MISSION.LOCATION_ERROR}
               </FormAlert>
             )}
         </div>
         <CardForm.Footer>
           <Button
-            id='sendNewMission'
+            id='sendEditMission'
             className='w-full'
             type='submit'
-            form='newMissionForm'
+            form='editMissionForm'
             disabled={isPending}
           >
             {isPending ? 'Publishing mission...' : 'Publish mission'}
@@ -188,7 +289,8 @@ const NewMissionForm = ({ state, action, isPending }) => {
   );
 };
 
-const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
+const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
+  const isAssigned = !!vacancy.adventurer_id;
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
@@ -203,33 +305,46 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
       onKeyDown={handleKeyDown}
       onClick={() => onClick(vacancy.id)}
     >
-      <Button
-        id={`deleteVacancy${vacancy.id}`}
-        type='button'
-        variant='outline'
-        onClick={(e) => {
-          e.stopPropagation(); //
-          onDelete(vacancy.id);
-        }}
-        className='absolute top-2 right-2 hover:text-red-500 transition-colors'
-        title='Delete vacancy'
-        aria-label='Delete vacancy'
-      >
-        <Trash2 size={24} />
-      </Button>
+      {canDelete && (
+        <Button
+          id={`deleteVacancy${vacancy.id}`}
+          type='button'
+          variant='outline'
+          onClick={(e) => {
+            e.stopPropagation(); //
+            onDelete(vacancy.id);
+          }}
+          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
+          title='Delete vacancy'
+          aria-label='Delete vacancy'
+        >
+          <Trash2 size={24} />
+        </Button>
+      )}
 
       <h3 className='font-semibold text-sm truncate min-h-5 mb-3 text-center mx-8'>
         {vacancy.title || 'Adventurer'}
       </h3>
 
       <div className='flex justify-center mb-4'>
-        <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed'>
-          <UserPlus size={24} />
-        </div>
+        {isAssigned ? (
+          // TODO: avatar del usuario
+          <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
+            <User size={24} />
+          </div>
+        ) : (
+          <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>
+            <UserPlus size={24} />
+          </div>
+        )}
       </div>
 
       <div className='flex justify-between items-center text-xs font-medium mb-2'>
-        <span className='truncate w-2/3 italic'>Unassigned</span>
+        <span
+          className={`truncate w-2/3 ${isAssigned ? 'text-primary font-bold' : 'italic '}`}
+        >
+          {isAssigned ? vacancy.username : 'Unassigned'}
+        </span>
         <span className='w-1/3 text-right text-primary font-bold text-sm'>
           {vacancy.reward}€
         </span>
@@ -247,6 +362,7 @@ const CreateVacanciesDialog = ({
   handleDeleteVacancy,
   handleClickVacancy,
   onConfirm,
+  canDelete,
 }) => {
   // Action handling for create vacancy form
   const [state, addVacanciesFormAction, isPending] = useActionState(
@@ -323,6 +439,7 @@ const CreateVacanciesDialog = ({
               vacancy={vac}
               onDelete={handleDeleteVacancy}
               onClick={handleClickVacancy}
+              canDelete={canDelete}
             />
           </div>
         ))}
@@ -515,7 +632,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
   useEffect(() => {
     if (state.success && processedState.current !== state) {
       onConfirm({
-        id: vacancy.id, // Pasamos el ID para saber cuál editar
+        id: vacancy.id,
         reward: state.data.vacanciesReward,
         title: state.data.vacanciesTitle,
         description: state.data.vacanciesDescription,
@@ -647,8 +764,18 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
   );
 };
 
-export const MissionVacanciesCreator = () => {
-  const [vacancies, setVacancies] = useState([]);
+export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
+  const formattedVacancies = initialVacancies.map((vac) => ({
+    adventurer_id: vac.adventurer_id,
+    avatar: vac.avatar,
+    reward: vac.reward,
+    username: vac.username,
+    id: vac.vacancy_id,
+    title: vac.vacancy_title,
+    description: vac.vacancy_description,
+  }));
+
+  const [vacancies, setVacancies] = useState(formattedVacancies);
   const [editingVacancyId, setEditingVacancyId] = useState(null);
 
   const handleAddVacancies = useCallback(
@@ -697,14 +824,14 @@ export const MissionVacanciesCreator = () => {
       <input
         type='hidden'
         name='vacancies'
-        form='newMissionForm'
+        form='editMissionForm'
         value={vacancies.length}
       />
 
       <input
         type='hidden'
         name='vacanciesData'
-        form='newMissionForm'
+        form='editMissionForm'
         value={JSON.stringify(vacancies)}
       />
 
@@ -713,6 +840,7 @@ export const MissionVacanciesCreator = () => {
         handleDeleteVacancy={handleDeleteVacancy}
         handleClickVacancy={handleClickVacancy}
         vacancies={vacancies}
+        canDelete={canDelete}
       />
 
       <EditVacancyDialog

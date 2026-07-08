@@ -1,3 +1,5 @@
+import { consts } from '../consts/consts.js';
+
 export const messages = {
   ///// Common messages
   //// Error
@@ -58,7 +60,6 @@ export const messages = {
 
   //// Get all paginated
   NO_MISSIONS: 'There is no missions yet.',
-
   MISSIONS_NOT_FOUND: 'Missions not found.',
   MISSION_NOT_IN_PROGRESS: 'Mission is not in progress.',
   MISSION_NOT_ACCEPTING_ADVENTURERS:
@@ -90,6 +91,10 @@ export const messages = {
 
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',
+  MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
+
+  //// Edit mission
+  CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
 
   //// Start mission
   START_WITHOUT_ADVENTURERS: `You can't start a mission without adventurers.`,
@@ -99,6 +104,17 @@ export const messages = {
   MISSION_FILLED:
     'There are no vacancies open left in this mission. Try another one!',
   MISSION_ALREADY_JOINED: 'You have already joined this mission!',
+  VACANCY_NOT_FOUND: 'Vacancy not found.',
+  VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
+  MISSION_NOT_JOINED: `Couldn't join mission.`,
+
+  /// Unjoin mission
+  VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
+  CANNOT_UNJOIN_IN_PROGRESS_MISSION: `You can't unjoin a mission that is already in progress.`,
+
+  /// Delete mission
+  CANNOT_DELETE_MISSION: `Can't delete mission.`,
+  CANNOT_DELETE_MISSION_STATE: `Can't delete finished missions.`,
 
   //// Profile
   ///Info
