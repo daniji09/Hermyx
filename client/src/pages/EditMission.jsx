@@ -147,7 +147,10 @@ const EditMissionError = ({ isError, children }) => {
 
 const EditMissionForm = ({ state, action, isPending, mission }) => {
   // State for map
-  const [missionCoords, setMissionCoords] = useState(null);
+  const [missionCoords, setMissionCoords] = useState({
+    lat: mission.latitude || '',
+    lng: mission.longitude || '',
+  });
 
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [clearedFields, setClearedFields] = useState({});

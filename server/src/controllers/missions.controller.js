@@ -19,15 +19,16 @@ import {
   adventurerUnjoined,
 } from '../models/mission.model.js';
 
-import { getById as getMissionParticipationById,
-    startParticipants,
-    submitParticipation as submitMissionParticipationRecord,
-    getVacancy,
-    insertVacancies,
-    unjoinVacancy,
-    updateVacancy,
-    deleteUnoccupiedVacancies,
- } from '../models/mission_participation.model.js';
+import {
+  getById as getMissionParticipationById,
+  startParticipants,
+  submitParticipation as submitMissionParticipationRecord,
+  getVacancy,
+  insertVacancies,
+  unjoinVacancy,
+  updateVacancy,
+  deleteUnoccupiedVacancies,
+} from '../models/mission_participation.model.js';
 import {
   createNotification as createNotificationRecord,
   createMissionNotification as createMissionNotificationRecord,
@@ -271,7 +272,7 @@ export const editMission = async (req, res) => {
 
     // TODO: cuando las notificaciones estén hechas cambiar esto, que esta con invitaciones.
     // La notificación será distinta si se cambia el dinero estando en progreso o cambiando otras en otros estados
-    for (const vacancy of vacanciesToNotify) {
+    /* For (const vacancy of vacanciesToNotify) {
       const invitationId = await createInvitationRecord({
         missionId: mission.mid,
         vacancyId: vacancy.id,
@@ -291,7 +292,7 @@ export const editMission = async (req, res) => {
         type: 'adventurer_to_applicant',
         message: 'Your vacant has been modified!',
       });
-    }
+    }*/
 
     // Lastly, inserting new vacancies
     await insertVacancies(mission.mid, newVacancies);
@@ -419,7 +420,7 @@ export const joinMission = async (req, res) => {
     const alreadyJoined = await getMissionParticipationById(mid, uid);
     if (alreadyJoined) {
       return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
-
+    }
     // Checks if vacancy exists
     const vacancyExists = await getVacancy(mid, vacancyId);
     if (vacancyExists < 1)

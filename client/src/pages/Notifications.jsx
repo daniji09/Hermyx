@@ -115,7 +115,7 @@ export const Notifications = () => {
           <Bell className='h-6 w-6' aria-hidden='true' />
         </span>
         <div className='min-w-0'>
-          <h1 className='text-3xl font-bold tracking-tight break-words'>
+          <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
             Notifications
           </h1>
           <p className='text-muted-foreground'>

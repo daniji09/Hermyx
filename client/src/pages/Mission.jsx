@@ -962,6 +962,46 @@ const StartMissionButton = ({ mission }) => {
     </Button>
   );
 };
+const CloseMissionButton = ({ missionId }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => closeMission(missionId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
+        description: error?.response.data.errors?.general,
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
+      description: messages.MISSION.CLOSE_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='closeMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Close mission'}
+    </Button>
+  );
+};
 
 const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   const { showAlert } = useAlert();
