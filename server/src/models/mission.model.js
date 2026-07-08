@@ -36,6 +36,7 @@ export const getParticipantsForDisplay = async (mid) => {
       mp.title AS vacancy_title,
       mp.description AS vacancy_description,
       mp.monetary_reward AS reward,
+      mp.status,
       u.uid AS adventurer_id,
       u.username,
       u.avatar
@@ -48,6 +49,18 @@ export const getParticipantsForDisplay = async (mid) => {
   return result.rows;
 };
 
+export const hasAllParticipantsApproved = async (mid) => {
+  const query = `
+    SELECT
+      COUNT(*)::int AS participant_count,
+      COALESCE(BOOL_AND(status = 'accepted'), FALSE) AS all_approved
+    FROM mission_participation
+    WHERE mid = $1
+  `;
+  const result = await pool.query(query, [mid]);
+  return result.rows[0];
+};
+
 //Tries to set status to "releasing" only if current status is 'accepted', this prevents double payments. Returns the row if successful.
 export const lockForRelease = async (mid, ownerId) => {
   const query = `
@@ -55,7 +68,7 @@ export const lockForRelease = async (mid, ownerId) => {
     SET status = 'releasing' 
     WHERE mid = $1 
     AND owner_id = $2 
-    AND status = 'accepted' 
+    AND status = 'finished'
     RETURNING *
   `;
   const result = await pool.query(query, [mid, ownerId]);
@@ -69,7 +82,7 @@ export const lockForRefund = async (mid, ownerId) => {
     SET status = 'refunding' 
     WHERE mid = $1 
     AND owner_id = $2 
-    AND status IN ('funded', 'in_progress', 'delivered', 'accepted')
+    AND status IN ('funded', 'in_progress', 'finished', 'accepted')
     RETURNING *
   `;
   const result = await pool.query(query, [mid, ownerId]);
@@ -219,9 +232,9 @@ export const updateMission = async (missionData) => {
   return result.rows[0];
 };
 
-// TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
+// TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
 export const getMissions = async ({ title = undefined, pagination }) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
     m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft'`;
@@ -242,7 +255,7 @@ export const getMissions = async ({ title = undefined, pagination }) => {
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -250,7 +263,7 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -260,7 +273,7 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   return { rows, totalCount };
 };
 
-// TODO Cuando haya más filtros de búsqueda hay que ver cómo hacer para poder implementarlos dinámicamente aquí
+// TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
 export const getMissionsFunded = async ({
   title = undefined,
   pagination,
@@ -292,7 +305,7 @@ export const getMissionsFunded = async ({
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -300,7 +313,7 @@ export const getMissionsFunded = async ({
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -324,7 +337,23 @@ export const getMissionById = async (id, uid) => {
       SELECT 1 
       FROM mission_participation ma 
       WHERE ma.mid = m.mid AND ma.adventurer_id = $2
-    ) AS is_joined FROM mission m WHERE mid = $1`;
+    ) AS is_joined,
+    COALESCE((
+      SELECT ma.status
+      FROM mission_participation ma
+      WHERE ma.mid = m.mid AND ma.adventurer_id = $2
+      LIMIT 1
+    ), NULL) AS participation_status,
+    EXISTS (
+      SELECT 1
+      FROM notification n
+      WHERE n.associated_mission_id = m.mid
+        AND n.sender_id = $2
+        AND n.recipient_id = m.owner_id
+        AND n.type = 'invitation'
+        AND n.status = 'pending'
+    ) AS has_pending_join_request
+    FROM mission m WHERE mid = $1`;
   const result = await pool.query(query, [id, uid]);
   return result.rows[0];
 };
@@ -338,6 +367,55 @@ export const updateMissionStatus = async (id, updateData) => {
   `;
   const result = await pool.query(query, [id, updateData]);
   return result.rows[0];
+};
+
+export const syncMissionCompletionStatus = async (mid) => {
+  const summaryQuery = `
+    SELECT
+      COUNT(*)::int AS participant_count,
+      COUNT(*) FILTER (
+        WHERE status IN ('in_progress', 'submitted', 'revision_requested')
+      )::int AS active_count,
+      COUNT(*) FILTER (WHERE status = 'in_dispute')::int AS dispute_count,
+      COUNT(*) FILTER (WHERE status = 'accepted')::int AS accepted_count
+    FROM mission_participation
+    WHERE mid = $1
+  `;
+  const summaryResult = await pool.query(summaryQuery, [mid]);
+  const summary = summaryResult.rows[0];
+
+  if (!summary || summary.participant_count === 0) {
+    return null;
+  }
+
+  let nextStatus = null;
+
+  if (summary.active_count > 0) {
+    nextStatus = 'in_progress';
+  } else if (summary.dispute_count > 0) {
+    nextStatus = 'in_dispute';
+  } else if (summary.accepted_count === summary.participant_count) {
+    nextStatus = 'finished';
+  }
+
+  if (!nextStatus) {
+    return null;
+  }
+
+  const updateQuery = `
+    UPDATE mission
+    SET
+      status = $2::varchar,
+      completion_date = CASE
+        WHEN $2::varchar IN ('finished', 'in_dispute') THEN COALESCE(completion_date, NOW())
+        ELSE NULL
+      END
+    WHERE mid = $1
+      AND status IN ('in_progress', 'finished', 'in_dispute')
+    RETURNING *
+  `;
+  const updateResult = await pool.query(updateQuery, [mid, nextStatus]);
+  return updateResult.rows[0] || null;
 };
 
 export const deleteMission = async (id) => {
@@ -385,7 +463,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -393,7 +471,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -405,9 +483,11 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 
 export const getMissionsJoinedByUser = async (uid, pagination = null) => {
   // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
-    m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM (mission_participation AS ma JOIN app_user AS a ON (ma.adventurer_id = a.uid)) JOIN mission AS m ON (m.mid = ma.mid) 
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
+    m.occupied_vacancies, m.monetary_reward, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
+    FROM mission_participation AS ma
+    JOIN mission AS m ON (m.mid = ma.mid)
+    JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
     WHERE adventurer_id = $1 ORDER BY m.publication_date DESC`;
   const values = [uid];
 
@@ -421,7 +501,7 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
 
   const result = await pool.query(query, values);
 
-  // Si no hay resultados, rows está vacío y totalCount es 0
+  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
@@ -429,7 +509,7 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -470,7 +550,7 @@ export const getByUidAndTitle = async (uid, title, mid = undefined) => {
 
 // Closes mission
 export const closeMission = async (mid) => {
-  const query = `UPDATE mission SET status = 'accepted' WHERE mid = $1 RETURNING *`;
+  const query = `UPDATE mission SET status = 'finished' WHERE mid = $1 RETURNING *`;
   const result = await pool.query(query, [mid]);
   return result.rows[0];
 };
@@ -494,9 +574,10 @@ export const getPublicProfileCreatedMissions = async (
         WHEN m.status = 'funded' THEN 'looking_for_adventurers'
         WHEN m.status IN (
           'in_progress',
-          'delivered',
           'accepted',
-          'releasing'
+          'finished',
+          'releasing',
+          'in_dispute'
         ) THEN 'in_progress'
         WHEN m.status IN (
           'released',
@@ -516,9 +597,10 @@ export const getPublicProfileCreatedMissions = async (
       AND m.status IN (
         'funded',
         'in_progress',
-        'delivered',
         'accepted',
+        'finished',
         'releasing',
+        'in_dispute',
         'released',
         'partially_released'
       )
@@ -610,7 +692,7 @@ export const getUserActiveMissions = async (uid) => {
   SELECT COUNT(DISTINCT m.mid) AS total_active
   FROM mission m
     LEFT JOIN mission_participation ma ON m.mid = ma.mid AND ma.adventurer_id = $1
-  WHERE m.status = 'in_progress' 
+  WHERE m.status = 'in_progress'
     AND (m.owner_id = $1 OR ma.adventurer_id = $1)
   `;
   const result = await pool.query(query, [uid]);

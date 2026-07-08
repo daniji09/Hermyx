@@ -2,6 +2,7 @@
 DROP TABLE IF EXISTS GUILD_MISSION;
 DROP TABLE IF EXISTS GUILD_MEMBER;
 DROP TABLE IF EXISTS MISSION_PARTICIPATION;
+DROP TABLE IF EXISTS NOTIFICATION;
 DROP TABLE IF EXISTS INVITATION;
 DROP TABLE IF EXISTS TAG;
 DROP TABLE IF EXISTS PAYMENT_METHOD;
@@ -49,8 +50,8 @@ CREATE TABLE MISSION (
 	status VARCHAR(20) NOT NULL CHECK (status IN ('draft','pending_payment',
     'funded',
     'in_progress',
-    'delivered',
     'accepted',
+    'finished',
     'releasing',
     'released',
 	'partially_released',
@@ -73,16 +74,38 @@ CREATE TABLE MISSION_PARTICIPATION (
 	title VARCHAR(50),
 	description VARCHAR(500),
 	transfer_id VARCHAR(255),
+  amount_paid NUMERIC,
+	status VARCHAR(20) NOT NULL DEFAULT 'joined' CHECK (status IN (
+		'joined',
+		'in_progress',
+		'submitted',
+		'revision_requested',
+		'accepted',
+		'in_dispute',
+		'releasing',
+		'released'
+	)),
+	review VARCHAR(500),
 	FOREIGN KEY (mid) REFERENCES MISSION(mid),
 	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid)
 );
 
-CREATE TABLE INVITATION (
-	iid SERIAL PRIMARY KEY,
+CREATE TABLE NOTIFICATION (
+	nid SERIAL PRIMARY KEY,
 	date TIMESTAMP NOT NULL,
 	seen BOOLEAN NOT NULL DEFAULT FALSE,
-	type VARCHAR(50) NOT NULL CHECK (type IN ('applicant_to_adventurer','adventurer_to_applicant')),
-	status VARCHAR(20) NOT NULL CHECK (status IN ('pending','accepted','rejected')),
+	type VARCHAR(50) NOT NULL CHECK (type IN ('invitation', 'mission')),
+	kind VARCHAR(20) NOT NULL DEFAULT 'actionable' CHECK (kind IN ('informational', 'actionable')),
+	action VARCHAR(50) NOT NULL DEFAULT 'mission_invite' CHECK (action IN (
+		'join_request',
+		'mission_invite',
+		'participation_review',
+		'participation_rejection_response',
+		'participation_approved',
+		'participation_disputed'
+	)),
+	payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+	status VARCHAR(20) CHECK (status IS NULL OR status IN ('pending','accepted','rejected','disputed')),
 	message VARCHAR(500),
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,

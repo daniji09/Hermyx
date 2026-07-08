@@ -80,10 +80,54 @@ export const AuthProvider = ({ children }) => {
           console.log('Socket disconnected:', reason);
         });
 
-        socketRef.current.on('invitation:created', (payload) => {
-          console.log('New invitation notification:', payload);
+        socketRef.current.on('notification:created', (payload) => {
+          console.log('New notification:', payload);
           setLatestNotification(payload);
-          queryClient.invalidateQueries({ queryKey: ['getMyInvitations'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+        });
+
+        socketRef.current.on('mission:participation-submitted', (payload) => {
+          console.log('Participation submitted notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        });
+
+        socketRef.current.on('mission:participation-approved', (payload) => {
+          console.log('Participation approved notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        });
+
+        socketRef.current.on('mission:participation-revision', (payload) => {
+          console.log('Participation revision notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        });
+
+        socketRef.current.on('mission:participation-disputed', (payload) => {
+          console.log('Participation disputed notification:', payload);
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
         });
       } catch (error) {
         console.error('Could not connect socket:', error);
@@ -96,7 +140,7 @@ export const AuthProvider = ({ children }) => {
       socketRef.current?.disconnect();
       socketRef.current = null;
     };
-  }, [currentUser]);
+  }, [currentUser, queryClient]);
 
   // Function to logout
   const logout = async () => {

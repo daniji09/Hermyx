@@ -122,6 +122,7 @@ describe('GET /api/missions/:id - HY-129 view mission', () => {
       status: testMission.status,
       owner_id: ownerId,
       is_joined: false,
+      has_pending_join_request: false,
     });
     expect(response.body.mission.publication_date).toBeDefined();
     expect(Number(response.body.mission.monetary_reward)).toBe(
@@ -137,6 +138,20 @@ describe('GET /api/missions/:id - HY-129 view mission', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.mission.is_joined).toBe(true);
+  });
+
+  it('should return has_pending_join_request true when the authenticated user already sent a join request', async () => {
+    const missionId = await createMission();
+
+    await pool.query(
+      "INSERT INTO notification (date, type, status, sender_id, recipient_id, associated_mission_id) VALUES (NOW(), 'invitation', 'pending', $1, $2, $3)",
+      [adventurerId, ownerId, missionId],
+    );
+
+    const response = await request(app).get(`/api/missions/${missionId}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.mission.has_pending_join_request).toBe(true);
   });
 
   it('should return 404 when the mission does not exist', async () => {

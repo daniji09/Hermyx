@@ -61,6 +61,33 @@ export const messages = {
   //// Get all paginated
   NO_MISSIONS: 'There is no missions yet.',
   MISSIONS_NOT_FOUND: 'Missions not found.',
+  MISSION_NOT_IN_PROGRESS: 'Mission is not in progress.',
+  MISSION_NOT_ACCEPTING_ADVENTURERS:
+    'This mission is no longer accepting adventurers.',
+  MISSION_PARTICIPATION_REQUIRED:
+    'You must be part of this mission to submit your participation.',
+  MISSION_PARTICIPATION_NOT_FOUND: 'Mission participation not found.',
+  MISSION_PART_ALREADY_SUBMITTED:
+    'Your participation has already been submitted.',
+  MISSION_PART_SUBMITTED_SUCCESSFULLY: 'Participation submitted successfully.',
+  MISSION_PARTICIPATION_NOT_SUBMITTED:
+    'This participation has not been submitted yet.',
+  MISSION_PARTICIPATION_ALREADY_REVIEWED:
+    'This participation has already been reviewed.',
+  MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY:
+    'Participation approved successfully.',
+  MISSION_PARTICIPATION_REJECTED_SUCCESSFULLY:
+    'Participation rejected successfully.',
+  MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY:
+    'Participation revision requested successfully.',
+  MISSION_PARTICIPATION_REVISION_ACCEPTED_SUCCESSFULLY:
+    'Participation revision accepted successfully.',
+  MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY:
+    'Participation disputed successfully.',
+  MISSION_PARTICIPATION_DISPUTE_REQUIRES_RETRY:
+    'Participation can only be disputed by the owner after a retry.',
+  MISSION_REQUIRES_ALL_PARTS_APPROVED:
+    'All adventurer participations must be approved before closing the mission.',
 
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',

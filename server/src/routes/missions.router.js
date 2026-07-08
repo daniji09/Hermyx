@@ -11,6 +11,7 @@ import {
   start,
   joinMission,
   closeMission,
+  submitMissionParticipation,
   getMissionsFunded,
   editMission,
   unjoinMission,
@@ -29,6 +30,7 @@ import {
   getMissionSchema,
   getMissionsQuerySchema,
   closeMissionSchema,
+  submitMissionParticipationSchema,
   joinMissionParamSchema,
   joinMissionBodySchema,
   editMissionParamSchema,
@@ -91,6 +93,13 @@ router.post(
   '/:mid/close',
   validateParamsSchema(closeMissionSchema),
   closeMission,
+);
+
+// Submits current adventurer participation for owner review
+router.post(
+  '/:mid/submit',
+  validateParamsSchema(submitMissionParticipationSchema),
+  submitMissionParticipation,
 );
 
 // Cancels a mission

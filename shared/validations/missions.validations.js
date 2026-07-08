@@ -295,6 +295,13 @@ export const closeMissionSchema = z.object({
     .min(0, messages.FIELD_POSITIVE('Id')),
 });
 
+export const submitMissionParticipationSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Id'))
+    .int(messages.FIELD_INTEGER('Id'))
+    .min(0, messages.FIELD_POSITIVE('Id')),
+});
+
 export const addVacanciesSchema = z
   .object({
     vacanciesQuantity: z.coerce

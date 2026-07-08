@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getMissionByIdQueryOptions } from './../queries/MissionsQueries';
-import { createInvitationMutationOptions } from '../queries/InvitationsQueries';
+import { createNotificationMutationOptions } from '../queries/NotificationsQueries';
 import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
 import {
   Card,
@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { timestampToDayMonthYear } from './../utils/date';
 import {
   Star,
@@ -28,7 +27,7 @@ import { useCallback, useContext, useRef, useState } from 'react';
 import {
   startMission,
   joinMission,
-  closeMission,
+  submitMissionParticipation,
   unjoinMission,
   cancelMission,
 } from '../services/MissionsServices';
@@ -163,6 +162,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
     mission?.status === 'in_dispute' ||
     mission?.status === 'reopened';
 
+  const canAddAdventurers = isCreator && mission?.status === 'funded';
   return (
     <>
       {mission && (
@@ -192,19 +192,12 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     </span>
                     <Users className='h-6 w-6' aria-hidden='true' />
                   </div>
-                  {isCreator && (
-                    <div className='flex flex-wrap items-center gap-2 pt-1'>
-                      <AddAdventurerButton
-                        onClick={() => setIsSearchModalOpen(true)}
-                      />
-                      {mission.participants?.map((participant) => (
-                        <AddedAdventurerBadge
-                          key={participant.vacancy_id}
-                          participant={participant}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <ParticipantSection
+                    mission={mission}
+                    isCreator={isCreator}
+                    canAddAdventurers={canAddAdventurers}
+                    onAddAdventurer={() => setIsSearchModalOpen(true)}
+                  />
                   <div className='flex items-center gap-2'>
                     <span>Monetary reward:</span>
                     <span>{mission.monetary_reward}$</span>
@@ -467,25 +460,51 @@ const AddAdventurerButton = ({ onClick }) => {
   );
 };
 
-const AddedAdventurerBadge = ({ participant }) => {
+const ParticipantSection = ({
+  mission,
+  isCreator,
+  canAddAdventurers,
+  onAddAdventurer,
+}) => {
+  if (!isCreator) {
+    return null;
+  }
+
   return (
-    <Badge
-      variant='outline'
-      className='gap-2 border-slate-900 bg-slate-900 text-white hover:bg-slate-900'
-    >
-      <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
-        {participant.avatar ? (
-          <img
-            src={participant.avatar}
-            alt={`${participant.username} avatar`}
-            className='h-full w-full object-cover'
-          />
-        ) : (
-          <User className='h-3.5 w-3.5 text-white' aria-hidden='true' />
-        )}
-      </span>
-      <span className='max-w-24 truncate'>{participant.username}</span>
-    </Badge>
+    <div className='flex flex-wrap items-center gap-2 pt-1'>
+      {isCreator && canAddAdventurers && (
+        <AddAdventurerButton onClick={onAddAdventurer} />
+      )}
+      {(mission.participants || []).map((participant) => (
+        <ParticipantRow key={participant.uid} participant={participant} />
+      ))}
+    </div>
+  );
+};
+
+const ParticipantRow = ({ participant }) => {
+  return (
+    <div className='flex items-center gap-2'>
+      <div className='inline-flex max-w-full items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-white'>
+        <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
+          {participant.avatar ? (
+            <img
+              src={participant.avatar}
+              alt={`${participant.username} avatar`}
+              className='h-full w-full object-cover'
+            />
+          ) : (
+            <User className='h-3.5 w-3.5' aria-hidden='true' />
+          )}
+        </span>
+        <span className='max-w-24 truncate text-sm font-medium'>
+          {participant.username}
+        </span>
+        <span className='rounded-full bg-white/15 px-2 py-0.5 text-xs text-white/90'>
+          {getParticipationStatusLabel(participant.status)}
+        </span>
+      </div>
+    </div>
   );
 };
 
@@ -494,13 +513,13 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
   const [username, setUsername] = useState('');
   const [foundUsers, setFoundUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [invitationMessage, setInvitationMessage] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const { showAlert } = useAlert();
-  const { isPending: isSendingInvitation, mutate: sendInvitation } =
+  const { isPending: isSendingNotification, mutate: sendNotification } =
     useMutation(
-      createInvitationMutationOptions({
+      createNotificationMutationOptions({
         onSuccess: () => {
           showAlert({
             title: 'Invitation sent',
@@ -552,7 +571,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
     setUsername('');
     setFoundUsers([]);
     setSelectedUser(null);
-    setInvitationMessage('');
+    setNotificationMessage('');
     setErrorMessage('');
     setIsSearching(false);
     onClose();
@@ -624,7 +643,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
                           variant='outline'
                           onClick={() => {
                             setSelectedUser(foundUser);
-                            setInvitationMessage('');
+                            setNotificationMessage('');
                             setErrorMessage('');
                           }}
                         >
@@ -655,16 +674,16 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
               </div>
 
               <label
-                htmlFor='invitationMessage'
+                htmlFor='notificationMessage'
                 className='text-sm font-medium text-slate-900'
               >
                 Invitation message
               </label>
               <Textarea
                 className='min-h-40 w-full min-w-0 resize-y'
-                id='invitationMessage'
-                value={invitationMessage}
-                onChange={(event) => setInvitationMessage(event.target.value)}
+                id='notificationMessage'
+                value={notificationMessage}
+                onChange={(event) => setNotificationMessage(event.target.value)}
                 placeholder='Write a short message for the adventurer'
                 rows={5}
               />
@@ -686,7 +705,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
                 variant='outline'
                 onClick={() => {
                   setSelectedUser(null);
-                  setInvitationMessage('');
+                  setNotificationMessage('');
                   setErrorMessage('');
                 }}
               >
@@ -695,15 +714,15 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
               <Button
                 type='button'
                 onClick={() =>
-                  sendInvitation({
+                  sendNotification({
                     missionId,
                     receiverId: selectedUser.uid,
-                    message: invitationMessage,
+                    message: notificationMessage,
                   })
                 }
-                disabled={isSendingInvitation}
+                disabled={isSendingNotification}
               >
-                {isSendingInvitation ? 'Sending...' : 'Send invitation'}
+                {isSendingNotification ? 'Sending...' : 'Send invitation'}
               </Button>
             </>
           ) : (
@@ -717,16 +736,30 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
   );
 };
 
-const JoinMissionButton = ({ missionId, vacancyId, isJoined }) => {
+const JoinMissionButton = ({
+  missionId,
+  vacancyId,
+  isJoined,
+  hasPendingJoinRequest = false,
+}) => {
   const { showAlert } = useAlert();
-  const [hasRequestedToJoin, setHasRequestedToJoin] = useState(false);
+  const [hasRequestedToJoin, setHasRequestedToJoin] = useState(
+    hasPendingJoinRequest,
+  );
   const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
   const joinRequestMessageRef = useRef(null);
+  const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
     mutationFn: (message) => joinMission(missionId, vacancyId, message),
     onSuccess: () => {
       setHasRequestedToJoin(true);
       setIsJoinDialogOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(missionId)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', missionId],
+      });
       if (joinRequestMessageRef.current) {
         joinRequestMessageRef.current.value = '';
       }
@@ -801,7 +834,7 @@ const JoinMissionButton = ({ missionId, vacancyId, isJoined }) => {
               id='joinMissionMessage'
               ref={joinRequestMessageRef}
               placeholder='Write a short message explaining why you want to join'
-              maxLength={consts.INVITATION.MESSAGE_MAX_LENGTH}
+              maxLength={consts.NOTIFICATION.MESSAGE_MAX_LENGTH}
               rows={5}
             />
           </div>
@@ -930,44 +963,71 @@ const StartMissionButton = ({ mission }) => {
   );
 };
 
-const CloseMissionButton = ({ missionId }) => {
+const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
-    mutationFn: () => closeMission(missionId),
+    mutationFn: () => submitMissionParticipation(missionId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(missionId)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', missionId],
+      });
     },
-    // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
-        description: error?.response.data.errors?.general,
+        title: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
       });
     },
   });
 
-  // Interceptor
   const handleAttempt = () => {
-    // This action needs confirmation
     showAlert({
-      title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
-      description: messages.MISSION.CLOSE_MISSION_ALERT.DESCRIPTION,
+      title: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.TITLE,
+      description: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.DESCRIPTION,
       variant: 'warning',
-      confirmText: messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
+      confirmText: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.CONFIRM_TEXT,
       onConfirm: mutate,
     });
   };
 
+  const isSubmitted =
+    participationStatus && participationStatus !== 'in_progress';
+  const buttonLabel =
+    participationStatus && participationStatus !== 'in_progress'
+      ? getParticipationStatusLabel(participationStatus)
+      : 'Submit my part';
+
   return (
     <Button
       type='button'
-      id='closeMissionButton'
+      id='submitParticipationButton'
       onClick={handleAttempt}
-      disabled={isPending}
+      disabled={isPending || isSubmitted}
     >
-      {'Close mission'}
+      {buttonLabel}
     </Button>
+  );
+};
+
+const MissionOwnerStatusMessage = ({ status }) => {
+  if (status === 'in_dispute') {
+    return (
+      <p className='text-muted-foreground bg-muted/20'>
+        {messages.MISSION.MISSION_IN_DISPUTE}
+      </p>
+    );
+  }
+
+  return (
+    <p className='text-muted-foreground bg-muted/20'>
+      {messages.MISSION.MISSION_CLOSED}
+    </p>
   );
 };
 
@@ -1034,4 +1094,12 @@ const CancelMissionButton = ({ mission }) => {
       {'Cancel mission'}
     </Button>
   );
+};
+
+const getParticipationStatusLabel = (status) => {
+  if (!status) {
+    return messages.MISSION.MISSION_JOINED;
+  }
+
+  return messages.MISSION.STATUS_LABELS[status] || status.replaceAll('_', ' ');
 };
