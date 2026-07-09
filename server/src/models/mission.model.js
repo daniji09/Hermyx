@@ -483,8 +483,8 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 
 export const getMissionsJoinedByUser = async (uid, pagination = null) => {
   // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
-    m.occupied_vacancies, m.monetary_reward, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
+    m.occupied_vacancies, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
     FROM mission_participation AS ma
     JOIN mission AS m ON (m.mid = ma.mid)
     JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)

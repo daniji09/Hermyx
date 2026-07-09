@@ -437,12 +437,12 @@ export const joinMission = async (req, res) => {
     const action = mission.owner_id === uid ? 'mission_invite' : 'join_request';
     const notificationId = await createNotificationRecord({
       missionId: mid,
-      vacancyId: vacancyId,
       senderId: uid,
       receiverId: ownerId,
       type: 'invitation',
       action,
       message,
+      payload: { vacancyId: vacancyId },
     });
 
     emitToUser(ownerId, 'notification:created', {

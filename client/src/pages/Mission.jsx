@@ -78,12 +78,10 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
-  console.log(mission);
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
   }
-  console.log(mission);
   return (
     <MissionPageContainer
       mission={mission}
@@ -338,7 +336,7 @@ const ViewVacancyDialog = ({
   if (!vacancy) return null;
 
   const isAssigned = !!vacancy.adventurer_id;
-  const isAssignedToUser = vacancy.adventurer_id === currentUser.uid;
+  const isAssignedToUser = vacancy.adventurer_id === currentUser.id;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -879,7 +877,6 @@ const UnjoinMissionButton = ({ missionId, vacancyId }) => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error.response);
       showAlert({
         title: messages.MISSION.UNJOIN_MISSION_ALERT.ERROR_TITLE,
         description:
@@ -1103,7 +1100,6 @@ const CancelMissionButton = ({ mission }) => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error.response);
       showAlert({
         title: messages.MISSION.CANCEL_MISSION_ALERT.ERROR_TITLE,
         description:

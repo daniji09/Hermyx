@@ -20,6 +20,7 @@ import {
   approveParticipation,
   disputeParticipation,
   getById as getMissionParticipationById,
+  joinVacancy,
   reopenParticipation,
   requestParticipationRevision,
 } from '../models/mission_participation.model.js';
@@ -422,8 +423,19 @@ const respondToMissionJoinNotification = async ({
       .json({ error: 'Adventurer already joined this mission' });
   }
 
-  await addParticipant(missionId, adventurerId);
-  await adventurerJoined(missionId);
+  // Joins vacancy
+  const join_vacancy = await joinVacancy(
+    missionId,
+    notification.payload.vacancyId,
+    adventurerId,
+  );
+  if (join_vacancy < 1)
+    return res.status(409).json({ error: messages.VACANCY_NOT_JOINED });
+
+  // If everything is ok, joins mission
+  const adventurer_joined = await adventurerJoined(missionId);
+  if (adventurer_joined < 1)
+    return res.status(409).json({ error: messages.MISSION_NOT_JOINED });
 
   await updateNotificationStatus(notificationId, 'accepted');
   await markAsSeen(notificationId);

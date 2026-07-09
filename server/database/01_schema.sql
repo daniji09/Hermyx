@@ -112,8 +112,7 @@ CREATE TABLE NOTIFICATION (
 	associated_mission_id INT NOT NULL,
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid),
 	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid),
-	FOREIGN KEY (associated_mission_id) REFERENCES MISSION(mid),
-	FOREIGN KEY (associated_vacancy_id) REFERENCES MISSION_PARTICIPATION(id)
+	FOREIGN KEY (associated_mission_id) REFERENCES MISSION(mid)
 );
 
 CREATE TABLE GUILD (
