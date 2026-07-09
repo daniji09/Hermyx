@@ -78,7 +78,7 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
-
+  console.log(mission);
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
@@ -212,10 +212,13 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                 {mission.location && (
                   <Map
                     readOnly={true}
-                    initialLocation={{
-                      lat: mission.latitude,
-                      lng: mission.longitude,
-                    }}
+                    initialLocation={
+                      mission?.latitude &&
+                      mission?.longitude && {
+                        lat: mission?.latitude,
+                        lng: mission?.longitude,
+                      }
+                    }
                   ></Map>
                 )}
               </CardContent>
