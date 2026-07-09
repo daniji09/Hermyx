@@ -11,6 +11,10 @@ export const createNotificationSchema = z.object({
     .number(messages.FIELD_NUMBER('Receiver id'))
     .int(messages.FIELD_INTEGER('Receiver id'))
     .min(0, messages.FIELD_POSITIVE('Receiver id')),
+  vacancyId: z.coerce
+    .number(messages.FIELD_NUMBER('Vacancy id'))
+    .int(messages.FIELD_INTEGER('Vacancy id'))
+    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
   message: z
     .string()
     .trim()

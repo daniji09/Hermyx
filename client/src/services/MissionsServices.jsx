@@ -145,12 +145,6 @@ export const startMission = async (mid) => {
   return data.mission;
 };
 
-// Closes a mission
-export const closeMission = async (mid) => {
-  const { data } = await api.post(`/missions/${mid}/close`);
-  return data.mission;
-};
-
 // Submits current adventurer participation for owner review
 export const submitMissionParticipation = async (mid) => {
   const { data } = await api.post(`/missions/${mid}/submit`);

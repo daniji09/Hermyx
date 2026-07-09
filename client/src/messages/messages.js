@@ -15,8 +15,6 @@ export const messages = {
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
     VACANCIES_DESCRIPTION:
       'Define how many adventurers you need for this mission.',
-    DIFFICULTY_DESCRIPTION:
-      'Higher difficulty implies higher rewards for adventurers.',
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
     LOCATION_ERROR: 'Please, select a valid location on the map.',
   },
@@ -25,8 +23,6 @@ export const messages = {
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
     VACANCIES_DESCRIPTION:
       'Define how many adventurers you need for this mission.',
-    DIFFICULTY_DESCRIPTION:
-      'Higher difficulty implies higher rewards for adventurers.',
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
     LOCATION_ERROR: 'Please, select a valid location on the map.',
   },
@@ -59,13 +55,6 @@ export const messages = {
       AVAILABLE_VACANCIES_DESCRIPTION: `There are still vacant places available.`,
       START_DESCRIPTION: `This will link the current adventurers to this mission.`,
       CONFIRM_TEXT: 'Yes, start mission',
-    },
-    CLOSE_MISSION_ALERT: {
-      TITLE: 'Are you sure you want to close the mission?',
-      ERROR_TITLE: `Can't close mission`,
-      DESCRIPTION:
-        'This will mark the mission as accepted after all participations have been approved.',
-      CONFIRM_TEXT: 'Yes, close mission',
     },
     CANCEL_MISSION_ALERT: {
       TITLE: 'Are you sure you want to cancel the mission?',

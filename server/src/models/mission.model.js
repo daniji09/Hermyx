@@ -20,7 +20,12 @@ export const updatePaymentInfo = async (mid, pi_id, status) => {
 //Get all adventurers in a mission, essential for knowing who to send money to.
 export const getParticipantsForRelease = async (mid) => {
   const query = `
-    SELECT u.uid, u.stripe_connected_id, u.email 
+    SELECT
+      u.uid,
+      u.stripe_connected_id,
+      u.email,
+      mp.monetary_reward,
+      mp.transfer_id
     FROM app_user u
     JOIN mission_participation mp ON u.uid = mp.adventurer_id
     WHERE mp.mid = $1
@@ -47,18 +52,6 @@ export const getParticipantsForDisplay = async (mid) => {
   `;
   const result = await pool.query(query, [mid]);
   return result.rows;
-};
-
-export const hasAllParticipantsApproved = async (mid) => {
-  const query = `
-    SELECT
-      COUNT(*)::int AS participant_count,
-      COALESCE(BOOL_AND(status = 'accepted'), FALSE) AS all_approved
-    FROM mission_participation
-    WHERE mid = $1
-  `;
-  const result = await pool.query(query, [mid]);
-  return result.rows[0];
 };
 
 //Tries to set status to "releasing" only if current status is 'accepted', this prevents double payments. Returns the row if successful.
@@ -235,8 +228,8 @@ export const updateMission = async (missionData) => {
 // TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
 export const getMissions = async ({ title = undefined, pagination }) => {
   // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
-    m.occupied_vacancies, m.monetary_reward, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
+    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft'`;
   const values = [];
 
@@ -418,13 +411,6 @@ export const syncMissionCompletionStatus = async (mid) => {
   return updateResult.rows[0] || null;
 };
 
-export const deleteMission = async (id) => {
-  const query =
-    'UPDATE mission SET status =  FROM mission WHERE mid = $1 RETURNING *';
-  const result = await pool.query(query, [id]);
-  return result.rows[0];
-};
-
 export const countMissions = async () => {
   const query = 'SELECT COUNT(*) FROM mission';
   const result = await pool.query(query, []);
@@ -483,8 +469,8 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 
 export const getMissionsJoinedByUser = async (uid, pagination = null) => {
   // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.difficulty, m.total_vacancies, 
-    m.occupied_vacancies, m.monetary_reward, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
+    m.occupied_vacancies, m.total_payment, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
     FROM mission_participation AS ma
     JOIN mission AS m ON (m.mid = ma.mid)
     JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
@@ -548,13 +534,6 @@ export const getByUidAndTitle = async (uid, title, mid = undefined) => {
   return result.rows[0];
 };
 
-// Closes mission
-export const closeMission = async (mid) => {
-  const query = `UPDATE mission SET status = 'finished' WHERE mid = $1 RETURNING *`;
-  const result = await pool.query(query, [mid]);
-  return result.rows[0];
-};
-
 // Gets created missions displayed in another user's public profile.
 export const getPublicProfileCreatedMissions = async (
   userId,
@@ -566,10 +545,9 @@ export const getPublicProfileCreatedMissions = async (
       m.title,
       owner_user.username,
       m.description,
-      m.difficulty,
       m.total_vacancies,
       m.occupied_vacancies,
-      m.monetary_reward,
+      m.total_payment,
       CASE
         WHEN m.status = 'funded' THEN 'looking_for_adventurers'
         WHEN m.status IN (
@@ -643,10 +621,9 @@ export const getPublicProfileJoinedMissions = async (
       m.title,
       owner_user.username,
       m.description,
-      m.difficulty,
       m.total_vacancies,
       m.occupied_vacancies,
-      m.monetary_reward,
+      m.total_payment,
       CASE
         WHEN m.completion_date IS NULL THEN NULL
         ELSE m.completion_date - m.publication_date

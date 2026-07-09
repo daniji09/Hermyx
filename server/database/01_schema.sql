@@ -110,6 +110,7 @@ CREATE TABLE NOTIFICATION (
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,
 	associated_mission_id INT NOT NULL,
+	associated_vacancy_id INT,
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid),
 	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid),
 	FOREIGN KEY (associated_mission_id) REFERENCES MISSION(mid),
