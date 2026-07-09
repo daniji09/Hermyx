@@ -74,7 +74,7 @@ CREATE TABLE MISSION_PARTICIPATION (
 	title VARCHAR(50),
 	description VARCHAR(500),
 	transfer_id VARCHAR(255),
-  amount_paid NUMERIC,
+  	amount_paid NUMERIC,
 	status VARCHAR(20) NOT NULL DEFAULT 'joined' CHECK (status IN (
 		'joined',
 		'in_progress',
@@ -110,10 +110,10 @@ CREATE TABLE NOTIFICATION (
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,
 	associated_mission_id INT NOT NULL,
+	associated_vacancy_id INT,
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid),
 	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid),
-	FOREIGN KEY (associated_mission_id) REFERENCES MISSION(mid),
-	FOREIGN KEY (associated_vacancy_id) REFERENCES MISSION_PARTICIPATION(id)
+	FOREIGN KEY (associated_mission_id) REFERENCES MISSION(mid)
 );
 
 CREATE TABLE GUILD (

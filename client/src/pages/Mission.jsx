@@ -12,15 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { timestampToDayMonthYear } from './../utils/date';
-import {
-  Star,
-  Users,
-  HandCoins,
-  Plus,
-  Search,
-  User,
-  UserPlus,
-} from 'lucide-react';
+import { Users, HandCoins, Plus, Search, User, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCallback, useContext, useRef, useState } from 'react';
@@ -78,12 +70,10 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
-
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
   }
-  console.log(mission);
   return (
     <MissionPageContainer
       mission={mission}
@@ -148,6 +138,9 @@ const MissionError = ({ isError, children }) => {
 
 const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const currentParticipation = mission?.participants?.find(
+    (participant) => participant.adventurer_id === currentUser?.id,
+  );
   const isEditable =
     mission?.status !== 'refunding' &&
     mission?.status !== 'refunded' &&
@@ -181,11 +174,6 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                 <div className='mb-4'>{mission.description}</div>
                 <div className='mt-auto flex flex-col gap-2'>
                   <div className='flex items-center gap-2'>
-                    <span>Difficulty:</span>
-                    <span>{mission.difficulty}</span>
-                    <Star className='h-6 w-6' aria-hidden='true' />
-                  </div>
-                  <div className='flex items-center gap-2'>
                     <span>Vacancies:</span>
                     <span>
                       {mission.occupied_vacancies}/{mission.total_vacancies}
@@ -199,8 +187,8 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     onAddAdventurer={() => setIsSearchModalOpen(true)}
                   />
                   <div className='flex items-center gap-2'>
-                    <span>Monetary reward:</span>
-                    <span>{mission.monetary_reward}$</span>
+                    <span>Total payment:</span>
+                    <span>{mission.total_payment}$</span>
                     <HandCoins className='h-6 w-6' aria-hidden='true' />
                   </div>
                 </div>
@@ -212,10 +200,13 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                 {mission.location && (
                   <Map
                     readOnly={true}
-                    initialLocation={{
-                      lat: mission.latitude,
-                      lng: mission.longitude,
-                    }}
+                    initialLocation={
+                      mission?.latitude &&
+                      mission?.longitude && {
+                        lat: mission?.latitude,
+                        lng: mission?.longitude,
+                      }
+                    }
                   ></Map>
                 )}
               </CardContent>
@@ -223,9 +214,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                 <>
                   {isCreator ? (
                     mission.status === 'in_progress' ? (
-                      <CloseMissionButton
-                        missionId={mission.mid}
-                      ></CloseMissionButton>
+                      <MissionOwnerStatusMessage status={mission.status} />
                     ) : mission.status === 'funded' ? (
                       <StartMissionButton
                         mission={mission}
@@ -239,6 +228,12 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         {messages.MISSION.MISSION_CLOSED}
                       </p>
                     )
+                  ) : mission.status === 'in_progress' &&
+                    currentParticipation ? (
+                    <SubmitParticipationButton
+                      missionId={mission.mid}
+                      participationStatus={currentParticipation.status}
+                    />
                   ) : isFull ? (
                     <p className='text-muted-foreground bg-muted/20'>
                       {messages.MISSION.MISSION_FILLED}
@@ -264,6 +259,9 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
           </Card>
           <SearchAdventurerModal
             missionId={mission.mid}
+            vacancies={(mission.participants || []).filter(
+              (vacancy) => !vacancy.adventurer_id,
+            )}
             isOpen={isSearchModalOpen}
             onClose={() => setIsSearchModalOpen(false)}
           />
@@ -278,7 +276,7 @@ const VacancyCard = ({ vacancy, onClick }) => {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onClick(vacancy.id);
+      onClick(vacancy.vacancy_id);
     }
   };
   return (
@@ -335,7 +333,7 @@ const ViewVacancyDialog = ({
   if (!vacancy) return null;
 
   const isAssigned = !!vacancy.adventurer_id;
-  const isAssignedToUser = vacancy.adventurer_id === currentUser.uid;
+  const isAssignedToUser = vacancy.adventurer_id === currentUser?.id;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -508,11 +506,12 @@ const ParticipantRow = ({ participant }) => {
   );
 };
 
-const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
+const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
   const queryClient = useQueryClient();
   const [username, setUsername] = useState('');
   const [foundUsers, setFoundUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedVacancyId, setSelectedVacancyId] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -571,6 +570,7 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
     setUsername('');
     setFoundUsers([]);
     setSelectedUser(null);
+    setSelectedVacancyId('');
     setNotificationMessage('');
     setErrorMessage('');
     setIsSearching(false);
@@ -674,6 +674,30 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
               </div>
 
               <label
+                htmlFor='invitationVacancy'
+                className='text-sm font-medium text-slate-900'
+              >
+                Vacancy
+              </label>
+              <select
+                id='invitationVacancy'
+                value={selectedVacancyId}
+                onChange={(event) => {
+                  setSelectedVacancyId(event.target.value);
+                  setErrorMessage('');
+                }}
+                className='h-10 w-full rounded-md border border-input bg-background px-3 text-sm'
+              >
+                <option value=''>Select a vacancy</option>
+                {vacancies.map((vacancy) => (
+                  <option key={vacancy.vacancy_id} value={vacancy.vacancy_id}>
+                    {vacancy.vacancy_title || 'Untitled vacancy'} -{' '}
+                    {vacancy.reward} EUR
+                  </option>
+                ))}
+              </select>
+
+              <label
                 htmlFor='notificationMessage'
                 className='text-sm font-medium text-slate-900'
               >
@@ -714,13 +738,16 @@ const SearchAdventurerModal = ({ missionId, isOpen, onClose }) => {
               <Button
                 type='button'
                 onClick={() =>
-                  sendNotification({
-                    missionId,
-                    receiverId: selectedUser.uid,
-                    message: notificationMessage,
-                  })
+                  selectedVacancyId
+                    ? sendNotification({
+                        missionId,
+                        receiverId: selectedUser.uid,
+                        vacancyId: Number(selectedVacancyId),
+                        message: notificationMessage,
+                      })
+                    : setErrorMessage('Select a vacancy before inviting.')
                 }
-                disabled={isSendingNotification}
+                disabled={isSendingNotification || vacancies.length === 0}
               >
                 {isSendingNotification ? 'Sending...' : 'Send invitation'}
               </Button>
@@ -876,7 +903,6 @@ const UnjoinMissionButton = ({ missionId, vacancyId }) => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error.response);
       showAlert({
         title: messages.MISSION.UNJOIN_MISSION_ALERT.ERROR_TITLE,
         description:
@@ -954,7 +980,7 @@ const StartMissionButton = ({ mission }) => {
   return (
     <Button
       type='button'
-      id='closeMissionButton'
+      id='startMissionButton'
       onClick={handleAttempt}
       disabled={isPending}
     >
@@ -962,47 +988,6 @@ const StartMissionButton = ({ mission }) => {
     </Button>
   );
 };
-const CloseMissionButton = ({ missionId }) => {
-  const { showAlert } = useAlert();
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationFn: () => closeMission(missionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
-    },
-    // Backend error handling
-    onError: (error) => {
-      showAlert({
-        title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
-        description: error?.response.data.errors?.general,
-      });
-    },
-  });
-
-  // Interceptor
-  const handleAttempt = () => {
-    // This action needs confirmation
-    showAlert({
-      title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
-      description: messages.MISSION.CLOSE_MISSION_ALERT.DESCRIPTION,
-      variant: 'warning',
-      confirmText: messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
-      onConfirm: mutate,
-    });
-  };
-
-  return (
-    <Button
-      type='button'
-      id='closeMissionButton'
-      onClick={handleAttempt}
-      disabled={isPending}
-    >
-      {'Close mission'}
-    </Button>
-  );
-};
-
 const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
@@ -1056,6 +1041,14 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 };
 
 const MissionOwnerStatusMessage = ({ status }) => {
+  if (status === 'in_progress') {
+    return (
+      <p className='text-muted-foreground bg-muted/20'>
+        Waiting for adventurers to submit their participation.
+      </p>
+    );
+  }
+
   if (status === 'in_dispute') {
     return (
       <p className='text-muted-foreground bg-muted/20'>
@@ -1100,7 +1093,6 @@ const CancelMissionButton = ({ mission }) => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error.response);
       showAlert({
         title: messages.MISSION.CANCEL_MISSION_ALERT.ERROR_TITLE,
         description:

@@ -33,7 +33,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
 
 export const EditMission = () => {
@@ -71,13 +71,16 @@ export const EditMission = () => {
   );
 
   // Effect for navigating to home
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   useEffect(() => {
     if (state.success) {
+      queryClient.invalidateQueries({ queryKey: ['getMission', id] });
+
       const destination = state.redirectTo || '/';
       navigate(destination);
     }
-  }, [state.success, state.redirectTo, navigate]);
+  }, [state.success, state.redirectTo, navigate, id, queryClient]);
 
   return (
     <EditMissionPageContainer

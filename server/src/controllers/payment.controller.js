@@ -240,7 +240,7 @@ export async function payDefault(req, res) {
 
     const pi = await createPaymentIntentDefault(
       {
-        amount: Math.round(mission.monetary_reward * 100),
+        amount: Math.round(mission.total_payment * 100),
         currency: 'eur',
         customer: customerId,
         payment_method: defaultPm,
@@ -405,11 +405,6 @@ export async function releaseMissionPayment(req, res) {
       throw new Error('The original payment is invalid.');
 
     const platformFeePercent = 0.1;
-    const totalToDistribute =
-      lockedMission.monetary_reward * (1 - platformFeePercent);
-    const amountPerPerson = totalToDistribute / participants.length;
-    const centsPerPerson = Math.round(amountPerPerson * 100);
-
     const transferResults = [];
 
     for (const adventurer of participants) {
@@ -419,9 +414,12 @@ export async function releaseMissionPayment(req, res) {
       }
 
       try {
+        const amountToPay =
+          Number(adventurer.monetary_reward) * (1 - platformFeePercent);
+        const centsToPay = Math.round(amountToPay * 100);
         const transfer = await createTransfer(
           {
-            amount: centsPerPerson,
+            amount: centsToPay,
             currency: 'eur',
             destination: adventurer.stripe_connected_id,
             transfer_group: `mission_${missionId}`,
@@ -433,7 +431,7 @@ export async function releaseMissionPayment(req, res) {
           missionId,
           adventurer.uid,
           transfer.id,
-          amountPerPerson,
+          amountToPay,
         );
         transferResults.push({ uid: adventurer.uid, success: true });
       } catch (tErr) {
@@ -487,7 +485,7 @@ export async function refundMissionPayment(req, res) {
     const refund = await createRefund(
       {
         payment_intent: lockedMission.stripe_pi_id,
-        amount: Math.round(lockedMission.monetary_reward * 100),
+        amount: Math.round(lockedMission.total_payment * 100),
         reason: 'requested_by_customer',
       },
       `refund_${missionId}`,

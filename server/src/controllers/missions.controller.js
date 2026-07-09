@@ -4,15 +4,12 @@ import {
   createMission as _createMission,
   getAllMissionsInDraft as _getAllMissionsInDraft,
   getMissionById as _getMissionById,
-  deleteMission as _deleteMission,
   getMissions as _getMissions,
   getById,
   getParticipantsForDisplay,
   getParticipantsForRelease,
-  hasAllParticipantsApproved,
   updateMissionStatus,
   getByUidAndTitle,
-  closeMission as _closeMission,
   getMissionsFunded as _getMissionsFunded,
   updateMission,
   getMissionParticipation,
@@ -23,7 +20,7 @@ import {
   getById as getMissionParticipationById,
   startParticipants,
   submitParticipation as submitMissionParticipationRecord,
-  getVacancy,
+  getVacancyById,
   insertVacancies,
   unjoinVacancy,
   updateVacancy,
@@ -422,12 +419,20 @@ export const joinMission = async (req, res) => {
       return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
     }
     // Checks if vacancy exists
-    const vacancyExists = await getVacancy(mid, vacancyId);
-    if (vacancyExists < 1)
+    const vacancy = await getVacancyById(mid, vacancyId);
+    if (!vacancy)
       return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
+    if (vacancy.adventurer_id !== null) {
+      return res.status(409).json({ error: messages.MISSION_FILLED });
+    }
 
     const ownerId = mission.owner_id;
-    const pendingRequest = await hasPendingJoinNotification(mid, uid, ownerId);
+    const pendingRequest = await hasPendingJoinNotification(
+      mid,
+      uid,
+      ownerId,
+      vacancyId,
+    );
     if (pendingRequest) {
       return res.status(409).json({
         error: 'You already sent a join request for this mission.',
@@ -437,12 +442,12 @@ export const joinMission = async (req, res) => {
     const action = mission.owner_id === uid ? 'mission_invite' : 'join_request';
     const notificationId = await createNotificationRecord({
       missionId: mid,
-      vacancyId: vacancyId,
       senderId: uid,
       receiverId: ownerId,
       type: 'invitation',
       action,
       message,
+      payload: { vacancyId: vacancyId },
     });
 
     emitToUser(ownerId, 'notification:created', {
@@ -665,98 +670,5 @@ export const cancelMission = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Closes a mission
-export const closeMission = async (req, res) => {
-  const { mid } = req.params;
-  const userId = req.user.uid;
-
-  try {
-    const mission = await getById(mid);
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-    }
-
-    if (mission.owner_id !== userId) {
-      return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
-    }
-
-    if (mission.status !== 'in_progress') {
-      return res.status(409).json({
-        error: messages.MISSION_NOT_IN_PROGRESS,
-      });
-    }
-
-    const approvalStatus = await hasAllParticipantsApproved(mid);
-    if (
-      !approvalStatus ||
-      approvalStatus.participant_count === 0 ||
-      !approvalStatus.all_approved
-    ) {
-      return res.status(409).json({
-        error: messages.MISSION_REQUIRES_ALL_PARTS_APPROVED,
-      });
-    }
-
-    const updatedMission = await _closeMission(mid);
-
-    return res.status(200).json({
-      mission: updatedMission,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-/*
-Export const updateMission = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { title, description, vacancies, reward, difficulty, isDraft } =
-      req.body;
-
-    const updateData = {
-      title: title || 'Mission not titled',
-      publication_date: Date.now(),
-      description: description || '',
-      vacancies: vacancies || 0,
-      reward: reward || 0,
-      difficulty: difficulty || 0,
-      status: isDraft ? 'draft' : 'pending_payment',
-    };
-
-    const updatedMission = await _updateMission(id, updateData);
-
-    if (!updatedMission) {
-      return res.status(404).json({ error: 'Mission not found' });
-    } else {
-      return res.status(200).json({
-        data: updatedMission,
-        message: 'Mission updated successfully',
-      });
-    }
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: 'Error updating mission' });
-  }
-};*/
-
-export const deleteMission = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deletedMission = await _deleteMission(id);
-    if (!deletedMission) {
-      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
-    } else {
-      res.status(200).json({
-        data: deletedMission,
-      });
-    }
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };

@@ -10,16 +10,15 @@ import {
 } from '../models/notification.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
 import {
-  adventurerJoined,
   getById,
-  getParticipantsForRelease,
   syncMissionCompletionStatus,
 } from '../models/mission.model.js';
 import {
-  addParticipant,
   approveParticipation,
   disputeParticipation,
   getById as getMissionParticipationById,
+  getVacancyById,
+  joinVacancy,
   reopenParticipation,
   requestParticipationRevision,
 } from '../models/mission_participation.model.js';
@@ -61,7 +60,7 @@ export const markMyNotificationAsSeen = async (req, res) => {
 
 // Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
 export const createNotification = async (req, res) => {
-  const { missionId, receiverId, message } = req.body;
+  const { missionId, receiverId, vacancyId, message } = req.body;
   const senderId = req.user.uid;
 
   if (senderId === receiverId) {
@@ -69,9 +68,10 @@ export const createNotification = async (req, res) => {
   }
 
   try {
-    const [mission, receiver] = await Promise.all([
+    const [mission, receiver, vacancy] = await Promise.all([
       getById(missionId),
       getUserById(receiverId),
+      getVacancyById(missionId, vacancyId),
     ]);
 
     if (!mission) {
@@ -80,6 +80,16 @@ export const createNotification = async (req, res) => {
 
     if (!receiver) {
       return res.status(404).json({ error: 'Receiver not found' });
+    }
+
+    if (!vacancy) {
+      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
+    }
+
+    if (vacancy.adventurer_id !== null) {
+      return res
+        .status(409)
+        .json({ error: 'This vacancy is already occupied.' });
     }
 
     if (mission.status !== 'funded') {
@@ -96,6 +106,7 @@ export const createNotification = async (req, res) => {
       missionId,
       senderId,
       receiverId,
+      vacancyId,
     );
 
     if (hasPending) {
@@ -129,6 +140,7 @@ export const createNotification = async (req, res) => {
       type,
       action,
       message,
+      vacancyId,
     };
 
     const newNotificationId = await _createNotification(notificationData);
@@ -136,6 +148,7 @@ export const createNotification = async (req, res) => {
     emitToUser(receiverId, 'notification:created', {
       notificationId: newNotificationId,
       missionId,
+      vacancyId,
       missionTitle: mission.title,
       senderId,
       senderUsername: req.user.username,
@@ -376,9 +389,42 @@ const respondToMissionJoinNotification = async ({
   notificationId,
   res,
 }) => {
+  const missionId = notification.associated_mission_id;
+  const mission = await getById(missionId);
+
+  if (!mission) {
+    return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+  }
+
   if (response === 'rejected') {
     await updateNotificationStatus(notificationId, 'rejected');
     await markAsSeen(notificationId);
+
+    const rejectionMessage =
+      notification.action === 'mission_invite'
+        ? `Your invitation to join "${mission.title}" was rejected.`
+        : `Your request to join "${mission.title}" was rejected.`;
+    const followUpNotificationId = await createMissionNotification({
+      missionId,
+      senderId: notification.recipient_id,
+      receiverId: notification.sender_id,
+      kind: 'informational',
+      action: notification.action,
+      message: rejectionMessage,
+    });
+
+    emitToUser(notification.sender_id, 'notification:created', {
+      notificationId: followUpNotificationId,
+      type: 'mission',
+      kind: 'informational',
+      action: notification.action,
+      missionId,
+      missionTitle: mission.title,
+      senderId: notification.recipient_id,
+      receiverId: notification.sender_id,
+      message: rejectionMessage,
+    });
+
     return res.status(200).json({ message: 'Notification rejected' });
   }
 
@@ -386,15 +432,12 @@ const respondToMissionJoinNotification = async ({
     return res.status(400).json({ error: 'Invalid response action' });
   }
 
-  const missionId = notification.associated_mission_id;
+  const vacancyId = notification.associated_vacancy_id;
 
-  const [mission, participants] = await Promise.all([
-    getById(missionId),
-    getParticipantsForRelease(missionId),
-  ]);
-
-  if (!mission) {
-    return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+  if (!vacancyId) {
+    return res.status(409).json({
+      error: 'This notification is not associated with a mission vacancy.',
+    });
   }
 
   const adventurerId =
@@ -408,10 +451,6 @@ const respondToMissionJoinNotification = async ({
     });
   }
 
-  if (mission.total_vacancies <= participants.length) {
-    return res.status(409).json({ error: 'There are no vacancies available' });
-  }
-
   const alreadyJoined = await getMissionParticipationById(
     missionId,
     adventurerId,
@@ -422,11 +461,47 @@ const respondToMissionJoinNotification = async ({
       .json({ error: 'Adventurer already joined this mission' });
   }
 
-  await addParticipant(missionId, adventurerId);
-  await adventurerJoined(missionId);
+  // Joins vacancy
+  const join_vacancy = await joinVacancy(
+    missionId,
+    notification.payload.vacancyId,
+    adventurerId,
+  );
+  if (join_vacancy < 1)
+    return res.status(409).json({ error: messages.VACANCY_NOT_JOINED });
+
+  // If everything is ok, joins mission
+  const adventurer_joined = await adventurerJoined(missionId);
+  if (adventurer_joined < 1)
+    return res.status(409).json({ error: messages.MISSION_NOT_JOINED });
 
   await updateNotificationStatus(notificationId, 'accepted');
   await markAsSeen(notificationId);
+
+  const acceptanceMessage =
+    notification.action === 'mission_invite'
+      ? `Your invitation to join "${mission.title}" was accepted.`
+      : `Your request to join "${mission.title}" was accepted. You are now part of the team.`;
+  const followUpNotificationId = await createMissionNotification({
+    missionId,
+    senderId: notification.recipient_id,
+    receiverId: notification.sender_id,
+    kind: 'informational',
+    action: notification.action,
+    message: acceptanceMessage,
+  });
+
+  emitToUser(notification.sender_id, 'notification:created', {
+    notificationId: followUpNotificationId,
+    type: 'mission',
+    kind: 'informational',
+    action: notification.action,
+    missionId,
+    missionTitle: mission.title,
+    senderId: notification.recipient_id,
+    receiverId: notification.sender_id,
+    message: acceptanceMessage,
+  });
 
   return res.status(200).json({ message: 'Adventurer successfully added' });
 };

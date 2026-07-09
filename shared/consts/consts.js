@@ -117,7 +117,6 @@ export const consts = {
       DESCRIPTION_MAX_LENGTH: 500,
     },
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
-    DIFFICULTY: { MIN: 1, STEP: 1, MAX: 5 },
   },
   NOTIFICATION: {
     MESSAGE_MAX_LENGTH: 500,

@@ -9,15 +9,6 @@ export const updateTransferInfo = async (mid, uid, transferId, amount) => {
   await pool.query(query, [transferId, amount, mid, uid]);
 };
 
-export const addParticipant = async (mid, adventurerId) => {
-  const query = `
-    INSERT INTO mission_participation (mid, adventurer_id) 
-    VALUES ($1, $2)
-  `;
-  const result = await pool.query(query, [mid, adventurerId]);
-  return result.rowCount;
-};
-
 export const startParticipants = async (mid) => {
   const query = `
     UPDATE mission_participation
@@ -103,17 +94,53 @@ export const disputeParticipation = async (mid, adventurerId) => {
   return result.rows[0] || null;
 };
 
-export const getVacancy = async (mid, vacancyId) => {
-  console.log(mid, vacancyId);
-  const query = `SELECT COUNT(*) FROM mission_participation WHERE mid = $1 AND id = $2`;
+export const getVacancyById = async (mid, vacancyId) => {
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE mid = $1 AND id = $2
+  `;
   const result = await pool.query(query, [mid, vacancyId]);
-  return result.rows[0].count;
+  return result.rows[0] || null;
 };
 
 export const joinVacancy = async (mid, vacancyId, uid) => {
-  const query = `UPDATE mission_participation SET adventurer_id = $1 WHERE mid = $2 AND id = $3`;
-  const result = await pool.query(query, [uid, mid, vacancyId]);
-  return result.rowCount;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `
+        UPDATE mission_participation
+        SET adventurer_id = $1
+        WHERE mid = $2 AND id = $3 AND adventurer_id IS NULL
+        RETURNING *
+      `,
+      [uid, mid, vacancyId],
+    );
+    const joinedVacancy = result.rows[0];
+
+    if (!joinedVacancy) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await client.query(
+      `
+        UPDATE mission
+        SET occupied_vacancies = occupied_vacancies + 1
+        WHERE mid = $1
+      `,
+      [mid],
+    );
+    await client.query('COMMIT');
+    return joinedVacancy;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const unjoinVacancy = async (mid, vacancyId) => {
