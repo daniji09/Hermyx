@@ -7,10 +7,8 @@ import {
   getAllMissionsInDraft,
   getMissionById,
   // UpdateMission,
-  deleteMission,
   start,
   joinMission,
-  closeMission,
   submitMissionParticipation,
   getMissionsFunded,
   editMission,
@@ -29,7 +27,6 @@ import {
   draftMissionSchema,
   getMissionSchema,
   getMissionsQuerySchema,
-  closeMissionSchema,
   submitMissionParticipationSchema,
   joinMissionParamSchema,
   joinMissionBodySchema,
@@ -88,13 +85,6 @@ router.post(
   joinMission,
 );
 
-// Closes a mission
-router.post(
-  '/:mid/close',
-  validateParamsSchema(closeMissionSchema),
-  closeMission,
-);
-
 // Submits current adventurer participation for owner review
 router.post(
   '/:mid/submit',
@@ -121,11 +111,6 @@ router.post(
 
 //Update mission
 //Router.put('/:id', dynamicValidation, updateMission);
-
-/// DELETE
-
-//Delete mission
-router.delete('/:id', deleteMission);
 
 // Joins an adventurer into a mission
 router.delete(

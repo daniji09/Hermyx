@@ -91,29 +91,6 @@ export const publishMissionSchema = z.object({
     .pipe(
       z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
     ),
-  /*
-  Reward: z.coerce
-    .number(messages.FIELD_NUMBER('Reward'))
-    .int(messages.FIELD_INTEGER('Reward'))
-    .min(
-      consts.MISSION.REWARD.MIN,
-      messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
-    )
-    .max(
-      consts.MISSION.REWARD.MAX,
-      messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
-    ),
-  difficulty: z.coerce
-    .number(messages.FIELD_NUMBER('Difficulty'))
-    .int(messages.FIELD_INTEGER('Difficulty'))
-    .min(
-      consts.MISSION.DIFFICULTY.MIN,
-      messages.FIELD_TOO_SMALL('Difficulty', consts.MISSION.DIFFICULTY.MIN),
-    )
-    .max(
-      consts.MISSION.DIFFICULTY.MAX,
-      messages.FIELD_TOO_BIG('Difficulty', consts.MISSION.DIFFICULTY.MAX),
-    ),*/
   isDraft: z.boolean().optional(),
   latitude: z.preprocess(
     (val) => (val === '' || val === null ? undefined : val),
@@ -211,8 +188,6 @@ export const draftMissionSchema = z.object({
   title: z.string().trim().optional(),
   description: z.string().trim().optional(),
   vacancies: optionalNumberFromFormSchema(z.coerce.number().int()),
-  reward: optionalNumberFromFormSchema(z.coerce.number()),
-  difficulty: optionalNumberFromFormSchema(z.coerce.number()),
   isDraft: z.boolean().optional(),
 });
 
@@ -286,13 +261,6 @@ export const unjoinMissionBodySchema = z.object({
     .number(messages.FIELD_NUMBER('Vacancy id'))
     .int(messages.FIELD_INTEGER('Vacancy id'))
     .min(0, messages.FIELD_POSITIVE('Vacancy id')),
-});
-
-export const closeMissionSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Id'))
-    .int(messages.FIELD_INTEGER('Id'))
-    .min(0, messages.FIELD_POSITIVE('Id')),
 });
 
 export const submitMissionParticipationSchema = z.object({

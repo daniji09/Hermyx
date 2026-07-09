@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { timestampToDayMonthYear } from './../../../utils/date';
 import { Button } from '@/components/ui/button';
-import { Star, Users, HandCoins } from 'lucide-react';
+import { Users, HandCoins } from 'lucide-react';
 import { messages } from '../../../messages/messages';
 
 export const MissionSearchContainer = ({
@@ -147,11 +147,6 @@ const MissionSearchCard = ({ mission }) => {
           <div className='mb-4 line-clamp-4'>{mission.description}</div>
           <div className='mt-auto flex items-center gap-6'>
             <div className='flex items-center gap-2'>
-              <span className='sr-only'>Difficulty:</span>
-              <span>{mission.difficulty}</span>
-              <Star className='h-6 w-6' aria-hidden='true' />
-            </div>
-            <div className='flex items-center gap-2'>
               <span className='sr-only'>Vacancies:</span>
               <span>
                 {mission.occupied_vacancies}/{mission.total_vacancies}
@@ -159,8 +154,8 @@ const MissionSearchCard = ({ mission }) => {
               <Users className='h-6 w-6' aria-hidden='true' />
             </div>
             <div className='flex items-center gap-2'>
-              <span className='sr-only'>Monetary reward:</span>
-              <span>{mission.monetary_reward}$</span>
+              <span className='sr-only'>Total payment:</span>
+              <span>{mission.total_payment}$</span>
               <HandCoins className='h-6 w-6' aria-hidden='true' />
             </div>
           </div>
