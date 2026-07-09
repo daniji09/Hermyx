@@ -225,9 +225,9 @@ export const updateMission = async (missionData) => {
   return result.rows[0];
 };
 
-// TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
+// TODO Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
 export const getMissions = async ({ title = undefined, pagination }) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condici璐竛 sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
     m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft'`;
@@ -256,7 +256,7 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -266,7 +266,7 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   return { rows, totalCount };
 };
 
-// TODO Cuando haya m璋﹕ filtros de b鐓queda hay que ver c璐竚o hacer para poder implementarlos din璋﹎icamente aqu閾?
+// TODO Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
 export const getMissionsFunded = async ({
   title = undefined,
   pagination,
@@ -306,7 +306,7 @@ export const getMissionsFunded = async ({
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -457,7 +457,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -495,7 +495,7 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
   // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misi璐竛
+  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;

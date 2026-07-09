@@ -74,7 +74,7 @@ CREATE TABLE MISSION_PARTICIPATION (
 	title VARCHAR(50),
 	description VARCHAR(500),
 	transfer_id VARCHAR(255),
-  amount_paid NUMERIC,
+  	amount_paid NUMERIC,
 	status VARCHAR(20) NOT NULL DEFAULT 'joined' CHECK (status IN (
 		'joined',
 		'in_progress',
