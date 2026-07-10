@@ -30,14 +30,14 @@ export const getMissions = async (options) => {
   }
 };
 
-// Finds all funded missions, it may be paginated
-export const getMissionsFunded = async (options) => {
+// Finds all missions opened, it may be paginated
+export const getMissionsOpened = async (options) => {
   const { page, limit } = options ? options : {};
 
   // Paginated
   if (page && limit) {
     // API search
-    const { data } = await api.get('/missions/funded', {
+    const { data } = await api.get('/missions/opened', {
       params: { page, limit, ...options.params },
     });
 
@@ -47,7 +47,7 @@ export const getMissionsFunded = async (options) => {
   // Not paginated
   else {
     // API search
-    const { data } = await api.get('/missions/funded', { ...options.params });
+    const { data } = await api.get('/missions/opened', { ...options.params });
 
     return data.missions;
   }

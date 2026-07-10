@@ -1,4 +1,5 @@
 import pool from '../config/db.config.js';
+import { MISSIONS_LIFE_CYCLE } from './../../../shared/utils/missions.lifecycle.js';
 
 //Get mission by its ID
 export const getById = async (mid) => {
@@ -225,9 +226,9 @@ export const updateMission = async (missionData) => {
   return result.rows[0];
 };
 
-// TODO Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
+// TODO: Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
 export const getMissions = async ({ title = undefined, pagination }) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
     m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft'`;
@@ -247,16 +248,14 @@ export const getMissions = async ({ title = undefined, pagination }) => {
   }
 
   const result = await pool.query(query, values);
-
-  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
 
-  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  // Postgres returns total_count in each row so we take the first one and clear it
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Total_count column is cleared so the mission objective is not cluttered
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -267,17 +266,20 @@ export const getMissions = async ({ title = undefined, pagination }) => {
 };
 
 // TODO Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
-export const getMissionsFunded = async ({
+export const getMissionsOpened = async ({
   title = undefined,
   pagination,
   excludeOwnerId = undefined,
 }) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
     m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) 
-    WHERE status = 'funded'`;
-  const values = [];
+    WHERE status = $1 OR status = $2`;
+  const values = [
+    MISSIONS_LIFE_CYCLE.OPENED.ID,
+    MISSIONS_LIFE_CYCLE.REOPENED.ID,
+  ];
 
   if (title) {
     values.push(title);
@@ -297,16 +299,14 @@ export const getMissionsFunded = async ({
   }
 
   const result = await pool.query(query, values);
-
-  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
 
-  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  // Postgres returns total_count in each row so we take the first one and clear it
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Total_count column is cleared so the mission objective is not cluttered
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -432,12 +432,12 @@ export const adventurerUnjoined = async (mid) => {
 };
 
 export const getMissionsByUid = async (uid, pagination = null) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, m.occupied_vacancies, 
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
     m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft' AND m.owner_id = $1 
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft' AND status != $2 AND m.owner_id = $1 
     ORDER BY m.publication_date DESC`;
-  const values = [uid];
+  const values = [uid, MISSIONS_LIFE_CYCLE.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);
@@ -448,16 +448,14 @@ export const getMissionsByUid = async (uid, pagination = null) => {
   }
 
   const result = await pool.query(query, values);
-
-  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
 
-  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  // Postgres returns total_count in each row so we take the first one and clear it
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Total_count column is cleared so the mission objective is not cluttered
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -468,14 +466,15 @@ export const getMissionsByUid = async (uid, pagination = null) => {
 };
 
 export const getMissionsJoinedByUser = async (uid, pagination = null) => {
-  // COUNT(*) OVER() permite contar todas las filas que cumplen la condición sin tener en cuenta el LIMIT y sin tener que agregar
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
     m.occupied_vacancies, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
     FROM mission_participation AS ma
     JOIN mission AS m ON (m.mid = ma.mid)
     JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
-    WHERE adventurer_id = $1 ORDER BY m.publication_date DESC`;
-  const values = [uid];
+    WHERE adventurer_id = $1 AND m.status != $2
+    ORDER BY m.publication_date DESC`;
+  const values = [uid, MISSIONS_LIFE_CYCLE.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);
@@ -486,16 +485,14 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
   }
 
   const result = await pool.query(query, values);
-
-  // Si no hay resultados, rows est璋?vac閾唎 y totalCount es 0
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
 
-  // Postgres devuelve total_count en cada fila, cogemos el primero y lo limpiamos
+  // Postgres returns total_count in each row so we take the first one and clear it
   const totalCount = parseInt(result.rows[0].total_count);
 
-  // Limpiamos la columna total_count para no ensuciar el objeto de la misión
+  // Total_count column is cleared so the mission objective is not cluttered
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...missionData } = row;
@@ -572,19 +569,10 @@ export const getPublicProfileCreatedMissions = async (
     FROM mission m
     JOIN app_user owner_user ON owner_user.uid = m.owner_id
     WHERE m.owner_id = $1
-      AND m.status IN (
-        'funded',
-        'in_progress',
-        'accepted',
-        'finished',
-        'releasing',
-        'in_dispute',
-        'released',
-        'partially_released'
-      )
+      AND m.status != $2
     ORDER BY m.publication_date DESC
   `;
-  const values = [userId];
+  const values = [userId, MISSIONS_LIFE_CYCLE.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);
@@ -634,10 +622,10 @@ export const getPublicProfileJoinedMissions = async (
     FROM mission_participation mp
     JOIN mission m ON m.mid = mp.mid
     JOIN app_user owner_user ON owner_user.uid = m.owner_id
-    WHERE mp.adventurer_id = $1
+    WHERE mp.adventurer_id = $1 AND status != $2
     ORDER BY m.completion_date DESC NULLS LAST, m.publication_date DESC
   `;
-  const values = [userId];
+  const values = [userId, MISSIONS_LIFE_CYCLE.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);

@@ -8,8 +8,7 @@ export const createNotification = async (notificationData) => {
     type,
     action = 'mission_invite',
     message,
-    payload = {},
-    vacancyId = null,
+    payload,
   } = notificationData;
   const query = `
     INSERT INTO notification (
@@ -22,10 +21,9 @@ export const createNotification = async (notificationData) => {
       sender_id,
       recipient_id,
       status,
-      message,
-      associated_vacancy_id
+      message
     )
-    VALUES (NOW(), $1, 'actionable', $2, $3, $4, $5, $6, 'pending', $7, $8)
+    VALUES (NOW(), $1, 'actionable', $2, $3, $4, $5, $6, 'pending', $7)
     RETURNING nid
   `;
   const result = await pool.query(query, [
@@ -36,7 +34,6 @@ export const createNotification = async (notificationData) => {
     senderId,
     receiverId,
     message,
-    vacancyId,
   ]);
   return result.rows[0].nid;
 };
@@ -116,7 +113,7 @@ export const hasPendingJoinNotification = async (
       WHERE associated_mission_id = $1
         AND sender_id = $2
         AND recipient_id = $3
-        AND associated_vacancy_id = $4
+        AND payload->>'associated_vacancy_id' = $4::text
         AND status = 'pending'
         AND action IN ('join_request', 'mission_invite')
     ) AS "hasPendingJoinNotification"
@@ -145,7 +142,6 @@ export const getByRecipientId = async (recipientId) => {
       n.sender_id,
       n.recipient_id,
       n.associated_mission_id,
-      n.associated_vacancy_id,
       sender.username AS sender_username,
       sender.avatar AS sender_avatar,
       m.title AS mission_title

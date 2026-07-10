@@ -10,7 +10,7 @@ import {
   start,
   joinMission,
   submitMissionParticipation,
-  getMissionsFunded,
+  getMissionsOpened,
   editMission,
   unjoinMission,
   cancelMission,
@@ -58,12 +58,12 @@ router.get(
 //List all draft missions
 router.get('/in-draft', getAllMissionsInDraft);
 
-// List all funded missions
+// List all opened missions
 router.get(
-  '/funded',
+  '/opened',
   validateQuerySchema(getMissionsQuerySchema),
   await pagination(),
-  getMissionsFunded,
+  getMissionsOpened,
 );
 
 //Get mission by id

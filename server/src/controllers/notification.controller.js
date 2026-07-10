@@ -10,6 +10,7 @@ import {
 } from '../models/notification.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
 import {
+  adventurerJoined,
   getById,
   syncMissionCompletionStatus,
 } from '../models/mission.model.js';
@@ -23,6 +24,7 @@ import {
   requestParticipationRevision,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
+import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -92,7 +94,7 @@ export const createNotification = async (req, res) => {
         .json({ error: 'This vacancy is already occupied.' });
     }
 
-    if (mission.status !== 'funded') {
+    if (!MISSIONS_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS) {
       return res.status(409).json({
         error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
       });
@@ -140,7 +142,7 @@ export const createNotification = async (req, res) => {
       type,
       action,
       message,
-      vacancyId,
+      payload: { vacancyId: vacancyId },
     };
 
     const newNotificationId = await _createNotification(notificationData);
@@ -432,7 +434,7 @@ const respondToMissionJoinNotification = async ({
     return res.status(400).json({ error: 'Invalid response action' });
   }
 
-  const vacancyId = notification.associated_vacancy_id;
+  const vacancyId = notification.payload.vacancyId;
 
   if (!vacancyId) {
     return res.status(409).json({
@@ -445,7 +447,7 @@ const respondToMissionJoinNotification = async ({
       ? notification.recipient_id
       : notification.sender_id;
 
-  if (mission.status !== 'funded') {
+  if (!MISSIONS_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS) {
     return res.status(409).json({
       error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
     });
@@ -471,9 +473,9 @@ const respondToMissionJoinNotification = async ({
     return res.status(409).json({ error: messages.VACANCY_NOT_JOINED });
 
   // If everything is ok, joins mission
-  const adventurer_joined = await adventurerJoined(missionId);
+  /* Const adventurer_joined = await adventurerJoined(missionId);
   if (adventurer_joined < 1)
-    return res.status(409).json({ error: messages.MISSION_NOT_JOINED });
+    return res.status(409).json({ error: messages.MISSION_NOT_JOINED });*/
 
   await updateNotificationStatus(notificationId, 'accepted');
   await markAsSeen(notificationId);

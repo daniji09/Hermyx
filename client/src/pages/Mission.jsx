@@ -45,6 +45,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
+import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle';
 
 export const Mission = () => {
   // Mission id
@@ -141,21 +142,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   const currentParticipation = mission?.participants?.find(
     (participant) => participant.adventurer_id === currentUser?.id,
   );
-  const isEditable =
-    mission?.status !== 'refunding' &&
-    mission?.status !== 'refunded' &&
-    mission?.status !== 'cancelling' &&
-    mission?.status !== 'cancelled' &&
-    mission?.status !== 'finished';
 
-  const isCancelable =
-    mission?.status === 'opened' ||
-    mission?.status === 'pending_payment' ||
-    mission?.status === 'in_progress' ||
-    mission?.status === 'in_dispute' ||
-    mission?.status === 'reopened';
-
-  const canAddAdventurers = isCreator && mission?.status === 'funded';
   return (
     <>
       {mission && (
@@ -183,7 +170,6 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   <ParticipantSection
                     mission={mission}
                     isCreator={isCreator}
-                    canAddAdventurers={canAddAdventurers}
                     onAddAdventurer={() => setIsSearchModalOpen(true)}
                   />
                   <div className='flex items-center gap-2'>
@@ -213,13 +199,15 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <CardFooter>
                 <>
                   {isCreator ? (
-                    mission.status === 'in_progress' ? (
+                    mission.status === MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID ? (
                       <MissionOwnerStatusMessage status={mission.status} />
-                    ) : mission.status === 'funded' ? (
+                    ) : mission.status === MISSIONS_LIFE_CYCLE.OPENED.ID ||
+                      mission.status === MISSIONS_LIFE_CYCLE.REOPENED.ID ? (
                       <StartMissionButton
                         mission={mission}
                       ></StartMissionButton>
-                    ) : mission.status === 'pending_payment' ? (
+                    ) : mission.status ===
+                      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID ? (
                       <PayMissionButton
                         missionId={mission.mid}
                       ></PayMissionButton>
@@ -228,7 +216,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         {messages.MISSION.MISSION_CLOSED}
                       </p>
                     )
-                  ) : mission.status === 'in_progress' &&
+                  ) : mission.status === MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID &&
                     currentParticipation ? (
                     <SubmitParticipationButton
                       missionId={mission.mid}
@@ -243,16 +231,19 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       {messages.MISSION.MISSION_OPEN}
                     </p>
                   )}
-                  {isCreator && isEditable && (
-                    <Button asChild>
-                      <Link to={`/missions/${mission.mid}/edit`}>
-                        Edit mission
-                      </Link>
-                    </Button>
-                  )}
-                  {isCreator && isCancelable && (
-                    <CancelMissionButton mission={mission} />
-                  )}
+                  {isCreator &&
+                    MISSIONS_LIFE_CYCLE[mission.status].CAN_EDIT && (
+                      <Button asChild>
+                        <Link to={`/missions/${mission.mid}/edit`}>
+                          Edit mission
+                        </Link>
+                      </Button>
+                    )}
+                  {isCreator &&
+                    (MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE ||
+                      MISSIONS_LIFE_CYCLE[mission.status].CAN_CANCEL) && (
+                      <CancelMissionButton mission={mission} />
+                    )}
                 </>
               </CardFooter>
             </section>
@@ -401,7 +392,7 @@ const ViewVacancyDialog = ({
 
           {!isCreator &&
             isAssignedToUser &&
-            mission.status !== 'in_progress' && (
+            mission.status !== MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID && (
               <UnjoinMissionButton
                 missionId={mission.mid}
                 vacancyId={vacancy.vacancy_id}
@@ -458,21 +449,17 @@ const AddAdventurerButton = ({ onClick }) => {
   );
 };
 
-const ParticipantSection = ({
-  mission,
-  isCreator,
-  canAddAdventurers,
-  onAddAdventurer,
-}) => {
+const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
   if (!isCreator) {
     return null;
   }
 
   return (
     <div className='flex flex-wrap items-center gap-2 pt-1'>
-      {isCreator && canAddAdventurers && (
-        <AddAdventurerButton onClick={onAddAdventurer} />
-      )}
+      {isCreator &&
+        MISSIONS_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS && (
+          <AddAdventurerButton onClick={onAddAdventurer} />
+        )}
       {(mission.participants || []).map((participant) => (
         <ParticipantRow key={participant.uid} participant={participant} />
       ))}
@@ -939,10 +926,12 @@ const UnjoinMissionButton = ({ missionId, vacancyId }) => {
 const StartMissionButton = ({ mission }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { isPending, mutate } = useMutation({
     mutationFn: () => startMission(mission.mid),
     onSuccess: () => {
       queryClient.invalidateQueries(['getMissions']);
+      navigate(`/missions/${mission.mid}/pay`);
     },
     // Backend error handling
     onError: (error) => {
@@ -1081,9 +1070,6 @@ const PayMissionButton = ({ missionId }) => {
 };
 
 const CancelMissionButton = ({ mission }) => {
-  const deleteMission =
-    mission.status === 'opened' || mission.status === 'pending_payment';
-
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
@@ -1107,7 +1093,7 @@ const CancelMissionButton = ({ mission }) => {
     // This action needs confirmation
     showAlert({
       title: messages.MISSION.CANCEL_MISSION_ALERT.TITLE,
-      description: deleteMission
+      description: MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE
         ? messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_DELETE
         : messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_CANCEL,
       variant: 'warning',

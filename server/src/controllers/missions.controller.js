@@ -10,7 +10,7 @@ import {
   getParticipantsForRelease,
   updateMissionStatus,
   getByUidAndTitle,
-  getMissionsFunded as _getMissionsFunded,
+  getMissionsOpened as _getMissionsOpened,
   updateMission,
   getMissionParticipation,
   adventurerUnjoined,
@@ -25,6 +25,7 @@ import {
   unjoinVacancy,
   updateVacancy,
   deleteUnoccupiedVacancies,
+  getOccupiedVacancies,
 } from '../models/mission_participation.model.js';
 import {
   createNotification as createNotificationRecord,
@@ -37,6 +38,7 @@ import {
   createPaymentIntentNew,
   createRefund,
 } from '../services/payment.service.js';
+import { MISSIONS_LIFE_CYCLE } from './../../../node_modules/@hermyx/shared/utils/missions.lifecycle.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -114,14 +116,14 @@ export const getAllMissionsInDraft = async (req, res) => {
   }
 };
 
-export const getMissionsFunded = async (req, res) => {
+export const getMissionsOpened = async (req, res) => {
   const { title } = req.query;
   const pagination = req.pagination;
   const excludeOwnerId = title ? req.user?.uid : undefined;
 
   try {
     // Gets all missions filtering what is needed
-    const { rows: missions, totalCount } = await _getMissionsFunded({
+    const { rows: missions, totalCount } = await _getMissionsOpened({
       title,
       pagination,
       excludeOwnerId,
@@ -174,27 +176,22 @@ export const createMission = async (req, res) => {
       description: description || 'No description',
       vacancies: vacancies || 0,
       vacanciesData: vacanciesData || '',
-      totalPayment:
-        vacanciesData.reduce(
-          (sum, vacancy) => sum + Number(vacancy.reward),
-          0,
-        ) || 0,
+      totalPayment: 0,
       latitude: latitude || null,
       longitude: longitude || null,
-      status: isDraft ? 'draft' : 'pending_payment',
+      status: MISSIONS_LIFE_CYCLE.OPENED.ID,
       ownerId: uid,
     };
 
     // Checks if user has a mission already with the same title
     const { hasDuplicate } = await getByUidAndTitle(uid, title);
-
     if (hasDuplicate)
       return res.status(400).json({
         errors: { general: [messages.MISSION_SAME_TITLE] },
       });
 
+    // Creates the new mission
     const newMission = await _createMission(missionData);
-
     return res.status(201).json({ mission: newMission });
   } catch (e) {
     console.error(e);
@@ -347,7 +344,7 @@ export const editMission = async (req, res) => {
   }
 };
 
-/*Verify that the owner of the mission is the one deleting it and that at least one person is assigned to close the mission.*/
+/*Verify that the owner of the mission is the one starting it and that at least one person is assigned to start the mission.*/
 export const start = async (req, res) => {
   const { missionId } = req.params;
   const userId = req.user.uid;
@@ -371,11 +368,31 @@ export const start = async (req, res) => {
         .json({ error: messages.START_WITHOUT_ADVENTURERS });
     }
 
-    await updateMissionStatus(missionId, 'in_progress');
-    await startParticipants(missionId);
+    await updateMissionStatus(
+      missionId,
+      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    );
+
+    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    console.log(occupied_vacancies);
+    const missionData = {
+      mid: mission.mid,
+      title: mission.title,
+      description: mission.description,
+      vacancies: mission.total_vacancies,
+      longitude: mission.longitude,
+      latitude: mission.latitude,
+      totalPayment:
+        occupied_vacancies.reduce(
+          (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+          0,
+        ) || 0,
+    };
+    // Updates total payment
+    await updateMission(missionData);
 
     return res.status(200).json({
-      status: 'in_progress',
+      status: MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
       participants: currentParticipants,
     });
   } catch (error) {
@@ -401,7 +418,7 @@ export const joinMission = async (req, res) => {
     if (mission.owner_id === uid)
       return res.status(403).json({ error: messages.JOIN_OWN_MISSION });
 
-    if (mission.status !== 'funded') {
+    if (!MISSIONS_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS) {
       return res.status(409).json({
         error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
       });

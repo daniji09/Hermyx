@@ -33,7 +33,11 @@ import {
   finalizeRefund,
 } from '../models/mission.model.js';
 
-import { updateTransferInfo } from '../models/mission_participation.model.js';
+import {
+  startParticipants,
+  updateTransferInfo,
+} from '../models/mission_participation.model.js';
+import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
@@ -293,7 +297,11 @@ export async function payNew(req, res) {
       `pay_new_${missionId}_${Date.now()}`,
     );
 
-    await updatePaymentInfo(missionId, pi.id, 'pending_payment');
+    await updatePaymentInfo(
+      missionId,
+      pi.id,
+      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    );
 
     res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
   } catch (err) {
@@ -326,7 +334,13 @@ export async function confirmPayment(req, res) {
         .json({ error: `Payment was not completed (status=${pi.status})` });
     }
 
-    await updatePaymentInfo(missionId, pi.id, 'funded');
+    // Mission and participants life cycle is updated
+    await updatePaymentInfo(
+      missionId,
+      pi.id,
+      MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID,
+    );
+    await startParticipants(missionId);
 
     res.json({ success: true });
   } catch (error) {
