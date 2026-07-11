@@ -22,6 +22,7 @@ import {
   submitMissionParticipation,
   unjoinMission,
   cancelMission,
+  reopenMission,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -45,7 +46,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
-import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle';
+import {
+  MISSIONS_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.lifecycle';
 
 export const Mission = () => {
   // Mission id
@@ -177,6 +181,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     <span>{mission.total_payment}$</span>
                     <HandCoins className='h-6 w-6' aria-hidden='true' />
                   </div>
+                  {mission.status}
                 </div>
                 <MissionVacancies
                   mission={mission}
@@ -244,6 +249,12 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       MISSIONS_LIFE_CYCLE[mission.status].CAN_CANCEL) && (
                       <CancelMissionButton mission={mission} />
                     )}
+                  {isCreator &&
+                    MISSIONS_LIFE_CYCLE[
+                      mission.status
+                    ].VALID_NEXT_STATES.includes(
+                      MISSIONS_LIFE_CYCLE.REOPENED.ID,
+                    ) && <ReopenMissionButton mission={mission} />}
                 </>
               </CardFooter>
             </section>
@@ -1011,9 +1022,11 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   };
 
   const isSubmitted =
-    participationStatus && participationStatus !== 'in_progress';
+    participationStatus &&
+    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID;
   const buttonLabel =
-    participationStatus && participationStatus !== 'in_progress'
+    participationStatus &&
+    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID
       ? getParticipationStatusLabel(participationStatus)
       : 'Submit my part';
 
@@ -1030,7 +1043,7 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 };
 
 const MissionOwnerStatusMessage = ({ status }) => {
-  if (status === 'in_progress') {
+  if (status === MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID) {
     return (
       <p className='text-muted-foreground bg-muted/20'>
         Waiting for adventurers to submit their participation.
@@ -1110,6 +1123,49 @@ const CancelMissionButton = ({ mission }) => {
       disabled={isPending}
     >
       {'Cancel mission'}
+    </Button>
+  );
+};
+
+const ReopenMissionButton = ({ mission }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => reopenMission(mission.mid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.REOPEN_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.REOPEN_MISSION_ALERT.TITLE,
+      description: messages.MISSION.REOPEN_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.REOPEN_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='reopenMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Reopen mission'}
     </Button>
   );
 };

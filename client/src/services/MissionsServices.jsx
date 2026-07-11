@@ -111,6 +111,12 @@ export const cancelMission = async (mid) => {
   return data;
 };
 
+// Reopens mission
+export const reopenMission = async (mid) => {
+  const { data } = await api.post(`/missions/${mid}/reopen`);
+  return data;
+};
+
 // Finds all missions from user, it may be paginated
 export const getUserMissions = async (
   uid,

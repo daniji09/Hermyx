@@ -14,6 +14,7 @@ import {
   editMission,
   unjoinMission,
   cancelMission,
+  reopenMission,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -35,6 +36,7 @@ import {
   unjoinMissionParamSchema,
   unjoinMissionBodySchema,
   cancelMissionParamSchema,
+  reopenMissionParamSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -97,6 +99,13 @@ router.post(
   '/:mid/cancel',
   validateParamsSchema(cancelMissionParamSchema),
   cancelMission,
+);
+
+// Reopens a mission
+router.post(
+  '/:mid/reopen',
+  validateParamsSchema(reopenMissionParamSchema),
+  reopenMission,
 );
 
 //Edit mission

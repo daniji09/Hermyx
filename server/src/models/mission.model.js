@@ -1,5 +1,8 @@
 import pool from '../config/db.config.js';
-import { MISSIONS_LIFE_CYCLE } from './../../../shared/utils/missions.lifecycle.js';
+import {
+  MISSIONS_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from './../../../shared/utils/missions.lifecycle.js';
 
 //Get mission by its ID
 export const getById = async (mid) => {
@@ -168,8 +171,8 @@ export const createMission = async (missionData) => {
 
     // Second step, save mission vacancies info
     const participationQuery = `
-      INSERT INTO MISSION_PARTICIPATION (mid, monetary_reward, title, description)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO MISSION_PARTICIPATION (mid, monetary_reward, title, description, status)
+      VALUES ($1, $2, $3, $4, $5)
     `;
 
     // Promises array, one per vacancy
@@ -179,6 +182,7 @@ export const createMission = async (missionData) => {
         vacancy.reward,
         vacancy.title || null,
         vacancy.description || null,
+        VACANCY_LIFE_CYCLE.EMPTY.ID,
       ]);
     });
 
@@ -367,14 +371,23 @@ export const syncMissionCompletionStatus = async (mid) => {
     SELECT
       COUNT(*)::int AS participant_count,
       COUNT(*) FILTER (
-        WHERE status IN ('in_progress', 'submitted', 'revision_requested')
+        WHERE status IN ($2, $3, $4)
       )::int AS active_count,
-      COUNT(*) FILTER (WHERE status = 'in_dispute')::int AS dispute_count,
-      COUNT(*) FILTER (WHERE status = 'accepted')::int AS accepted_count
+      COUNT(*) FILTER (WHERE status = $5)::int AS dispute_count,
+      COUNT(*) FILTER (WHERE status IN ($6, $7, $8))::int AS accepted_count
     FROM mission_participation
     WHERE mid = $1
   `;
-  const summaryResult = await pool.query(summaryQuery, [mid]);
+  const summaryResult = await pool.query(summaryQuery, [
+    mid,
+    VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
+    VACANCY_LIFE_CYCLE.SUBMITTED.ID,
+    VACANCY_LIFE_CYCLE.REJECTED.ID,
+    VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+    VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+    VACANCY_LIFE_CYCLE.RELEASING.ID,
+    VACANCY_LIFE_CYCLE.RELEASED.ID,
+  ]);
   const summary = summaryResult.rows[0];
 
   if (!summary || summary.participant_count === 0) {
@@ -384,11 +397,11 @@ export const syncMissionCompletionStatus = async (mid) => {
   let nextStatus = null;
 
   if (summary.active_count > 0) {
-    nextStatus = 'in_progress';
+    nextStatus = MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID;
   } else if (summary.dispute_count > 0) {
-    nextStatus = 'in_dispute';
+    nextStatus = MISSIONS_LIFE_CYCLE.IN_DISPUTE.ID;
   } else if (summary.accepted_count === summary.participant_count) {
-    nextStatus = 'finished';
+    nextStatus = MISSIONS_LIFE_CYCLE.FINISHED.ID;
   }
 
   if (!nextStatus) {
@@ -400,14 +413,20 @@ export const syncMissionCompletionStatus = async (mid) => {
     SET
       status = $2::varchar,
       completion_date = CASE
-        WHEN $2::varchar IN ('finished', 'in_dispute') THEN COALESCE(completion_date, NOW())
+        WHEN $2::varchar = $3 THEN COALESCE(completion_date, NOW())
         ELSE NULL
       END
     WHERE mid = $1
-      AND status IN ('in_progress', 'finished', 'in_dispute')
+      AND status IN ($4, $3, $5)
     RETURNING *
   `;
-  const updateResult = await pool.query(updateQuery, [mid, nextStatus]);
+  const updateResult = await pool.query(updateQuery, [
+    mid,
+    nextStatus,
+    MISSIONS_LIFE_CYCLE.FINISHED.ID,
+    MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID,
+    MISSIONS_LIFE_CYCLE.IN_DISPUTE.ID,
+  ]);
   return updateResult.rows[0] || null;
 };
 

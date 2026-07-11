@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
+import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle';
 
 export const EditMission = () => {
   // Mission id
@@ -69,7 +70,7 @@ export const EditMission = () => {
     editMissionAction,
     initialStateUseStateAction,
   );
-
+  console.log(state);
   // Effect for navigating to home
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -239,7 +240,9 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         <div className='px-8'>
           <MissionVacanciesCreator
             initialVacancies={mission?.participants || []}
-            canDelete={mission.status === 'opened'}
+            canDelete={
+              MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE_ADVENTURERS
+            }
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
             <FormAlert onClose={() => setIsAlertClosed(true)}>

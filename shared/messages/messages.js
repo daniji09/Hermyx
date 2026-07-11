@@ -95,6 +95,7 @@ export const messages = {
 
   //// Edit mission
   CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
+  CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
 
   //// Start mission
   START_WITHOUT_ADVENTURERS: `You can't start a mission without adventurers.`,
@@ -110,11 +111,15 @@ export const messages = {
 
   /// Unjoin mission
   VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
-  CANNOT_UNJOIN_IN_PROGRESS_MISSION: `You can't unjoin a mission that is already in progress.`,
+  CANNOT_UNJOIN_IN_PROGRESS_MISSION: `You can't unjoin a mission that has already closed.`,
 
   /// Delete mission
   CANNOT_DELETE_MISSION: `Can't delete mission.`,
   CANNOT_DELETE_MISSION_STATE: `Can't delete finished missions.`,
+
+  /// Reopen mission
+  CANNOT_REOPEN_MISSION_STATE: `Can't reopen mission on current state.`,
+  CANNOT_REOPEN_MISSION_WITHOUT_EMPTY_VACANCIES: `Can't reopen mission with no empty vacancies that can be filled.`,
 
   //// Profile
   ///Info

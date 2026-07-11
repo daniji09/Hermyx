@@ -253,7 +253,11 @@ export async function payDefault(req, res) {
       `pay_default_${missionId}_${Date.now()}`,
     );
 
-    await updatePaymentInfo(missionId, pi.id, 'pending_payment');
+    await updatePaymentInfo(
+      missionId,
+      pi.id,
+      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    );
 
     res.json({
       clientSecret: pi.client_secret,

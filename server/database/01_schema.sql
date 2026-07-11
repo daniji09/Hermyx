@@ -75,14 +75,15 @@ CREATE TABLE MISSION_PARTICIPATION (
 	transfer_id VARCHAR(255),
   	amount_paid NUMERIC,
 	status VARCHAR(20) NOT NULL DEFAULT 'joined' CHECK (status IN (
-		'joined',
-		'in_progress',
-		'submitted',
-		'revision_requested',
-		'accepted',
-		'in_dispute',
-		'releasing',
-		'released'
+		'EMPTY',
+		'JOINED',
+		'IN_PROGRESS',
+		'SUBMITTED',
+		'ACCEPTED',
+		'REJECTED',
+		'IN_DISPUTE',
+		'RELEASING',
+		'RELEASED'
 	)),
 	review VARCHAR(500),
 	FOREIGN KEY (mid) REFERENCES MISSION(mid),

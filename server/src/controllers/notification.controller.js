@@ -10,7 +10,6 @@ import {
 } from '../models/notification.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
 import {
-  adventurerJoined,
   getById,
   syncMissionCompletionStatus,
 } from '../models/mission.model.js';
@@ -24,7 +23,10 @@ import {
   requestParticipationRevision,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
-import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle.js';
+import {
+  MISSIONS_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.lifecycle.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -185,7 +187,7 @@ const respondToParticipationReview = async ({
     return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
   }
 
-  if (mission.status !== 'in_progress') {
+  if (!MISSIONS_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_SUBMIT) {
     return res.status(409).json({ error: messages.MISSION_NOT_IN_PROGRESS });
   }
 
@@ -200,7 +202,7 @@ const respondToParticipationReview = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (participation.status !== 'submitted') {
+  if (!VACANCY_LIFE_CYCLE.SUBMITTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
@@ -332,7 +334,7 @@ const respondToParticipationRejection = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (participation.status !== 'revision_requested') {
+  if (!VACANCY_LIFE_CYCLE.REJECTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });

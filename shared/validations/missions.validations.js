@@ -20,6 +20,7 @@ const vacancySchema = z.object({
   title: z
     .string()
     .trim()
+
     .max(
       consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
       messages.FIELD_TOO_LONG(
@@ -27,6 +28,7 @@ const vacancySchema = z.object({
         consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
       ),
     )
+    .nullable()
     .optional()
     .or(z.literal('')),
   description: z
@@ -39,6 +41,7 @@ const vacancySchema = z.object({
         consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
       ),
     )
+    .nullable()
     .optional()
     .or(z.literal('')),
 });
@@ -151,7 +154,9 @@ export const editMissionBodySchema = z.object({
         return z.NEVER;
       }
     })
-    .pipe(z.array(vacancySchema)),
+    .pipe(
+      z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
+    ),
   latitude: z.preprocess(
     (val) => (val === '' || val === null ? undefined : val),
     z.coerce.number().optional(),
@@ -177,6 +182,13 @@ const optionalNumberFromFormSchema = (schema) =>
   }, schema.optional());
 
 export const cancelMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const reopenMissionParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Mid'))
     .int(messages.FIELD_INTEGER('Mid'))
