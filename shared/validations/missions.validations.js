@@ -275,6 +275,33 @@ export const unjoinMissionBodySchema = z.object({
     .min(0, messages.FIELD_POSITIVE('Vacancy id')),
 });
 
+export const inviteToMissionSchema = z.object({
+  missionId: z.coerce
+    .number(messages.FIELD_NUMBER('Mission id'))
+    .int(messages.FIELD_INTEGER('Mission id'))
+    .min(0, messages.FIELD_POSITIVE('Mission id')),
+  receiverId: z.coerce
+    .number(messages.FIELD_NUMBER('Receiver id'))
+    .int(messages.FIELD_INTEGER('Receiver id'))
+    .min(0, messages.FIELD_POSITIVE('Receiver id')),
+  vacancyId: z.coerce
+    .number(messages.FIELD_NUMBER('Vacancy id'))
+    .int(messages.FIELD_INTEGER('Vacancy id'))
+    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
+  message: z
+    .string()
+    .trim()
+    .max(
+      consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Notification message',
+        consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .default(''),
+});
+
 export const submitMissionParticipationSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Id'))

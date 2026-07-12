@@ -94,26 +94,23 @@ CREATE TABLE NOTIFICATION (
 	nid SERIAL PRIMARY KEY,
 	date TIMESTAMP NOT NULL,
 	seen BOOLEAN NOT NULL DEFAULT FALSE,
-	type VARCHAR(50) NOT NULL CHECK (type IN ('invitation', 'mission')),
-	kind VARCHAR(20) NOT NULL DEFAULT 'actionable' CHECK (kind IN ('informational', 'actionable')),
-	action VARCHAR(50) NOT NULL DEFAULT 'mission_invite' CHECK (action IN (
-		'join_request',
-		'mission_invite',
-		'participation_review',
-		'participation_rejection_response',
-		'participation_approved',
-		'participation_disputed'
+	type VARCHAR(50) NOT NULL CHECK (type IN ('INVITATION', 'MISSION')),
+	kind VARCHAR(20) NOT NULL DEFAULT 'ACTIONABLE' CHECK (kind IN ('INFORMATIONAL', 'ACTIONABLE')),
+	action VARCHAR(50) NOT NULL DEFAULT 'MISSION_INVITE' CHECK (action IN (
+		'JOIN_REQUEST',
+		'MISSION_INVITE',
+		'PARTICIPATION_REVIEW',
+		'PARTICIPATION_REJECTION_RESPONSE',
+		'PARTICIPATION_APPROVED',
+		'PARTICIPATION_DISPUTED'
 	)),
-	payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-	status VARCHAR(20) CHECK (status IS NULL OR status IN ('pending','accepted','rejected','disputed')),
+	status VARCHAR(20) CHECK (status IS NULL OR status IN ('PENDING','ACCEPTED','REJECTED','DISPUTED')),
 	message VARCHAR(500),
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,
-	associated_mission_id INT NOT NULL,
-	associated_vacancy_id INT,
+	payload JSONB NOT NULL DEFAULT '{}'::jsonb,
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid),
-	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid),
-	FOREIGN KEY (associated_mission_id) REFERENCES MISSION(mid)
+	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid)
 );
 
 CREATE TABLE GUILD (

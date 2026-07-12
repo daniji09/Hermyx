@@ -1,21 +1,5 @@
 import api from '../config/api';
 
-export const createNotification = async ({
-  missionId,
-  receiverId,
-  vacancyId,
-  message,
-}) => {
-  const { data } = await api.post('/notifications', {
-    missionId,
-    receiverId,
-    vacancyId,
-    message,
-  });
-
-  return data;
-};
-
 export const getMyNotifications = async () => {
   const { data } = await api.get('/notifications/me');
   return data;

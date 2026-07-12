@@ -15,7 +15,7 @@ import {
   getMissionParticipation,
   adventurerUnjoined,
 } from '../models/mission.model.js';
-
+import { getById as getUserById } from '../models/app_user.model.js';
 import {
   getById as getMissionParticipationById,
   submitParticipation as submitMissionParticipationRecord,
@@ -28,8 +28,7 @@ import {
   getEmptyVacancies,
 } from '../models/mission_participation.model.js';
 import {
-  createNotification as createNotificationRecord,
-  createMissionNotification as createMissionNotificationRecord,
+  createNotification,
   countParticipationReviewAttempts,
   hasPendingJoinNotification,
 } from '../models/notification.model.js';
@@ -39,9 +38,15 @@ import {
   createRefund,
 } from '../services/payment.service.js';
 import {
-  MISSIONS_LIFE_CYCLE,
+  MISSION_LIFE_CYCLE,
   VACANCY_LIFE_CYCLE,
-} from './../../../node_modules/@hermyx/shared/utils/missions.lifecycle.js';
+} from './../../../node_modules/@hermyx/shared/utils/missions.utils.js';
+import {
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_STATUS,
+  NOTIFICATION_TYPE,
+} from '@hermyx/shared/utils/notifications.utils.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -182,7 +187,7 @@ export const createMission = async (req, res) => {
       totalPayment: 0,
       latitude: latitude || null,
       longitude: longitude || null,
-      status: MISSIONS_LIFE_CYCLE.OPENED.ID,
+      status: MISSION_LIFE_CYCLE.OPENED.ID,
       ownerId: uid,
     };
 
@@ -218,7 +223,7 @@ export const editMission = async (req, res) => {
     const currentMission = await _getMissionById(mission.mid);
 
     // Checks that mission is in a editable status
-    if (!MISSIONS_LIFE_CYCLE[currentMission.status].CAN_EDIT)
+    if (!MISSION_LIFE_CYCLE[currentMission.status].CAN_EDIT)
       return res.status(400).json({
         errors: { general: [messages.CANNOT_EDIT_MISSION] },
       });
@@ -247,7 +252,7 @@ export const editMission = async (req, res) => {
     const existingIds = existingVacancies.map((v) => v.id);
 
     // New mission info can delete existing vacancies only in opened state
-    if (!MISSIONS_LIFE_CYCLE[currentMission.status].CAN_DELETE_ADVENTURERS) {
+    if (!MISSION_LIFE_CYCLE[currentMission.status].CAN_DELETE_ADVENTURERS) {
       const originalVacancies = await getMissionParticipation(mission.mid);
       if (existingIds.length < originalVacancies) {
         return res.status(400).json({
@@ -379,17 +384,14 @@ export const start = async (req, res) => {
 
     // Checks if mission can be started by states
     if (
-      !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
       )
     )
       return res.status(400).json({ error: messages.CANNOT_START_STATE });
 
     // Then, it updates the mission
-    await updateMissionStatus(
-      missionId,
-      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
-    );
+    await updateMissionStatus(missionId, MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID);
 
     const occupied_vacancies = await getOccupiedVacancies(mission.mid);
     const missionData = {
@@ -409,7 +411,7 @@ export const start = async (req, res) => {
     await updateMission(missionData);
 
     return res.status(200).json({
-      status: MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      status: MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
       participants: currentParticipants,
     });
   } catch (error) {
@@ -435,11 +437,11 @@ export const joinMission = async (req, res) => {
     if (mission.owner_id === uid)
       return res.status(403).json({ error: messages.JOIN_OWN_MISSION });
 
-    if (!MISSIONS_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS) {
+    // Checks if mission status is valid for accepting adventurers
+    if (!MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS)
       return res.status(409).json({
         error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
       });
-    }
 
     // Checks if mission is already full
     if (mission.occupied_vacancies === mission.total_vacancies)
@@ -449,9 +451,9 @@ export const joinMission = async (req, res) => {
 
     // Checks if user has already joined that mission
     const alreadyJoined = await getMissionParticipationById(mid, uid);
-    if (alreadyJoined) {
+    if (alreadyJoined)
       return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
-    }
+
     // Checks if vacancy exists
     const vacancy = await getVacancyById(mid, vacancyId);
     if (!vacancy)
@@ -460,6 +462,7 @@ export const joinMission = async (req, res) => {
       return res.status(409).json({ error: messages.MISSION_FILLED });
     }
 
+    // Checks if user has already requested the joining for this mission
     const ownerId = mission.owner_id;
     const pendingRequest = await hasPendingJoinNotification(
       mid,
@@ -473,17 +476,23 @@ export const joinMission = async (req, res) => {
       });
     }
 
-    const action = mission.owner_id === uid ? 'mission_invite' : 'join_request';
-    const notificationId = await createNotificationRecord({
-      missionId: mid,
+    // Otherwise, creates the notification for the joining request (or invite)
+    const action =
+      mission.owner_id === uid
+        ? NOTIFICATION_ACTION.MISSION_INVITE.ID
+        : NOTIFICATION_ACTION.JOIN_REQUEST.ID;
+    const notificationId = await createNotification({
+      type: NOTIFICATION_TYPE.INVITATION.ID,
+      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+      action,
+      status: NOTIFICATION_STATUS.PENDING.ID,
+      message,
       senderId: uid,
       receiverId: ownerId,
-      type: 'invitation',
-      action,
-      message,
-      payload: { vacancyId: vacancyId },
+      payload: { associated_mission_id: mid, associated_vacancy_id: vacancyId },
     });
 
+    // And sends it to the user
     emitToUser(ownerId, 'notification:created', {
       notificationId,
       missionId: mid,
@@ -492,7 +501,7 @@ export const joinMission = async (req, res) => {
       senderId: uid,
       senderUsername: req.user.username,
       receiverId: ownerId,
-      type: 'invitation',
+      type: NOTIFICATION_TYPE.INVITATION.ID,
       message,
     });
 
@@ -502,6 +511,112 @@ export const joinMission = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
+export const inviteToMission = async (req, res) => {
+  const { missionId, receiverId, vacancyId, message } = req.body;
+  const senderId = req.user.uid;
+
+  if (senderId === receiverId) {
+    return res.status(400).json({ error: messages.CANNOT_INVITE_YOURSELF });
+  }
+
+  try {
+    const [mission, receiver, vacancy] = await Promise.all([
+      getById(missionId),
+      getUserById(receiverId),
+      getVacancyById(missionId, vacancyId),
+    ]);
+
+    if (!mission) {
+      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+    }
+
+    if (!receiver) {
+      return res.status(404).json({ error: messages.RECEIVER_NOT_FOUND });
+    }
+
+    if (!vacancy) {
+      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
+    }
+
+    if (vacancy.adventurer_id !== null) {
+      return res.status(409).json({ error: messages.VACANCY_ALREADY_OCCUPIED });
+    }
+
+    if (!MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS) {
+      return res.status(409).json({
+        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
+      });
+    }
+
+    const type = NOTIFICATION_TYPE.INVITATION.ID;
+    const action =
+      mission.owner_id === senderId
+        ? NOTIFICATION_ACTION.MISSION_INVITE.ID
+        : NOTIFICATION_ACTION.JOIN_REQUEST.ID;
+
+    const hasPending = await hasPendingJoinNotification(
+      missionId,
+      senderId,
+      receiverId,
+      vacancyId,
+    );
+
+    if (hasPending) {
+      return res.status(409).json({
+        error: messages.PENDING_NOTIFICATION_EXISTS,
+      });
+    }
+
+    const adventurerId = mission.owner_id === senderId ? receiverId : senderId;
+
+    if (mission.total_vacancies <= mission.occupied_vacancies) {
+      return res.status(409).json({ error: messages.NO_VACANCIES_AVAILABLE });
+    }
+
+    const alreadyJoined = await getMissionParticipationById(
+      missionId,
+      adventurerId,
+    );
+    if (alreadyJoined) {
+      return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
+    }
+
+    const notificationData = {
+      type,
+      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+      status: NOTIFICATION_STATUS.PENDING.ID,
+      action,
+      message,
+      senderId,
+      receiverId,
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: vacancyId,
+      },
+    };
+    console.log(notificationData);
+    const newNotificationId = await createNotification(notificationData);
+
+    emitToUser(receiverId, 'notification:created', {
+      notificationId: newNotificationId,
+      missionId,
+      vacancyId,
+      missionTitle: mission.title,
+      senderId,
+      senderUsername: req.user.username,
+      receiverId,
+      type,
+      message,
+    });
+
+    return res.status(201).json(newNotificationId);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Database error' });
   }
 };
 
@@ -515,7 +630,7 @@ export const submitMissionParticipation = async (req, res) => {
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
     }
 
-    if (!MISSIONS_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_SUBMIT) {
+    if (!MISSION_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_SUBMIT) {
       return res.status(400).json({
         error: messages.MISSION_NOT_IN_PROGRESS,
       });
@@ -528,7 +643,7 @@ export const submitMissionParticipation = async (req, res) => {
       });
     }
 
-    if (participation.status !== MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID) {
+    if (participation.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
       return res.status(409).json({
         error: messages.MISSION_PART_ALREADY_SUBMITTED,
       });
@@ -548,20 +663,20 @@ export const submitMissionParticipation = async (req, res) => {
     const attempts =
       (await countParticipationReviewAttempts(mid, adventurerId)) + 1;
     const missionCompletionMessage = `The participation in "${mission.title}" was submitted by ${req.user.username}.`;
-    const notificationId = await createMissionNotificationRecord({
-      missionId: Number(mid),
+    const notificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
+      status: NOTIFICATION_STATUS.PENDING.ID,
+      message: missionCompletionMessage,
       senderId: adventurerId,
       receiverId: mission.owner_id,
-      kind: 'actionable',
-      action: 'participation_review',
-      payload: { attempt: attempts },
-      status: 'pending',
-      message: missionCompletionMessage,
+      payload: { associated_mission_id: Number(mid), attempt: attempts },
     });
 
     emitToUser(mission.owner_id, 'mission:participation-submitted', {
       notificationId,
-      type: 'mission',
+      type: NOTIFICATION_TYPE.MISSION.ID,
       missionId: Number(mid),
       missionTitle: mission.title,
       adventurerId,
@@ -592,7 +707,7 @@ export const unjoinMission = async (req, res) => {
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
     // Checks if mission is opened, so unjoin can be done
-    if (!MISSIONS_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_UNJOIN) {
+    if (!MISSION_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_UNJOIN) {
       return res.status(400).json({
         errors: {
           general: [messages.CANNOT_UNJOIN_IN_PROGRESS_MISSION],
@@ -671,11 +786,11 @@ export const cancelMission = async (req, res) => {
       return res.status(403).json({ error: messages.CANNOT_DELETE_MISSION });
 
     // If mission has to be "deleted", it will be
-    if (MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE) {
+    if (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE) {
       // Checks if mission can be deleted by states
       if (
-        !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-          MISSIONS_LIFE_CYCLE.DELETED.ID,
+        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_LIFE_CYCLE.DELETED.ID,
         )
       )
         return res
@@ -683,14 +798,14 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSIONS_LIFE_CYCLE.DELETED.ID);
+      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.DELETED.ID);
     }
     // If mission has to be cancelled, it will be
-    else if (MISSIONS_LIFE_CYCLE[mission.status].CAN_CANCEL) {
+    else if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) {
       // Checks if mission can be cancelled by states
       if (
-        !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-          MISSIONS_LIFE_CYCLE.CANCELLING.ID,
+        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_LIFE_CYCLE.CANCELLING.ID,
         )
       )
         return res
@@ -698,7 +813,7 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSIONS_LIFE_CYCLE.CANCELLING.ID); // TODO: primero a cancelling pero eso depende de lo de stripe
+      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLING.ID); // TODO: primero a cancelling pero eso depende de lo de stripe
       // TODO: pagar a todos los aventureros
     }
     // Otherwise, mission can't be deleted or cancelled
@@ -755,8 +870,8 @@ export const reopenMission = async (req, res) => {
 
     // Checks if mission can be reopened by state
     if (
-      !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSIONS_LIFE_CYCLE.REOPENED.ID,
+      !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_LIFE_CYCLE.REOPENED.ID,
       )
     )
       return res.status(400).json({
@@ -776,7 +891,7 @@ export const reopenMission = async (req, res) => {
       });
 
     // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSIONS_LIFE_CYCLE.REOPENED.ID);
+    await updateMissionStatus(mid, MISSION_LIFE_CYCLE.REOPENED.ID);
 
     /* TODO: enviar notificación a todos los aventureros de que la misión ha sido reabierta
     Const invitationId = await createInvitationRecord({

@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getMissionByIdQueryOptions } from './../queries/MissionsQueries';
-import { createNotificationMutationOptions } from '../queries/NotificationsQueries';
+import {
+  getMissionByIdQueryOptions,
+  inviteToMissionMutationOptions,
+} from './../queries/MissionsQueries';
 import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
 import {
   Card,
@@ -47,9 +49,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import {
-  MISSIONS_LIFE_CYCLE,
+  MISSION_LIFE_CYCLE,
   VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.lifecycle';
+} from '@hermyx/shared/utils/missions.utils';
 
 export const Mission = () => {
   // Mission id
@@ -204,15 +206,15 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <CardFooter>
                 <>
                   {isCreator ? (
-                    mission.status === MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID ? (
+                    mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID ? (
                       <MissionOwnerStatusMessage status={mission.status} />
-                    ) : mission.status === MISSIONS_LIFE_CYCLE.OPENED.ID ||
-                      mission.status === MISSIONS_LIFE_CYCLE.REOPENED.ID ? (
+                    ) : mission.status === MISSION_LIFE_CYCLE.OPENED.ID ||
+                      mission.status === MISSION_LIFE_CYCLE.REOPENED.ID ? (
                       <StartMissionButton
                         mission={mission}
                       ></StartMissionButton>
                     ) : mission.status ===
-                      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID ? (
+                      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID ? (
                       <PayMissionButton
                         missionId={mission.mid}
                       ></PayMissionButton>
@@ -221,7 +223,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         {messages.MISSION.MISSION_CLOSED}
                       </p>
                     )
-                  ) : mission.status === MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID &&
+                  ) : mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
                     currentParticipation ? (
                     <SubmitParticipationButton
                       missionId={mission.mid}
@@ -236,24 +238,23 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       {messages.MISSION.MISSION_OPEN}
                     </p>
                   )}
+                  {isCreator && MISSION_LIFE_CYCLE[mission.status].CAN_EDIT && (
+                    <Button asChild>
+                      <Link to={`/missions/${mission.mid}/edit`}>
+                        Edit mission
+                      </Link>
+                    </Button>
+                  )}
                   {isCreator &&
-                    MISSIONS_LIFE_CYCLE[mission.status].CAN_EDIT && (
-                      <Button asChild>
-                        <Link to={`/missions/${mission.mid}/edit`}>
-                          Edit mission
-                        </Link>
-                      </Button>
-                    )}
-                  {isCreator &&
-                    (MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE ||
-                      MISSIONS_LIFE_CYCLE[mission.status].CAN_CANCEL) && (
+                    (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE ||
+                      MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) && (
                       <CancelMissionButton mission={mission} />
                     )}
                   {isCreator &&
-                    MISSIONS_LIFE_CYCLE[
+                    MISSION_LIFE_CYCLE[
                       mission.status
                     ].VALID_NEXT_STATES.includes(
-                      MISSIONS_LIFE_CYCLE.REOPENED.ID,
+                      MISSION_LIFE_CYCLE.REOPENED.ID,
                     ) && <ReopenMissionButton mission={mission} />}
                 </>
               </CardFooter>
@@ -403,7 +404,7 @@ const ViewVacancyDialog = ({
 
           {!isCreator &&
             isAssignedToUser &&
-            mission.status !== MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID && (
+            mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID && (
               <UnjoinMissionButton
                 missionId={mission.mid}
                 vacancyId={vacancy.vacancy_id}
@@ -468,7 +469,7 @@ const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
   return (
     <div className='flex flex-wrap items-center gap-2 pt-1'>
       {isCreator &&
-        MISSIONS_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS && (
+        MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS && (
           <AddAdventurerButton onClick={onAddAdventurer} />
         )}
       {(mission.participants || []).map((participant) => (
@@ -516,7 +517,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
   const { showAlert } = useAlert();
   const { isPending: isSendingNotification, mutate: sendNotification } =
     useMutation(
-      createNotificationMutationOptions({
+      inviteToMissionMutationOptions({
         onSuccess: () => {
           showAlert({
             title: 'Invitation sent',
@@ -1043,7 +1044,7 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 };
 
 const MissionOwnerStatusMessage = ({ status }) => {
-  if (status === MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID) {
+  if (status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
     return (
       <p className='text-muted-foreground bg-muted/20'>
         Waiting for adventurers to submit their participation.
@@ -1106,7 +1107,7 @@ const CancelMissionButton = ({ mission }) => {
     // This action needs confirmation
     showAlert({
       title: messages.MISSION.CANCEL_MISSION_ALERT.TITLE,
-      description: MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE
+      description: MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
         ? messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_DELETE
         : messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_CANCEL,
       variant: 'warning',

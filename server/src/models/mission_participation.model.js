@@ -1,4 +1,4 @@
-import { VACANCY_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle.js';
+import { VACANCY_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 import pool from '../config/db.config.js';
 
 export const updateTransferInfo = async (mid, uid, transferId, amount) => {

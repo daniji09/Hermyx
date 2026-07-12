@@ -35,7 +35,7 @@ import {
 } from '@/components/ui/dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
-import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle';
+import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils';
 
 export const EditMission = () => {
   // Mission id
@@ -241,7 +241,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
           <MissionVacanciesCreator
             initialVacancies={mission?.participants || []}
             canDelete={
-              MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE_ADVENTURERS
+              MISSION_LIFE_CYCLE[mission.status].CAN_DELETE_ADVENTURERS
             }
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (

@@ -37,7 +37,7 @@ import {
   startParticipants,
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
-import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle.js';
+import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 import { messages } from '@hermyx/shared';
 
 //Registers the current user as a Stripe Customer to allow making payments.
@@ -257,7 +257,7 @@ export async function payDefault(req, res) {
     await updatePaymentInfo(
       missionId,
       pi.id,
-      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
     );
 
     res.json({
@@ -305,7 +305,7 @@ export async function payNew(req, res) {
     await updatePaymentInfo(
       missionId,
       pi.id,
-      MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
     );
 
     res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
@@ -341,8 +341,8 @@ export async function confirmPayment(req, res) {
 
     // Checks if mission can be in progress by states
     if (
-      !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID,
+      !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
       )
     )
       return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
@@ -351,7 +351,7 @@ export async function confirmPayment(req, res) {
     await updatePaymentInfo(
       missionId,
       pi.id,
-      MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID,
+      MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
     );
     await startParticipants(missionId);
 

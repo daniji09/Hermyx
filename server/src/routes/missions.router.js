@@ -37,8 +37,10 @@ import {
   unjoinMissionBodySchema,
   cancelMissionParamSchema,
   reopenMissionParamSchema,
+  inviteToMissionSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
+import { inviteToMission } from './../controllers/missions.controller.js';
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
@@ -85,6 +87,13 @@ router.post(
   validateParamsSchema(joinMissionParamSchema),
   validateBodySchema(joinMissionBodySchema),
   joinMission,
+);
+
+// Create a notification
+router.post(
+  '/invite',
+  validateBodySchema(inviteToMissionSchema),
+  inviteToMission,
 );
 
 // Submits current adventurer participation for owner review

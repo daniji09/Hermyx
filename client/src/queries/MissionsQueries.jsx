@@ -3,6 +3,7 @@ import {
   getMissionById,
   getMissionsOpened,
   getUserMissions,
+  inviteToMission,
 } from '../services/MissionsServices';
 
 export const getMissionByIdQueryOptions = (params, options) => {
@@ -45,4 +46,11 @@ export const getUserMissionsInfiniteQueryOptions = (
     },
     ...options,
   });
+};
+
+export const inviteToMissionMutationOptions = (options) => {
+  return {
+    mutationFn: inviteToMission,
+    ...options,
+  };
 };

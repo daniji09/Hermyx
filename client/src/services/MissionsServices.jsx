@@ -105,6 +105,22 @@ export const unjoinMission = async (mid, vacancyId) => {
   return data;
 };
 
+export const inviteToMission = async ({
+  missionId,
+  receiverId,
+  vacancyId,
+  message,
+}) => {
+  const { data } = await api.post('/missions/invite', {
+    missionId,
+    receiverId,
+    vacancyId,
+    message,
+  });
+
+  return data;
+};
+
 // Cancels mission
 export const cancelMission = async (mid) => {
   const { data } = await api.post(`/missions/${mid}/cancel`);

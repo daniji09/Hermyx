@@ -61,6 +61,8 @@ export const messages = {
   //// Get all paginated
   NO_MISSIONS: 'There is no missions yet.',
   MISSIONS_NOT_FOUND: 'Missions not found.',
+
+  /// Mission participation
   MISSION_NOT_IN_PROGRESS: 'Mission is not in progress.',
   MISSION_NOT_ACCEPTING_ADVENTURERS:
     'This mission is no longer accepting adventurers.',
@@ -120,6 +122,11 @@ export const messages = {
   CANNOT_UNJOIN_IN_PROGRESS_MISSION: `You can't unjoin a mission that has already closed.`,
   CANNOT_UNJOIN_VACANCY_STATE: `Vacancy can't be unjoined on current state.`,
 
+  /// Invite to mission
+  CANNOT_INVITE_YOURSELF: `You can't invite yourself.`,
+  VACANCY_ALREADY_OCCUPIED: `This vacancy is already occupied.`,
+  NO_VACANCIES_AVAILABLE: `There is no vacancies available.`,
+
   /// Delete mission
   CANNOT_DELETE_MISSION: `Can't delete mission.`,
   CANNOT_DELETE_MISSION_STATE: `Can't delete mission on current state.`,
@@ -146,4 +153,16 @@ export const messages = {
     'This Google account is already linked to another Hermyx account',
   CHANGING_EMAIL_TO_CURRENT:
     'The new email cannot be the same as your current one.',
+
+  //// Notification
+  PENDING_NOTIFICATION_EXISTS:
+    'There is already a pending notification for this user.',
+  RECEIVER_NOT_FOUND: `Receiver not found.`,
+  NOTIFICATION_NOT_FOUND: 'Notification not found.',
+  NOTIFICATION_NOT_PENDING: (status) =>
+    `This notification has already been ${status}.`,
+  INVALID_NOTIFICATION_ACTION: 'Invalid notification action.',
+  INVALID_RESPONSE_ACTION: 'Invalid response action',
+  NOTIFICATION_NOT_ASSOCIATED_WITH_VACANCY:
+    'This notification is not associated with a mission vacancy.',
 };

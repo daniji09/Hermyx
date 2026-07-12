@@ -1,4 +1,4 @@
-export const MISSIONS_LIFE_CYCLE = {
+export const MISSION_LIFE_CYCLE = {
   OPENED: {
     ID: 'OPENED',
     LABEL: 'Opened',
