@@ -1,3 +1,4 @@
+import { VACANCY_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 import pool from '../config/db.config.js';
 
 export const updateTransferInfo = async (mid, uid, transferId, amount) => {
@@ -12,11 +13,15 @@ export const updateTransferInfo = async (mid, uid, transferId, amount) => {
 export const startParticipants = async (mid) => {
   const query = `
     UPDATE mission_participation
-    SET status = 'in_progress'
-    WHERE mid = $1 AND status = 'joined'
+    SET status = $2
+    WHERE mid = $1 AND status = $3
     RETURNING *
   `;
-  const result = await pool.query(query, [mid]);
+  const result = await pool.query(query, [
+    mid,
+    VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
+    VACANCY_LIFE_CYCLE.JOINED.ID,
+  ]);
   return result.rows;
 };
 
@@ -40,57 +45,75 @@ export const getById = async (mid, adventurerId) => {
 export const submitParticipation = async (mid, adventurerId) => {
   const query = `
     UPDATE mission_participation
-    SET status = 'submitted'
-    WHERE mid = $1 AND adventurer_id = $2 AND status = 'in_progress'
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
     RETURNING *
   `;
-  const result = await pool.query(query, [mid, adventurerId]);
+  const result = await pool.query(query, [
+    mid,
+    adventurerId,
+    VACANCY_LIFE_CYCLE.SUBMITTED.ID,
+  ]);
   return result.rows[0] || null;
 };
 
 export const approveParticipation = async (mid, adventurerId) => {
   const query = `
     UPDATE mission_participation
-    SET status = 'accepted'
-    WHERE mid = $1 AND adventurer_id = $2 AND status = 'submitted'
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
     RETURNING *
   `;
-  const result = await pool.query(query, [mid, adventurerId]);
+  const result = await pool.query(query, [
+    mid,
+    adventurerId,
+    VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+  ]);
   return result.rows[0] || null;
 };
 
 export const requestParticipationRevision = async (mid, adventurerId) => {
   const query = `
     UPDATE mission_participation
-    SET status = 'revision_requested'
-    WHERE mid = $1 AND adventurer_id = $2 AND status = 'submitted'
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
     RETURNING *
   `;
-  const result = await pool.query(query, [mid, adventurerId]);
+  const result = await pool.query(query, [
+    mid,
+    adventurerId,
+    VACANCY_LIFE_CYCLE.REJECTED.ID,
+  ]);
   return result.rows[0] || null;
 };
 
 export const reopenParticipation = async (mid, adventurerId) => {
   const query = `
     UPDATE mission_participation
-    SET status = 'in_progress'
-    WHERE mid = $1 AND adventurer_id = $2 AND status = 'revision_requested'
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
     RETURNING *
   `;
-  const result = await pool.query(query, [mid, adventurerId]);
+  const result = await pool.query(query, [
+    mid,
+    adventurerId,
+    VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
+  ]);
   return result.rows[0] || null;
 };
 
 export const disputeParticipation = async (mid, adventurerId) => {
   const query = `
     UPDATE mission_participation
-    SET status = 'in_dispute'
-    WHERE mid = $1
-      AND adventurer_id = $2
-      AND status IN ('submitted', 'revision_requested')
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
     RETURNING *
   `;
-  const result = await pool.query(query, [mid, adventurerId]);
+  const result = await pool.query(query, [
+    mid,
+    adventurerId,
+    VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+  ]);
   return result.rows[0] || null;
 };
 
@@ -112,11 +135,11 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
     const result = await client.query(
       `
         UPDATE mission_participation
-        SET adventurer_id = $1
+        SET adventurer_id = $1, status = $4
         WHERE mid = $2 AND id = $3 AND adventurer_id IS NULL
         RETURNING *
       `,
-      [uid, mid, vacancyId],
+      [uid, mid, vacancyId, VACANCY_LIFE_CYCLE.JOINED.ID],
     );
     const joinedVacancy = result.rows[0];
 
@@ -144,8 +167,12 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
 };
 
 export const unjoinVacancy = async (mid, vacancyId) => {
-  const query = `UPDATE mission_participation SET adventurer_id = NULL WHERE mid = $1 AND id = $2`;
-  const result = await pool.query(query, [mid, vacancyId]);
+  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $3 WHERE mid = $1 AND id = $2`;
+  const result = await pool.query(query, [
+    mid,
+    vacancyId,
+    VACANCY_LIFE_CYCLE.EMPTY.ID,
+  ]);
   return result.rowCount;
 };
 
@@ -197,16 +224,29 @@ export const updateVacancy = async (mid, vacancy) => {
 export const insertVacancies = async (mid, vacancies) => {
   const insertPromises = vacancies.map((vacancy) => {
     const insertQuery = `
-      INSERT INTO mission_participation (mid, monetary_reward, title, description)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO mission_participation (mid, monetary_reward, title, description, status)
+      VALUES ($1, $2, $3, $4, $5)
     `;
     return pool.query(insertQuery, [
       mid,
       vacancy.reward,
       vacancy.title || null,
       vacancy.description || null,
+      VACANCY_LIFE_CYCLE.EMPTY.ID,
     ]);
   });
   const result = await Promise.all([...insertPromises]);
   return result;
+};
+
+export const getOccupiedVacancies = async (mid) => {
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL`;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
+};
+
+export const getEmptyVacancies = async (mid) => {
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NULL`;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
 };

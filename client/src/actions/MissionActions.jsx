@@ -49,7 +49,6 @@ export const createMissionAction = async (previousState, formData) => {
 
     const success = await createMission({
       ...validatedFields.data,
-      status: 'pending_payment',
     });
 
     if (!success?.mid) {
@@ -73,7 +72,7 @@ export const createMissionAction = async (previousState, formData) => {
     //Success
     return {
       success: true,
-      redirectTo: `/missions/${success.mid}/pay`,
+      redirectTo: `/missions/${success.mid}`,
       errors: {},
       data: null,
     };

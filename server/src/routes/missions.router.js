@@ -10,10 +10,11 @@ import {
   start,
   joinMission,
   submitMissionParticipation,
-  getMissionsFunded,
+  getMissionsOpened,
   editMission,
   unjoinMission,
   cancelMission,
+  reopenMission,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -35,8 +36,11 @@ import {
   unjoinMissionParamSchema,
   unjoinMissionBodySchema,
   cancelMissionParamSchema,
+  reopenMissionParamSchema,
+  inviteToMissionSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
+import { inviteToMission } from './../controllers/missions.controller.js';
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
@@ -58,12 +62,12 @@ router.get(
 //List all draft missions
 router.get('/in-draft', getAllMissionsInDraft);
 
-// List all funded missions
+// List all opened missions
 router.get(
-  '/funded',
+  '/opened',
   validateQuerySchema(getMissionsQuerySchema),
   await pagination(),
-  getMissionsFunded,
+  getMissionsOpened,
 );
 
 //Get mission by id
@@ -85,6 +89,13 @@ router.post(
   joinMission,
 );
 
+// Create a notification
+router.post(
+  '/invite',
+  validateBodySchema(inviteToMissionSchema),
+  inviteToMission,
+);
+
 // Submits current adventurer participation for owner review
 router.post(
   '/:mid/submit',
@@ -97,6 +108,13 @@ router.post(
   '/:mid/cancel',
   validateParamsSchema(cancelMissionParamSchema),
   cancelMission,
+);
+
+// Reopens a mission
+router.post(
+  '/:mid/reopen',
+  validateParamsSchema(reopenMissionParamSchema),
+  reopenMission,
 );
 
 //Edit mission

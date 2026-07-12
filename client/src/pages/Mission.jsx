@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getMissionByIdQueryOptions } from './../queries/MissionsQueries';
-import { createNotificationMutationOptions } from '../queries/NotificationsQueries';
+import {
+  getMissionByIdQueryOptions,
+  inviteToMissionMutationOptions,
+} from './../queries/MissionsQueries';
 import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
 import {
   Card,
@@ -22,6 +24,7 @@ import {
   submitMissionParticipation,
   unjoinMission,
   cancelMission,
+  reopenMission,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -45,6 +48,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
+import {
+  MISSION_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.utils';
 
 export const Mission = () => {
   // Mission id
@@ -141,21 +148,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   const currentParticipation = mission?.participants?.find(
     (participant) => participant.adventurer_id === currentUser?.id,
   );
-  const isEditable =
-    mission?.status !== 'refunding' &&
-    mission?.status !== 'refunded' &&
-    mission?.status !== 'cancelling' &&
-    mission?.status !== 'cancelled' &&
-    mission?.status !== 'finished';
 
-  const isCancelable =
-    mission?.status === 'opened' ||
-    mission?.status === 'pending_payment' ||
-    mission?.status === 'in_progress' ||
-    mission?.status === 'in_dispute' ||
-    mission?.status === 'reopened';
-
-  const canAddAdventurers = isCreator && mission?.status === 'funded';
   return (
     <>
       {mission && (
@@ -183,7 +176,6 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   <ParticipantSection
                     mission={mission}
                     isCreator={isCreator}
-                    canAddAdventurers={canAddAdventurers}
                     onAddAdventurer={() => setIsSearchModalOpen(true)}
                   />
                   <div className='flex items-center gap-2'>
@@ -191,6 +183,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     <span>{mission.total_payment}$</span>
                     <HandCoins className='h-6 w-6' aria-hidden='true' />
                   </div>
+                  {mission.status}
                 </div>
                 <MissionVacancies
                   mission={mission}
@@ -213,13 +206,15 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <CardFooter>
                 <>
                   {isCreator ? (
-                    mission.status === 'in_progress' ? (
+                    mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID ? (
                       <MissionOwnerStatusMessage status={mission.status} />
-                    ) : mission.status === 'funded' ? (
+                    ) : mission.status === MISSION_LIFE_CYCLE.OPENED.ID ||
+                      mission.status === MISSION_LIFE_CYCLE.REOPENED.ID ? (
                       <StartMissionButton
                         mission={mission}
                       ></StartMissionButton>
-                    ) : mission.status === 'pending_payment' ? (
+                    ) : mission.status ===
+                      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID ? (
                       <PayMissionButton
                         missionId={mission.mid}
                       ></PayMissionButton>
@@ -228,7 +223,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         {messages.MISSION.MISSION_CLOSED}
                       </p>
                     )
-                  ) : mission.status === 'in_progress' &&
+                  ) : mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
                     currentParticipation ? (
                     <SubmitParticipationButton
                       missionId={mission.mid}
@@ -243,16 +238,24 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       {messages.MISSION.MISSION_OPEN}
                     </p>
                   )}
-                  {isCreator && isEditable && (
+                  {isCreator && MISSION_LIFE_CYCLE[mission.status].CAN_EDIT && (
                     <Button asChild>
                       <Link to={`/missions/${mission.mid}/edit`}>
                         Edit mission
                       </Link>
                     </Button>
                   )}
-                  {isCreator && isCancelable && (
-                    <CancelMissionButton mission={mission} />
-                  )}
+                  {isCreator &&
+                    (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE ||
+                      MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) && (
+                      <CancelMissionButton mission={mission} />
+                    )}
+                  {isCreator &&
+                    MISSION_LIFE_CYCLE[
+                      mission.status
+                    ].VALID_NEXT_STATES.includes(
+                      MISSION_LIFE_CYCLE.REOPENED.ID,
+                    ) && <ReopenMissionButton mission={mission} />}
                 </>
               </CardFooter>
             </section>
@@ -401,7 +404,7 @@ const ViewVacancyDialog = ({
 
           {!isCreator &&
             isAssignedToUser &&
-            mission.status !== 'in_progress' && (
+            mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID && (
               <UnjoinMissionButton
                 missionId={mission.mid}
                 vacancyId={vacancy.vacancy_id}
@@ -458,21 +461,17 @@ const AddAdventurerButton = ({ onClick }) => {
   );
 };
 
-const ParticipantSection = ({
-  mission,
-  isCreator,
-  canAddAdventurers,
-  onAddAdventurer,
-}) => {
+const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
   if (!isCreator) {
     return null;
   }
 
   return (
     <div className='flex flex-wrap items-center gap-2 pt-1'>
-      {isCreator && canAddAdventurers && (
-        <AddAdventurerButton onClick={onAddAdventurer} />
-      )}
+      {isCreator &&
+        MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS && (
+          <AddAdventurerButton onClick={onAddAdventurer} />
+        )}
       {(mission.participants || []).map((participant) => (
         <ParticipantRow key={participant.uid} participant={participant} />
       ))}
@@ -518,7 +517,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
   const { showAlert } = useAlert();
   const { isPending: isSendingNotification, mutate: sendNotification } =
     useMutation(
-      createNotificationMutationOptions({
+      inviteToMissionMutationOptions({
         onSuccess: () => {
           showAlert({
             title: 'Invitation sent',
@@ -939,10 +938,12 @@ const UnjoinMissionButton = ({ missionId, vacancyId }) => {
 const StartMissionButton = ({ mission }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { isPending, mutate } = useMutation({
     mutationFn: () => startMission(mission.mid),
     onSuccess: () => {
       queryClient.invalidateQueries(['getMissions']);
+      navigate(`/missions/${mission.mid}/pay`);
     },
     // Backend error handling
     onError: (error) => {
@@ -1022,9 +1023,11 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   };
 
   const isSubmitted =
-    participationStatus && participationStatus !== 'in_progress';
+    participationStatus &&
+    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID;
   const buttonLabel =
-    participationStatus && participationStatus !== 'in_progress'
+    participationStatus &&
+    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID
       ? getParticipationStatusLabel(participationStatus)
       : 'Submit my part';
 
@@ -1041,7 +1044,7 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 };
 
 const MissionOwnerStatusMessage = ({ status }) => {
-  if (status === 'in_progress') {
+  if (status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
     return (
       <p className='text-muted-foreground bg-muted/20'>
         Waiting for adventurers to submit their participation.
@@ -1081,9 +1084,6 @@ const PayMissionButton = ({ missionId }) => {
 };
 
 const CancelMissionButton = ({ mission }) => {
-  const deleteMission =
-    mission.status === 'opened' || mission.status === 'pending_payment';
-
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
@@ -1107,7 +1107,7 @@ const CancelMissionButton = ({ mission }) => {
     // This action needs confirmation
     showAlert({
       title: messages.MISSION.CANCEL_MISSION_ALERT.TITLE,
-      description: deleteMission
+      description: MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
         ? messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_DELETE
         : messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_CANCEL,
       variant: 'warning',
@@ -1124,6 +1124,49 @@ const CancelMissionButton = ({ mission }) => {
       disabled={isPending}
     >
       {'Cancel mission'}
+    </Button>
+  );
+};
+
+const ReopenMissionButton = ({ mission }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => reopenMission(mission.mid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.REOPEN_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.REOPEN_MISSION_ALERT.TITLE,
+      description: messages.MISSION.REOPEN_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.REOPEN_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='reopenMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Reopen mission'}
     </Button>
   );
 };
