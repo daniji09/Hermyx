@@ -38,6 +38,7 @@ import {
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
 import { MISSIONS_LIFE_CYCLE } from '@hermyx/shared/utils/missions.lifecycle.js';
+import { messages } from '@hermyx/shared';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
@@ -337,6 +338,14 @@ export async function confirmPayment(req, res) {
         .status(400)
         .json({ error: `Payment was not completed (status=${pi.status})` });
     }
+
+    // Checks if mission can be in progress by states
+    if (
+      !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+        MISSIONS_LIFE_CYCLE.IN_PROGRESS.ID,
+      )
+    )
+      return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
 
     // Mission and participants life cycle is updated
     await updatePaymentInfo(

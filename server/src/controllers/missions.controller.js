@@ -38,7 +38,10 @@ import {
   createPaymentIntentNew,
   createRefund,
 } from '../services/payment.service.js';
-import { MISSIONS_LIFE_CYCLE } from './../../../node_modules/@hermyx/shared/utils/missions.lifecycle.js';
+import {
+  MISSIONS_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from './../../../node_modules/@hermyx/shared/utils/missions.lifecycle.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -374,13 +377,21 @@ export const start = async (req, res) => {
         .json({ error: messages.START_WITHOUT_ADVENTURERS });
     }
 
+    // Checks if mission can be started by states
+    if (
+      !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+        MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      )
+    )
+      return res.status(400).json({ error: messages.CANNOT_START_STATE });
+
+    // Then, it updates the mission
     await updateMissionStatus(
       missionId,
       MISSIONS_LIFE_CYCLE.PENDING_PAYMENT.ID,
     );
 
     const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-    console.log(occupied_vacancies);
     const missionData = {
       mid: mission.mid,
       title: mission.title,
@@ -589,6 +600,19 @@ export const unjoinMission = async (req, res) => {
       });
     }
 
+    // Vacancy is searched
+    const vacancy = await getVacancyById(mid, vacancyId);
+
+    // Checks if adventurer can unjoin can be deleted by states
+    if (
+      !VACANCY_LIFE_CYCLE[vacancy.status].VALID_NEXT_STATES.includes(
+        VACANCY_LIFE_CYCLE.EMPTY.ID,
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: messages.CANNOT_UNJOIN_VACANCY_STATE });
+
     // Checks if user has actually joined that mission
     const alreadyJoined = await getMissionParticipationById(mid, uid);
     if (alreadyJoined < 1)
@@ -648,10 +672,32 @@ export const cancelMission = async (req, res) => {
 
     // If mission has to be "deleted", it will be
     if (MISSIONS_LIFE_CYCLE[mission.status].CAN_DELETE) {
+      // Checks if mission can be deleted by states
+      if (
+        !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+          MISSIONS_LIFE_CYCLE.DELETED.ID,
+        )
+      )
+        return res
+          .status(400)
+          .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
+
+      // Then mission status is updated
       await updateMissionStatus(mid, MISSIONS_LIFE_CYCLE.DELETED.ID);
     }
     // If mission has to be cancelled, it will be
     else if (MISSIONS_LIFE_CYCLE[mission.status].CAN_CANCEL) {
+      // Checks if mission can be cancelled by states
+      if (
+        !MISSIONS_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+          MISSIONS_LIFE_CYCLE.CANCELLING.ID,
+        )
+      )
+        return res
+          .status(400)
+          .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
+
+      // Then mission status is updated
       await updateMissionStatus(mid, MISSIONS_LIFE_CYCLE.CANCELLING.ID); // TODO: primero a cancelling pero eso depende de lo de stripe
       // TODO: pagar a todos los aventureros
     }

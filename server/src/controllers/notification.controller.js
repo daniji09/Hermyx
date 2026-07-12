@@ -202,7 +202,7 @@ const respondToParticipationReview = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (!VACANCY_LIFE_CYCLE.SUBMITTED.ID) {
+  if (participation.status !== VACANCY_LIFE_CYCLE.SUBMITTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
@@ -215,6 +215,16 @@ const respondToParticipationReview = async ({
         error: messages.MISSION_PARTICIPATION_DISPUTE_REQUIRES_RETRY,
       });
     }
+
+    // Checks if vacancy can be in dispute by states
+    if (
+      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+        VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: messages.CANNOT_DISPUTE_PARTICIPATION_STATE });
 
     await disputeParticipation(missionId, notification.sender_id);
     await syncMissionCompletionStatus(missionId);
@@ -248,6 +258,16 @@ const respondToParticipationReview = async ({
   }
 
   if (response === 'rejected') {
+    // Checks if vacancy can be rejected by states
+    if (
+      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+        VACANCY_LIFE_CYCLE.REJECTED.ID,
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: messages.CANNOT_REJECT_PARTICIPATION_STATE });
+
     await requestParticipationRevision(missionId, notification.sender_id);
     await syncMissionCompletionStatus(missionId);
     await updateNotificationStatus(notificationId, 'rejected');
@@ -279,6 +299,15 @@ const respondToParticipationReview = async ({
       message: messages.MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY,
     });
   }
+  // Checks if vacancy can be accepted by states
+  if (
+    !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+      VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+    )
+  )
+    return res
+      .status(400)
+      .json({ error: messages.CANNOT_ACCEPT_PARTICIPATION_STATE });
 
   await approveParticipation(missionId, notification.sender_id);
   await syncMissionCompletionStatus(missionId);
@@ -334,13 +363,22 @@ const respondToParticipationRejection = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (!VACANCY_LIFE_CYCLE.REJECTED.ID) {
+  if (participation !== VACANCY_LIFE_CYCLE.REJECTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
   }
 
   if (response === 'disputed') {
+    // Checks if vacancy can be in dispute by states
+    if (
+      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+        VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: messages.CANNOT_DISPUTE_PARTICIPATION_STATE });
     await disputeParticipation(missionId, userId);
     const missionAfterSync = await syncMissionCompletionStatus(missionId);
     await updateNotificationStatus(notificationId, 'disputed');
@@ -376,6 +414,16 @@ const respondToParticipationRejection = async ({
   if (response !== 'accepted' && response !== 'accept') {
     return res.status(400).json({ error: 'Invalid response action' });
   }
+
+  // Checks if vacancy can be in progress by states
+  if (
+    !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+      VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
+    )
+  )
+    return res
+      .status(400)
+      .json({ error: messages.CANNOT_REOPEN_PARTICIPATION_STATE });
 
   await reopenParticipation(missionId, userId);
   await syncMissionCompletionStatus(missionId);
@@ -444,16 +492,21 @@ const respondToMissionJoinNotification = async ({
     });
   }
 
+  const vacancy = getVacancyById(missionId, vacancyId);
+  // Checks if vacancy can be joined by states
+  if (
+    !VACANCY_LIFE_CYCLE[vacancy.status].VALID_NEXT_STATES.includes(
+      VACANCY_LIFE_CYCLE.JOINED.ID,
+    )
+  )
+    return res
+      .status(400)
+      .json({ error: messages.CANNOT_JOIN_PARTICIPATION_STATE });
+
   const adventurerId =
     mission.owner_id === notification.sender_id
       ? notification.recipient_id
       : notification.sender_id;
-
-  if (!MISSIONS_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS) {
-    return res.status(409).json({
-      error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-    });
-  }
 
   const alreadyJoined = await getMissionParticipationById(
     missionId,

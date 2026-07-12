@@ -119,7 +119,7 @@ export const VACANCY_LIFE_CYCLE = {
   IN_PROGRESS: {
     ID: 'IN_PROGRESS',
     LABEL: 'In progress',
-    VALID_NEXT_STATES: ['SUBMITTED'],
+    VALID_NEXT_STATES: ['SUBMITTED', 'EMPTY'],
   },
   SUBMITTED: {
     ID: 'SUBMITTED',
