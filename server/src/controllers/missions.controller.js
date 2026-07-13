@@ -563,6 +563,33 @@ export const start = async (req, res) => {
     // Updates total payment
     await updateMission(missionData);
 
+    const message = `Mission ${mission.title} has been closed. Waiting for owner payment for start.`;
+    // Finally, all occupied vacancies are notified
+    for (const vacancy of occupied_vacancies) {
+      const notificationId = await createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
+        status: null,
+        message: message,
+        senderId: userId,
+        receiverId: vacancy.adventurer_id,
+        payload: {
+          associated_mission_id: mission.mid,
+        },
+      });
+      emitToUser(vacancy.adventurer_id, 'mission:closed', {
+        notificationId,
+        missionId: mission.mid,
+        vacancyId: vacancy.adventurer_id,
+        missionTitle: mission.title,
+        senderId: userId,
+        senderUsername: req.user.username,
+        receiverId: vacancy.adventurer_id,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        message: message,
+      });
+    }
     return res.status(200).json({
       status: MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
       participants: currentParticipants,
@@ -751,7 +778,7 @@ export const inviteToMission = async (req, res) => {
         associated_vacancy_id: vacancyId,
       },
     };
-    console.log(notificationData);
+
     const newNotificationId = await createNotification(notificationData);
 
     emitToUser(receiverId, 'notification:created', {
@@ -894,27 +921,34 @@ export const unjoinMission = async (req, res) => {
     // Mission info is update
     await adventurerUnjoined(mid);
 
-    /* TODO: enviar notificación al creador de la misión para informarle que ha perdido un participante
-    Const invitationId = await createInvitationRecord({
-      missionId: mid,
-      vacancyId: vacancyId,
+    // Gets adventurer fled information
+    const adventurer = await getUserById(vacancy.adventurer_id);
+    const message = `Adventurer ${adventurer.username} fled the vacancy ${vacancy.title} from your mission ${mission.title}.`;
+    // Finally, a notification is sent to the owner
+    const notificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.MISSION_UNJOIN.ID,
+      status: null,
+      message: message,
       senderId: uid,
-      receiverId: ownerId,
-      type: 'adventurer_to_applicant',
-      message,
+      receiverId: mission.owner_id,
+      payload: {
+        associated_mission_id: mission.mid,
+        associated_vacancy_id: vacancy.id,
+      },
     });
-
-    emitToUser(ownerId, 'invitation:created', {
-      invitationId,
-      missionId: mid,
-      vacancyId: vacancyId,
+    emitToUser(vacancy.adventurer_id, 'mission:unjoined', {
+      notificationId,
+      missionId: mission.mid,
+      vacancyId: vacancy.adventurer_id,
       missionTitle: mission.title,
       senderId: uid,
-      senderUsername: req.user.username,
-      receiverId: ownerId,
-      type: 'adventurer_to_applicant',
-      message,
-    });*/
+      senderUsername: adventurer.username,
+      receiverId: mission.owner_id,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      message: message,
+    });
 
     return res.status(200).json({});
   } catch (error) {
@@ -977,28 +1011,41 @@ export const cancelMission = async (req, res) => {
         },
       });
 
-    /* TODO: enviar notificación a todos los aventureros de que la misión ha sido cancelada
-    Const invitationId = await createInvitationRecord({
-      missionId: mid,
-      vacancyId: vacancyId,
-      senderId: uid,
-      receiverId: ownerId,
-      type: 'adventurer_to_applicant',
-      message,
-    });
-
-    emitToUser(ownerId, 'invitation:created', {
-      invitationId,
-      missionId: mid,
-      vacancyId: vacancyId,
-      missionTitle: mission.title,
-      senderId: uid,
-      senderUsername: req.user.username,
-      receiverId: ownerId,
-      type: 'adventurer_to_applicant',
-      message,
-    });*/
-
+    // Either way, all adventurers are informed
+    const occupied_vacancies = await getOccupiedVacancies(mid);
+    for (const vacancy of occupied_vacancies) {
+      const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+        ? `Mission ${mission.title} has been deleted, so it won't be done, we are sorry.`
+        : `Mission ${mission.title} has been cancelled, but don't worry, your reward will be still payed.`;
+      const notificationId = await createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+          ? NOTIFICATION_ACTION.MISSION_DELETE.ID
+          : NOTIFICATION_ACTION.MISSION_CANCEL.ID,
+        status: null,
+        message: message,
+        senderId: uid,
+        receiverId: vacancy.adventurer_id,
+        payload: {
+          associated_mission_id: mission.mid,
+        },
+      });
+      const eventName = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+        ? 'mission:delete'
+        : 'mission:cancel';
+      emitToUser(vacancy.adventurer_id, eventName, {
+        notificationId,
+        missionId: mission.mid,
+        vacancyId: vacancy.id,
+        missionTitle: mission.title,
+        senderId: uid,
+        senderUsername: req.user.username,
+        receiverId: vacancy.adventurer_id,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        message: message,
+      });
+    }
     return res.status(200).json({});
   } catch (error) {
     console.error(error);
@@ -1046,27 +1093,34 @@ export const reopenMission = async (req, res) => {
     // Finally, mission is reopened
     await updateMissionStatus(mid, MISSION_LIFE_CYCLE.REOPENED.ID);
 
-    /* TODO: enviar notificación a todos los aventureros de que la misión ha sido reabierta
-    Const invitationId = await createInvitationRecord({
-      missionId: mid,
-      vacancyId: vacancyId,
-      senderId: uid,
-      receiverId: ownerId,
-      type: 'adventurer_to_applicant',
-      message,
-    });
-
-    emitToUser(ownerId, 'invitation:created', {
-      invitationId,
-      missionId: mid,
-      vacancyId: vacancyId,
-      missionTitle: mission.title,
-      senderId: uid,
-      senderUsername: req.user.username,
-      receiverId: ownerId,
-      type: 'adventurer_to_applicant',
-      message,
-    });*/
+    // And all adventurers are informed
+    const occupied_vacancies = await getOccupiedVacancies(mid);
+    for (const vacancy of occupied_vacancies) {
+      const message = `Mission ${mission.title} has been reopened, so new teammates will enter!`;
+      const notificationId = await createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.MISSION_REOPEN.ID,
+        status: null,
+        message: message,
+        senderId: uid,
+        receiverId: vacancy.adventurer_id,
+        payload: {
+          associated_mission_id: mission.mid,
+        },
+      });
+      emitToUser(vacancy.adventurer_id, 'mission:reopened', {
+        notificationId,
+        missionId: mission.mid,
+        vacancyId: vacancy.id,
+        missionTitle: mission.title,
+        senderId: uid,
+        senderUsername: req.user.username,
+        receiverId: vacancy.adventurer_id,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        message: message,
+      });
+    }
 
     return res.status(200).json({});
   } catch (error) {

@@ -103,7 +103,13 @@ CREATE TABLE NOTIFICATION (
 		'PARTICIPATION_REJECTION_RESPONSE',
 		'PARTICIPATION_APPROVED',
 		'PARTICIPATION_DISPUTED',
-		'MISSION_EDIT'
+		'MISSION_EDIT',
+		'MISSION_CLOSE', --- Mission has been closed for adventurers, but its not payed
+		'MISSION_START', --- Mission has been payed, so it starts
+		'MISSION_UNJOIN',
+		'MISSION_DELETE',
+		'MISSION_CANCEL',
+		'MISSION_REOPEN'
 	)),
 	status VARCHAR(20) CHECK (status IS NULL OR status IN ('PENDING','ACCEPTED','REJECTED','DISPUTED')),
 	message VARCHAR(500),

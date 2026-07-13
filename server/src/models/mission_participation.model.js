@@ -238,8 +238,8 @@ export const insertVacancies = async (mid, vacancies) => {
 };
 
 export const getOccupiedVacancies = async (mid) => {
-  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL`;
-  const result = await pool.query(query, [mid]);
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status != $2`;
+  const result = await pool.query(query, [mid, VACANCY_LIFE_CYCLE.RELEASED.ID]);
   return result.rows;
 };
 

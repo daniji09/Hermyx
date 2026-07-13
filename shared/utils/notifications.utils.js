@@ -31,6 +31,30 @@ export const NOTIFICATION_ACTION = {
     ID: 'MISSION_EDIT',
     LABEL: 'Mission edit',
   },
+  MISSION_CLOSE: {
+    ID: 'MISSION_CLOSE',
+    LABEL: 'Mission close',
+  },
+  MISSION_START: {
+    ID: 'MISSION_START',
+    LABEL: 'Mission start',
+  },
+  MISSION_UNJOIN: {
+    ID: 'MISSION_UNJOIN',
+    LABEL: 'Mission unjoin',
+  },
+  MISSION_DELETE: {
+    ID: 'MISSION_DELETE',
+    LABEL: 'Mission delete',
+  },
+  MISSION_CANCEL: {
+    ID: 'MISSION_EDIT',
+    LABEL: 'Mission cancel',
+  },
+  MISSION_REOPEN: {
+    ID: 'MISSION_REOPEN',
+    LABEL: 'Mission reopen',
+  },
 };
 
 export const NOTIFICATION_STATUS = {
