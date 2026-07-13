@@ -115,11 +115,15 @@ export const VACANCY_LIFE_CYCLE = {
     LABEL: 'Empty',
     VALID_NEXT_STATES: ['JOINED'],
   },
-  JOINED: { ID: 'JOINED', LABEL: 'Joined', VALID_NEXT_STATES: ['IN_PROGRESS'] },
+  JOINED: {
+    ID: 'JOINED',
+    LABEL: 'Joined',
+    VALID_NEXT_STATES: ['IN_PROGRESS', 'EMPTY'],
+  },
   IN_PROGRESS: {
     ID: 'IN_PROGRESS',
     LABEL: 'In progress',
-    VALID_NEXT_STATES: ['SUBMITTED', 'EMPTY'],
+    VALID_NEXT_STATES: ['SUBMITTED'],
   },
   SUBMITTED: {
     ID: 'SUBMITTED',

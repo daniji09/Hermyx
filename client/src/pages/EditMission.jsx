@@ -639,6 +639,8 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
     if (state.success && processedState.current !== state) {
       onConfirm({
         id: vacancy.id,
+        adventurer_id: vacancy.adventurer_id || undefined,
+        username: vacancy.username || undefined,
         reward: state.data.vacanciesReward,
         title: state.data.vacanciesTitle,
         description: state.data.vacanciesDescription,

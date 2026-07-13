@@ -34,11 +34,19 @@ import {
 } from '../models/mission.model.js';
 
 import {
+  getOccupiedVacancies,
   startParticipants,
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
 import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 import { messages } from '@hermyx/shared';
+import { createNotification } from '../models/notification.model.js';
+import {
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_TYPE,
+} from '@hermyx/shared/utils/notifications.utils.js';
+import { emitToUser } from '../services/socket.service.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
@@ -354,6 +362,36 @@ export async function confirmPayment(req, res) {
       MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
     );
     await startParticipants(missionId);
+
+    // Finally, all participants are notified
+    const occupied_vacancies = await getOccupiedVacancies(missionId);
+    const message = `Mission ${mission.title} has started! Talk to your team and start working.`;
+    // Finally, all occupied vacancies are notified
+    for (const vacancy of occupied_vacancies) {
+      const notificationId = await createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.MISSION_START.ID,
+        status: null,
+        message: message,
+        senderId: req.user.uid,
+        receiverId: vacancy.adventurer_id,
+        payload: {
+          associated_mission_id: mission.mid,
+        },
+      });
+      emitToUser(vacancy.adventurer_id, 'mission:started', {
+        notificationId,
+        missionId: mission.mid,
+        vacancyId: vacancy.adventurer_id,
+        missionTitle: mission.title,
+        senderId: req.user.uid,
+        senderUsername: req.user.username,
+        receiverId: vacancy.adventurer_id,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        message: message,
+      });
+    }
 
     res.json({ success: true });
   } catch (error) {

@@ -200,18 +200,16 @@ export const updateVacancy = async (mid, vacancy) => {
   // Only makes update if its actually different
   const updateQuery = `
     UPDATE mission_participation 
-    SET monetary_reward = $1, title = $2, description = $3
-    WHERE id = $4 AND mid = $5
+    SET title = $1, description = $2
+    WHERE id = $3 AND mid = $4
       AND (
-        monetary_reward != $1 OR 
-        title IS DISTINCT FROM $2 OR 
-        description IS DISTINCT FROM $3
+        title IS DISTINCT FROM $1 OR 
+        description IS DISTINCT FROM $2
       )
-    RETURNING id, adventurer_id, title, description;
+    RETURNING id, adventurer_id, title, description, monetary_reward;
   `;
 
   const result = await pool.query(updateQuery, [
-    vacancy.reward,
     vacancy.title || null,
     vacancy.description || null,
     vacancy.id,
@@ -240,8 +238,8 @@ export const insertVacancies = async (mid, vacancies) => {
 };
 
 export const getOccupiedVacancies = async (mid) => {
-  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL`;
-  const result = await pool.query(query, [mid]);
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status != $2`;
+  const result = await pool.query(query, [mid, VACANCY_LIFE_CYCLE.RELEASED.ID]);
   return result.rows;
 };
 
@@ -249,4 +247,10 @@ export const getEmptyVacancies = async (mid) => {
   const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NULL`;
   const result = await pool.query(query, [mid]);
   return result.rows;
+};
+
+export const updateVacancyMonetaryReward = async (id, monetary_reward) => {
+  const query = `UPDATE mission_participation SET monetary_reward = $2 WHERE id = $1 RETURNING *`;
+  const result = await pool.query(query, [id, monetary_reward]);
+  return result.rows[0];
 };
