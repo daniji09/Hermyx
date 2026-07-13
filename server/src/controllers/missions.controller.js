@@ -31,6 +31,8 @@ import {
   createNotification,
   countParticipationReviewAttempts,
   hasPendingJoinNotification,
+  findByActionStatusAndVacancy,
+  updateNotification,
 } from '../models/notification.model.js';
 import { emitToUser } from '../services/socket.service.js';
 import {
@@ -234,11 +236,13 @@ export const editMission = async (req, res) => {
       mission.title,
       mission.mid,
     );
-
     if (hasDuplicate)
       return res.status(400).json({
         errors: { general: [messages.MISSION_SAME_TITLE] },
       });
+
+    // Gets current vacancies info
+    const originalVacancies = await getOccupiedVacancies(mission.mid);
 
     // Updates each vacancy of the mission, first, new and existing vacancies are selected
     const newVacancies = mission.vacanciesData.filter(
@@ -253,7 +257,6 @@ export const editMission = async (req, res) => {
 
     // New mission info can delete existing vacancies only in opened state
     if (!MISSION_LIFE_CYCLE[currentMission.status].CAN_DELETE_ADVENTURERS) {
-      const originalVacancies = await getMissionParticipation(mission.mid);
       if (existingIds.length < originalVacancies) {
         return res.status(400).json({
           errors: {
@@ -269,38 +272,32 @@ export const editMission = async (req, res) => {
     // First operation, deleting vacancies that are not occupied
     await deleteUnoccupiedVacancies(mission.mid, existingIds);
 
+    const vacanciesToNotify = [];
     // After that, updating existing vacancies
-    const updatePromises = existingVacancies.map((vacancy) =>
-      updateVacancy(mission.mid, vacancy),
-    );
-    const updateResults = await Promise.all(updatePromises);
-    const vacanciesToNotify = updateResults.filter(
-      (res) => res !== undefined && res.adventurer_id !== null,
-    );
+    const updatePromises = existingVacancies.map((vacancy) => {
+      const currentOriginalVacancy = originalVacancies.find(
+        (vac) => vac.id === vacancy.id,
+      );
 
-    // TODO: cuando las notificaciones estén hechas cambiar esto, que esta con invitaciones.
-    // La notificación será distinta si se cambia el dinero estando en progreso o cambiando otras en otros estados
-    /* For (const vacancy of vacanciesToNotify) {
-      const invitationId = await createInvitationRecord({
-        missionId: mission.mid,
-        vacancyId: vacancy.id,
-        senderId: uid,
-        receiverId: vacancy.adventurer_id,
-        type: 'adventurer_to_applicant',
-        message: 'Your vacant has been modified!',
-      });
-      emitToUser(mission.owner_id, 'invitation:updated', {
-        invitationId,
-        missionId: mission.mid,
-        vacancyId: vacancy.id,
-        missionTitle: mission.title,
-        senderId: uid,
-        senderUsername: req.user.username,
-        receiverId: vacancy.adventurer_id,
-        type: 'adventurer_to_applicant',
-        message: 'Your vacant has been modified!',
-      });
-    }*/
+      // Checks for each vacancy if any field has been changed
+      if (
+        Number(currentOriginalVacancy.monetary_reward) !==
+          Number(vacancy.reward) ||
+        currentOriginalVacancy.description !== vacancy.description ||
+        currentOriginalVacancy.title !== vacancy.title
+      ) {
+        // So its saves that vacancy because its owner will have to be notified
+        const vacancyToSave = {
+          adventurer_id: currentOriginalVacancy.adventurer_id,
+          ...vacancy,
+        };
+        vacanciesToNotify.push(vacancyToSave);
+      }
+
+      // Then, makes allowed changes in vacancy (anything but monetary reward)
+      return updateVacancy(mission.mid, vacancy);
+    });
+    await Promise.all(updatePromises);
 
     // Lastly, inserting new vacancies
     await insertVacancies(mission.mid, newVacancies);
@@ -351,6 +348,162 @@ export const editMission = async (req, res) => {
       });
     }
 */
+    // First, if mission info is changed, every old vacancy is notified
+    const changes = [];
+    Object.keys(updatedMission).forEach((key) => {
+      // Detects changes in mission info, except for publication date and total payment
+      if (
+        currentMission[key] !== updatedMission[key] &&
+        key !== 'publication_date' &&
+        key !== 'total_payment'
+      ) {
+        if (key === 'total_vacancies') key = 'total vacancies';
+        changes.push(key);
+      }
+    });
+
+    if (changes.length > 0) {
+      for (const vacancyId of existingIds) {
+        const vacancy = await getVacancyById(mission.mid, vacancyId);
+        const message = `${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
+        const notificationId = await createNotification({
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+          status: null,
+          message: message,
+          senderId: uid,
+          receiverId: vacancy.adventurer_id,
+          payload: {
+            associated_mission_id: mission.mid,
+            associated_vacancy_id: vacancyId,
+          },
+        });
+        emitToUser(vacancy.adventurer_id, 'mission:edited', {
+          notificationId,
+          missionId: mission.mid,
+          vacancyId: vacancyId,
+          missionTitle: mission.title,
+          senderId: uid,
+          senderUsername: req.user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: message,
+        });
+      }
+    }
+
+    // Then, if vacancy info is changed, each adventurer is notified. If monetary reward is changed, the notification is actionable.
+    for (const vacancy of vacanciesToNotify) {
+      const changes = [];
+      Object.keys(vacancy).forEach((key) => {
+        // Detects changes in mission info
+        if (
+          originalVacancies.find((vac) => vac.id === vacancy.id)[key] !==
+            vacancy[key] &&
+          key !== 'reward'
+        )
+          changes.push(key);
+        // The reward has different key name on each object
+        if (
+          key === 'reward' &&
+          Number(
+            originalVacancies.find((vac) => vac.id === vacancy.id)[
+              'monetary_reward'
+            ],
+          ) !== Number(vacancy[key])
+        )
+          changes.push(key);
+      });
+
+      if (
+        changes.length > 0 &&
+        !(changes.length === 1 && changes.includes('reward')) // If the only change is the reward, no additional notification is needed
+      ) {
+        // First, informational notification is sended
+        const message = `Your vacancy at ${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
+        const notificationId = await createNotification({
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+          status: null,
+          message: message,
+          senderId: uid,
+          receiverId: vacancy.adventurer_id,
+          payload: {
+            associated_mission_id: mission.mid,
+            associated_vacancy_id: vacancy.id,
+          },
+        });
+        emitToUser(vacancy.adventurer_id, 'mission:edited', {
+          notificationId,
+          missionId: mission.mid,
+          vacancyId: vacancy.id,
+          missionTitle: mission.title,
+          senderId: uid,
+          senderUsername: req.user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: message,
+        });
+      }
+
+      // Then, if monetary reward has been changed, notification is sended
+      if (changes.includes('reward')) {
+        // First, if a pending monetary reward notification exists, it changes its value
+        // eslint-disable-next-line prefer-const
+        let notification = await findByActionStatusAndVacancy(
+          NOTIFICATION_ACTION.MISSION_EDIT.ID,
+          NOTIFICATION_STATUS.PENDING.ID,
+          vacancy.id,
+        );
+        if (notification.length > 0) {
+          notification[0].payload.new_offer = vacancy.reward;
+          notification[0].message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
+          console.log(notification[0], vacancy.reward);
+          await updateNotification({
+            nid: notification[0].nid,
+            type: notification[0].type,
+            kind: notification[0].kind,
+            action: notification[0].action,
+            status: notification[0].status,
+            message: notification[0].message,
+            senderId: notification[0].sender_id,
+            recipientId: notification[0].recipient_id,
+            payload: notification[0].payload,
+          });
+        } else {
+          // If not, the new notification is send
+          const message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
+          const notificationId = await createNotification({
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+            action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+            status: NOTIFICATION_STATUS.PENDING.ID,
+            message: message,
+            senderId: uid,
+            receiverId: vacancy.adventurer_id,
+            payload: {
+              associated_mission_id: mission.mid,
+              associated_vacancy_id: vacancy.id,
+              new_offer: vacancy.reward,
+            },
+          });
+          emitToUser(vacancy.adventurer_id, 'mission:edited', {
+            notificationId,
+            missionId: mission.mid,
+            vacancyId: vacancy.id,
+            missionTitle: mission.title,
+            senderId: uid,
+            senderUsername: req.user.username,
+            receiverId: vacancy.adventurer_id,
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            message: message,
+          });
+        }
+      }
+    }
+
     return res.status(200).json({ mission: updatedMission });
   } catch (e) {
     console.log(e);

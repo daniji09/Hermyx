@@ -18,6 +18,7 @@ import {
   joinVacancy,
   reopenParticipation,
   requestParticipationRevision,
+  updateVacancyMonetaryReward,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
 import {
@@ -486,6 +487,116 @@ const respondToMissionJoinNotification = async ({
   return res.status(200).json({ message: 'Adventurer successfully added' });
 };
 
+const respondToVacancyMonetaryRewardEdition = async ({
+  notification,
+  response,
+  userId,
+  username,
+  notificationId,
+  res,
+}) => {
+  const missionId = notification.payload.associated_mission_id;
+  const mission = await getById(missionId);
+  if (!mission) {
+    return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+  }
+
+  const participation = await getMissionParticipationById(missionId, userId);
+  if (!participation) {
+    return res
+      .status(404)
+      .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
+  }
+
+  // Checks that mission is in a editable status
+  if (!MISSION_LIFE_CYCLE[mission.status].CAN_EDIT)
+    return res.status(400).json({
+      errors: { general: [messages.CANNOT_EDIT_MISSION] },
+    });
+
+  if (response === 'rejected') {
+    await updateNotificationStatus(
+      notificationId,
+      NOTIFICATION_STATUS.REJECTED.ID,
+    );
+    await markAsSeen(notificationId);
+
+    const rejectionMessage = `${username} rejected your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+      status: NOTIFICATION_STATUS.REJECTED.ID,
+      message: rejectionMessage,
+      senderId: userId,
+      receiverId: mission.owner_id,
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: notification.payload.associated_vacancy_id,
+      },
+    });
+
+    emitToUser(mission.owner_id, 'mission:participation-disputed', {
+      notificationId: followUpNotificationId,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+      missionId,
+      missionTitle: mission.title,
+      adventurerId: userId,
+      adventurerUsername: username,
+      message: rejectionMessage,
+    });
+
+    return res.status(200).json({
+      message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY,
+    });
+  }
+
+  if (response !== 'accepted' && response !== 'accept') {
+    return res.status(400).json({ error: messages.INVALID_RESPONSE_ACTION });
+  }
+
+  await updateVacancyMonetaryReward(
+    notification.payload.associated_vacancy_id,
+    notification.payload.new_offer,
+  );
+  await updateNotificationStatus(
+    notificationId,
+    NOTIFICATION_STATUS.ACCEPTED.ID,
+  );
+  await markAsSeen(notificationId);
+
+  const acceptMessage = `${username} accepted your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
+  const followUpNotificationId = await createNotification({
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+    action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+    status: NOTIFICATION_STATUS.ACCEPTED.ID,
+    message: acceptMessage,
+    senderId: userId,
+    receiverId: mission.owner_id,
+    payload: {
+      associated_mission_id: missionId,
+      associated_vacancy_id: notification.payload.associated_vacancy_id,
+    },
+  });
+
+  emitToUser(mission.owner_id, 'mission:participation-disputed', {
+    notificationId: followUpNotificationId,
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+    missionId,
+    missionTitle: mission.title,
+    adventurerId: userId,
+    adventurerUsername: username,
+    message: acceptMessage,
+  });
+
+  return res.status(200).json({
+    message: messages.MISSION_PARTICIPATION_REVISION_ACCEPTED_SUCCESSFULLY,
+  });
+};
+
 /*Receives a notification id and response. Business behavior is selected by action.*/
 export const respondToNotification = async (req, res) => {
   const { notificationId } = req.params;
@@ -544,6 +655,17 @@ export const respondToNotification = async (req, res) => {
       return await respondToMissionJoinNotification({
         notification,
         response,
+        notificationId,
+        res,
+      });
+    }
+
+    if (notification.action === NOTIFICATION_ACTION.MISSION_EDIT.ID) {
+      return await respondToVacancyMonetaryRewardEdition({
+        notification,
+        response,
+        userId,
+        username: req.user.username,
         notificationId,
         res,
       });

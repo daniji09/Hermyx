@@ -27,6 +27,10 @@ export const NOTIFICATION_ACTION = {
     ID: 'PARTICIPATION_DISPUTED',
     LABEL: 'Participation disputed',
   },
+  MISSION_EDIT: {
+    ID: 'MISSION_EDIT',
+    LABEL: 'Mission edit',
+  },
 };
 
 export const NOTIFICATION_STATUS = {

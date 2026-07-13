@@ -142,3 +142,51 @@ export const countParticipationReviewAttempts = async (
   ]);
   return result.rows[0].attempts;
 };
+
+export const findByActionStatusAndVacancy = async (
+  action,
+  status,
+  associated_vacancy_id,
+) => {
+  const query = `SELECT * 
+  FROM notification 
+  WHERE action = $1 
+    AND status = $2 
+    AND payload->>'associated_mission_id' = $3::text`;
+  const result = await pool.query(query, [
+    action,
+    status,
+    associated_vacancy_id,
+  ]);
+  return result.rows;
+};
+
+export const updateNotification = async (notificationData) => {
+  const {
+    nid,
+    type,
+    kind,
+    action,
+    status,
+    message,
+    senderId,
+    recipientId,
+    payload,
+  } = notificationData;
+
+  const query = `UPDATE notification 
+  SET type = $1, kind = $2, action = $3, status = $4, message = $5, sender_id = $6, recipient_id = $7, payload = $8
+  WHERE nid = $9`;
+  const result = await pool.query(query, [
+    type,
+    kind,
+    action,
+    status,
+    message,
+    senderId,
+    recipientId,
+    payload,
+    nid,
+  ]);
+  return result.rowCount;
+};
