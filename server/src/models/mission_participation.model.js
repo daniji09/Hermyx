@@ -1,5 +1,6 @@
 import { VACANCY_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 import pool from '../config/db.config.js';
+import { VACANCY_PAYMENT_STATUS } from '@hermyx/shared/utils/payment.utils.js';
 
 export const updateTransferInfo = async (mid, uid, transferId, amount) => {
   const query = `
@@ -253,4 +254,33 @@ export const updateVacancyMonetaryReward = async (id, monetary_reward) => {
   const query = `UPDATE mission_participation SET monetary_reward = $2 WHERE id = $1 RETURNING *`;
   const result = await pool.query(query, [id, monetary_reward]);
   return result.rows[0];
+};
+
+export const getMissionPayment = async (mid) => {
+  const query = `SELECT SUM(monetary_reward) FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND payment_status = $2`;
+  const result = await pool.query(query, [
+    mid,
+    VACANCY_PAYMENT_STATUS.UNPAID.ID,
+  ]);
+  return result.rows[0].sum;
+};
+
+export const payVacancies = async (mid, pid) => {
+  const query = `UPDATE mission_participation SET payment_status = $3, mission_payment_pid = $4 WHERE mid = $1 AND adventurer_id IS NOT NULL AND payment_status = $2`;
+  const result = await pool.query(query, [
+    mid,
+    VACANCY_PAYMENT_STATUS.UNPAID.ID,
+    VACANCY_PAYMENT_STATUS.PAID.ID,
+    pid,
+  ]);
+  return result.rowCount;
+};
+
+export const markVacancyAsPaidOut = async (id) => {
+  const query = `UPDATE mission_participation SET payment_status = $2 WHERE id = $1`;
+  const result = await pool.query(query, [
+    id,
+    VACANCY_PAYMENT_STATUS.LIQUIDATED.ID,
+  ]);
+  return result.rowCount;
 };

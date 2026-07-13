@@ -12,7 +12,6 @@ import {
   getByUidAndTitle,
   getMissionsOpened as _getMissionsOpened,
   updateMission,
-  getMissionParticipation,
   adventurerUnjoined,
 } from '../models/mission.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
@@ -26,6 +25,7 @@ import {
   deleteUnoccupiedVacancies,
   getOccupiedVacancies,
   getEmptyVacancies,
+  markVacancyAsPaidOut,
 } from '../models/mission_participation.model.js';
 import {
   createNotification,
@@ -38,6 +38,7 @@ import { emitToUser } from '../services/socket.service.js';
 import {
   createPaymentIntentNew,
   createRefund,
+  createTransfer,
 } from '../services/payment.service.js';
 import {
   MISSION_LIFE_CYCLE,
@@ -49,6 +50,7 @@ import {
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
+import { getMissionPayments } from '../models/mission_payment.model.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -534,61 +536,127 @@ export const start = async (req, res) => {
         .status(400)
         .json({ error: messages.START_WITHOUT_ADVENTURERS });
     }
-
-    // Checks if mission can be started by states
-    if (
-      !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    // Different start for opened or reopened mission+
+    if (mission.status === MISSION_LIFE_CYCLE.OPENED.ID) {
+      // Checks if mission can be started by states
+      if (
+        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+        )
       )
-    )
-      return res.status(400).json({ error: messages.CANNOT_START_STATE });
+        return res.status(400).json({ error: messages.CANNOT_START_STATE });
 
-    // Then, it updates the mission
-    await updateMissionStatus(missionId, MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID);
+      // Then, it updates the mission
+      await updateMissionStatus(
+        missionId,
+        MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      );
 
-    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-    const missionData = {
-      mid: mission.mid,
-      title: mission.title,
-      description: mission.description,
-      vacancies: mission.total_vacancies,
-      longitude: mission.longitude,
-      latitude: mission.latitude,
-      totalPayment:
-        occupied_vacancies.reduce(
-          (sum, vacancy) => sum + Number(vacancy.monetary_reward),
-          0,
-        ) || 0,
-    };
-    // Updates total payment
-    await updateMission(missionData);
+      const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+      const missionData = {
+        mid: mission.mid,
+        title: mission.title,
+        description: mission.description,
+        vacancies: mission.total_vacancies,
+        longitude: mission.longitude,
+        latitude: mission.latitude,
+        totalPayment:
+          occupied_vacancies.reduce(
+            (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+            0,
+          ) || 0,
+      };
+      // Updates total payment
+      await updateMission(missionData);
 
-    const message = `Mission ${mission.title} has been closed. Waiting for owner payment for start.`;
-    // Finally, all occupied vacancies are notified
-    for (const vacancy of occupied_vacancies) {
-      const notificationId = await createNotification({
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-        action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
-        status: null,
-        message: message,
-        senderId: userId,
-        receiverId: vacancy.adventurer_id,
-        payload: {
-          associated_mission_id: mission.mid,
-        },
-      });
-      emitToUser(vacancy.adventurer_id, 'mission:closed', {
-        notificationId,
-        missionId: mission.mid,
-        vacancyId: vacancy.adventurer_id,
-        missionTitle: mission.title,
-        senderId: userId,
-        senderUsername: req.user.username,
-        receiverId: vacancy.adventurer_id,
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        message: message,
-      });
+      const message = `Mission ${mission.title} has been closed. Waiting for owner payment to start.`;
+      // Finally, all occupied vacancies are notified
+      for (const vacancy of occupied_vacancies) {
+        const notificationId = await createNotification({
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
+          status: null,
+          message: message,
+          senderId: userId,
+          receiverId: vacancy.adventurer_id,
+          payload: {
+            associated_mission_id: mission.mid,
+          },
+        });
+        emitToUser(vacancy.adventurer_id, 'mission:closed', {
+          notificationId,
+          missionId: mission.mid,
+          vacancyId: vacancy.adventurer_id,
+          missionTitle: mission.title,
+          senderId: userId,
+          senderUsername: req.user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: message,
+        });
+      }
+    } else if (mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) {
+      // Checks if mission can be started by states
+      if (
+        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_LIFE_CYCLE.REOPENED_PENDING_PAYMENT.ID,
+        )
+      )
+        return res
+          .status(400)
+          .json({ error: messages.CANNOT_REOPEN_MISSION_STATE });
+
+      // Then, it updates the mission
+      await updateMissionStatus(
+        missionId,
+        MISSION_LIFE_CYCLE.REOPENED_PENDING_PAYMENT.ID,
+      );
+
+      const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+      const missionData = {
+        mid: mission.mid,
+        title: mission.title,
+        description: mission.description,
+        vacancies: mission.total_vacancies,
+        longitude: mission.longitude,
+        latitude: mission.latitude,
+        totalPayment:
+          occupied_vacancies.reduce(
+            (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+            0,
+          ) || 0,
+      };
+      // Updates total payment
+      await updateMission(missionData);
+
+      const message = `Mission ${mission.title} has been closed after being reopened. Waiting for owner payment to start new adventurers.`;
+      // Finally, all occupied vacancies are notified
+      for (const vacancy of occupied_vacancies) {
+        const notificationId = await createNotification({
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
+          status: null,
+          message: message,
+          senderId: userId,
+          receiverId: vacancy.adventurer_id,
+          payload: {
+            associated_mission_id: mission.mid,
+          },
+        });
+        emitToUser(vacancy.adventurer_id, 'mission:closed', {
+          notificationId,
+          missionId: mission.mid,
+          vacancyId: vacancy.adventurer_id,
+          missionTitle: mission.title,
+          senderId: userId,
+          senderUsername: req.user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: message,
+        });
+      }
     }
     return res.status(200).json({
       status: MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
@@ -972,6 +1040,9 @@ export const cancelMission = async (req, res) => {
     if (mission.owner_id !== uid)
       return res.status(403).json({ error: messages.CANNOT_DELETE_MISSION });
 
+    // Gets occupied vacancies
+    const occupied_vacancies = await getOccupiedVacancies(mid);
+
     // If mission has to be "deleted", it will be
     if (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE) {
       // Checks if mission can be deleted by states
@@ -1000,8 +1071,28 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLING.ID); // TODO: primero a cancelling pero eso depende de lo de stripe
-      // TODO: pagar a todos los aventureros
+      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLING.ID);
+      for (const vacancy of occupied_vacancies) {
+        const adventurer = await getUserById(vacancy.adventurer_id);
+        if (adventurer.stripe_account_id) {
+          const transferData = {
+            amount: Math.round(vacancy.monetary_reward * 100),
+            currency: 'eur',
+            destination: adventurer.stripe_account_id,
+            description: `mission_cancelled`,
+          };
+
+          const idempotencyKey = `cancel_${mid}_vac_${vacancy.id}`;
+          await createTransfer(transferData, idempotencyKey);
+
+          await markVacancyAsPaidOut(vacancy.id);
+        }
+      }
+      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLED.ID);
+
+      return res
+        .status(200)
+        .json({ message: 'Misión cancelada y pagos procesados' });
     }
     // Otherwise, mission can't be deleted or cancelled
     else
@@ -1012,7 +1103,6 @@ export const cancelMission = async (req, res) => {
       });
 
     // Either way, all adventurers are informed
-    const occupied_vacancies = await getOccupiedVacancies(mid);
     for (const vacancy of occupied_vacancies) {
       const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
         ? `Mission ${mission.title} has been deleted, so it won't be done, we are sorry.`

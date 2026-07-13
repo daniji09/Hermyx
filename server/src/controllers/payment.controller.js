@@ -31,10 +31,13 @@ import {
   updateReleaseStatus,
   lockForRefund,
   finalizeRefund,
+  updateMissionStatus,
 } from '../models/mission.model.js';
 
 import {
+  getMissionPayment,
   getOccupiedVacancies,
+  payVacancies,
   startParticipants,
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
@@ -47,6 +50,7 @@ import {
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
 import { emitToUser } from '../services/socket.service.js';
+import { createMissionPayment } from '../models/mission_payment.model.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
@@ -265,7 +269,9 @@ export async function payDefault(req, res) {
     await updatePaymentInfo(
       missionId,
       pi.id,
-      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      mission.status === MISSION_LIFE_CYCLE.OPENED.ID
+        ? MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID
+        : MISSION_LIFE_CYCLE.REOPENED_PENDING_PAYMENT.ID,
     );
 
     res.json({
@@ -282,13 +288,15 @@ export async function payDefault(req, res) {
 export async function payNew(req, res) {
   try {
     const customerId = req.user.stripe_customer_id;
-    const { missionId, saveCard = true } = req.body;
+    const { mid, saveCard = true } = req.body;
 
-    if (!missionId) return res.status(400).json({ error: 'Missing missionId' });
-
-    const mission = await _getById(missionId);
-    if (!mission) return res.status(404).json({ error: 'Mission not found' });
+    const mission = await _getById(mid);
+    if (!mission)
+      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
     if (!ensureMissionOwner(mission, req.user.uid, res)) return;
+
+    // Finds how much it has to be payed
+    const paymentAmount = await getMissionPayment(mid);
 
     const reusablePi = await getReusablePaymentIntent(mission, customerId);
     if (reusablePi) {
@@ -298,22 +306,35 @@ export async function payNew(req, res) {
       });
     }
 
+    // Creates payment on Stripe
     const pi = await createPaymentIntentNew(
       {
-        amount: Math.round(mission.total_payment * 100),
+        amount: Math.round(paymentAmount * 100),
         currency: 'eur',
         customer: customerId,
         automatic_payment_methods: { enabled: true },
         ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
-        metadata: { missionId, ownerId: req.user.uid },
+        metadata: { mid, ownerId: req.user.uid },
       },
-      `pay_new_${missionId}_${Date.now()}`,
+      `pay_new_${mid}_${Date.now()}`,
     );
 
-    await updatePaymentInfo(
-      missionId,
-      pi.id,
-      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    // Adds mission payment
+    const payment = await createMissionPayment({
+      mid,
+      stripe_pi_id: pi.id,
+      amount_paid: paymentAmount,
+    });
+
+    // Updates vacancies info
+    await payVacancies(mid, payment.pid);
+
+    // Updates mission info
+    await updateMissionStatus(
+      mid,
+      mission.status === MISSION_LIFE_CYCLE.OPENED.ID
+        ? MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID
+        : MISSION_LIFE_CYCLE.REOPENED_PENDING_PAYMENT.ID,
     );
 
     res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
@@ -356,11 +377,7 @@ export async function confirmPayment(req, res) {
       return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
 
     // Mission and participants life cycle is updated
-    await updatePaymentInfo(
-      missionId,
-      pi.id,
-      MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
-    );
+    await updateMissionStatus(missionId, MISSION_LIFE_CYCLE.IN_PROGRESS.ID);
     await startParticipants(missionId);
 
     // Finally, all participants are notified
