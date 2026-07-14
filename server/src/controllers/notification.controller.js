@@ -6,6 +6,7 @@ import {
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
+import { getById as getUserById } from '../models/app_user.model.js';
 import {
   getById,
   syncMissionCompletionStatus,
@@ -16,6 +17,8 @@ import {
   getById as getMissionParticipationById,
   getVacancyById,
   joinVacancy,
+  markVacancyAsPaidOut,
+  releaseParticipation,
   reopenParticipation,
   requestParticipationRevision,
   updateVacancyMonetaryReward,
@@ -31,6 +34,7 @@ import {
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
+import { createTransfer } from '../services/payment.service.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -218,6 +222,24 @@ const respondToParticipationReview = async ({
 
   await approveParticipation(missionId, notification.sender_id);
   await syncMissionCompletionStatus(missionId);
+  // Reward is payed
+  const adventurer = await getUserById(notification.sender_id);
+  if (adventurer.stripe_connected_id) {
+    const transferData = {
+      amount: Math.round(participation.monetary_reward * 100),
+      currency: 'eur',
+      destination: adventurer.stripe_connected_id,
+      description: `mission_payed`,
+      transfer_group: `mission_${missionId}`,
+    };
+
+    const idempotencyKey = `pay_${missionId}_vac_${participation.id}`;
+    await createTransfer(transferData, idempotencyKey);
+
+    await markVacancyAsPaidOut(participation.id);
+    await releaseParticipation(missionId, notification.sender_id);
+  }
+
   await updateNotificationStatus(
     notificationId,
     NOTIFICATION_STATUS.ACCEPTED.ID,

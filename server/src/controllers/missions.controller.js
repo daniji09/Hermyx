@@ -281,16 +281,16 @@ export const editMission = async (req, res) => {
         (vac) => vac.id === vacancy.id,
       );
 
-      // Checks for each vacancy if any field has been changed
+      // Checks for each vacancy if any field has been changed TODO:fallo
       if (
-        Number(currentOriginalVacancy.monetary_reward) !==
+        Number(currentOriginalVacancy?.monetary_reward) !==
           Number(vacancy.reward) ||
-        currentOriginalVacancy.description !== vacancy.description ||
-        currentOriginalVacancy.title !== vacancy.title
+        currentOriginalVacancy?.description !== vacancy.description ||
+        currentOriginalVacancy?.title !== vacancy.title
       ) {
         // So its saves that vacancy because its owner will have to be notified
         const vacancyToSave = {
-          adventurer_id: currentOriginalVacancy.adventurer_id,
+          adventurer_id: currentOriginalVacancy?.adventurer_id,
           ...vacancy,
         };
         vacanciesToNotify.push(vacancyToSave);
@@ -462,7 +462,6 @@ export const editMission = async (req, res) => {
         if (notification.length > 0) {
           notification[0].payload.new_offer = vacancy.reward;
           notification[0].message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
-          console.log(notification[0], vacancy.reward);
           await updateNotification({
             nid: notification[0].nid,
             type: notification[0].type,
@@ -722,6 +721,13 @@ export const joinMission = async (req, res) => {
       return res.status(409).json({
         error: 'You already sent a join request for this mission.',
       });
+    }
+
+    // Checks if user has configured their bank account
+    if (req.user.stripe_connected_id === null) {
+      return res
+        .status(403)
+        .json({ error: messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED });
     }
 
     // Otherwise, creates the notification for the joining request (or invite)
@@ -1072,14 +1078,17 @@ export const cancelMission = async (req, res) => {
 
       // Then mission status is updated
       await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLING.ID);
+
+      // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
       for (const vacancy of occupied_vacancies) {
         const adventurer = await getUserById(vacancy.adventurer_id);
-        if (adventurer.stripe_account_id) {
+        if (adventurer.stripe_connected_id) {
           const transferData = {
             amount: Math.round(vacancy.monetary_reward * 100),
             currency: 'eur',
-            destination: adventurer.stripe_account_id,
+            destination: adventurer.stripe_connected_id,
             description: `mission_cancelled`,
+            transfer_group: `mission_${mid}`,
           };
 
           const idempotencyKey = `cancel_${mid}_vac_${vacancy.id}`;
@@ -1089,10 +1098,6 @@ export const cancelMission = async (req, res) => {
         }
       }
       await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLED.ID);
-
-      return res
-        .status(200)
-        .json({ message: 'Misión cancelada y pagos procesados' });
     }
     // Otherwise, mission can't be deleted or cancelled
     else
@@ -1106,7 +1111,7 @@ export const cancelMission = async (req, res) => {
     for (const vacancy of occupied_vacancies) {
       const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
         ? `Mission ${mission.title} has been deleted, so it won't be done, we are sorry.`
-        : `Mission ${mission.title} has been cancelled, but don't worry, your reward will be still payed.`;
+        : `Mission ${mission.title} has been cancelled, but don't worry, your reward is on your way!.`;
       const notificationId = await createNotification({
         type: NOTIFICATION_TYPE.MISSION.ID,
         kind: NOTIFICATION_KIND.INFORMATIONAL.ID,

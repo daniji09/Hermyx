@@ -82,7 +82,7 @@ router.post(
 );
 
 //Route to register as a connected account
-router.get('/connect/onboard', connectOnboard);
+router.post('/connect/onboard', connectOnboard);
 
 //Successful connected account route
 router.get('/connect/success', connectSuccess);

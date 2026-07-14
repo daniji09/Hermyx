@@ -15,6 +15,7 @@ import {
   createTransfer,
   createRefund,
   createLoginLink,
+  retrieveConnectAccount,
 } from '../services/payment.service.js';
 
 import {
@@ -51,6 +52,7 @@ import {
 } from '@hermyx/shared/utils/notifications.utils.js';
 import { emitToUser } from '../services/socket.service.js';
 import { createMissionPayment } from '../models/mission_payment.model.js';
+import { FRONTEND_URL } from '../config/config.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
@@ -421,9 +423,8 @@ export async function confirmPayment(req, res) {
 export async function connectOnboard(req, res) {
   try {
     const userId = req.user.uid;
-
     const user = await getById(userId);
-    if (!user) return res.status(404).send('User not found');
+    if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
     let accountId = user.stripe_connected_id;
 
@@ -434,8 +435,8 @@ export async function connectOnboard(req, res) {
       await updateStripeConnectId(userId, accountId);
     }
 
-    const refreshUrl = `http://localhost:3000/stripe/connect/onboard`;
-    const returnUrl = `http://localhost:3000/stripe/connect/success`;
+    const refreshUrl = `${FRONTEND_URL}/stripe/connect/onboard`;
+    const returnUrl = `${FRONTEND_URL}/stripe/connect/success`;
 
     const accountLink = await createAccountLink(
       accountId,
@@ -443,10 +444,10 @@ export async function connectOnboard(req, res) {
       returnUrl,
     );
 
-    res.redirect(accountLink.url);
+    return res.json({ url: accountLink.url });
   } catch (err) {
     console.error('Error Connect Onboard:', err);
-    res.status(500).send('Failed to initialize payment registration');
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 }
 
@@ -589,20 +590,23 @@ export async function refundMissionPayment(req, res) {
 export async function getDashboardLink(req, res) {
   try {
     const userId = req.user.uid;
-
     const user = await getById(userId);
+    if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
-    if (!user || !user.stripe_connected_id) {
-      return res
-        .status(400)
-        .json({ error: 'The user does not have a connected stripe account' });
+    // Checks if user actually completed login form
+    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
+    if (!accountInfo.details_submitted) {
+      return res.status(403).json({
+        error: {
+          general: [messages.STRIPE_ONBOARDING_NOT_COMPLETED],
+        },
+      });
     }
 
     const loginLink = await createLoginLink(user.stripe_connected_id);
-
-    res.json({ url: loginLink.url });
+    return res.json({ url: loginLink.url });
   } catch (err) {
     console.error('Error Login Link:', err);
-    res.status(500).json({ error: 'Could not access the dashboard.' });
+    res.status(500).json({ error: { general: [messages.UNEXPECTED_ERROR] } });
   }
 }

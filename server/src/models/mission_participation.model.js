@@ -73,6 +73,21 @@ export const approveParticipation = async (mid, adventurerId) => {
   return result.rows[0] || null;
 };
 
+export const releaseParticipation = async (mid, adventurerId) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    mid,
+    adventurerId,
+    VACANCY_LIFE_CYCLE.RELEASED.ID,
+  ]);
+  return result.rows[0] || null;
+};
+
 export const requestParticipationRevision = async (mid, adventurerId) => {
   const query = `
     UPDATE mission_participation

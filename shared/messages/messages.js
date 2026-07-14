@@ -40,6 +40,7 @@ export const messages = {
   USERNAME_ALREADY_EXISTS: (username) => `Username ${username} already in use.`,
   USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
   COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
+  USER_NOT_FOUND: `User not found.`,
 
   //// Log In
   // Server errors
@@ -116,6 +117,7 @@ export const messages = {
   VACANCY_NOT_FOUND: 'Vacancy not found.',
   VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
   MISSION_NOT_JOINED: `Couldn't join mission.`,
+  ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
 
   /// Unjoin mission
   VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
@@ -138,6 +140,8 @@ export const messages = {
 
   /// Pay mission
   CANNOT_PAY_MISSION_STATE: `Can't pay mission on current state.`,
+  STRIPE_ONBOARDING_NOT_COMPLETED:
+    'You have not completed the Stripe onboarding yet.',
 
   //// Profile
   ///Info

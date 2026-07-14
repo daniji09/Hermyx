@@ -44,3 +44,13 @@ export const deleteSavedCard = async (paymentMethodId) => {
   const { data } = await api.delete(`/stripe/cards/${paymentMethodId}`);
   return data;
 };
+
+export const connectOnBoard = async () => {
+  const { data } = await api.post(`/stripe/connect/onboard`);
+  return data;
+};
+
+export const goToDashboard = async () => {
+  const { data } = await api.post(`/stripe/connect/login-link`);
+  return data;
+};
