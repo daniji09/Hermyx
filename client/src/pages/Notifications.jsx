@@ -13,6 +13,12 @@ import {
 } from '../queries/NotificationsQueries';
 import { timestampToDayMonthYear } from '../utils/date';
 import { AuthContext } from '../contexts/AuthContext';
+import {
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_STATUS,
+  NOTIFICATION_TYPE,
+} from '@hermyx/shared/utils/notifications.utils';
 
 const getInvitationTitle = (notification) => {
   if (notification.action === 'mission_invite') return 'Mission invitation from ';
@@ -62,7 +68,7 @@ export const Notifications = () => {
   const filteredNotifications = useMemo(() => {
     if (filter === 'all') return notifications;
     return notifications.filter(
-      (notification) => notification.status === filter,
+      (notification) => notification.status === filter.toUpperCase(),
     );
   }, [filter, notifications]);
 
@@ -89,7 +95,8 @@ export const Notifications = () => {
   const actionableCount = useMemo(() => {
     return notifications.filter(
       (notification) =>
-        notification.kind === 'actionable' && notification.status === 'pending',
+        notification.kind === NOTIFICATION_KIND.ACTIONABLE.ID &&
+        notification.status === NOTIFICATION_STATUS.PENDING.ID,
     ).length;
   }, [notifications]);
 
@@ -179,15 +186,18 @@ export const Notifications = () => {
             <section className='space-y-4'>
               {filteredNotifications.map((notification) => {
                 const isSeen = notification.seen;
-                const isMissionNotification = notification.type === 'mission';
+                const isMissionNotification =
+                  notification.type === NOTIFICATION_TYPE.MISSION.ID;
                 const isPendingAction =
-                  notification.kind === 'actionable' &&
-                  notification.status === 'pending';
+                  notification.kind === NOTIFICATION_KIND.ACTIONABLE.ID &&
+                  notification.status === NOTIFICATION_STATUS.PENDING.ID;
                 const isPendingMissionReview =
-                  notification.action === 'participation_review' &&
+                  notification.action ===
+                    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID &&
                   isPendingAction;
                 const isPendingRevisionResponse =
-                  notification.action === 'participation_rejection_response' &&
+                  notification.action ===
+                    NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID &&
                   isPendingAction;
                 const canOwnerDispute =
                   isPendingMissionReview &&

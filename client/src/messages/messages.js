@@ -64,6 +64,13 @@ export const messages = {
       DESCRIPTION_CANCEL: `This will cancel the mission, but a refund of your money won't be made, adventurers will be payed.`,
       CONFIRM_TEXT: 'Yes, close mission',
     },
+    REOPEN_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to reopen the mission?',
+      ERROR_TITLE: `Can't reopen mission`,
+      DESCRIPTION:
+        'Empty vacancies must exist on your mission, and new adventurers will be allowed to join them.',
+      CONFIRM_TEXT: 'Yes, reopen mission',
+    },
     SUBMIT_PARTICIPATION_ALERT: {
       TITLE: 'Submit your participation?',
       ERROR_TITLE: `Can't submit participation`,

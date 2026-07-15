@@ -20,6 +20,7 @@ const vacancySchema = z.object({
   title: z
     .string()
     .trim()
+
     .max(
       consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
       messages.FIELD_TOO_LONG(
@@ -27,6 +28,7 @@ const vacancySchema = z.object({
         consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
       ),
     )
+    .nullable()
     .optional()
     .or(z.literal('')),
   description: z
@@ -39,6 +41,7 @@ const vacancySchema = z.object({
         consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
       ),
     )
+    .nullable()
     .optional()
     .or(z.literal('')),
 });
@@ -151,7 +154,9 @@ export const editMissionBodySchema = z.object({
         return z.NEVER;
       }
     })
-    .pipe(z.array(vacancySchema)),
+    .pipe(
+      z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
+    ),
   latitude: z.preprocess(
     (val) => (val === '' || val === null ? undefined : val),
     z.coerce.number().optional(),
@@ -177,6 +182,13 @@ const optionalNumberFromFormSchema = (schema) =>
   }, schema.optional());
 
 export const cancelMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const reopenMissionParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Mid'))
     .int(messages.FIELD_INTEGER('Mid'))
@@ -297,6 +309,33 @@ export const unjoinMissionBodySchema = z.object({
     .number(messages.FIELD_NUMBER('Vacancy id'))
     .int(messages.FIELD_INTEGER('Vacancy id'))
     .min(0, messages.FIELD_POSITIVE('Vacancy id')),
+});
+
+export const inviteToMissionSchema = z.object({
+  missionId: z.coerce
+    .number(messages.FIELD_NUMBER('Mission id'))
+    .int(messages.FIELD_INTEGER('Mission id'))
+    .min(0, messages.FIELD_POSITIVE('Mission id')),
+  receiverId: z.coerce
+    .number(messages.FIELD_NUMBER('Receiver id'))
+    .int(messages.FIELD_INTEGER('Receiver id'))
+    .min(0, messages.FIELD_POSITIVE('Receiver id')),
+  vacancyId: z.coerce
+    .number(messages.FIELD_NUMBER('Vacancy id'))
+    .int(messages.FIELD_INTEGER('Vacancy id'))
+    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
+  message: z
+    .string()
+    .trim()
+    .max(
+      consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Notification message',
+        consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .default(''),
 });
 
 export const submitMissionParticipationSchema = z.object({

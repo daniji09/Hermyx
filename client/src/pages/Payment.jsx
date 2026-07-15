@@ -368,7 +368,7 @@ const PaymentForm = ({ missionId }) => {
   const [clearedFields, setClearedFields] = useState({});
   const [isAlertClosed, setIsAlertClosed] = useState(false);
 
-  // Payment workflow has to be orchestrated in an only component
+  // Payment workflow has to be orchestrated in an only component, that is why the action is here
   const [state, paymentFormAction, isPending] = useActionState(
     // eslint-disable-next-line no-unused-vars
     async (prevState, formData) => {

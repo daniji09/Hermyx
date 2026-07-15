@@ -1,14 +1,11 @@
 import { messages } from '@hermyx/shared';
 import {
-  createNotification as _createNotification,
-  createMissionNotification,
+  createNotification,
   findById,
   getByRecipientId,
-  hasPendingJoinNotification,
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
-import { getById as getUserById } from '../models/app_user.model.js';
 import {
   getById,
   syncMissionCompletionStatus,
@@ -21,8 +18,19 @@ import {
   joinVacancy,
   reopenParticipation,
   requestParticipationRevision,
+  updateVacancyMonetaryReward,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
+import {
+  MISSION_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.utils.js';
+import {
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_STATUS,
+  NOTIFICATION_TYPE,
+} from '@hermyx/shared/utils/notifications.utils.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -58,112 +66,6 @@ export const markMyNotificationAsSeen = async (req, res) => {
   }
 };
 
-// Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
-export const createNotification = async (req, res) => {
-  const { missionId, receiverId, vacancyId, message } = req.body;
-  const senderId = req.user.uid;
-
-  if (senderId === receiverId) {
-    return res.status(400).json({ error: "You can't invite yourself" });
-  }
-
-  try {
-    const [mission, receiver, vacancy] = await Promise.all([
-      getById(missionId),
-      getUserById(receiverId),
-      getVacancyById(missionId, vacancyId),
-    ]);
-
-    if (!mission) {
-      return res.status(404).json({ error: 'Mission not found' });
-    }
-
-    if (!receiver) {
-      return res.status(404).json({ error: 'Receiver not found' });
-    }
-
-    if (!vacancy) {
-      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
-    }
-
-    if (vacancy.adventurer_id !== null) {
-      return res
-        .status(409)
-        .json({ error: 'This vacancy is already occupied.' });
-    }
-
-    if (mission.status !== 'funded') {
-      return res.status(409).json({
-        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-      });
-    }
-
-    const type = 'invitation';
-    const action =
-      mission.owner_id === senderId ? 'mission_invite' : 'join_request';
-
-    const hasPending = await hasPendingJoinNotification(
-      missionId,
-      senderId,
-      receiverId,
-      vacancyId,
-    );
-
-    if (hasPending) {
-      return res.status(409).json({
-        error: 'There is already a pending notification for this user.',
-      });
-    }
-
-    const adventurerId = mission.owner_id === senderId ? receiverId : senderId;
-
-    if (mission.total_vacancies <= mission.occupied_vacancies) {
-      return res
-        .status(409)
-        .json({ error: 'There are no vacancies available' });
-    }
-
-    const alreadyJoined = await getMissionParticipationById(
-      missionId,
-      adventurerId,
-    );
-    if (alreadyJoined) {
-      return res
-        .status(409)
-        .json({ error: 'Adventurer already joined this mission' });
-    }
-
-    const notificationData = {
-      missionId,
-      senderId,
-      receiverId,
-      type,
-      action,
-      message,
-      vacancyId,
-    };
-
-    const newNotificationId = await _createNotification(notificationData);
-
-    emitToUser(receiverId, 'notification:created', {
-      notificationId: newNotificationId,
-      missionId,
-      vacancyId,
-      missionTitle: mission.title,
-      senderId,
-      senderUsername: req.user.username,
-      receiverId,
-      type,
-      message,
-    });
-
-    return res.status(201).json(newNotificationId);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Database error' });
-  }
-};
-
 const respondToParticipationReview = async ({
   notification,
   response,
@@ -172,7 +74,7 @@ const respondToParticipationReview = async ({
   notificationId,
   res,
 }) => {
-  const missionId = notification.associated_mission_id;
+  const missionId = notification.payload.associated_mission_id;
   const mission = await getById(missionId);
 
   if (!mission) {
@@ -183,7 +85,7 @@ const respondToParticipationReview = async ({
     return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
   }
 
-  if (mission.status !== 'in_progress') {
+  if (!MISSION_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_SUBMIT) {
     return res.status(409).json({ error: messages.MISSION_NOT_IN_PROGRESS });
   }
 
@@ -198,7 +100,7 @@ const respondToParticipationReview = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (participation.status !== 'submitted') {
+  if (participation.status !== VACANCY_LIFE_CYCLE.SUBMITTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
@@ -212,25 +114,40 @@ const respondToParticipationReview = async ({
       });
     }
 
+    // Checks if vacancy can be in dispute by states
+    if (
+      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+        VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: messages.CANNOT_DISPUTE_PARTICIPATION_STATE });
+
     await disputeParticipation(missionId, notification.sender_id);
     await syncMissionCompletionStatus(missionId);
-    await updateNotificationStatus(notificationId, 'disputed');
+    await updateNotificationStatus(
+      notificationId,
+      NOTIFICATION_STATUS.DISPUTED.ID,
+    );
     await markAsSeen(notificationId);
 
     const disputeMessage = `Your participation in "${mission.title}" was disputed by ${username}.`;
-    const followUpNotificationId = await createMissionNotification({
-      missionId,
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+      status: null,
+      message: disputeMessage,
       senderId: userId,
       receiverId: notification.sender_id,
-      kind: 'informational',
-      action: 'participation_disputed',
-      message: disputeMessage,
+      payload: { associated_mission_id: missionId },
     });
 
     emitToUser(notification.sender_id, 'mission:participation-disputed', {
       notificationId: followUpNotificationId,
-      type: 'mission',
-      action: 'participation_disputed',
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
       missionId,
       missionTitle: mission.title,
       ownerId: userId,
@@ -244,26 +161,40 @@ const respondToParticipationReview = async ({
   }
 
   if (response === 'rejected') {
+    // Checks if vacancy can be rejected by states
+    if (
+      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+        VACANCY_LIFE_CYCLE.REJECTED.ID,
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: messages.CANNOT_REJECT_PARTICIPATION_STATE });
+
     await requestParticipationRevision(missionId, notification.sender_id);
     await syncMissionCompletionStatus(missionId);
-    await updateNotificationStatus(notificationId, 'rejected');
+    await updateNotificationStatus(
+      notificationId,
+      NOTIFICATION_STATUS.REJECTED.ID,
+    );
     await markAsSeen(notificationId);
 
     const revisionMessage = `Your participation in "${mission.title}" was rejected by ${username}. Please accept the revision or open a dispute.`;
-    const followUpNotificationId = await createMissionNotification({
-      missionId,
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
+      status: NOTIFICATION_STATUS.PENDING.ID,
+      message: revisionMessage,
       senderId: userId,
       receiverId: notification.sender_id,
-      kind: 'actionable',
-      action: 'participation_rejection_response',
-      status: 'pending',
-      message: revisionMessage,
+      payload: { associated_mission_id: missionId },
     });
 
     emitToUser(notification.sender_id, 'mission:participation-revision', {
       notificationId: followUpNotificationId,
-      type: 'mission',
-      action: 'participation_rejection_response',
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
       missionId,
       missionTitle: mission.title,
       ownerId: userId,
@@ -275,26 +206,40 @@ const respondToParticipationReview = async ({
       message: messages.MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY,
     });
   }
+  // Checks if vacancy can be accepted by states
+  if (
+    !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+      VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+    )
+  )
+    return res
+      .status(400)
+      .json({ error: messages.CANNOT_ACCEPT_PARTICIPATION_STATE });
 
   await approveParticipation(missionId, notification.sender_id);
   await syncMissionCompletionStatus(missionId);
-  await updateNotificationStatus(notificationId, 'accepted');
+  await updateNotificationStatus(
+    notificationId,
+    NOTIFICATION_STATUS.ACCEPTED.ID,
+  );
   await markAsSeen(notificationId);
 
   const approvedMessage = `Your participation in "${mission.title}" was approved by ${username}.`;
-  const followUpNotificationId = await createMissionNotification({
-    missionId,
+  const followUpNotificationId = await createNotification({
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+    action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+    status: null,
+    message: approvedMessage,
     senderId: userId,
     receiverId: notification.sender_id,
-    kind: 'informational',
-    action: 'participation_approved',
-    message: approvedMessage,
+    payload: { associated_mission_id: missionId },
   });
 
   emitToUser(notification.sender_id, 'mission:participation-approved', {
     notificationId: followUpNotificationId,
-    type: 'mission',
-    action: 'participation_approved',
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
     missionId,
     missionTitle: mission.title,
     ownerId: userId,
@@ -315,7 +260,7 @@ const respondToParticipationRejection = async ({
   notificationId,
   res,
 }) => {
-  const missionId = notification.associated_mission_id;
+  const missionId = notification.payload.associated_mission_id;
   const mission = await getById(missionId);
 
   if (!mission) {
@@ -330,32 +275,46 @@ const respondToParticipationRejection = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (participation.status !== 'revision_requested') {
+  if (participation.status !== VACANCY_LIFE_CYCLE.REJECTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
   }
 
   if (response === 'disputed') {
+    // Checks if vacancy can be in dispute by states
+    if (
+      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+        VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+      )
+    )
+      return res
+        .status(400)
+        .json({ error: messages.CANNOT_DISPUTE_PARTICIPATION_STATE });
     await disputeParticipation(missionId, userId);
     const missionAfterSync = await syncMissionCompletionStatus(missionId);
-    await updateNotificationStatus(notificationId, 'disputed');
+    await updateNotificationStatus(
+      notificationId,
+      NOTIFICATION_STATUS.DISPUTED.ID,
+    );
     await markAsSeen(notificationId);
 
     const disputeMessage = `${username} opened a dispute for "${mission.title}".`;
-    const followUpNotificationId = await createMissionNotification({
-      missionId,
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+      status: null,
+      message: disputeMessage,
       senderId: userId,
       receiverId: mission.owner_id,
-      kind: 'informational',
-      action: 'participation_disputed',
-      message: disputeMessage,
+      payload: { associated_mission_id: missionId },
     });
 
     emitToUser(mission.owner_id, 'mission:participation-disputed', {
       notificationId: followUpNotificationId,
-      type: 'mission',
-      action: 'participation_disputed',
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
       missionId,
       missionTitle: mission.title,
       adventurerId: userId,
@@ -370,12 +329,25 @@ const respondToParticipationRejection = async ({
   }
 
   if (response !== 'accepted' && response !== 'accept') {
-    return res.status(400).json({ error: 'Invalid response action' });
+    return res.status(400).json({ error: messages.INVALID_RESPONSE_ACTION });
   }
+
+  // Checks if vacancy can be in progress by states
+  if (
+    !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+      VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
+    )
+  )
+    return res
+      .status(400)
+      .json({ error: messages.CANNOT_REOPEN_PARTICIPATION_STATE });
 
   await reopenParticipation(missionId, userId);
   await syncMissionCompletionStatus(missionId);
-  await updateNotificationStatus(notificationId, 'accepted');
+  await updateNotificationStatus(
+    notificationId,
+    NOTIFICATION_STATUS.ACCEPTED.ID,
+  );
   await markAsSeen(notificationId);
 
   return res.status(200).json({
@@ -389,7 +361,7 @@ const respondToMissionJoinNotification = async ({
   notificationId,
   res,
 }) => {
-  const missionId = notification.associated_mission_id;
+  const missionId = notification.payload.associated_mission_id;
   const mission = await getById(missionId);
 
   if (!mission) {
@@ -397,26 +369,31 @@ const respondToMissionJoinNotification = async ({
   }
 
   if (response === 'rejected') {
-    await updateNotificationStatus(notificationId, 'rejected');
+    await updateNotificationStatus(
+      notificationId,
+      NOTIFICATION_STATUS.REJECTED.ID,
+    );
     await markAsSeen(notificationId);
 
     const rejectionMessage =
-      notification.action === 'mission_invite'
+      notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
         ? `Your invitation to join "${mission.title}" was rejected.`
         : `Your request to join "${mission.title}" was rejected.`;
-    const followUpNotificationId = await createMissionNotification({
-      missionId,
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: notification.action,
+      status: null,
+      message: rejectionMessage,
       senderId: notification.recipient_id,
       receiverId: notification.sender_id,
-      kind: 'informational',
-      action: notification.action,
-      message: rejectionMessage,
+      payload: { associated_mission_id: missionId },
     });
 
     emitToUser(notification.sender_id, 'notification:created', {
       notificationId: followUpNotificationId,
-      type: 'mission',
-      kind: 'informational',
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: notification.action,
       missionId,
       missionTitle: mission.title,
@@ -429,72 +406,76 @@ const respondToMissionJoinNotification = async ({
   }
 
   if (response !== 'accepted' && response !== 'accept') {
-    return res.status(400).json({ error: 'Invalid response action' });
+    return res.status(400).json({ error: messages.INVALID_RESPONSE_ACTION });
   }
 
-  const vacancyId = notification.associated_vacancy_id;
+  const vacancyId = notification.payload.associated_vacancy_id;
 
   if (!vacancyId) {
     return res.status(409).json({
-      error: 'This notification is not associated with a mission vacancy.',
+      error: messages.NOTIFICATION_NOT_ASSOCIATED_WITH_VACANCY,
     });
   }
+
+  const vacancy = await getVacancyById(missionId, vacancyId);
+  console.log(vacancy);
+  // Checks if vacancy can be joined by states
+  if (
+    !VACANCY_LIFE_CYCLE[vacancy.status].VALID_NEXT_STATES.includes(
+      VACANCY_LIFE_CYCLE.JOINED.ID,
+    )
+  )
+    return res
+      .status(400)
+      .json({ error: messages.CANNOT_JOIN_PARTICIPATION_STATE });
 
   const adventurerId =
     mission.owner_id === notification.sender_id
       ? notification.recipient_id
       : notification.sender_id;
 
-  if (mission.status !== 'funded') {
-    return res.status(409).json({
-      error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-    });
-  }
-
   const alreadyJoined = await getMissionParticipationById(
     missionId,
     adventurerId,
   );
   if (alreadyJoined) {
-    return res
-      .status(409)
-      .json({ error: 'Adventurer already joined this mission' });
+    return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
   }
 
   // Joins vacancy
   const join_vacancy = await joinVacancy(
     missionId,
-    notification.payload.vacancyId,
+    notification.payload.associated_vacancy_id,
     adventurerId,
   );
   if (join_vacancy < 1)
     return res.status(409).json({ error: messages.VACANCY_NOT_JOINED });
 
-  // If everything is ok, joins mission
-  const adventurer_joined = await adventurerJoined(missionId);
-  if (adventurer_joined < 1)
-    return res.status(409).json({ error: messages.MISSION_NOT_JOINED });
-
-  await updateNotificationStatus(notificationId, 'accepted');
+  await updateNotificationStatus(
+    notificationId,
+    NOTIFICATION_STATUS.ACCEPTED.ID,
+  );
   await markAsSeen(notificationId);
 
   const acceptanceMessage =
-    notification.action === 'mission_invite'
+    notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
       ? `Your invitation to join "${mission.title}" was accepted.`
       : `Your request to join "${mission.title}" was accepted. You are now part of the team.`;
-  const followUpNotificationId = await createMissionNotification({
-    missionId,
+  const followUpNotificationId = await createNotification({
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+    action: notification.action,
+    status: null,
+    message: acceptanceMessage,
     senderId: notification.recipient_id,
     receiverId: notification.sender_id,
-    kind: 'informational',
-    action: notification.action,
-    message: acceptanceMessage,
+    payload: { associated_mission_id: missionId },
   });
 
   emitToUser(notification.sender_id, 'notification:created', {
     notificationId: followUpNotificationId,
-    type: 'mission',
-    kind: 'informational',
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
     action: notification.action,
     missionId,
     missionTitle: mission.title,
@@ -504,6 +485,116 @@ const respondToMissionJoinNotification = async ({
   });
 
   return res.status(200).json({ message: 'Adventurer successfully added' });
+};
+
+const respondToVacancyMonetaryRewardEdition = async ({
+  notification,
+  response,
+  userId,
+  username,
+  notificationId,
+  res,
+}) => {
+  const missionId = notification.payload.associated_mission_id;
+  const mission = await getById(missionId);
+  if (!mission) {
+    return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+  }
+
+  const participation = await getMissionParticipationById(missionId, userId);
+  if (!participation) {
+    return res
+      .status(404)
+      .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
+  }
+
+  // Checks that mission is in a editable status
+  if (!MISSION_LIFE_CYCLE[mission.status].CAN_EDIT)
+    return res.status(400).json({
+      errors: { general: [messages.CANNOT_EDIT_MISSION] },
+    });
+
+  if (response === 'rejected') {
+    await updateNotificationStatus(
+      notificationId,
+      NOTIFICATION_STATUS.REJECTED.ID,
+    );
+    await markAsSeen(notificationId);
+
+    const rejectionMessage = `${username} rejected your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+      status: NOTIFICATION_STATUS.REJECTED.ID,
+      message: rejectionMessage,
+      senderId: userId,
+      receiverId: mission.owner_id,
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: notification.payload.associated_vacancy_id,
+      },
+    });
+
+    emitToUser(mission.owner_id, 'mission:participation-disputed', {
+      notificationId: followUpNotificationId,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+      missionId,
+      missionTitle: mission.title,
+      adventurerId: userId,
+      adventurerUsername: username,
+      message: rejectionMessage,
+    });
+
+    return res.status(200).json({
+      message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY,
+    });
+  }
+
+  if (response !== 'accepted' && response !== 'accept') {
+    return res.status(400).json({ error: messages.INVALID_RESPONSE_ACTION });
+  }
+
+  await updateVacancyMonetaryReward(
+    notification.payload.associated_vacancy_id,
+    notification.payload.new_offer,
+  );
+  await updateNotificationStatus(
+    notificationId,
+    NOTIFICATION_STATUS.ACCEPTED.ID,
+  );
+  await markAsSeen(notificationId);
+
+  const acceptMessage = `${username} accepted your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
+  const followUpNotificationId = await createNotification({
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+    action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+    status: NOTIFICATION_STATUS.ACCEPTED.ID,
+    message: acceptMessage,
+    senderId: userId,
+    receiverId: mission.owner_id,
+    payload: {
+      associated_mission_id: missionId,
+      associated_vacancy_id: notification.payload.associated_vacancy_id,
+    },
+  });
+
+  emitToUser(mission.owner_id, 'mission:participation-disputed', {
+    notificationId: followUpNotificationId,
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+    missionId,
+    missionTitle: mission.title,
+    adventurerId: userId,
+    adventurerUsername: username,
+    message: acceptMessage,
+  });
+
+  return res.status(200).json({
+    message: messages.MISSION_PARTICIPATION_REVISION_ACCEPTED_SUCCESSFULLY,
+  });
 };
 
 /*Receives a notification id and response. Business behavior is selected by action.*/
@@ -517,22 +608,22 @@ export const respondToNotification = async (req, res) => {
     const notification = await findById(notificationId);
 
     if (!notification) {
-      return res.status(404).json({ error: 'Notification not found' });
+      return res.status(404).json({ error: messages.NOTIFICATION_NOT_FOUND });
     }
 
     if (notification.recipient_id !== userId) {
       return res.status(403).json({
-        error: 'You do not have permission to respond to this notification.',
+        error: messages.UNAUTHORIZED_ERROR,
       });
     }
 
-    if (notification.status !== 'pending') {
+    if (notification.status !== NOTIFICATION_STATUS.PENDING.ID) {
       return res.status(400).json({
-        error: `This notification has already been ${notification.status}.`,
+        error: messages.NOTIFICATION_NOT_PENDING(notification.status),
       });
     }
 
-    if (notification.action === 'participation_review') {
+    if (notification.action === NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID) {
       return await respondToParticipationReview({
         notification,
         response,
@@ -543,7 +634,10 @@ export const respondToNotification = async (req, res) => {
       });
     }
 
-    if (notification.action === 'participation_rejection_response') {
+    if (
+      notification.action ===
+      NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID
+    ) {
       return await respondToParticipationRejection({
         notification,
         response,
@@ -555,8 +649,8 @@ export const respondToNotification = async (req, res) => {
     }
 
     if (
-      notification.action === 'join_request' ||
-      notification.action === 'mission_invite'
+      notification.action === NOTIFICATION_ACTION.JOIN_REQUEST.ID ||
+      notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
     ) {
       return await respondToMissionJoinNotification({
         notification,
@@ -566,9 +660,22 @@ export const respondToNotification = async (req, res) => {
       });
     }
 
-    return res.status(400).json({ error: 'Invalid notification action' });
+    if (notification.action === NOTIFICATION_ACTION.MISSION_EDIT.ID) {
+      return await respondToVacancyMonetaryRewardEdition({
+        notification,
+        response,
+        userId,
+        username: req.user.username,
+        notificationId,
+        res,
+      });
+    }
+
+    return res
+      .status(400)
+      .json({ error: messages.INVALID_NOTIFICATION_ACTION });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Error processing the request' });
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };

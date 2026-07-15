@@ -1,6 +1,5 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
-  createNotification,
   getMyNotifications,
   markNotificationAsSeen,
   respondToNotification,
@@ -12,13 +11,6 @@ export const getMyNotificationsQueryOptions = (options) => {
     queryFn: getMyNotifications,
     ...options,
   });
-};
-
-export const createNotificationMutationOptions = (options) => {
-  return {
-    mutationFn: createNotification,
-    ...options,
-  };
 };
 
 export const respondToNotificationMutationOptions = (options) => {
