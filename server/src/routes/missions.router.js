@@ -14,6 +14,7 @@ import {
   editMission,
   unjoinMission,
   cancelMission,
+  reviewAdventurer,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -35,6 +36,8 @@ import {
   unjoinMissionParamSchema,
   unjoinMissionBodySchema,
   cancelMissionParamSchema,
+  reviewAdventurerParamSchema,
+  reviewAdventurerBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
@@ -90,6 +93,14 @@ router.post(
   '/:mid/submit',
   validateParamsSchema(submitMissionParticipationSchema),
   submitMissionParticipation,
+);
+
+// Reviews an adventurer after a completed mission
+router.post(
+  '/:mid/adventurers/:adventurerId/review',
+  validateParamsSchema(reviewAdventurerParamSchema),
+  validateBodySchema(reviewAdventurerBodySchema),
+  reviewAdventurer,
 );
 
 // Cancels a mission

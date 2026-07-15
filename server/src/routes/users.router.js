@@ -48,6 +48,7 @@ router.get('/', validateQuerySchema(getUsersQuerySchema), getUsers);
 // Search users by partial username
 router.get(
   '/search',
+  verifyToken,
   validateQuerySchema(searchUsersByUsernameQuerySchema),
   searchUsersByUsername,
 );

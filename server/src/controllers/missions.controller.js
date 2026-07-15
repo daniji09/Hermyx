@@ -26,6 +26,7 @@ import {
   updateVacancy,
   deleteUnoccupiedVacancies,
 } from '../models/mission_participation.model.js';
+import { createOwnerReview } from '../models/review.model.js';
 import {
   createNotification as createNotificationRecord,
   createMissionNotification as createMissionNotificationRecord,
@@ -538,6 +539,54 @@ export const submitMissionParticipation = async (req, res) => {
     return res.status(200).json({
       message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
       participation: updatedParticipation,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const reviewAdventurer = async (req, res) => {
+  const { mid, adventurerId } = req.params;
+  const { rating, comment } = req.body;
+  const ownerId = req.user.uid;
+
+  try {
+    const result = await createOwnerReview({
+      missionId: mid,
+      adventurerId,
+      ownerId,
+      rating,
+      comment,
+    });
+
+    if (result.error === 'participation_not_found') {
+      return res.status(404).json({
+        error: messages.MISSION_REVIEW_PARTICIPATION_REQUIRED,
+      });
+    }
+
+    if (result.error === 'not_owner') {
+      return res.status(403).json({
+        error: messages.MISSION_REVIEW_NOT_ALLOWED,
+      });
+    }
+
+    if (result.error === 'mission_not_completed') {
+      return res.status(409).json({
+        error: messages.MISSION_REVIEW_COMPLETED_REQUIRED,
+      });
+    }
+
+    if (result.error === 'already_reviewed') {
+      return res.status(409).json({
+        error: messages.MISSION_REVIEW_ALREADY_EXISTS,
+      });
+    }
+
+    return res.status(201).json({
+      message: messages.MISSION_REVIEW_CREATED_SUCCESSFULLY,
+      review: result.review,
     });
   } catch (error) {
     console.error(error);

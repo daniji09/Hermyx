@@ -150,3 +150,12 @@ export const submitMissionParticipation = async (mid) => {
   const { data } = await api.post(`/missions/${mid}/submit`);
   return data;
 };
+
+// Reviews an adventurer after a completed mission
+export const reviewAdventurer = async (mid, adventurerId, review) => {
+  const { data } = await api.post(
+    `/missions/${mid}/adventurers/${adventurerId}/review`,
+    review,
+  );
+  return data;
+};

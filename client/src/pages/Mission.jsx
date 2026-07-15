@@ -12,7 +12,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { timestampToDayMonthYear } from './../utils/date';
-import { Users, HandCoins, Plus, Search, User, UserPlus } from 'lucide-react';
+import {
+  Users,
+  HandCoins,
+  Plus,
+  Search,
+  Star,
+  User,
+  UserPlus,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCallback, useContext, useRef, useState } from 'react';
@@ -22,6 +30,7 @@ import {
   submitMissionParticipation,
   unjoinMission,
   cancelMission,
+  reviewAdventurer,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -474,15 +483,25 @@ const ParticipantSection = ({
         <AddAdventurerButton onClick={onAddAdventurer} />
       )}
       {(mission.participants || []).map((participant) => (
-        <ParticipantRow key={participant.uid} participant={participant} />
+        <ParticipantRow
+          key={participant.vacancy_id}
+          mission={mission}
+          participant={participant}
+        />
       ))}
     </div>
   );
 };
 
-const ParticipantRow = ({ participant }) => {
+const ParticipantRow = ({ mission, participant }) => {
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const canReview =
+    !!participant.adventurer_id &&
+    ['accepted', 'in_dispute', 'released'].includes(participant.status);
+  const hasReview = !!participant.owner_review_id;
+
   return (
-    <div className='flex items-center gap-2'>
+    <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1 shadow-sm'>
       <div className='inline-flex max-w-full items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-white'>
         <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
           {participant.avatar ? (
@@ -502,7 +521,159 @@ const ParticipantRow = ({ participant }) => {
           {getParticipationStatusLabel(participant.status)}
         </span>
       </div>
+      {hasReview ? (
+        <span className='inline-flex items-center gap-1 px-2 text-sm font-medium text-amber-700'>
+          <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+          {Number(participant.owner_review_rating).toFixed(1)}
+        </span>
+      ) : (
+        canReview && (
+          <Button
+            type='button'
+            size='sm'
+            variant='outline'
+            onClick={() => setIsReviewDialogOpen(true)}
+          >
+            <Star className='h-4 w-4' aria-hidden='true' />
+            Review
+          </Button>
+        )
+      )}
+      <ReviewAdventurerDialog
+        mission={mission}
+        participant={participant}
+        isOpen={isReviewDialogOpen}
+        onClose={() => setIsReviewDialogOpen(false)}
+      />
     </div>
+  );
+};
+
+const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const { isPending, mutate } = useMutation({
+    mutationFn: () =>
+      reviewAdventurer(mission.mid, participant.adventurer_id, {
+        rating,
+        comment,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(mission.mid)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', mission.mid],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getPublicUserProfile', participant.username],
+      });
+      showAlert({
+        title: messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_TITLE,
+        description:
+          messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_DESCRIPTION,
+      });
+      setRating(5);
+      setComment('');
+      setErrorMessage('');
+      onClose();
+    },
+    onError: (error) => {
+      setErrorMessage(
+        error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0] ||
+          messages.MISSION.REVIEW_ADVENTURER_ALERT.ERROR_TITLE,
+      );
+    },
+  });
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setErrorMessage('');
+
+    if (rating < 1 || rating > 5) {
+      setErrorMessage('Rating must be between 1 and 5.');
+      return;
+    }
+
+    if (comment.length > consts.MISSION.REVIEW.COMMENT_MAX_LENGTH) {
+      setErrorMessage(
+        `Comment must be shorter than ${consts.MISSION.REVIEW.COMMENT_MAX_LENGTH} characters.`,
+      );
+      return;
+    }
+
+    mutate();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className='sm:max-w-md'>
+        <DialogHeader>
+          <DialogTitle>Review {participant.username}</DialogTitle>
+          <DialogDescription>
+            This review will be linked to this completed mission.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form id='reviewAdventurerForm' onSubmit={handleSubmit}>
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <label htmlFor='adventurerRating' className='text-sm font-medium'>
+                Rating
+              </label>
+              <Input
+                id='adventurerRating'
+                type='number'
+                min={consts.MISSION.REVIEW.RATING_MIN}
+                max={consts.MISSION.REVIEW.RATING_MAX}
+                step={consts.MISSION.REVIEW.RATING_STEP}
+                value={rating}
+                onChange={(event) => setRating(Number(event.target.value))}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <label htmlFor='adventurerReview' className='text-sm font-medium'>
+                Comment
+              </label>
+              <Textarea
+                id='adventurerReview'
+                value={comment}
+                maxLength={consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                onChange={(event) => setComment(event.target.value)}
+                rows={5}
+              />
+              <p className='text-xs text-muted-foreground'>
+                {comment.length}/{consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+              </p>
+            </div>
+
+            {errorMessage && (
+              <p className='rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive'>
+                {errorMessage}
+              </p>
+            )}
+          </div>
+        </form>
+
+        <DialogFooter>
+          <Button type='button' variant='outline' onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type='submit'
+            form='reviewAdventurerForm'
+            disabled={isPending}
+          >
+            {isPending ? 'Sending...' : 'Send review'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

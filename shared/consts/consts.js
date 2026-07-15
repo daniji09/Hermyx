@@ -109,6 +109,12 @@ export const consts = {
   MISSION: {
     TITLE_MAX_LENGTH: 100,
     DESCRIPTION_MAX_LENGTH: 1000,
+    REVIEW: {
+      RATING_MIN: 1,
+      RATING_MAX: 5,
+      RATING_STEP: 0.5,
+      COMMENT_MAX_LENGTH: 500,
+    },
     VACANCIES: {
       MIN: 1,
       STEP: 1,

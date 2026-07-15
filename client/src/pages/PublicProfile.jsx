@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Navigate, useParams } from 'react-router-dom';
-import { MapPin, User } from 'lucide-react';
+import { MapPin, Star, User } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
@@ -54,6 +54,7 @@ export const PublicProfile = () => {
   );
 
   const user = profileData?.user;
+  const reviewsData = profileData?.reviews;
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
 
@@ -104,6 +105,17 @@ export const PublicProfile = () => {
           </h1>
 
           <p className='mt-1 text-lg text-muted-foreground'>@{user.username}</p>
+
+          <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
+            <span className='inline-flex items-center gap-1 font-medium text-amber-700'>
+              <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+              {`${Number(reviewsData?.averageRating || 0).toFixed(1)}/5`}
+            </span>
+            <span>
+              {reviewsData?.totalReviews || 0}{' '}
+              {(reviewsData?.totalReviews || 0) === 1 ? 'review' : 'reviews'}
+            </span>
+          </div>
 
           {user.location && (
             <p className='mt-3 flex items-center gap-2 text-muted-foreground'>
@@ -161,6 +173,66 @@ export const PublicProfile = () => {
           </TabsContent>
         </Tabs>
       )}
+
+      <AdventurerReviewsSection
+        reviewsData={reviewsData}
+        isLoading={isProfileLoading}
+      />
     </main>
+  );
+};
+
+const AdventurerReviewsSection = ({ reviewsData, isLoading }) => {
+  const reviews = reviewsData?.reviews || [];
+
+  return (
+    <section className='mt-10 border-t pt-8'>
+      <div className='mb-5 flex items-center justify-between gap-4'>
+        <h2 className='text-2xl font-bold tracking-tight'>Reviews</h2>
+        {!isLoading && (
+          <p className='text-sm text-muted-foreground'>
+            {Number(reviewsData?.averageRating || 0).toFixed(1)}/5 from{' '}
+            {reviewsData?.totalReviews || 0}
+          </p>
+        )}
+      </div>
+
+      {isLoading ? (
+        <p className='text-muted-foreground'>Loading reviews</p>
+      ) : reviews.length === 0 ? (
+        <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
+          This adventurer has no reviews yet.
+        </p>
+      ) : (
+        <div className='grid gap-4'>
+          {reviews.map((review) => (
+            <article
+              key={review.id}
+              className='rounded-lg border bg-card p-4 shadow-sm'
+            >
+              <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
+                <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
+                  <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+                  {Number(review.rating).toFixed(1)}/5
+                </span>
+                <span className='text-sm text-muted-foreground'>
+                  {new Date(review.created_at).toLocaleDateString()}
+                </span>
+              </div>
+
+              {review.comment && (
+                <p className='whitespace-pre-line text-sm leading-6'>
+                  {review.comment}
+                </p>
+              )}
+
+              <p className='mt-3 text-xs text-muted-foreground'>
+                {review.owner_username} on {review.mission_title}
+              </p>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 };

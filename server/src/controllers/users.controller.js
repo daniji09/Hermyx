@@ -22,6 +22,7 @@ import {
   getMissionsJoinedByUser,
   getUserActiveMissions,
 } from '../models/mission.model.js';
+import { getAdventurerReviewsByUsername } from '../models/review.model.js';
 import {
   createFirebaseUser,
   deleteFirebaseUser,
@@ -69,7 +70,7 @@ export const getUsers = async (req, res) => {
 export const searchUsersByUsername = async (req, res) => {
   try {
     const username = req.query.username.toLowerCase().trim();
-    const users = await searchByUsername(username);
+    const users = await searchByUsername(username, req.user.uid);
 
     return res.status(200).json({ users });
   } catch (e) {
@@ -175,10 +176,12 @@ export const getUserPublicProfile = async (req, res) => {
 
     const missionsVisible =
       user.configuration?.show_missions_to_others !== false;
+    const reviews = await getAdventurerReviewsByUsername(username);
 
     return res.status(200).json({
       user: publicProfile,
       missionsVisible,
+      reviews,
     });
   } catch (e) {
     console.error(e);

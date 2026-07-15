@@ -42,11 +42,16 @@ export const getParticipantsForDisplay = async (mid) => {
       mp.description AS vacancy_description,
       mp.monetary_reward AS reward,
       mp.status,
+      owner_review.id AS owner_review_id,
+      owner_review.rating AS owner_review_rating,
+      owner_review.comment AS owner_review_comment,
+      owner_review.created_at AS owner_review_created_at,
       u.uid AS adventurer_id,
       u.username,
       u.avatar
     FROM mission_participation mp
     LEFT JOIN app_user u ON mp.adventurer_id = u.uid
+    LEFT JOIN review owner_review ON owner_review.id = mp.owner_review_id
     WHERE mp.mid = $1
     ORDER BY mp.id ASC
   `;
