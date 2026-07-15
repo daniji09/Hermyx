@@ -558,7 +558,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
       },
     });
 
-    emitToUser(mission.owner_id, 'mission:participation-disputed', {
+    emitToUser(mission.owner_id, 'mission:participation-negotiation-rejected', {
       notificationId: followUpNotificationId,
       type: NOTIFICATION_TYPE.MISSION.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
@@ -588,6 +588,11 @@ const respondToVacancyMonetaryRewardEdition = async ({
   );
   await markAsSeen(notificationId);
 
+  /*
+  // Monetary change affects mission, if new offer is lower, a refund is made
+  if (participation.monetary_reward > notification.payload.new_offer) {
+  }
+*/
   const acceptMessage = `${username} accepted your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
   const followUpNotificationId = await createNotification({
     type: NOTIFICATION_TYPE.MISSION.ID,
@@ -603,7 +608,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     },
   });
 
-  emitToUser(mission.owner_id, 'mission:participation-disputed', {
+  emitToUser(mission.owner_id, 'mission:participation-negotiation-accepted', {
     notificationId: followUpNotificationId,
     type: NOTIFICATION_TYPE.MISSION.ID,
     action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,

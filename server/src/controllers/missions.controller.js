@@ -216,18 +216,18 @@ export const editMission = async (req, res) => {
     const { uid } = req.user;
     const mission = req.body;
 
-    // Updates new payment
+    // Updates new total payment
     mission.totalPayment =
       mission.vacanciesData.reduce(
         (sum, vacancy) => sum + Number(vacancy.reward),
         0,
       ) || 0;
 
-    // Gets current mission info
-    const currentMission = await _getMissionById(mission.mid);
+    // Gets original mission info
+    const originalMission = await _getMissionById(mission.mid);
 
     // Checks that mission is in a editable status
-    if (!MISSION_LIFE_CYCLE[currentMission.status].CAN_EDIT)
+    if (!MISSION_LIFE_CYCLE[originalMission.status].CAN_EDIT)
       return res.status(400).json({
         errors: { general: [messages.CANNOT_EDIT_MISSION] },
       });
@@ -258,8 +258,8 @@ export const editMission = async (req, res) => {
     const existingIds = existingVacancies.map((v) => v.id);
 
     // New mission info can delete existing vacancies only in opened state
-    if (!MISSION_LIFE_CYCLE[currentMission.status].CAN_DELETE_ADVENTURERS) {
-      if (existingIds.length < originalVacancies) {
+    if (!MISSION_LIFE_CYCLE[originalMission.status].CAN_DELETE_ADVENTURERS) {
+      if (existingIds.length < originalVacancies.length) {
         return res.status(400).json({
           errors: {
             general: [messages.CANNOT_DELETE_EXISTING_VACANCIES],
@@ -271,91 +271,48 @@ export const editMission = async (req, res) => {
     // Updates mission
     const updatedMission = await updateMission(mission);
 
-    // First operation, deleting vacancies that are not occupied
+    // First operation, deleting vacancies that are not occupied from the original mission
     await deleteUnoccupiedVacancies(mission.mid, existingIds);
 
     const vacanciesToNotify = [];
     // After that, updating existing vacancies
     const updatePromises = existingVacancies.map((vacancy) => {
+      // Finds existing vacancy
       const currentOriginalVacancy = originalVacancies.find(
         (vac) => vac.id === vacancy.id,
       );
+      // Updates existing vacancy only if its found, that means it hasn't been added or deleted
+      if (currentOriginalVacancy !== undefined) {
+        // Checks for each vacancy if any field has been changed
+        if (
+          Number(currentOriginalVacancy?.monetary_reward) !==
+            Number(vacancy.reward) ||
+          currentOriginalVacancy?.description !== vacancy.description ||
+          currentOriginalVacancy?.title !== vacancy.title
+        ) {
+          // So its saves that vacancy because its owner will have to be notified
+          const vacancyToSave = {
+            adventurer_id: currentOriginalVacancy?.adventurer_id,
+            ...vacancy,
+          };
+          vacanciesToNotify.push(vacancyToSave);
+        }
 
-      // Checks for each vacancy if any field has been changed TODO:fallo
-      if (
-        Number(currentOriginalVacancy?.monetary_reward) !==
-          Number(vacancy.reward) ||
-        currentOriginalVacancy?.description !== vacancy.description ||
-        currentOriginalVacancy?.title !== vacancy.title
-      ) {
-        // So its saves that vacancy because its owner will have to be notified
-        const vacancyToSave = {
-          adventurer_id: currentOriginalVacancy?.adventurer_id,
-          ...vacancy,
-        };
-        vacanciesToNotify.push(vacancyToSave);
+        // Then, makes allowed changes in vacancy (anything but monetary reward)
+        return updateVacancy(mission.mid, vacancy);
       }
-
-      // Then, makes allowed changes in vacancy (anything but monetary reward)
-      return updateVacancy(mission.mid, vacancy);
     });
     await Promise.all(updatePromises);
 
     // Lastly, inserting new vacancies
     await insertVacancies(mission.mid, newVacancies);
-    /*TODO: transacciones bancarias (y realmente mejorar las cosas de arriba porque los bucles tienen que 
-    estar fuera, pero bueno, eso es de transacciones de bd)
-    // Now, checks monetary reward differences, for a possible payment
-    if (currentMission.total_payment < mission.totalPayment) {
-      const extraAmount = mission.totalPayment - currentMission.total_payment;
 
-      const pi = await createPaymentIntentNew(
-        {
-          amount: Math.round(extraAmount * 100),
-          currency: 'eur',
-          customer: req.user.stripe_customer_id,
-          automatic_payment_methods: { enabled: true },
-          metadata: {
-            missionId: mission.mid,
-            ownerId: req.user.uid,
-            action: 'edit_extra_charge',
-          },
-        },
-        `edit_extra_${mission.mid}_${Date.now()}`,
-      );
-
-      return res.status(200).json({
-        mission: updatedMission,
-        requiresExtraPayment: true,
-        clientSecret: pi.client_secret,
-        paymentIntentId: pi.id,
-      });
-    } else if (currentMission.total_payment > mission.totalPayment) {
-      const amountToRefund = Math.round(
-        Math.abs(currentMission.total_payment - mission.totalPayment) * 100,
-      );
-
-      const refund = await createRefund(
-        {
-          payment_intent: currentMission.stripe_pi_id,
-          amount: amountToRefund,
-          reason: 'requested_by_customer',
-        },
-        `refund_edit_${mission.mid}_${Date.now()}`,
-      );
-      console.log(refund);
-      return res.status(200).json({
-        mission: updatedMission,
-        refunded_amount: refund.amount * 100,
-      });
-    }
-*/
     // First, if mission info is changed, every old vacancy is notified
     const changes = [];
     Object.keys(updatedMission).forEach((key) => {
       // Detects changes in mission info, except for publication date and total payment
       if (
-        currentMission[key] !== updatedMission[key] &&
+        originalMission[key] !== updatedMission[key] &&
         key !== 'publication_date' &&
         key !== 'total_payment'
       ) {

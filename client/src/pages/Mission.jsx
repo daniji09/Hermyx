@@ -208,7 +208,11 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   {isCreator ? (
                     mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID ? (
                       <MissionOwnerStatusMessage status={mission.status} />
-                    ) : mission.status === MISSION_LIFE_CYCLE.OPENED.ID ||
+                    ) : mission.status === MISSION_LIFE_CYCLE.OPENED.ID ? (
+                      <CloseMissionButton
+                        mission={mission}
+                      ></CloseMissionButton>
+                    ) : mission.status === MISSION_LIFE_CYCLE.CLOSED.ID ||
                       mission.status === MISSION_LIFE_CYCLE.REOPENED.ID ? (
                       <StartMissionButton
                         mission={mission}
@@ -935,6 +939,61 @@ const UnjoinMissionButton = ({ missionId, vacancyId }) => {
   );
 };
 
+const CloseMissionButton = ({ mission }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => startMission(mission.mid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+      navigate(`/missions/${mission.mid}/pay`);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.START_MISSION_ALERT.ERROR_TITLE,
+        description: error?.response.data.errors?.general,
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title:
+        mission.occupied_vacancies === 0
+          ? messages.MISSION.START_MISSION_ALERT.ERROR_TITLE
+          : messages.MISSION.START_MISSION_ALERT.TITLE,
+      description:
+        mission.occupied_vacancies === 0
+          ? messages.MISSION.START_MISSION_ALERT.NO_ADVENTURERS_DESCRIPTION
+          : mission.total_vacancies > mission.occupied_vacancies
+            ? messages.MISSION.START_MISSION_ALERT
+                .AVAILABLE_VACANCIES_DESCRIPTION
+            : messages.MISSION.START_MISSION_ALERT.START_DESCRIPTION,
+      variant: mission.occupied_vacancies === 0 ? 'info' : 'warning',
+      confirmText:
+        mission.occupied_vacancies === 0
+          ? 'OK'
+          : messages.MISSION.START_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mission.occupied_vacancies === 0 ? null : mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='closeMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Close mission'}
+    </Button>
+  );
+};
+
 const StartMissionButton = ({ mission }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
@@ -989,6 +1048,7 @@ const StartMissionButton = ({ mission }) => {
     </Button>
   );
 };
+
 const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
