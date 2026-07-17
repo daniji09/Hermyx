@@ -13,7 +13,7 @@ export const VACANCY_PAYMENT_STATUS = {
   REFUNDED: { ID: 'REFUNDED', LABEL: 'Refunded' },
 };
 
-export const TRANSACTION_STATUS = {
+export const TRANSACTION_TYPE = {
   INITIAL_FUNDING: { ID: 'INITIAL_FUNDING', LABEL: 'Initial funding' },
   NEW_ADVENTURER_FUNDING: {
     ID: 'NEW_ADVENTURER_FUNDING',
@@ -30,3 +30,5 @@ export const TRANSACTION_STATUS = {
   },
   PAYOUT: { ID: 'PAYOUT', LABEL: 'Payout' },
 };
+
+export const HERMYX_TRANSACTION_ID = 1;
