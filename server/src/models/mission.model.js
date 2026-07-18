@@ -231,6 +231,13 @@ export const updateMission = async (missionData) => {
   return result.rows[0];
 };
 
+export const updateMissionPayment = async (mid, payment) => {
+  const query =
+    'UPDATE mission SET total_payment = $2 WHERE mid = $1 RETURNING *';
+  const result = await pool.query(query, [mid, payment]);
+  return result.rows[0];
+};
+
 // TODO: Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
 export const getMissions = async ({ title = undefined, pagination }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation

@@ -33,7 +33,7 @@ import {
   lockForRefund,
   finalizeRefund,
   updateMissionStatus,
-  updateMission,
+  updateMissionPayment,
 } from '../models/mission.model.js';
 
 import {
@@ -41,7 +41,7 @@ import {
   getOccupiedVacancies,
   getVacancyById,
   getWaitingForPaymentVacancies,
-  payVacancies,
+  payVacancy,
   startParticipants,
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
@@ -282,9 +282,7 @@ export async function payDefault(req, res) {
     await updatePaymentInfo(
       missionId,
       pi.id,
-      mission.status === MISSION_LIFE_CYCLE.OPENED.ID
-        ? MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID
-        : MISSION_LIFE_CYCLE.REOPENED_PENDING_PAYMENT.ID,
+      MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
     );
 
     res.json({
@@ -310,7 +308,6 @@ export async function payNew(req, res) {
 
     // Finds how much it has to be payed
     const paymentAmount = await getMissionPayment(mid);
-
     const reusablePi = await getReusablePaymentIntent(mission, customerId);
     if (reusablePi) {
       return res.json({
@@ -334,7 +331,6 @@ export async function payNew(req, res) {
 
     // Finds waiting for payment vacancies
     const waitingForPaymentVacancies = await getWaitingForPaymentVacancies();
-    console.log(waitingForPaymentVacancies);
     for (const vacancy of waitingForPaymentVacancies) {
       let transaction_type;
       // Each type of payment has different information or actions
@@ -359,31 +355,15 @@ export async function payNew(req, res) {
         receiver_id: HERMYX_TRANSACTION_ID,
         stripe_transaction_id: pi.id,
         transaction_type: transaction_type,
-        amount_paid: vacancy.monetary_reward,
+        amount_paid: vacancy.monetary_reward - vacancy.amount_paid,
       });
+
+      // Updates vacancy info
+      await payVacancy(
+        vacancy.id,
+        vacancy.monetary_reward - vacancy.amount_paid,
+      );
     }
-
-    // Updates vacancies info
-    await payVacancies(mid, paymentAmount);
-
-    // Updates mission info
-    await updateMissionStatus(mid, MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID);
-
-    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-    const missionData = {
-      mid: mission.mid,
-      title: mission.title,
-      description: mission.description,
-      vacancies: mission.total_vacancies,
-      longitude: mission.longitude,
-      latitude: mission.latitude,
-      totalPayment:
-        occupied_vacancies.reduce(
-          (sum, vacancy) => sum + Number(vacancy.monetary_reward),
-          0,
-        ) || 0,
-    };
-    await updateMission(missionData);
 
     return res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
   } catch (err) {
@@ -415,14 +395,25 @@ export async function confirmPayment(req, res) {
         .status(400)
         .json({ error: `Payment was not completed (status=${pi.status})` });
     }
-
+    console.log(mission.status);
     // Checks if mission can be in progress by states
     if (
+      mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
       !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
         MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
       )
     )
       return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
+
+    // Updates total payment on mission
+    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    await updateMissionPayment(
+      mission.mid,
+      occupied_vacancies.reduce(
+        (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+        0,
+      ) || 0,
+    );
 
     // Mission and participants life cycle is updated
     await updateMissionStatus(missionId, MISSION_LIFE_CYCLE.IN_PROGRESS.ID);

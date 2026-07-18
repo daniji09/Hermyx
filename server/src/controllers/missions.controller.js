@@ -27,6 +27,7 @@ import {
   markVacancyAsPaidOut,
   updateStatus,
   getJoinedVacancies,
+  getWaitingForPaymentVacancies,
 } from '../models/mission_participation.model.js';
 import {
   createNotification,
@@ -61,10 +62,12 @@ export const getMissionById = async (req, res) => {
     const uid = req.user.uid;
 
     // Searches mission by id
-    const [mission, participants] = await Promise.all([
-      _getMissionById(id, uid),
-      getParticipantsForDisplay(id),
-    ]);
+    const [mission, participants, waitingForPaymentVacancies] =
+      await Promise.all([
+        _getMissionById(id, uid),
+        getParticipantsForDisplay(id),
+        getWaitingForPaymentVacancies(),
+      ]);
 
     // Returns success or error
     if (!mission) {
@@ -75,6 +78,7 @@ export const getMissionById = async (req, res) => {
       mission: {
         ...mission,
         participants,
+        waitingForPaymentVacancies,
       },
     });
   } catch (e) {
@@ -501,21 +505,6 @@ export const close = async (req, res) => {
 
       // Then, it updates the mission
       await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CLOSED.ID);
-      const missionData = {
-        mid: mission.mid,
-        title: mission.title,
-        description: mission.description,
-        vacancies: mission.total_vacancies,
-        longitude: mission.longitude,
-        latitude: mission.latitude,
-        totalPayment:
-          occupied_vacancies.reduce(
-            (sum, vacancy) => sum + Number(vacancy.monetary_reward),
-            0,
-          ) || 0,
-      };
-      // Updates total payment
-      await updateMission(missionData);
 
       // Updates vacancies status, there is 2 for because if a vacancy fails when a notification has been sent, there is no rollback possible
       for (const vacancy of occupied_vacancies)
@@ -559,7 +548,7 @@ export const close = async (req, res) => {
       // Checks if mission can be started by states
       if (
         !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+          MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
         )
       )
         return res
@@ -567,32 +556,16 @@ export const close = async (req, res) => {
           .json({ error: messages.CANNOT_REOPEN_MISSION_STATE });
 
       // Then, it updates the mission
-      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID);
+      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.IN_PROGRESS.ID);
 
       // And the vacancies are updated
       const joined_vacancies = await getJoinedVacancies(mission.mid);
       for (const vacancy of joined_vacancies)
         updateStatus(vacancy.id, VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID);
 
-      const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-      const missionData = {
-        mid: mission.mid,
-        title: mission.title,
-        description: mission.description,
-        vacancies: mission.total_vacancies,
-        longitude: mission.longitude,
-        latitude: mission.latitude,
-        totalPayment:
-          occupied_vacancies.reduce(
-            (sum, vacancy) => sum + Number(vacancy.monetary_reward),
-            0,
-          ) || 0,
-      };
-      // Updates total payment
-      await updateMission(missionData);
-
-      const message = `Mission ${mission.title} has been closed after being reopened. Waiting for owner payment to start new adventurers.`;
       // Finally, all occupied vacancies are notified
+      const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+      const message = `Mission ${mission.title} has been closed after being reopened. Waiting for owner payment to start new adventurers.`;
       for (const vacancy of occupied_vacancies) {
         if (vacancy.status !== VACANCY_LIFE_CYCLE.RELEASED.ID) {
           const notificationId = await createNotification({
@@ -621,7 +594,7 @@ export const close = async (req, res) => {
         }
       }
       return res.status(200).json({
-        status: MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+        status: MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
         participants: occupied_vacancies,
       });
     }
@@ -912,7 +885,7 @@ export const submitMissionParticipation = async (req, res) => {
   }
 };
 
-// Sends a join request to the mission owner instead of joining immediately
+// Unjoin mission by adventurer before mission has started
 export const unjoinMission = async (req, res) => {
   const { mid } = req.params;
   const uid = req.user.uid;

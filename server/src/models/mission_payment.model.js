@@ -47,7 +47,7 @@ export const getMissionPaymentsByStripeTransactionId = async (
 export const getMissionPaymentsByVacancy = async (vacancy_id) => {
   const query = `SELECT * 
   FROM mission_payment 
-  WHERE vacancy_id = $1 AND status != $2 AND transaction_type IN ($3, $4, $5) ORDER DESC`;
+  WHERE vacancy_id = $1 AND status != $2 AND transaction_type IN ($3, $4, $5) ORDER BY created_at DESC`;
   const result = await pool.query(query, [
     vacancy_id,
     MISSION_PAYMENT_STATUS.REFUNDED.ID,
@@ -63,7 +63,7 @@ export const refundFromPayment = async (amount, pid) => {
         UPDATE MISSION_PAYMENT 
         SET amount_refunded = amount_refunded + $1,
             status = CASE 
-                       WHEN (amount_refunded + $1) >= amount THEN 'REFUNDED' 
+                       WHEN (amount_refunded + $1) >= amount_paid THEN 'REFUNDED' 
                        ELSE 'PARTIALLY_REFUNDED' 
                      END
         WHERE pid = $2`;

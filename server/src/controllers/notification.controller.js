@@ -10,8 +10,7 @@ import { getById as getUserById } from '../models/app_user.model.js';
 import {
   getById,
   syncMissionCompletionStatus,
-  updateMission,
-  updateMissionStatus,
+  updateMissionPayment,
 } from '../models/mission.model.js';
 import {
   approveParticipation,
@@ -21,6 +20,7 @@ import {
   getVacancyById,
   joinVacancy,
   markVacancyAsPaidOut,
+  refundVacancy,
   releaseParticipation,
   reopenParticipation,
   requestParticipationRevision,
@@ -467,7 +467,7 @@ const respondToMissionJoinNotification = async ({
   }
 
   const vacancy = await getVacancyById(missionId, vacancyId);
-  console.log(vacancy);
+
   // Checks if vacancy can be joined by states
   if (
     !VACANCY_LIFE_CYCLE[vacancy.status].VALID_NEXT_STATES.includes(
@@ -605,23 +605,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     return res.status(400).json({ error: messages.INVALID_RESPONSE_ACTION });
   }
 
-  // Updates mission, vacancy and notifications info
-  const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-  const missionData = {
-    mid: mission.mid,
-    title: mission.title,
-    description: mission.description,
-    vacancies: mission.total_vacancies,
-    longitude: mission.longitude,
-    latitude: mission.latitude,
-    totalPayment:
-      occupied_vacancies.reduce(
-        (sum, vacancy) => sum + Number(vacancy.monetary_reward),
-        0,
-      ) || 0,
-  };
-  // Updates total payment
-  await updateMission(missionData);
+  // Updates vacancy and notifications info
   await updateVacancyMonetaryReward(
     notification.payload.associated_vacancy_id,
     notification.payload.new_offer,
@@ -647,11 +631,11 @@ const respondToVacancyMonetaryRewardEdition = async ({
 
     // Amount to refund is calculated
     let amountToRefund =
-      notification.payload.new_offer - participation.monetary_reward;
+      participation.monetary_reward - notification.payload.new_offer;
 
     // That amount is refunded from every payment that is associated with the vacancy, if needed
     for (const payment of payments) {
-      if (amountToRefund < 0) break;
+      if (amountToRefund <= 0) break;
 
       // Amount to refund from this payment is calculated
       const availableBalance = payment.amount_paid - payment.amount_refunded;
@@ -668,7 +652,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
             reason: 'negotiation_refund',
           },
         },
-        `negotiation_refund_${missionId}_${notification.payload.associated_vacancy_id}`,
+        `negotiation_refund_${missionId}_${notification.payload.associated_vacancy_id}_${Date.now()}`,
       );
 
       // Payment is updated on db
@@ -679,7 +663,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
         mid: missionId,
         vacancy_id: notification.payload.associated_vacancy_id,
         sender_id: HERMYX_TRANSACTION_ID,
-        receiver_id: userId,
+        receiver_id: mission.owner_id,
         stripe_transaction_id: refund.id,
         transaction_type: TRANSACTION_TYPE.NEGOTIATION_REFUND.ID,
         amount_paid: paymentRefund,
@@ -688,21 +672,32 @@ const respondToVacancyMonetaryRewardEdition = async ({
       amountToRefund -= paymentRefund;
     }
     // When refund is complete, is marked as that
-    await updatePaymentStatus(
+    await refundVacancy(
       notification.payload.associated_vacancy_id,
-      VACANCY_PAYMENT_STATUS.PAID.ID,
+      participation.monetary_reward - notification.payload.new_offer,
+    );
+
+    // Updates total payment on mission
+    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    await updateMissionPayment(
+      mission.mid,
+      occupied_vacancies.reduce(
+        (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+        0,
+      ) || 0,
     );
   } else {
-    // If new offer is higher, mission and vacancy states change
-    await updateMissionStatus(missionId, MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID);
-    await updateStatus(
-      notification.payload.associated_vacancy_id,
-      VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
-    );
-    await updatePaymentStatus(
-      notification.payload.associated_vacancy_id,
-      VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID,
-    );
+    // If new offer is higher, mission and vacancy states change if vacancy was already paid
+    if (participation.payment_status === VACANCY_PAYMENT_STATUS.PAID.ID) {
+      await updateStatus(
+        notification.payload.associated_vacancy_id,
+        VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      );
+      await updatePaymentStatus(
+        notification.payload.associated_vacancy_id,
+        VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+      );
+    }
   }
 
   const acceptMessage = `${username} accepted your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;

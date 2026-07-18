@@ -21,17 +21,6 @@ export const MISSION_LIFE_CYCLE = {
     ADVENTURERS_CAN_UNJOIN: false,
     VALID_NEXT_STATES: ['IN_PROGRESS', 'DELETED'],
   },
-  PENDING_PAYMENT: {
-    ID: 'PENDING_PAYMENT',
-    LABEL: 'Pending payment',
-    CAN_EDIT: true,
-    CAN_DELETE: false,
-    CAN_CANCEL: false,
-    CAN_ACCEPT_ADVENTURERS: false,
-    CAN_DELETE_ADVENTURERS: false,
-    ADVENTURERS_CAN_UNJOIN: false,
-    VALID_NEXT_STATES: ['IN_PROGRESS'],
-  },
   IN_PROGRESS: {
     ID: 'IN_PROGRESS',
     LABEL: 'In progress',
@@ -41,13 +30,7 @@ export const MISSION_LIFE_CYCLE = {
     CAN_ACCEPT_ADVENTURERS: false,
     CAN_DELETE_ADVENTURERS: false,
     ADVENTURERS_CAN_UNJOIN: false,
-    VALID_NEXT_STATES: [
-      'FINISHED',
-      'IN_DISPUTE',
-      'REOPENED',
-      'CANCELLING',
-      'PENDING_PAYMENT',
-    ],
+    VALID_NEXT_STATES: ['FINISHED', 'IN_DISPUTE', 'REOPENED', 'CANCELLING'],
   },
   REOPENED: {
     ID: 'REOPENED',
@@ -58,7 +41,7 @@ export const MISSION_LIFE_CYCLE = {
     CAN_ACCEPT_ADVENTURERS: true,
     CAN_DELETE_ADVENTURERS: false,
     ADVENTURERS_CAN_UNJOIN: false,
-    VALID_NEXT_STATES: ['PENDING_PAYMENT', 'CANCELLING'],
+    VALID_NEXT_STATES: ['CANCELLING', 'IN_PROGRESS'],
   },
   CANCELLING: {
     ID: 'CANCELLING',
@@ -121,42 +104,55 @@ export const VACANCY_LIFE_CYCLE = {
   EMPTY: {
     ID: 'EMPTY',
     LABEL: 'Empty',
+    CAN_EDIT: true,
     VALID_NEXT_STATES: ['JOINED'],
   },
   JOINED: {
     ID: 'JOINED',
     LABEL: 'Joined',
+    CAN_EDIT: true,
     VALID_NEXT_STATES: ['EMPTY', 'PENDING_PAYMENT'],
   },
   PENDING_PAYMENT: {
     ID: 'PENDING_PAYMENT',
     LABEL: 'Pending payment',
+    CAN_EDIT: true,
     VALID_NEXT_STATES: ['IN_PROGRESS'],
   },
   IN_PROGRESS: {
     ID: 'IN_PROGRESS',
     LABEL: 'In progress',
+    CAN_EDIT: true,
     VALID_NEXT_STATES: ['SUBMITTED'],
   },
   SUBMITTED: {
     ID: 'SUBMITTED',
     LABEL: 'Submitted',
+    CAN_EDIT: true,
     VALID_NEXT_STATES: ['ACCEPTED', 'REJECTED', 'IN_DISPUTE'],
   },
   ACCEPTED: {
     ID: 'ACCEPTED',
     LABEL: 'Accepted',
+    CAN_EDIT: false,
     VALID_NEXT_STATES: ['RELEASED'],
   },
   REJECTED: {
     ID: 'REJECTED',
     LABEL: 'Rejected',
+    CAN_EDIT: true,
     VALID_NEXT_STATES: ['IN_PROGRESS', 'IN_DISPUTE'],
   },
   IN_DISPUTE: {
     ID: 'IN_DISPUTE',
     LABEL: 'In dispute',
+    CAN_EDIT: false,
     VALID_NEXT_STATES: ['IN_PROGRESS'],
   },
-  RELEASED: { ID: 'RELEASED', LABEL: 'Released', VALID_NEXT_STATES: [] },
+  RELEASED: {
+    ID: 'RELEASED',
+    LABEL: 'Released',
+    CAN_EDIT: false,
+    VALID_NEXT_STATES: [],
+  },
 };
