@@ -181,6 +181,13 @@ const optionalNumberFromFormSchema = (schema) =>
     return value;
   }, schema.optional());
 
+export const closeMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
 export const cancelMissionParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Mid'))
@@ -259,6 +266,18 @@ export const joinMissionBodySchema = z.object({
     .number(messages.FIELD_NUMBER('Vacancy id'))
     .int(messages.FIELD_INTEGER('Vacancy id'))
     .min(0, messages.FIELD_POSITIVE('Vacancy id')),
+  message: z
+    .string()
+    .trim()
+    .max(
+      consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Notification message',
+        consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .default(''),
 });
 
 export const unjoinMissionParamSchema = z.object({

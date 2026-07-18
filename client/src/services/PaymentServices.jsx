@@ -3,7 +3,7 @@ import api from '../config/api';
 // Finds mission by id
 export const saveNewCard = async (id) => {
   const { data } = await api.post('/stripe/pay/new', {
-    missionId: id.trim(),
+    mid: id.trim(),
     saveCard: true,
   });
 
@@ -42,5 +42,15 @@ export const setDefaultSavedCard = async (paymentMethodId) => {
 
 export const deleteSavedCard = async (paymentMethodId) => {
   const { data } = await api.delete(`/stripe/cards/${paymentMethodId}`);
+  return data;
+};
+
+export const connectOnBoard = async () => {
+  const { data } = await api.post(`/stripe/connect/onboard`);
+  return data;
+};
+
+export const goToDashboard = async () => {
+  const { data } = await api.post(`/stripe/connect/login-link`);
   return data;
 };

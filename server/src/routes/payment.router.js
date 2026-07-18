@@ -19,7 +19,11 @@ import {
   validateBodySchema,
   validateParamsSchema,
 } from '../middlewares/validations.middleware.js';
-import { deleteCardParamSchema, setDefaultCardSchema } from '@hermyx/shared';
+import {
+  deleteCardParamSchema,
+  payNewBodySchema,
+  setDefaultCardSchema,
+} from '@hermyx/shared';
 
 //Middleware to require customerId
 const requireCustomer = async (req, res, next) => {
@@ -63,7 +67,12 @@ router.delete(
 router.post('/pay/default', requireCustomer, payDefault);
 
 //Pay with a new card
-router.post('/pay/new', requireCustomer, payNew);
+router.post(
+  '/pay/new',
+  requireCustomer,
+  validateBodySchema(payNewBodySchema),
+  payNew,
+);
 
 //Route to confirm that we have charged the customer
 router.post(
@@ -73,7 +82,7 @@ router.post(
 );
 
 //Route to register as a connected account
-router.get('/connect/onboard', connectOnboard);
+router.post('/connect/onboard', connectOnboard);
 
 //Successful connected account route
 router.get('/connect/success', connectSuccess);

@@ -171,8 +171,8 @@ export const createMission = async (missionData) => {
 
     // Second step, save mission vacancies info
     const participationQuery = `
-      INSERT INTO MISSION_PARTICIPATION (mid, monetary_reward, title, description, status)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO MISSION_PARTICIPATION (mid, monetary_reward, title, description, status, amount_paid)
+      VALUES ($1, $2, $3, $4, $5, $6)
     `;
 
     // Promises array, one per vacancy
@@ -183,6 +183,7 @@ export const createMission = async (missionData) => {
         vacancy.title || null,
         vacancy.description || null,
         VACANCY_LIFE_CYCLE.EMPTY.ID,
+        0,
       ]);
     });
 
@@ -227,6 +228,13 @@ export const updateMission = async (missionData) => {
     latitude,
     totalPayment,
   ]);
+  return result.rows[0];
+};
+
+export const updateMissionPayment = async (mid, payment) => {
+  const query =
+    'UPDATE mission SET total_payment = $2 WHERE mid = $1 RETURNING *';
+  const result = await pool.query(query, [mid, payment]);
   return result.rows[0];
 };
 
@@ -371,7 +379,7 @@ export const syncMissionCompletionStatus = async (mid) => {
         WHERE status IN ($2, $3, $4)
       )::int AS active_count,
       COUNT(*) FILTER (WHERE status = $5)::int AS dispute_count,
-      COUNT(*) FILTER (WHERE status IN ($6, $7, $8))::int AS accepted_count
+      COUNT(*) FILTER (WHERE status IN ($6, $7))::int AS accepted_count
     FROM mission_participation
     WHERE mid = $1
   `;
@@ -382,7 +390,6 @@ export const syncMissionCompletionStatus = async (mid) => {
     VACANCY_LIFE_CYCLE.REJECTED.ID,
     VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
     VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-    VACANCY_LIFE_CYCLE.RELEASING.ID,
     VACANCY_LIFE_CYCLE.RELEASED.ID,
   ]);
   const summary = summaryResult.rows[0];
