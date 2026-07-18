@@ -181,3 +181,9 @@ export const reviewAdventurer = async (mid, adventurerId, review) => {
   );
   return data;
 };
+
+// Reviews a mission owner after a completed participation
+export const reviewOwner = async (mid, review) => {
+  const { data } = await api.post(`/missions/${mid}/owner/review`, review);
+  return data;
+};

@@ -2,11 +2,13 @@ import { useContext, useState } from 'react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Navigate, useParams } from 'react-router-dom';
 import { MapPin, Star, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
 import {
+  getUserReviewsInfiniteQueryOptions,
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
 } from '../queries/UsersQueries';
@@ -53,10 +55,23 @@ export const PublicProfile = () => {
     ),
   );
 
+  const {
+    data: reviewsPagesData,
+    hasNextPage: hasNextReviewsPage,
+    isFetchingNextPage: isFetchingNextReviewsPage,
+    fetchNextPage: fetchNextReviewsPage,
+    isLoading: isReviewsLoading,
+  } = useInfiniteQuery(
+    getUserReviewsInfiniteQueryOptions(username, PAGINATION_LIMIT.REVIEWS, {
+      retry: retryOption,
+      enabled: !!username && !isOwnProfile && !!profileData?.missionsVisible,
+    }),
+  );
+
   const user = profileData?.user;
-  const reviewsData = profileData?.reviews;
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
+  const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
 
   if (isOwnProfile) {
     return <Navigate to='/profile' replace />;
@@ -176,13 +191,34 @@ export const PublicProfile = () => {
 
       <AdventurerReviewsSection
         reviewsData={reviewsData}
-        isLoading={isProfileLoading}
+        isLoading={isReviewsLoading}
+        isPrivate={!missionsVisible}
+        hasNextPage={hasNextReviewsPage}
+        isFetchingNextPage={isFetchingNextReviewsPage}
+        fetchNextPage={fetchNextReviewsPage}
       />
     </main>
   );
 };
 
-const AdventurerReviewsSection = ({ reviewsData, isLoading }) => {
+const getReviewsDataFromPages = (pages = []) => {
+  const firstPage = pages[0];
+
+  return {
+    averageRating: firstPage?.averageRating || 0,
+    totalReviews: firstPage?.totalReviews || 0,
+    reviews: pages.flatMap((page) => page.reviews || []),
+  };
+};
+
+const AdventurerReviewsSection = ({
+  reviewsData,
+  isLoading,
+  isPrivate,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
+}) => {
   const reviews = reviewsData?.reviews || [];
 
   return (
@@ -197,41 +233,60 @@ const AdventurerReviewsSection = ({ reviewsData, isLoading }) => {
         )}
       </div>
 
-      {isLoading ? (
+      {isPrivate ? (
+        <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
+          This user keeps their mission history and reviews private.
+        </p>
+      ) : isLoading ? (
         <p className='text-muted-foreground'>Loading reviews</p>
       ) : reviews.length === 0 ? (
         <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
           This adventurer has no reviews yet.
         </p>
       ) : (
-        <div className='grid gap-4'>
-          {reviews.map((review) => (
-            <article
-              key={review.id}
-              className='rounded-lg border bg-card p-4 shadow-sm'
-            >
-              <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
-                <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
-                  <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
-                  {Number(review.rating).toFixed(1)}/5
-                </span>
-                <span className='text-sm text-muted-foreground'>
-                  {new Date(review.created_at).toLocaleDateString()}
-                </span>
-              </div>
+        <>
+          <div className='grid gap-4'>
+            {reviews.map((review) => (
+              <article
+                key={review.id}
+                className='rounded-lg border bg-card p-4 shadow-sm'
+              >
+                <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
+                  <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
+                    <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+                    {Number(review.rating).toFixed(1)}/5
+                  </span>
+                  <span className='text-sm text-muted-foreground'>
+                    {new Date(review.created_at).toLocaleDateString()}
+                  </span>
+                </div>
 
-              {review.comment && (
-                <p className='whitespace-pre-line text-sm leading-6'>
-                  {review.comment}
+                {review.comment && (
+                  <p className='whitespace-pre-line text-sm leading-6'>
+                    {review.comment}
+                  </p>
+                )}
+
+                <p className='mt-3 text-xs text-muted-foreground'>
+                  {review.owner_username} on {review.mission_title}
                 </p>
-              )}
+              </article>
+            ))}
+          </div>
 
-              <p className='mt-3 text-xs text-muted-foreground'>
-                {review.owner_username} on {review.mission_title}
-              </p>
-            </article>
-          ))}
-        </div>
+          {hasNextPage && (
+            <div className='mt-6 flex justify-center'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? 'Loading reviews' : 'Load more reviews'}
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );

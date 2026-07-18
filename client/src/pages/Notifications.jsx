@@ -21,7 +21,8 @@ import {
 } from '@hermyx/shared/utils/notifications.utils';
 
 const getInvitationTitle = (notification) => {
-  if (notification.action === 'mission_invite') return 'Mission invitation from ';
+  if (notification.action === 'mission_invite')
+    return 'Mission invitation from ';
   if (notification.action === 'join_request') return 'Join request from ';
   return 'Message from ';
 };

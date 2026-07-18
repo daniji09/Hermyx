@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { coerce, z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
@@ -231,6 +231,13 @@ export const reviewAdventurerBodySchema = z.object({
     .or(z.literal('')),
 });
 
+export const reviewOwnerParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
 // Server and client sign up shared validation
 export const draftMissionSchema = z.object({
   title: z.string().trim().optional(),
@@ -250,27 +257,50 @@ export const getMissionSchema = z.object({
 });
 
 // Backend endpoint getMissions
-export const getMissionsQuerySchema = z.object({
-  page: z.coerce
-    .number(messages.FIELD_NUMBER('Page'))
-    .int(messages.FIELD_INTEGER('Page'))
-    .min(0, messages.FIELD_POSITIVE('Page'))
-    .optional(),
-  limit: z.coerce
-    .number(messages.FIELD_NUMBER('Limit'))
-    .int(messages.FIELD_INTEGER('Limit'))
-    .min(0, messages.FIELD_POSITIVE('Limit'))
-    .optional(),
-  title: z
-    .string()
-    .trim()
-    .max(
-      consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Title'),
-    )
-    .min(1, messages.FIELD_REQUIRED)
-    .optional(),
-});
+export const getMissionsQuerySchema = z
+  .object({
+    page: z.coerce
+      .number(messages.FIELD_NUMBER('Page'))
+      .int(messages.FIELD_INTEGER('Page'))
+      .min(0, messages.FIELD_POSITIVE('Page'))
+      .optional(),
+    limit: z.coerce
+      .number(messages.FIELD_NUMBER('Limit'))
+      .int(messages.FIELD_INTEGER('Limit'))
+      .min(0, messages.FIELD_POSITIVE('Limit'))
+      .optional(),
+    title: z
+      .string()
+      .trim()
+      .max(
+        consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
+        messages.FIELD_TOO_LONG('Title'),
+      )
+      .min(1, messages.FIELD_REQUIRED)
+      .optional(),
+    minPayment: z.coerce
+      .number(messages.FIELD_NUMBER('Min payment'))
+      .min(0, messages.FIELD_POSITIVE('Min payment'))
+      .optional(),
+    maxPayment: z.coerce
+      .number(messages.FIELD_NUMBER('Max payment'))
+      .min(0, messages.FIELD_POSITIVE('Max payment'))
+      .optional(),
+    maxDistanceKm: z.coerce
+      .number(messages.FIELD_NUMBER('Max distance'))
+      .min(0, messages.FIELD_POSITIVE('Max distance'))
+      .optional(),
+  })
+  .refine(
+    (data) =>
+      data.minPayment === undefined ||
+      data.maxPayment === undefined ||
+      data.minPayment <= data.maxPayment,
+    {
+      message: 'Min payment cannot be greater than max payment.',
+      path: ['minPayment'],
+    },
+  );
 
 export const searchMissionByTitleSchema = z.object({
   searchMissionByTitle_input: z
