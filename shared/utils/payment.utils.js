@@ -32,3 +32,4 @@ export const TRANSACTION_TYPE = {
 };
 
 export const HERMYX_TRANSACTION_ID = 1;
+export const HERMYX_FEE = 1.1;

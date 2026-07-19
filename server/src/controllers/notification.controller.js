@@ -43,6 +43,7 @@ import {
 } from '@hermyx/shared/utils/notifications.utils.js';
 import { createRefund, createTransfer } from '../services/payment.service.js';
 import {
+  HERMYX_FEE,
   HERMYX_TRANSACTION_ID,
   TRANSACTION_TYPE,
   VACANCY_PAYMENT_STATUS,
@@ -688,7 +689,8 @@ const respondToVacancyMonetaryRewardEdition = async ({
 
     // Amount to refund is calculated
     let amountToRefund =
-      participation.monetary_reward - notification.payload.new_offer;
+      (participation.monetary_reward - notification.payload.new_offer) *
+      HERMYX_FEE;
 
     // That amount is refunded from every payment that is associated with the vacancy, if needed
     for (const payment of payments) {
@@ -741,7 +743,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
       occupied_vacancies.reduce(
         (sum, vacancy) => sum + Number(vacancy.monetary_reward),
         0,
-      ) || 0,
+      ) * HERMYX_FEE || 0,
     );
   } else {
     // If new offer is higher, mission and vacancy states change if vacancy was already paid

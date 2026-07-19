@@ -182,7 +182,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   />
                   <div className='flex items-center gap-2'>
                     <span>Total payment:</span>
-                    <span>{mission.total_payment}$</span>
+                    <span>{Number(mission.total_payment).toFixed(2)}$</span>
                     <HandCoins className='h-6 w-6' aria-hidden='true' />
                   </div>
                   {mission.status}

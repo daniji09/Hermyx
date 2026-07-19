@@ -63,6 +63,7 @@ import {
 } from '../models/mission_payment.model.js';
 import { FRONTEND_URL } from '../config/config.js';
 import {
+  HERMYX_FEE,
   HERMYX_TRANSACTION_ID,
   TRANSACTION_TYPE,
   VACANCY_PAYMENT_STATUS,
@@ -322,7 +323,7 @@ export async function payNew(req, res) {
     // Creates payment on Stripe
     const pi = await createPaymentIntentNew(
       {
-        amount: Math.round(paymentAmount * 100),
+        amount: Math.round(paymentAmount * 100 * HERMYX_FEE),
         currency: 'eur',
         customer: customerId,
         automatic_payment_methods: { enabled: true },
@@ -358,7 +359,8 @@ export async function payNew(req, res) {
         receiver_id: HERMYX_TRANSACTION_ID,
         stripe_transaction_id: pi.id,
         transaction_type: transaction_type,
-        amount_paid: vacancy.monetary_reward - vacancy.amount_paid,
+        amount_paid:
+          (vacancy.monetary_reward - vacancy.amount_paid) * HERMYX_FEE,
       });
 
       // Updates vacancy info
@@ -398,7 +400,7 @@ export async function confirmPayment(req, res) {
         .status(400)
         .json({ error: `Payment was not completed (status=${pi.status})` });
     }
-    console.log(mission.status);
+
     // Checks if mission can be in progress by states
     if (
       mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
@@ -415,7 +417,7 @@ export async function confirmPayment(req, res) {
       occupied_vacancies.reduce(
         (sum, vacancy) => sum + Number(vacancy.monetary_reward),
         0,
-      ) || 0,
+      ) * HERMYX_FEE || 0,
     );
 
     // Mission and participants life cycle is updated
