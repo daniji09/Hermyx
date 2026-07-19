@@ -15,6 +15,7 @@ import {
   createTransfer,
   createRefund,
   createLoginLink,
+  retrieveConnectAccount,
 } from '../services/payment.service.js';
 
 import {
@@ -31,10 +32,16 @@ import {
   updateReleaseStatus,
   lockForRefund,
   finalizeRefund,
+  updateMissionStatus,
+  updateMissionPayment,
 } from '../models/mission.model.js';
 
 import {
+  getMissionPayment,
   getOccupiedVacancies,
+  getVacancyById,
+  getWaitingForPaymentVacancies,
+  payVacancy,
   startParticipants,
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
@@ -47,6 +54,16 @@ import {
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
 import { emitToUser } from '../services/socket.service.js';
+import {
+  createMissionPayment,
+  getMissionPaymentsByStripeTransactionId,
+} from '../models/mission_payment.model.js';
+import { FRONTEND_URL } from '../config/config.js';
+import {
+  HERMYX_TRANSACTION_ID,
+  TRANSACTION_TYPE,
+  VACANCY_PAYMENT_STATUS,
+} from '@hermyx/shared/utils/payment.utils.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
@@ -265,7 +282,7 @@ export async function payDefault(req, res) {
     await updatePaymentInfo(
       missionId,
       pi.id,
-      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
     );
 
     res.json({
@@ -282,14 +299,15 @@ export async function payDefault(req, res) {
 export async function payNew(req, res) {
   try {
     const customerId = req.user.stripe_customer_id;
-    const { missionId, saveCard = true } = req.body;
+    const { mid, saveCard = true } = req.body;
 
-    if (!missionId) return res.status(400).json({ error: 'Missing missionId' });
-
-    const mission = await _getById(missionId);
-    if (!mission) return res.status(404).json({ error: 'Mission not found' });
+    const mission = await _getById(mid);
+    if (!mission)
+      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
     if (!ensureMissionOwner(mission, req.user.uid, res)) return;
 
+    // Finds how much it has to be payed
+    const paymentAmount = await getMissionPayment(mid);
     const reusablePi = await getReusablePaymentIntent(mission, customerId);
     if (reusablePi) {
       return res.json({
@@ -298,31 +316,62 @@ export async function payNew(req, res) {
       });
     }
 
+    // Creates payment on Stripe
     const pi = await createPaymentIntentNew(
       {
-        amount: Math.round(mission.total_payment * 100),
+        amount: Math.round(paymentAmount * 100),
         currency: 'eur',
         customer: customerId,
         automatic_payment_methods: { enabled: true },
         ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
-        metadata: { missionId, ownerId: req.user.uid },
+        metadata: { mid, ownerId: req.user.uid },
       },
-      `pay_new_${missionId}_${Date.now()}`,
+      `${customerId}_payment_on_${Date.now()}`,
     );
 
-    await updatePaymentInfo(
-      missionId,
-      pi.id,
-      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID,
-    );
+    // Finds waiting for payment vacancies
+    const waitingForPaymentVacancies = await getWaitingForPaymentVacancies();
+    for (const vacancy of waitingForPaymentVacancies) {
+      let transaction_type;
+      // Each type of payment has different information or actions
+      if (mission.status === MISSION_LIFE_CYCLE.CLOSED.ID) {
+        // If mission is in closed state, is funding payment
+        transaction_type = TRANSACTION_TYPE.INITIAL_FUNDING.ID;
+      } else if (
+        vacancy.payment_status === VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID
+      ) {
+        // If vacancy is partially pay, is a reward negotiation
+        transaction_type = TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID;
+      } else {
+        // Any other option means a new adventurer joined the mission via reopening
+        transaction_type = TRANSACTION_TYPE.NEW_ADVENTURER_FUNDING.ID;
+      }
 
-    res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
+      // Adds mission payment
+      await createMissionPayment({
+        mid,
+        vacancy_id: vacancy.id,
+        sender_id: req.user.uid,
+        receiver_id: HERMYX_TRANSACTION_ID,
+        stripe_transaction_id: pi.id,
+        transaction_type: transaction_type,
+        amount_paid: vacancy.monetary_reward - vacancy.amount_paid,
+      });
+
+      // Updates vacancy info
+      await payVacancy(
+        vacancy.id,
+        vacancy.monetary_reward - vacancy.amount_paid,
+      );
+    }
+
+    return res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
   } catch (err) {
     handlePaymentError(err, res);
   }
 }
 
-//Verifies the payment status in Stripe and marks the mission as funded.
+//Verifies the payment status in Stripe
 export async function confirmPayment(req, res) {
   try {
     const { missionId } = req.params;
@@ -346,28 +395,45 @@ export async function confirmPayment(req, res) {
         .status(400)
         .json({ error: `Payment was not completed (status=${pi.status})` });
     }
-
+    console.log(mission.status);
     // Checks if mission can be in progress by states
     if (
+      mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
       !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
         MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
       )
     )
       return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
 
-    // Mission and participants life cycle is updated
-    await updatePaymentInfo(
-      missionId,
-      pi.id,
-      MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
+    // Updates total payment on mission
+    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    await updateMissionPayment(
+      mission.mid,
+      occupied_vacancies.reduce(
+        (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+        0,
+      ) || 0,
     );
+
+    // Mission and participants life cycle is updated
+    await updateMissionStatus(missionId, MISSION_LIFE_CYCLE.IN_PROGRESS.ID);
     await startParticipants(missionId);
 
+    // Gets all operations made in that payment
+    const transactions = await getMissionPaymentsByStripeTransactionId(pi.id);
+
     // Finally, all participants are notified
-    const occupied_vacancies = await getOccupiedVacancies(missionId);
-    const message = `Mission ${mission.title} has started! Talk to your team and start working.`;
-    // Finally, all occupied vacancies are notified
-    for (const vacancy of occupied_vacancies) {
+    for (const transaction of transactions) {
+      const vacancy = await getVacancyById(mission.mid, transaction.vacancy_id);
+      let message;
+      if (transaction.transaction_type === TRANSACTION_TYPE.INITIAL_FUNDING.ID)
+        message = `Mission ${mission.title} has started! Talk to your team and start working.`;
+      else if (
+        transaction.transaction_type === TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID
+      )
+        message = `Your new monetary reward for ${mission.title} has been funded. Now you can submit your part!`;
+      else
+        message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
       const notificationId = await createNotification({
         type: NOTIFICATION_TYPE.MISSION.ID,
         kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -393,10 +459,10 @@ export async function confirmPayment(req, res) {
       });
     }
 
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Error while confirming' });
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 }
 
@@ -404,9 +470,8 @@ export async function confirmPayment(req, res) {
 export async function connectOnboard(req, res) {
   try {
     const userId = req.user.uid;
-
     const user = await getById(userId);
-    if (!user) return res.status(404).send('User not found');
+    if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
     let accountId = user.stripe_connected_id;
 
@@ -417,8 +482,8 @@ export async function connectOnboard(req, res) {
       await updateStripeConnectId(userId, accountId);
     }
 
-    const refreshUrl = `http://localhost:3000/stripe/connect/onboard`;
-    const returnUrl = `http://localhost:3000/stripe/connect/success`;
+    const refreshUrl = `${FRONTEND_URL}/stripe/connect/onboard`;
+    const returnUrl = `${FRONTEND_URL}/stripe/connect/success`;
 
     const accountLink = await createAccountLink(
       accountId,
@@ -426,10 +491,10 @@ export async function connectOnboard(req, res) {
       returnUrl,
     );
 
-    res.redirect(accountLink.url);
+    return res.json({ url: accountLink.url });
   } catch (err) {
     console.error('Error Connect Onboard:', err);
-    res.status(500).send('Failed to initialize payment registration');
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 }
 
@@ -572,20 +637,23 @@ export async function refundMissionPayment(req, res) {
 export async function getDashboardLink(req, res) {
   try {
     const userId = req.user.uid;
-
     const user = await getById(userId);
+    if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
-    if (!user || !user.stripe_connected_id) {
-      return res
-        .status(400)
-        .json({ error: 'The user does not have a connected stripe account' });
+    // Checks if user actually completed login form
+    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
+    if (!accountInfo.details_submitted) {
+      return res.status(403).json({
+        error: {
+          general: [messages.STRIPE_ONBOARDING_NOT_COMPLETED],
+        },
+      });
     }
 
     const loginLink = await createLoginLink(user.stripe_connected_id);
-
-    res.json({ url: loginLink.url });
+    return res.json({ url: loginLink.url });
   } catch (err) {
     console.error('Error Login Link:', err);
-    res.status(500).json({ error: 'Could not access the dashboard.' });
+    res.status(500).json({ error: { general: [messages.UNEXPECTED_ERROR] } });
   }
 }

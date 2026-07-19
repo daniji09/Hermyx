@@ -96,7 +96,7 @@ const LogInForm = ({ state, action, isPending }) => {
             type='text'
             name='usernameEmail'
             defaultValue={state.data?.usernameEmail || ''}
-            autoComplete='off'
+            autoComplete='username'
             maxLength={consts.USERNAME_MAX_LENGTH}
             required
             aria-invalid={

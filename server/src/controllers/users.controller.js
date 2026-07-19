@@ -30,6 +30,7 @@ import {
   updateFirebaseAccount,
 } from '../services/auth.service.js';
 import { stringShortener } from '../utils/strings.utils.js';
+import { retrieveConnectAccount } from '../services/payment.service.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -332,6 +333,8 @@ export const getMyProfile = async (req, res) => {
 
     const location = await getLocationByUid(req.user.uid);
 
+    const bankAccount = await getConnectStatus(user);
+
     const profile = {
       username: user.username,
       email: user.email,
@@ -341,6 +344,8 @@ export const getMyProfile = async (req, res) => {
       location: location,
       avatar: user.avatar,
       configuration: user.configuration,
+      stripe_connected_id: user.stripe_connected_id,
+      bank_account: bankAccount,
     };
 
     return res.status(200).json({
@@ -351,6 +356,34 @@ export const getMyProfile = async (req, res) => {
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+const getConnectStatus = async (user) => {
+  try {
+    // If there is no ID, is not configured
+    if (!user || !user.stripe_connected_id) return { isConfigured: false };
+
+    // Info is retrieved from Stripe
+    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
+
+    // Checks if details form are ok
+    if (!accountInfo.details_submitted) return { isConfigured: false };
+
+    // Bank account info is extracted
+    const bankAccounts = accountInfo.external_accounts?.data || [];
+    const defaultBank = bankAccounts.length > 0 ? bankAccounts[0] : null;
+
+    // Data is sent to front
+    return {
+      isConfigured: true,
+      payoutsEnabled: accountInfo.payouts_enabled,
+      bankName: defaultBank?.bank_name || 'Bank account',
+      last4: defaultBank?.last4 || '****',
+    };
+  } catch (error) {
+    console.error('Error fetching connect status:', error);
+    return {};
   }
 };
 

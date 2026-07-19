@@ -7,3 +7,4 @@ export const DB_NAME = process.env.DB_NAME;
 export const DB_TEST_NAME = process.env.DB_TEST_NAME;
 export const DB_SSL = process.env.DB_SSL;
 export const FIREBASE_JSON = process.env.FIREBASE_JSON;
+export const FRONTEND_URL = process.env.FRONTEND_URL;

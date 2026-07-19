@@ -6,18 +6,26 @@ import {
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
+import { getById as getUserById } from '../models/app_user.model.js';
 import {
   getById,
   syncMissionCompletionStatus,
+  updateMissionPayment,
 } from '../models/mission.model.js';
 import {
   approveParticipation,
   disputeParticipation,
   getById as getMissionParticipationById,
+  getOccupiedVacancies,
   getVacancyById,
   joinVacancy,
+  markVacancyAsPaidOut,
+  refundVacancy,
+  releaseParticipation,
   reopenParticipation,
   requestParticipationRevision,
+  updatePaymentStatus,
+  updateStatus,
   updateVacancyMonetaryReward,
 } from '../models/mission_participation.model.js';
 import { emitToUser } from '../services/socket.service.js';
@@ -31,6 +39,17 @@ import {
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
+import { createRefund, createTransfer } from '../services/payment.service.js';
+import {
+  HERMYX_TRANSACTION_ID,
+  TRANSACTION_TYPE,
+  VACANCY_PAYMENT_STATUS,
+} from '@hermyx/shared/utils/payment.utils.js';
+import {
+  createMissionPayment,
+  getMissionPaymentsByVacancy,
+  refundFromPayment,
+} from '../models/mission_payment.model.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -85,7 +104,7 @@ const respondToParticipationReview = async ({
     return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
   }
 
-  if (!MISSION_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_SUBMIT) {
+  if (mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
     return res.status(409).json({ error: messages.MISSION_NOT_IN_PROGRESS });
   }
 
@@ -217,6 +236,36 @@ const respondToParticipationReview = async ({
       .json({ error: messages.CANNOT_ACCEPT_PARTICIPATION_STATE });
 
   await approveParticipation(missionId, notification.sender_id);
+
+  // Reward is payed
+  const adventurer = await getUserById(notification.sender_id);
+  if (adventurer.stripe_connected_id) {
+    const transferData = {
+      amount: Math.round(participation.monetary_reward * 100),
+      currency: 'eur',
+      destination: adventurer.stripe_connected_id,
+      description: `mission_payed`,
+      transfer_group: `mission_${missionId}`,
+    };
+
+    const idempotencyKey = `pay_${missionId}_vac_${participation.id}`;
+    const transfer = await createTransfer(transferData, idempotencyKey);
+
+    // Adds mission payment
+    await createMissionPayment({
+      mid: missionId,
+      vacancy_id: participation.id,
+      sender_id: HERMYX_TRANSACTION_ID,
+      receiver_id: adventurer.uid,
+      stripe_transaction_id: transfer.id,
+      transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
+      amount_paid: participation.monetary_reward,
+    });
+
+    await markVacancyAsPaidOut(participation.id);
+    await releaseParticipation(missionId, notification.sender_id);
+  }
+
   await syncMissionCompletionStatus(missionId);
   await updateNotificationStatus(
     notificationId,
@@ -418,7 +467,7 @@ const respondToMissionJoinNotification = async ({
   }
 
   const vacancy = await getVacancyById(missionId, vacancyId);
-  console.log(vacancy);
+
   // Checks if vacancy can be joined by states
   if (
     !VACANCY_LIFE_CYCLE[vacancy.status].VALID_NEXT_STATES.includes(
@@ -536,7 +585,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
       },
     });
 
-    emitToUser(mission.owner_id, 'mission:participation-disputed', {
+    emitToUser(mission.owner_id, 'mission:participation-negotiation-rejected', {
       notificationId: followUpNotificationId,
       type: NOTIFICATION_TYPE.MISSION.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
@@ -556,6 +605,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     return res.status(400).json({ error: messages.INVALID_RESPONSE_ACTION });
   }
 
+  // Updates vacancy and notifications info
   await updateVacancyMonetaryReward(
     notification.payload.associated_vacancy_id,
     notification.payload.new_offer,
@@ -565,6 +615,90 @@ const respondToVacancyMonetaryRewardEdition = async ({
     NOTIFICATION_STATUS.ACCEPTED.ID,
   );
   await markAsSeen(notificationId);
+
+  // Monetary change affects mission, if new offer is lower, a refund is made
+  if (participation.monetary_reward > notification.payload.new_offer) {
+    // Partially refunded
+    await updatePaymentStatus(
+      notification.payload.associated_vacancy_id,
+      VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+    );
+
+    // First, payments for this mission are get
+    const payments = await getMissionPaymentsByVacancy(
+      notification.payload.associated_vacancy_id,
+    );
+
+    // Amount to refund is calculated
+    let amountToRefund =
+      participation.monetary_reward - notification.payload.new_offer;
+
+    // That amount is refunded from every payment that is associated with the vacancy, if needed
+    for (const payment of payments) {
+      if (amountToRefund <= 0) break;
+
+      // Amount to refund from this payment is calculated
+      const availableBalance = payment.amount_paid - payment.amount_refunded;
+      const paymentRefund = Math.min(amountToRefund, availableBalance);
+
+      // Refund is made on Stripe
+      const refund = await createRefund(
+        {
+          payment_intent: payment.stripe_transaction_id,
+          amount: Math.round(paymentRefund * 100),
+          metadata: {
+            mission_id: missionId,
+            vacancy_id: notification.payload.associated_vacancy_id,
+            reason: 'negotiation_refund',
+          },
+        },
+        `negotiation_refund_${missionId}_${notification.payload.associated_vacancy_id}_${Date.now()}`,
+      );
+
+      // Payment is updated on db
+      await refundFromPayment(paymentRefund, payment.pid);
+
+      // And new transaction is added to db
+      await createMissionPayment({
+        mid: missionId,
+        vacancy_id: notification.payload.associated_vacancy_id,
+        sender_id: HERMYX_TRANSACTION_ID,
+        receiver_id: mission.owner_id,
+        stripe_transaction_id: refund.id,
+        transaction_type: TRANSACTION_TYPE.NEGOTIATION_REFUND.ID,
+        amount_paid: paymentRefund,
+      });
+
+      amountToRefund -= paymentRefund;
+    }
+    // When refund is complete, is marked as that
+    await refundVacancy(
+      notification.payload.associated_vacancy_id,
+      participation.monetary_reward - notification.payload.new_offer,
+    );
+
+    // Updates total payment on mission
+    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    await updateMissionPayment(
+      mission.mid,
+      occupied_vacancies.reduce(
+        (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+        0,
+      ) || 0,
+    );
+  } else {
+    // If new offer is higher, mission and vacancy states change if vacancy was already paid
+    if (participation.payment_status === VACANCY_PAYMENT_STATUS.PAID.ID) {
+      await updateStatus(
+        notification.payload.associated_vacancy_id,
+        VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
+      );
+      await updatePaymentStatus(
+        notification.payload.associated_vacancy_id,
+        VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+      );
+    }
+  }
 
   const acceptMessage = `${username} accepted your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
   const followUpNotificationId = await createNotification({
@@ -581,7 +715,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     },
   });
 
-  emitToUser(mission.owner_id, 'mission:participation-disputed', {
+  emitToUser(mission.owner_id, 'mission:participation-negotiation-accepted', {
     notificationId: followUpNotificationId,
     type: NOTIFICATION_TYPE.MISSION.ID,
     action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,

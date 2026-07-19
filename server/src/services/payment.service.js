@@ -28,6 +28,11 @@ export async function retrieveCustomer(customerId) {
   return await stripe.customers.retrieve(customerId);
 }
 
+// Retrieves the details of a Connect Express account
+export async function retrieveConnectAccount(accountId) {
+  return await stripe.accounts.retrieve(accountId);
+}
+
 //Creates a SetupIntent. This is used to save a card for future use without charging it immediately.
 export async function createSetupIntent(customerId) {
   return await stripe.setupIntents.create({
@@ -87,6 +92,13 @@ export async function createExpressAccount(email) {
     type: 'express',
     country: 'ES',
     email,
+    business_type: 'individual',
+    business_profile: {
+      url: 'https://hermyx-test.com', // Our app
+      mcc: '8999', // Universal Stripe code for "Diverse professional services"
+      product_description:
+        'Performing micro-tasks and freelance services through the Hermyx platform.',
+    },
     capabilities: { transfers: { requested: true } },
   });
 }

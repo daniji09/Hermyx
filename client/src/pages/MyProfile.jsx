@@ -152,7 +152,7 @@ export const MyProfile = () => {
         fetchNextPage={fetchNextReviewsPage}
       />
       <ProfileAccessMethods user={user}></ProfileAccessMethods>
-      <ProfilePaymentMethods></ProfilePaymentMethods>
+      <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
       <ProfileConfiguration user={user}></ProfileConfiguration>
       <ProfileDangerZone></ProfileDangerZone>
     </main>
@@ -518,7 +518,7 @@ const ProfileAccessMethods = ({ user }) => {
       <section className='p-4 sm:p-6 mt-6'>
         <h2 className='text-xl font-semibold'>Access methods</h2>
         <div className='flex flex-col gap-y-2'>
-          <p className='text-lg font-medium'>E-mail & password</p>
+          <h3 className='text-lg font-medium'>E-mail & password</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
             <p className='text-sm'>
               {hasPasswordProvider
@@ -543,7 +543,7 @@ const ProfileAccessMethods = ({ user }) => {
               )}
             </div>
           </div>
-          <p className='text-lg mt-3 font-medium'>Google</p>
+          <h3 className='text-lg mt-3 font-medium'>Google</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
             <p className='text-sm'>
               {hasGoogleProvider
@@ -1171,12 +1171,12 @@ const LinkGoogleButton = ({
   );
 };
 
-const ProfilePaymentMethods = () => {
+const ProfilePaymentMethods = ({ user }) => {
   return (
     <>
       {stripePromise ? (
         <Elements stripe={stripePromise} options={{ locale: 'en' }}>
-          <StripeManagement />
+          <StripeManagement user={user} />
         </Elements>
       ) : (
         <Card asChild>

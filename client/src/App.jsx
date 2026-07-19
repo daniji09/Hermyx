@@ -15,6 +15,7 @@ import { MyProfile } from './pages/MyProfile';
 import { Notifications } from './pages/Notifications';
 import { SearchUsers } from './pages/SearchUsers';
 import { EditMission } from './pages/EditMission';
+import { StripeSuccess } from './pages/StripeConnectSuccess';
 
 function App() {
   return (
@@ -128,6 +129,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Notifications />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/stripe/connect/success'
+          element={
+            <ProtectedRoute>
+              <StripeSuccess />
             </ProtectedRoute>
           }
         />

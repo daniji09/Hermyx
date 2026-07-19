@@ -7,7 +7,6 @@ import {
   getAllMissionsInDraft,
   getMissionById,
   // UpdateMission,
-  start,
   joinMission,
   submitMissionParticipation,
   getMissionsOpened,
@@ -15,6 +14,7 @@ import {
   unjoinMission,
   cancelMission,
   reopenMission,
+  close,
   reviewAdventurer,
   reviewOwner,
 } from '../controllers/missions.controller.js';
@@ -40,6 +40,7 @@ import {
   cancelMissionParamSchema,
   reopenMissionParamSchema,
   inviteToMissionSchema,
+  closeMissionParamSchema,
   reviewAdventurerParamSchema,
   reviewAdventurerBodySchema,
   reviewOwnerParamSchema,
@@ -83,8 +84,12 @@ router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
 //Create mission
 router.post('/', dynamicValidation, createMission);
 
-//Starts a mission
-router.post('/:missionId/start', start);
+//Closes a mission
+router.post(
+  '/:mid/close',
+  validateParamsSchema(closeMissionParamSchema),
+  close,
+);
 
 // Joins an adventurer into a mission
 router.post(

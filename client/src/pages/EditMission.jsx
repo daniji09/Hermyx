@@ -35,7 +35,10 @@ import {
 } from '@/components/ui/dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
-import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils';
+import {
+  MISSION_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.utils';
 
 export const EditMission = () => {
   // Mission id
@@ -296,6 +299,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
 };
 
 const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
+  console.log(vacancy);
   const isAssigned = !!vacancy.adventurer_id;
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -781,6 +785,7 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
     id: vac.vacancy_id,
     title: vac.vacancy_title,
     description: vac.vacancy_description,
+    status: vac.status,
   }));
 
   const [vacancies, setVacancies] = useState(formattedVacancies);

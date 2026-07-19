@@ -48,12 +48,17 @@ export const messages = {
         'Unjoining this mission will unlink it from you, and you will no longer be part of it.',
       CONFIRM_TEXT: 'Yes, unjoin mission',
     },
+    CLOSE_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to close the mission?',
+      ERROR_TITLE: `Can't close mission`,
+      NO_ADVENTURERS_DESCRIPTION: `You can't close a mission without adventurers.`,
+      AVAILABLE_VACANCIES_DESCRIPTION: `There are still vacant places available.`,
+      START_DESCRIPTION: `This will link the current adventurers to this mission, they won't be able to leave but until you pay mission won't start and you can still delete it.`,
+      CONFIRM_TEXT: 'Yes, close mission',
+    },
     START_MISSION_ALERT: {
       TITLE: 'Are you sure you want to start the mission?',
-      ERROR_TITLE: `Can't start mission`,
-      NO_ADVENTURERS_DESCRIPTION: `You can't start a mission without adventurers.`,
-      AVAILABLE_VACANCIES_DESCRIPTION: `There are still vacant places available.`,
-      START_DESCRIPTION: `This will link the current adventurers to this mission.`,
+      START_DESCRIPTION: `After you pay, mission will be started and adventurers will start working on it. From then on, if you cancel it, the money will be transferred to the adventurers anyway.`,
       CONFIRM_TEXT: 'Yes, start mission',
     },
     CANCEL_MISSION_ALERT: {
@@ -168,6 +173,12 @@ export const messages = {
       DESCRIPTION: (googleEmail) =>
         `This action will unlink your Google account ${googleEmail} from your Hermyx account, and you will be able to link any other Google account.`,
       CONFIRM_TEXT: 'Yes, unlink account',
+    },
+    ADD_BANK_ACCOUNT_ALERT: {
+      ERROR_TITLE: `Couldn't add bank account.`,
+    },
+    DASHBOARD_ACCOUNT_ALERT: {
+      ERROR_TITLE: `Couldn't go to account dashboard.`,
     },
     CONFIGURATION: {
       SHOW_MISSIONS_TEXT:

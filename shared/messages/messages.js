@@ -40,6 +40,7 @@ export const messages = {
   USERNAME_ALREADY_EXISTS: (username) => `Username ${username} already in use.`,
   USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
   COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
+  USER_NOT_FOUND: `User not found.`,
 
   //// Log In
   // Server errors
@@ -104,6 +105,7 @@ export const messages = {
   CANNOT_ACCEPT_PARTICIPATION_STATE: `Can't accept participation on current state`,
   CANNOT_REOPEN_PARTICIPATION_STATE: `Can't reopen participation on current state`,
   CANNOT_JOIN_PARTICIPATION_STATE: `Can't join participation on current state`,
+  CANNOT_SUBMIT_UNPAID: `Not completely paid adventurer can't submit their part.`,
 
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',
@@ -113,9 +115,9 @@ export const messages = {
   CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
   CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
 
-  //// Start mission
-  START_WITHOUT_ADVENTURERS: `You can't start a mission without adventurers.`,
-  CANNOT_START_STATE: `Can't start mission on current state.`,
+  //// Close mission
+  CLOSE_WITHOUT_ADVENTURERS: `You can't close a mission without adventurers.`,
+  CANNOT_CLOSE_STATE: `Can't close mission on current state.`,
 
   //// Join mission
   JOIN_OWN_MISSION: `You can't join your own mission.`,
@@ -125,6 +127,7 @@ export const messages = {
   VACANCY_NOT_FOUND: 'Vacancy not found.',
   VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
   MISSION_NOT_JOINED: `Couldn't join mission.`,
+  ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
 
   /// Unjoin mission
   VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
@@ -147,6 +150,8 @@ export const messages = {
 
   /// Pay mission
   CANNOT_PAY_MISSION_STATE: `Can't pay mission on current state.`,
+  STRIPE_ONBOARDING_NOT_COMPLETED:
+    'You have not completed the Stripe onboarding yet.',
 
   //// Profile
   ///Info

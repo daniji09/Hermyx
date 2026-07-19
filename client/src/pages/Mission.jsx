@@ -27,12 +27,12 @@ import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCallback, useContext, useRef, useState } from 'react';
 import {
-  startMission,
   joinMission,
   submitMissionParticipation,
   unjoinMission,
   cancelMission,
   reopenMission,
+  closeMission,
   reviewAdventurer,
   reviewOwner,
 } from '../services/MissionsServices';
@@ -87,6 +87,7 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
+  console.log(mission);
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
@@ -216,18 +217,11 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <CardFooter>
                 <>
                   {isCreator ? (
-                    mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID ? (
+                    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID ||
+                    mission.waitingForPaymentVacancies.length > 0 ? (
+                      <PayMissionButton mission={mission}></PayMissionButton>
+                    ) : mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID ? (
                       <MissionOwnerStatusMessage status={mission.status} />
-                    ) : mission.status === MISSION_LIFE_CYCLE.OPENED.ID ||
-                      mission.status === MISSION_LIFE_CYCLE.REOPENED.ID ? (
-                      <StartMissionButton
-                        mission={mission}
-                      ></StartMissionButton>
-                    ) : mission.status ===
-                      MISSION_LIFE_CYCLE.PENDING_PAYMENT.ID ? (
-                      <PayMissionButton
-                        missionId={mission.mid}
-                      ></PayMissionButton>
                     ) : (
                       <p className='text-muted-foreground bg-muted/20'>
                         {messages.MISSION.MISSION_CLOSED}
@@ -248,6 +242,13 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       {messages.MISSION.MISSION_OPEN}
                     </p>
                   )}
+                  {isCreator &&
+                    (mission.status === MISSION_LIFE_CYCLE.OPENED.ID ||
+                      mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) && (
+                      <CloseMissionButton
+                        mission={mission}
+                      ></CloseMissionButton>
+                    )}
                   {isCreator && MISSION_LIFE_CYCLE[mission.status].CAN_EDIT && (
                     <Button asChild>
                       <Link to={`/missions/${mission.mid}/edit`}>
@@ -1297,20 +1298,18 @@ const UnjoinMissionButton = ({ missionId, vacancyId }) => {
   );
 };
 
-const StartMissionButton = ({ mission }) => {
+const CloseMissionButton = ({ mission }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { isPending, mutate } = useMutation({
-    mutationFn: () => startMission(mission.mid),
+    mutationFn: () => closeMission(mission.mid),
     onSuccess: () => {
       queryClient.invalidateQueries(['getMissions']);
-      navigate(`/missions/${mission.mid}/pay`);
     },
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.START_MISSION_ALERT.ERROR_TITLE,
+        title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
         description: error?.response.data.errors?.general,
       });
     },
@@ -1322,20 +1321,20 @@ const StartMissionButton = ({ mission }) => {
     showAlert({
       title:
         mission.occupied_vacancies === 0
-          ? messages.MISSION.START_MISSION_ALERT.ERROR_TITLE
-          : messages.MISSION.START_MISSION_ALERT.TITLE,
+          ? messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE
+          : messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
       description:
         mission.occupied_vacancies === 0
-          ? messages.MISSION.START_MISSION_ALERT.NO_ADVENTURERS_DESCRIPTION
+          ? messages.MISSION.CLOSE_MISSION_ALERT.NO_ADVENTURERS_DESCRIPTION
           : mission.total_vacancies > mission.occupied_vacancies
-            ? messages.MISSION.START_MISSION_ALERT
+            ? messages.MISSION.CLOSE_MISSION_ALERT
                 .AVAILABLE_VACANCIES_DESCRIPTION
-            : messages.MISSION.START_MISSION_ALERT.START_DESCRIPTION,
+            : messages.MISSION.CLOSE_MISSION_ALERT.START_DESCRIPTION,
       variant: mission.occupied_vacancies === 0 ? 'info' : 'warning',
       confirmText:
         mission.occupied_vacancies === 0
           ? 'OK'
-          : messages.MISSION.START_MISSION_ALERT.CONFIRM_TEXT,
+          : messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
       onConfirm: mission.occupied_vacancies === 0 ? null : mutate,
     });
   };
@@ -1343,14 +1342,15 @@ const StartMissionButton = ({ mission }) => {
   return (
     <Button
       type='button'
-      id='startMissionButton'
+      id='closeMissionButton'
       onClick={handleAttempt}
       disabled={isPending}
     >
-      {'Start mission'}
+      {'Close mission'}
     </Button>
   );
 };
+
 const SubmitParticipationButton = ({ missionId, participationStatus }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
@@ -1429,18 +1429,33 @@ const MissionOwnerStatusMessage = ({ status }) => {
   );
 };
 
-const PayMissionButton = ({ missionId }) => {
+const PayMissionButton = ({ mission }) => {
+  const { showAlert } = useAlert();
   const navigate = useNavigate();
+  const text =
+    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID
+      ? 'Start mission'
+      : 'Pay mission';
+
+  // Interceptor
+  const handleAttempt = () => {
+    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID
+      ? // This action needs confirmation
+        showAlert({
+          title: messages.MISSION.START_MISSION_ALERT.TITLE,
+          description: messages.MISSION.START_MISSION_ALERT.START_DESCRIPTION,
+          variant: 'warning',
+          confirmText: messages.MISSION.START_MISSION_ALERT.CONFIRM_TEXT,
+          onConfirm: () => {
+            navigate(`/missions/${mission.mid}/pay`);
+          },
+        })
+      : navigate(`/missions/${mission.mid}/pay`);
+  };
 
   return (
-    <Button
-      type='button'
-      id='payMissionButton'
-      onClick={() => {
-        navigate(`/missions/${missionId}/pay`);
-      }}
-    >
-      {'Pay mission'}
+    <Button type='button' id='payMissionButton' onClick={handleAttempt}>
+      {text}
     </Button>
   );
 };
