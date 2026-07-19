@@ -45,7 +45,10 @@ import {
   startParticipants,
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
-import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
+import {
+  MISSION_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.utils.js';
 import { messages } from '@hermyx/shared';
 import { createNotification } from '../models/notification.model.js';
 import {
@@ -434,29 +437,31 @@ export async function confirmPayment(req, res) {
         message = `Your new monetary reward for ${mission.title} has been funded. Now you can submit your part!`;
       else
         message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
-      const notificationId = await createNotification({
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-        action: NOTIFICATION_ACTION.MISSION_START.ID,
-        status: null,
-        message: message,
-        senderId: req.user.uid,
-        receiverId: vacancy.adventurer_id,
-        payload: {
-          associated_mission_id: mission.mid,
-        },
-      });
-      emitToUser(vacancy.adventurer_id, 'mission:started', {
-        notificationId,
-        missionId: mission.mid,
-        vacancyId: vacancy.adventurer_id,
-        missionTitle: mission.title,
-        senderId: req.user.uid,
-        senderUsername: req.user.username,
-        receiverId: vacancy.adventurer_id,
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        message: message,
-      });
+      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+        const notificationId = await createNotification({
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_START.ID,
+          status: null,
+          message: message,
+          senderId: req.user.uid,
+          receiverId: vacancy.adventurer_id,
+          payload: {
+            associated_mission_id: mission.mid,
+          },
+        });
+        emitToUser(vacancy.adventurer_id, 'mission:started', {
+          notificationId,
+          missionId: mission.mid,
+          vacancyId: vacancy.adventurer_id,
+          missionTitle: mission.title,
+          senderId: req.user.uid,
+          senderUsername: req.user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: message,
+        });
+      }
     }
 
     return res.json({ success: true });

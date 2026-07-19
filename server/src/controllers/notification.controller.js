@@ -1,6 +1,8 @@
 import { messages } from '@hermyx/shared';
 import {
   createNotification,
+  findByActionStatusAndVacancy,
+  findByActionStatusSenderAndMission,
   findById,
   getByRecipientId,
   markAsSeen,
@@ -500,12 +502,67 @@ const respondToMissionJoinNotification = async ({
   if (join_vacancy < 1)
     return res.status(409).json({ error: messages.VACANCY_NOT_JOINED });
 
+  // Updates notification
   await updateNotificationStatus(
     notificationId,
     NOTIFICATION_STATUS.ACCEPTED.ID,
   );
   await markAsSeen(notificationId);
 
+  // Rejects automatically every notification for this vacancy or from this adventurer
+  const vacancyNotifications = await findByActionStatusAndVacancy(
+    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+    notification.payload.associated_vacancy_id,
+  );
+  const adventurerNotifications = await findByActionStatusSenderAndMission(
+    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+    missionId,
+    notification.sender_id,
+  );
+
+  for (const notificationToReject of [
+    ...vacancyNotifications,
+    ...adventurerNotifications,
+  ]) {
+    // Rejects notification
+    await updateNotificationStatus(
+      notificationToReject.nid,
+      NOTIFICATION_STATUS.REJECTED.ID,
+    );
+    await markAsSeen(notificationToReject.nid);
+
+    // Sends confirmation notification to adventurers rejected
+    const rejectionMessage =
+      notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
+        ? `Your invitation to join "${mission.title}" was rejected.`
+        : `Your request to join "${mission.title}" was rejected.`;
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: notification.action,
+      status: null,
+      message: rejectionMessage,
+      senderId: notificationToReject.recipient_id,
+      receiverId: notificationToReject.sender_id,
+      payload: { associated_mission_id: missionId },
+    });
+
+    emitToUser(notification.sender_id, 'notification:created', {
+      notificationId: followUpNotificationId,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: notification.action,
+      missionId,
+      missionTitle: mission.title,
+      senderId: notificationToReject.recipient_id,
+      receiverId: notificationToReject.sender_id,
+      message: rejectionMessage,
+    });
+  }
+
+  // Sends confirmation notification to adventurers accepted
   const acceptanceMessage =
     notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
       ? `Your invitation to join "${mission.title}" was accepted.`

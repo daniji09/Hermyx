@@ -39,6 +39,7 @@ import {
   MISSION_LIFE_CYCLE,
   VACANCY_LIFE_CYCLE,
 } from '@hermyx/shared/utils/missions.utils';
+import { useAlert } from '../contexts/AlertContext';
 
 export const EditMission = () => {
   // Mission id
@@ -73,7 +74,7 @@ export const EditMission = () => {
     editMissionAction,
     initialStateUseStateAction,
   );
-  console.log(state);
+
   // Effect for navigating to home
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -176,7 +177,6 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
     const fieldName = e.target.name;
     setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
   };
-  //Console.log(mission);
   return (
     <div className='flex flex-col w-full max-w-4xl gap-4'>
       <CardForm id='editMissionForm' action={action}>
@@ -299,9 +299,9 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
 };
 
 const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
-  console.log(vacancy);
   const isAssigned = !!vacancy.adventurer_id;
   const handleKeyDown = (e) => {
+    if (!VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick(vacancy.id);
@@ -311,9 +311,15 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
     <Card
       role='button'
       tabIndex={0}
-      className='relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 group'
+      className={`relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all group ${
+        VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT
+          ? 'hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+          : 'opacity-70 cursor-default'
+      }`}
       onKeyDown={handleKeyDown}
-      onClick={() => onClick(vacancy.id)}
+      onClick={() =>
+        VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT && onClick(vacancy.id)
+      }
     >
       {canDelete && (
         <Button
@@ -421,6 +427,7 @@ const CreateVacanciesDialog = ({
         reward: state.data.vacanciesReward,
         title: state.data.vacanciesTitle,
         description: state.data.vacanciesDescription,
+        status: VACANCY_LIFE_CYCLE.EMPTY.ID,
       });
       processedState.current = state;
     }
@@ -648,6 +655,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
         reward: state.data.vacanciesReward,
         title: state.data.vacanciesTitle,
         description: state.data.vacanciesDescription,
+        status: vacancy.status,
       });
       processedState.current = state;
       onClose();
@@ -777,6 +785,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
 };
 
 export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
+  const { showAlert } = useAlert();
   const formattedVacancies = initialVacancies.map((vac) => ({
     adventurer_id: vac.adventurer_id,
     avatar: vac.avatar,
@@ -792,13 +801,14 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
   const [editingVacancyId, setEditingVacancyId] = useState(null);
 
   const handleAddVacancies = useCallback(
-    ({ quantity, reward, title, description }) => {
+    ({ quantity, reward, title, description, status }) => {
       setVacancies((prevVacancies) => {
         const newVacancies = Array.from({ length: quantity }).map(() => ({
           id: crypto.randomUUID(),
           reward,
           title,
           description,
+          status,
         }));
 
         return [...prevVacancies, ...newVacancies];
@@ -817,9 +827,17 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
     [editingVacancyId],
   );
 
-  const handleClickVacancy = useCallback((id) => {
-    setEditingVacancyId(id);
-  }, []);
+  const handleClickVacancy = useCallback(
+    (id) => {
+      const targetVacancy = vacancies.find((v) => v.id === id);
+      if (targetVacancy && VACANCY_LIFE_CYCLE[targetVacancy.status].CAN_EDIT) {
+        setEditingVacancyId(id);
+      } else {
+        showAlert({ title: messages.EDIT_MISSION.EDIT_FINISHED_VACANCIES });
+      }
+    },
+    [vacancies, showAlert],
+  );
 
   const handleConfirmEdit = useCallback((updatedVacancy) => {
     setVacancies((prevVacancies) =>

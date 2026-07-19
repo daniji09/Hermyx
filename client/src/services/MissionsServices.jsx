@@ -133,6 +133,12 @@ export const reopenMission = async (mid) => {
   return data;
 };
 
+// Finishes mission
+export const finishMission = async (mid) => {
+  const { data } = await api.post(`/missions/${mid}/finish`);
+  return data;
+};
+
 // Finds all missions from user, it may be paginated
 export const getUserMissions = async (
   uid,

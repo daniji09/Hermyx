@@ -44,6 +44,19 @@ const vacancySchema = z.object({
     .nullable()
     .optional()
     .or(z.literal('')),
+  status: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
+      messages.FIELD_TOO_LONG(
+        'Status',
+        consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
+      ),
+    )
+    .nullable()
+    .optional()
+    .or(z.literal('')),
 });
 
 // Server and client publish mission shared validation
@@ -196,6 +209,13 @@ export const cancelMissionParamSchema = z.object({
 });
 
 export const reopenMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const finishMissionParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Mid'))
     .int(messages.FIELD_INTEGER('Mid'))

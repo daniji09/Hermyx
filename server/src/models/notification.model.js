@@ -152,7 +152,7 @@ export const findByActionStatusAndVacancy = async (
   FROM notification 
   WHERE action = $1 
     AND status = $2 
-    AND payload->>'associated_mission_id' = $3::text`;
+    AND payload->>'associated_vacancy_id' = $3::text`;
   const result = await pool.query(query, [
     action,
     status,
@@ -189,4 +189,25 @@ export const updateNotification = async (notificationData) => {
     nid,
   ]);
   return result.rowCount;
+};
+
+export const findByActionStatusSenderAndMission = async (
+  action,
+  status,
+  associated_mission_id,
+  sender_id,
+) => {
+  const query = `SELECT * 
+  FROM notification 
+  WHERE action = $1 
+    AND status = $2 
+    AND payload->>'associated_mission_id' = $3::text
+    AND sender_id = $4`;
+  const result = await pool.query(query, [
+    action,
+    status,
+    associated_mission_id,
+    sender_id,
+  ]);
+  return result.rows;
 };
