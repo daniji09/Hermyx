@@ -1,6 +1,7 @@
 import { messages } from '@hermyx/shared';
 import { verifyIdToken } from '../services/auth.service.js';
 import { getByFirebaseUid } from '../models/app_user.model.js';
+import { CRON_SECRET_TOKEN } from '../config/config.js';
 
 export const verifyToken = async (req, res, next) => {
   // ID token is retrieved
@@ -34,4 +35,17 @@ export const verifyToken = async (req, res, next) => {
     console.error('Error verifying token:', error);
     return res.status(403).json({ errors: { general: [messages.FORBIDDEN] } });
   }
+};
+
+export const verifyCronToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const expectedToken = `Bearer ${CRON_SECRET_TOKEN}`;
+
+  if (!authHeader || authHeader !== expectedToken) {
+    return res.status(403).json({
+      error: messages.SYSTEM_FORBIDDEN,
+    });
+  }
+
+  next();
 };

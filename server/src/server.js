@@ -5,6 +5,8 @@ const PORT = process.env.PORT || 3000;
 import { createServer } from 'node:http';
 import app from './app.js';
 import { initializeSocketServer } from './services/socket.service.js';
+// eslint-disable-next-line no-unused-vars
+import { autoAcceptParticipation } from './jobs/notification.jobs.js';
 
 const httpServer = createServer(app);
 

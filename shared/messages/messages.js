@@ -16,6 +16,7 @@ export const messages = {
     `${field} must be longer than ${min} characters.`,
   FIELD_REQUIRED: 'This field is required.',
   FORBIDDEN: 'Action is not authorized.',
+  SYSTEM_FORBIDDEN: 'Action is only authorize for the system.',
   OPERATION_ERROR: 'Operation ended abruptly.',
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
   UNEXPECTED_ERROR: 'Unexpected error.',

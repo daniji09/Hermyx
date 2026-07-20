@@ -211,3 +211,17 @@ export const findByActionStatusSenderAndMission = async (
   ]);
   return result.rows;
 };
+
+export const findExpiredParticipationReview = async () => {
+  const query = `
+      SELECT * 
+      FROM notification
+      WHERE action = $1 AND status = $2 
+        AND date <= NOW() - INTERVAL '168 hours'
+    `; // 7 days
+  const result = await pool.query(query, [
+    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+  ]);
+  return result.rows;
+};

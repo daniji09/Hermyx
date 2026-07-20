@@ -211,7 +211,7 @@ export const Notifications = () => {
                             <User className='h-5 w-5' aria-hidden='true' />
                           </span>
                           <span className='min-w-0'>
-                            <span className='block break-words leading-snug'>
+                            <span className='block wrap-break-words leading-snug'>
                               {isMissionNotification ? (
                                 <>
                                   {isPendingMissionReview
