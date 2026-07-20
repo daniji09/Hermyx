@@ -434,8 +434,7 @@ export const syncMissionCompletionStatus = async (mid) => {
       COUNT(*) FILTER (
         WHERE status IN ($2, $3, $4)
       )::int AS active_count,
-      COUNT(*) FILTER (WHERE status = $5)::int AS dispute_count,
-      COUNT(*) FILTER (WHERE status IN ($6, $7))::int AS accepted_count
+      COUNT(*) FILTER (WHERE status = $5)::int AS dispute_count
     FROM mission_participation
     WHERE mid = $1
   `;
@@ -445,8 +444,6 @@ export const syncMissionCompletionStatus = async (mid) => {
     VACANCY_LIFE_CYCLE.SUBMITTED.ID,
     VACANCY_LIFE_CYCLE.REJECTED.ID,
     VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
-    VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-    VACANCY_LIFE_CYCLE.RELEASED.ID,
   ]);
   const summary = summaryResult.rows[0];
 
@@ -460,8 +457,6 @@ export const syncMissionCompletionStatus = async (mid) => {
     nextStatus = MISSION_LIFE_CYCLE.IN_PROGRESS.ID;
   } else if (summary.dispute_count > 0) {
     nextStatus = MISSION_LIFE_CYCLE.IN_DISPUTE.ID;
-  } else if (summary.accepted_count === summary.participant_count) {
-    nextStatus = MISSION_LIFE_CYCLE.FINISHED.ID;
   }
 
   if (!nextStatus) {
@@ -471,19 +466,14 @@ export const syncMissionCompletionStatus = async (mid) => {
   const updateQuery = `
     UPDATE mission
     SET
-      status = $2::varchar,
-      completion_date = CASE
-        WHEN $2::varchar = $3 THEN COALESCE(completion_date, NOW())
-        ELSE NULL
-      END
+      status = $2::varchar
     WHERE mid = $1
-      AND status IN ($4, $3, $5)
+      AND status IN ($4, $3)
     RETURNING *
   `;
   const updateResult = await pool.query(updateQuery, [
     mid,
     nextStatus,
-    MISSION_LIFE_CYCLE.FINISHED.ID,
     MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
     MISSION_LIFE_CYCLE.IN_DISPUTE.ID,
   ]);

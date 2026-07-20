@@ -25,6 +25,7 @@ export const messages = {
       'Define how many adventurers you need for this mission.',
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
     LOCATION_ERROR: 'Please, select a valid location on the map.',
+    EDIT_FINISHED_VACANCIES: `Can't edit vacancies from finished adventurers.`,
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
@@ -55,6 +56,7 @@ export const messages = {
       AVAILABLE_VACANCIES_DESCRIPTION: `There are still vacant places available.`,
       START_DESCRIPTION: `This will link the current adventurers to this mission, they won't be able to leave but until you pay mission won't start and you can still delete it.`,
       CONFIRM_TEXT: 'Yes, close mission',
+      NO_NEW_ADVENTURERS_AFTER_REOPEN: `No new adventurers have joined since this mission was reopened.`,
     },
     START_MISSION_ALERT: {
       TITLE: 'Are you sure you want to start the mission?',
@@ -75,6 +77,12 @@ export const messages = {
       DESCRIPTION:
         'Empty vacancies must exist on your mission, and new adventurers will be allowed to join them.',
       CONFIRM_TEXT: 'Yes, reopen mission',
+    },
+    FINISH_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to finish the mission?',
+      ERROR_TITLE: `Can't finish mission`,
+      DESCRIPTION: `This will complete the mission, and you won't be able to make any changes.`,
+      CONFIRM_TEXT: 'Yes, finish mission',
     },
     SUBMIT_PARTICIPATION_ALERT: {
       TITLE: 'Submit your participation?',

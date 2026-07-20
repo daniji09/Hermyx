@@ -45,7 +45,10 @@ import {
   startParticipants,
   updateTransferInfo,
 } from '../models/mission_participation.model.js';
-import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
+import {
+  MISSION_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.utils.js';
 import { messages } from '@hermyx/shared';
 import { createNotification } from '../models/notification.model.js';
 import {
@@ -60,6 +63,7 @@ import {
 } from '../models/mission_payment.model.js';
 import { FRONTEND_URL } from '../config/config.js';
 import {
+  HERMYX_FEE,
   HERMYX_TRANSACTION_ID,
   TRANSACTION_TYPE,
   VACANCY_PAYMENT_STATUS,
@@ -319,7 +323,7 @@ export async function payNew(req, res) {
     // Creates payment on Stripe
     const pi = await createPaymentIntentNew(
       {
-        amount: Math.round(paymentAmount * 100),
+        amount: Math.round(paymentAmount * 100 * HERMYX_FEE),
         currency: 'eur',
         customer: customerId,
         automatic_payment_methods: { enabled: true },
@@ -355,7 +359,8 @@ export async function payNew(req, res) {
         receiver_id: HERMYX_TRANSACTION_ID,
         stripe_transaction_id: pi.id,
         transaction_type: transaction_type,
-        amount_paid: vacancy.monetary_reward - vacancy.amount_paid,
+        amount_paid:
+          (vacancy.monetary_reward - vacancy.amount_paid) * HERMYX_FEE,
       });
 
       // Updates vacancy info
@@ -395,7 +400,7 @@ export async function confirmPayment(req, res) {
         .status(400)
         .json({ error: `Payment was not completed (status=${pi.status})` });
     }
-    console.log(mission.status);
+
     // Checks if mission can be in progress by states
     if (
       mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
@@ -412,7 +417,7 @@ export async function confirmPayment(req, res) {
       occupied_vacancies.reduce(
         (sum, vacancy) => sum + Number(vacancy.monetary_reward),
         0,
-      ) || 0,
+      ) * HERMYX_FEE || 0,
     );
 
     // Mission and participants life cycle is updated
@@ -434,29 +439,31 @@ export async function confirmPayment(req, res) {
         message = `Your new monetary reward for ${mission.title} has been funded. Now you can submit your part!`;
       else
         message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
-      const notificationId = await createNotification({
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-        action: NOTIFICATION_ACTION.MISSION_START.ID,
-        status: null,
-        message: message,
-        senderId: req.user.uid,
-        receiverId: vacancy.adventurer_id,
-        payload: {
-          associated_mission_id: mission.mid,
-        },
-      });
-      emitToUser(vacancy.adventurer_id, 'mission:started', {
-        notificationId,
-        missionId: mission.mid,
-        vacancyId: vacancy.adventurer_id,
-        missionTitle: mission.title,
-        senderId: req.user.uid,
-        senderUsername: req.user.username,
-        receiverId: vacancy.adventurer_id,
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        message: message,
-      });
+      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+        const notificationId = await createNotification({
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_START.ID,
+          status: null,
+          message: message,
+          senderId: req.user.uid,
+          receiverId: vacancy.adventurer_id,
+          payload: {
+            associated_mission_id: mission.mid,
+          },
+        });
+        emitToUser(vacancy.adventurer_id, 'mission:started', {
+          notificationId,
+          missionId: mission.mid,
+          vacancyId: vacancy.adventurer_id,
+          missionTitle: mission.title,
+          senderId: req.user.uid,
+          senderUsername: req.user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: message,
+        });
+      }
     }
 
     return res.json({ success: true });

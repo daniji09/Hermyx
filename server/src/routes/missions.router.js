@@ -15,6 +15,7 @@ import {
   cancelMission,
   reopenMission,
   close,
+  finishMission,
   reviewAdventurer,
   reviewOwner,
 } from '../controllers/missions.controller.js';
@@ -41,6 +42,7 @@ import {
   reopenMissionParamSchema,
   inviteToMissionSchema,
   closeMissionParamSchema,
+  finishMissionParamSchema,
   reviewAdventurerParamSchema,
   reviewAdventurerBodySchema,
   reviewOwnerParamSchema,
@@ -141,6 +143,13 @@ router.post(
   '/:mid/reopen',
   validateParamsSchema(reopenMissionParamSchema),
   reopenMission,
+);
+
+// Reopens a mission
+router.post(
+  '/:mid/finish',
+  validateParamsSchema(finishMissionParamSchema),
+  finishMission,
 );
 
 //Edit mission

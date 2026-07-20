@@ -121,6 +121,7 @@ export const consts = {
       MAX: 100,
       TITLE_MAX_LENGTH: 50,
       DESCRIPTION_MAX_LENGTH: 500,
+      STATUS_MAX_LENGTH: 20,
     },
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
   },
