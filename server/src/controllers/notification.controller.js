@@ -491,8 +491,17 @@ const respondToMissionJoinNotification = async ({
     missionId,
     adventurerId,
   );
+
   if (alreadyJoined) {
     return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
+  }
+
+  const adventurer = await getUserById(adventurerId);
+
+  if (adventurer.stripe_connected_id === null) {
+    return res
+      .status(403)
+      .json({ error: messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED });
   }
 
   // Joins vacancy

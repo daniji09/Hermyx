@@ -84,7 +84,10 @@ export const getMissionById = async (req, res) => {
         (participant) =>
           participant.status === VACANCY_LIFE_CYCLE.EMPTY.ID ||
           participant.status === VACANCY_LIFE_CYCLE.RELEASED.ID,
-      ) && MISSION_LIFE_CYCLE[mission.status].CAN_FINISH;
+      ) &&
+      MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_LIFE_CYCLE.FINISHED.ID,
+      );
 
     return res.status(200).json({
       mission: {
