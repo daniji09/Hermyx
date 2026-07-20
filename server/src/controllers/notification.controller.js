@@ -1,7 +1,10 @@
 import { messages } from '@hermyx/shared';
 import {
   createNotification,
+  findByActionStatusAndVacancy,
+  findByActionStatusSenderAndMission,
   findById,
+  findExpiredParticipationReview,
   getByRecipientId,
   markAsSeen,
   updateNotificationStatus,
@@ -41,6 +44,7 @@ import {
 } from '@hermyx/shared/utils/notifications.utils.js';
 import { createRefund, createTransfer } from '../services/payment.service.js';
 import {
+  HERMYX_FEE,
   HERMYX_TRANSACTION_ID,
   TRANSACTION_TYPE,
   VACANCY_PAYMENT_STATUS,
@@ -500,12 +504,67 @@ const respondToMissionJoinNotification = async ({
   if (join_vacancy < 1)
     return res.status(409).json({ error: messages.VACANCY_NOT_JOINED });
 
+  // Updates notification
   await updateNotificationStatus(
     notificationId,
     NOTIFICATION_STATUS.ACCEPTED.ID,
   );
   await markAsSeen(notificationId);
 
+  // Rejects automatically every notification for this vacancy or from this adventurer
+  const vacancyNotifications = await findByActionStatusAndVacancy(
+    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+    notification.payload.associated_vacancy_id,
+  );
+  const adventurerNotifications = await findByActionStatusSenderAndMission(
+    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+    missionId,
+    notification.sender_id,
+  );
+
+  for (const notificationToReject of [
+    ...vacancyNotifications,
+    ...adventurerNotifications,
+  ]) {
+    // Rejects notification
+    await updateNotificationStatus(
+      notificationToReject.nid,
+      NOTIFICATION_STATUS.REJECTED.ID,
+    );
+    await markAsSeen(notificationToReject.nid);
+
+    // Sends confirmation notification to adventurers rejected
+    const rejectionMessage =
+      notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
+        ? `Your invitation to join "${mission.title}" was rejected.`
+        : `Your request to join "${mission.title}" was rejected.`;
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: notification.action,
+      status: null,
+      message: rejectionMessage,
+      senderId: notificationToReject.recipient_id,
+      receiverId: notificationToReject.sender_id,
+      payload: { associated_mission_id: missionId },
+    });
+
+    emitToUser(notification.sender_id, 'notification:created', {
+      notificationId: followUpNotificationId,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: notification.action,
+      missionId,
+      missionTitle: mission.title,
+      senderId: notificationToReject.recipient_id,
+      receiverId: notificationToReject.sender_id,
+      message: rejectionMessage,
+    });
+  }
+
+  // Sends confirmation notification to adventurers accepted
   const acceptanceMessage =
     notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
       ? `Your invitation to join "${mission.title}" was accepted.`
@@ -631,7 +690,8 @@ const respondToVacancyMonetaryRewardEdition = async ({
 
     // Amount to refund is calculated
     let amountToRefund =
-      participation.monetary_reward - notification.payload.new_offer;
+      (participation.monetary_reward - notification.payload.new_offer) *
+      HERMYX_FEE;
 
     // That amount is refunded from every payment that is associated with the vacancy, if needed
     for (const payment of payments) {
@@ -684,7 +744,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
       occupied_vacancies.reduce(
         (sum, vacancy) => sum + Number(vacancy.monetary_reward),
         0,
-      ) || 0,
+      ) * HERMYX_FEE || 0,
     );
   } else {
     // If new offer is higher, mission and vacancy states change if vacancy was already paid
@@ -811,5 +871,137 @@ export const respondToNotification = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Automatize called functions, jobs
+export const autoAcceptParticipation = async (req, res) => {
+  try {
+    // Gets expired participation reviews
+    const expiredReviews = await findExpiredParticipationReview();
+
+    // Checks if there is any
+    if (expiredReviews.length === 0)
+      return res.status(200).json('No notifications expired.');
+
+    // Notifications that can't be accepted
+    const errors = [];
+    const successes = [];
+
+    // If there are, it tries to auto-accept them
+    for (const expiredReview of expiredReviews) {
+      console.log(expiredReview);
+      // Gets mission
+      const mission = await getById(
+        expiredReview.payload.associated_mission_id,
+      );
+      if (!mission)
+        errors.push(
+          `${messages.MISSION_NOT_FOUND}. Notification: ${expiredReview.nid}.`,
+        );
+      else {
+        // Gets participation
+        const participation = await getMissionParticipationById(
+          expiredReview.payload.associated_mission_id,
+          expiredReview.sender_id,
+        );
+        // Checks if vacancy can be accepted by states
+        if (
+          !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
+            VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+          )
+        )
+          errors.push(
+            `${messages.CANNOT_ACCEPT_PARTICIPATION_STATE}. Notification: ${expiredReview.nid}.`,
+          );
+        else {
+          await approveParticipation(
+            expiredReview.payload.associated_mission_id,
+            expiredReview.sender_id,
+          );
+
+          // Reward is payed
+          const adventurer = await getUserById(expiredReview.sender_id);
+          if (adventurer.stripe_connected_id) {
+            const transferData = {
+              amount: Math.round(participation.monetary_reward * 100),
+              currency: 'eur',
+              destination: adventurer.stripe_connected_id,
+              description: `mission_payed`,
+              transfer_group: `mission_${expiredReview.payload.associated_mission_id}`,
+            };
+
+            const idempotencyKey = `pay_${expiredReview.payload.associated_mission_id}_vac_${participation.id}`;
+            const transfer = await createTransfer(transferData, idempotencyKey);
+
+            // Adds mission payment
+            await createMissionPayment({
+              mid: expiredReview.payload.associated_mission_id,
+              vacancy_id: participation.id,
+              sender_id: HERMYX_TRANSACTION_ID,
+              receiver_id: adventurer.uid,
+              stripe_transaction_id: transfer.id,
+              transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
+              amount_paid: participation.monetary_reward,
+            });
+
+            await markVacancyAsPaidOut(participation.id);
+            await releaseParticipation(
+              expiredReview.payload.associated_mission_id,
+              expiredReview.sender_id,
+            );
+          }
+
+          await syncMissionCompletionStatus(
+            expiredReview.payload.associated_mission_id,
+          );
+          await updateNotificationStatus(
+            expiredReview.nid,
+            NOTIFICATION_STATUS.ACCEPTED.ID,
+          );
+          await markAsSeen(expiredReview.nid);
+
+          const approvedMessage = `Your participation in "${mission.title}" was approved automatically by the system after it wasn't reviewed on time (one week).`;
+          const followUpNotificationId = await createNotification({
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+            action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+            status: null,
+            message: approvedMessage,
+            senderId: HERMYX_TRANSACTION_ID,
+            receiverId: expiredReview.sender_id,
+            payload: {
+              associated_mission_id:
+                expiredReview.payload.associated_mission_id,
+            },
+          });
+
+          emitToUser(
+            expiredReview.sender_id,
+            'mission:participation-approved',
+            {
+              notificationId: followUpNotificationId,
+              type: NOTIFICATION_TYPE.MISSION.ID,
+              action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+              missionId: expiredReview.payload.associated_mission_id,
+              missionTitle: mission.title,
+              ownerId: HERMYX_TRANSACTION_ID,
+              ownerUsername: 'SYSTEM',
+              message: approvedMessage,
+            },
+          );
+
+          successes.push(
+            `${messages.MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY}. Notification: ${expiredReview.nid}.`,
+          );
+        }
+      }
+    }
+    return res.status(200).json({ errors, successes });
+  } catch (error) {
+    console.error(
+      '[CRON] Error while accepting expired participation reviews:',
+      error,
+    );
   }
 };

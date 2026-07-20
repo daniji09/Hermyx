@@ -16,6 +16,7 @@ export const messages = {
     `${field} must be longer than ${min} characters.`,
   FIELD_REQUIRED: 'This field is required.',
   FORBIDDEN: 'Action is not authorized.',
+  SYSTEM_FORBIDDEN: 'Action is only authorize for the system.',
   OPERATION_ERROR: 'Operation ended abruptly.',
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
   UNEXPECTED_ERROR: 'Unexpected error.',
@@ -105,6 +106,7 @@ export const messages = {
   //// Edit mission
   CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
   CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
+  CANNOT_EDIT_VACANCY: `Vacancy can't be edited on current state.`,
 
   //// Close mission
   CLOSE_WITHOUT_ADVENTURERS: `You can't close a mission without adventurers.`,
@@ -119,6 +121,7 @@ export const messages = {
   VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
   MISSION_NOT_JOINED: `Couldn't join mission.`,
   ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
+  REQUEST_ALREADY_SENT: `You have already sent a join request for this vacancy.`,
 
   /// Unjoin mission
   VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
@@ -138,6 +141,12 @@ export const messages = {
   /// Reopen mission
   CANNOT_REOPEN_MISSION_STATE: `Can't reopen mission on current state.`,
   CANNOT_REOPEN_MISSION_WITHOUT_EMPTY_VACANCIES: `Can't reopen mission with no empty vacancies that can be filled.`,
+  CANNOT_REOPEN_MISSION: `Can't reopen mission.`,
+
+  /// Finish mission
+  CANNOT_FINISH_ADVENTURERS_IN_PROGRESS: `Can't finish mission because there are adventurers that have not finished yet.`,
+  CANNOT_FINISH_MISSION_STATE: `Can't finish mission on current state.`,
+  CANNOT_FINISH: `Can't finish mission`,
 
   /// Pay mission
   CANNOT_PAY_MISSION_STATE: `Can't pay mission on current state.`,

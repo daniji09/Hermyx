@@ -32,6 +32,6 @@ import { verifyToken } from './middlewares/auth.middleware.js';
 app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
-app.use('/api/notifications', verifyToken, notificationRouter);
+app.use('/api/notifications', notificationRouter);
 
 export default app;

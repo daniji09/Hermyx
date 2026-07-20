@@ -25,6 +25,7 @@ import {
   cancelMission,
   reopenMission,
   closeMission,
+  finishMission,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -46,7 +47,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { consts } from '@hermyx/shared';
+import { consts, messages as messagesShared } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import {
   MISSION_LIFE_CYCLE,
@@ -181,7 +182,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   />
                   <div className='flex items-center gap-2'>
                     <span>Total payment:</span>
-                    <span>{mission.total_payment}$</span>
+                    <span>{Number(mission.total_payment).toFixed(2)}$</span>
                     <HandCoins className='h-6 w-6' aria-hidden='true' />
                   </div>
                   {mission.status}
@@ -257,6 +258,11 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     ].VALID_NEXT_STATES.includes(
                       MISSION_LIFE_CYCLE.REOPENED.ID,
                     ) && <ReopenMissionButton mission={mission} />}
+                  {isCreator &&
+                    mission.canFinish &&
+                    mission.status !== MISSION_LIFE_CYCLE.FINISHED.ID && (
+                      <FinishMissionButton mission={mission} />
+                    )}
                 </>
               </CardFooter>
             </section>
@@ -956,25 +962,35 @@ const CloseMissionButton = ({ mission }) => {
   // Interceptor
   const handleAttempt = () => {
     // This action needs confirmation
-    showAlert({
-      title:
-        mission.occupied_vacancies === 0
-          ? messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE
-          : messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
-      description:
-        mission.occupied_vacancies === 0
-          ? messages.MISSION.CLOSE_MISSION_ALERT.NO_ADVENTURERS_DESCRIPTION
-          : mission.total_vacancies > mission.occupied_vacancies
-            ? messages.MISSION.CLOSE_MISSION_ALERT
-                .AVAILABLE_VACANCIES_DESCRIPTION
-            : messages.MISSION.CLOSE_MISSION_ALERT.START_DESCRIPTION,
-      variant: mission.occupied_vacancies === 0 ? 'info' : 'warning',
-      confirmText:
-        mission.occupied_vacancies === 0
-          ? 'OK'
-          : messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
-      onConfirm: mission.occupied_vacancies === 0 ? null : mutate,
-    });
+    if (mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) {
+      showAlert({
+        title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
+        description:
+          messages.MISSION.CLOSE_MISSION_ALERT.NO_NEW_ADVENTURERS_AFTER_REOPEN,
+        confirmText: messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
+        onConfirm: mutate,
+      });
+    } else {
+      showAlert({
+        title:
+          mission.occupied_vacancies === 0
+            ? messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE
+            : messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
+        description:
+          mission.occupied_vacancies === 0
+            ? messages.MISSION.CLOSE_MISSION_ALERT.NO_ADVENTURERS_DESCRIPTION
+            : mission.total_vacancies > mission.occupied_vacancies
+              ? messages.MISSION.CLOSE_MISSION_ALERT
+                  .AVAILABLE_VACANCIES_DESCRIPTION
+              : messages.MISSION.CLOSE_MISSION_ALERT.START_DESCRIPTION,
+        variant: mission.occupied_vacancies === 0 ? 'info' : 'warning',
+        confirmText:
+          mission.occupied_vacancies === 0
+            ? 'Ok'
+            : messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
+        onConfirm: mission.occupied_vacancies === 0 ? null : mutate,
+      });
+    }
   };
 
   return (
@@ -1166,11 +1182,21 @@ const ReopenMissionButton = ({ mission }) => {
   const handleAttempt = () => {
     // This action needs confirmation
     showAlert({
-      title: messages.MISSION.REOPEN_MISSION_ALERT.TITLE,
-      description: messages.MISSION.REOPEN_MISSION_ALERT.DESCRIPTION,
-      variant: 'warning',
-      confirmText: messages.MISSION.REOPEN_MISSION_ALERT.CONFIRM_TEXT,
-      onConfirm: mutate,
+      title:
+        mission.occupied_vacancies === mission.total_vacancies
+          ? messages.MISSION.REOPEN_MISSION_ALERT.ERROR_TITLE
+          : messages.MISSION.REOPEN_MISSION_ALERT.TITLE,
+      description:
+        mission.occupied_vacancies === mission.total_vacancies
+          ? messagesShared.CANNOT_REOPEN_MISSION_WITHOUT_EMPTY_VACANCIES
+          : messages.MISSION.REOPEN_MISSION_ALERT.DESCRIPTION,
+      variant: 'error',
+      confirmText:
+        mission.occupied_vacancies === mission.total_vacancies
+          ? 'Ok'
+          : messages.MISSION.REOPEN_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm:
+        mission.occupied_vacancies === mission.total_vacancies ? null : mutate,
     });
   };
 
@@ -1182,6 +1208,49 @@ const ReopenMissionButton = ({ mission }) => {
       disabled={isPending}
     >
       {'Reopen mission'}
+    </Button>
+  );
+};
+
+const FinishMissionButton = ({ mission }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => finishMission(mission.mid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.FINISH_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.FINISH_MISSION_ALERT.TITLE,
+      description: messages.MISSION.FINISH_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.FINISH_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='finishMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Finish mission'}
     </Button>
   );
 };
