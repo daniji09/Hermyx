@@ -20,6 +20,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
   // For search bar
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const trimmedQuery = query.trim();
 
   // No React useAction because is a GET, it's done by Maps
@@ -27,21 +28,21 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
     e.preventDefault();
     if (trimmedQuery) {
       navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
-      setQuery('');
+      setIsMenuOpen(false);
     }
   };
 
   const handleMissionSearch = () => {
     if (trimmedQuery) {
       navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
-      setQuery('');
+      setIsMenuOpen(false);
     }
   };
 
   const handleUserSearch = () => {
     if (trimmedQuery) {
       navigate(`/users/search?username=${encodeURIComponent(trimmedQuery)}`);
-      setQuery('');
+      setIsMenuOpen(false);
     }
   };
 
@@ -50,7 +51,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
       id={id}
       onSubmit={handleSearch}
       noValidate
-      className='flex items-center w-full min-w-25 md:min-w-75 lg:min-w-100 max-w-md relative'
+      className='relative z-[10001] flex w-full max-w-md items-center min-w-25 md:min-w-75 lg:min-w-100'
     >
       <InputGroup className='bg-white flex justify-between'>
         <div className='flex'>
@@ -61,7 +62,12 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
               name={fieldId}
               type='text'
               autoComplete='off'
-              onChange={(e) => setQuery(e.target.value)}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIsMenuOpen(true);
+              }}
+              onFocus={() => setIsMenuOpen(true)}
               required
               placeholder='Search mission in Hermyx...'
               aria-label='Search mission'
@@ -85,8 +91,8 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
         </InputGroupAddon>
       </InputGroup>
 
-      {trimmedQuery && (
-        <div className='absolute top-full left-0 right-0 z-20 mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm'>
+      {trimmedQuery && isMenuOpen && (
+        <div className='absolute left-0 right-0 top-full z-[10001] mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm'>
           <button
             type='button'
             onClick={handleMissionSearch}

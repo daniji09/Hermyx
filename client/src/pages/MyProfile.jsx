@@ -5,13 +5,19 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import {
   Edit,
   Info,
   LockKeyhole,
   Mail,
   Save,
+  Star,
   User,
   UserRoundX,
   X,
@@ -25,6 +31,7 @@ import { Card } from '@/components/ui/card';
 import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import {
+  getUserReviewsInfiniteQueryOptions,
   getMyProfileQueryOptions,
   updateMyProfileMutationOptions,
 } from '../queries/UsersQueries';
@@ -49,7 +56,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { initialStateUseStateAction } from '../consts/consts';
+import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import {
   updateEmailAction,
@@ -89,6 +96,25 @@ export const MyProfile = () => {
       },
     }),
   );
+  const profileUser = data?.user;
+  const reviewsEnabled =
+    !!profileUser?.username &&
+    profileUser.configuration?.show_missions_to_others !== false;
+  const {
+    data: reviewsPagesData,
+    hasNextPage: hasNextReviewsPage,
+    isFetchingNextPage: isFetchingNextReviewsPage,
+    fetchNextPage: fetchNextReviewsPage,
+    isLoading: isReviewsLoading,
+  } = useInfiniteQuery(
+    getUserReviewsInfiniteQueryOptions(
+      profileUser?.username,
+      PAGINATION_LIMIT.REVIEWS,
+      {
+        enabled: reviewsEnabled,
+      },
+    ),
+  );
 
   if (isLoading) {
     return (
@@ -111,17 +137,36 @@ export const MyProfile = () => {
   }
 
   const user = data.user;
+  const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
 
   return (
     <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
       <ProfileHeader user={user}></ProfileHeader>
       <ProfileInformation data={data}></ProfileInformation>
+      <ProfileReviews
+        reviewsData={reviewsData}
+        isLoading={isReviewsLoading}
+        isPrivate={!reviewsEnabled}
+        hasNextPage={hasNextReviewsPage}
+        isFetchingNextPage={isFetchingNextReviewsPage}
+        fetchNextPage={fetchNextReviewsPage}
+      />
       <ProfileAccessMethods user={user}></ProfileAccessMethods>
       <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
       <ProfileConfiguration user={user}></ProfileConfiguration>
       <ProfileDangerZone></ProfileDangerZone>
     </main>
   );
+};
+
+const getReviewsDataFromPages = (pages = []) => {
+  const firstPage = pages[0];
+
+  return {
+    averageRating: firstPage?.averageRating || 0,
+    totalReviews: firstPage?.totalReviews || 0,
+    reviews: pages.flatMap((page) => page.reviews || []),
+  };
 };
 
 const ProfileHeader = ({ user }) => {
@@ -151,6 +196,89 @@ const ProfileHeader = ({ user }) => {
         </p>
       </div>
     </header>
+  );
+};
+
+const ProfileReviews = ({
+  reviewsData,
+  isLoading,
+  isPrivate,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
+}) => {
+  const reviews = reviewsData?.reviews || [];
+
+  return (
+    <Card asChild>
+      <section className='mb-6 p-4 sm:p-6'>
+        <div className='mb-5 flex items-center justify-between gap-4'>
+          <h2 className='text-xl font-semibold'>Reviews</h2>
+          {!isLoading && (
+            <p className='text-sm text-muted-foreground'>
+              {Number(reviewsData?.averageRating || 0).toFixed(1)}/5 from{' '}
+              {reviewsData?.totalReviews || 0}
+            </p>
+          )}
+        </div>
+
+        {isPrivate ? (
+          <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
+            Reviews are hidden while your mission history is private.
+          </p>
+        ) : isLoading ? (
+          <p className='text-muted-foreground'>Loading reviews</p>
+        ) : reviews.length === 0 ? (
+          <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
+            You have no reviews yet.
+          </p>
+        ) : (
+          <>
+            <div className='grid gap-4'>
+              {reviews.map((review) => (
+                <article
+                  key={review.id}
+                  className='rounded-lg border bg-card p-4 shadow-sm'
+                >
+                  <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
+                    <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
+                      <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+                      {Number(review.rating).toFixed(1)}/5
+                    </span>
+                    <span className='text-sm text-muted-foreground'>
+                      {new Date(review.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {review.comment && (
+                    <p className='whitespace-pre-line text-sm leading-6'>
+                      {review.comment}
+                    </p>
+                  )}
+
+                  <p className='mt-3 text-xs text-muted-foreground'>
+                    {review.owner_username} on {review.mission_title}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            {hasNextPage && (
+              <div className='mt-6 flex justify-center'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? 'Loading reviews' : 'Load more reviews'}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </Card>
   );
 };
 

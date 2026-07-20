@@ -16,6 +16,8 @@ import {
   reopenMission,
   close,
   finishMission,
+  reviewAdventurer,
+  reviewOwner,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -41,6 +43,9 @@ import {
   inviteToMissionSchema,
   closeMissionParamSchema,
   finishMissionParamSchema,
+  reviewAdventurerParamSchema,
+  reviewAdventurerBodySchema,
+  reviewOwnerParamSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { inviteToMission } from './../controllers/missions.controller.js';
@@ -108,6 +113,22 @@ router.post(
   '/:mid/submit',
   validateParamsSchema(submitMissionParticipationSchema),
   submitMissionParticipation,
+);
+
+// Reviews an adventurer after a completed mission
+router.post(
+  '/:mid/adventurers/:adventurerId/review',
+  validateParamsSchema(reviewAdventurerParamSchema),
+  validateBodySchema(reviewAdventurerBodySchema),
+  reviewAdventurer,
+);
+
+// Reviews a mission owner after a completed participation
+router.post(
+  '/:mid/owner/review',
+  validateParamsSchema(reviewOwnerParamSchema),
+  validateBodySchema(reviewAdventurerBodySchema),
+  reviewOwner,
 );
 
 // Cancels a mission

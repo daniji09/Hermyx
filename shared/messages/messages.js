@@ -92,6 +92,15 @@ export const messages = {
     'Participation can only be disputed by the owner after a retry.',
   MISSION_REQUIRES_ALL_PARTS_APPROVED:
     'All adventurer participations must be approved before closing the mission.',
+  MISSION_REVIEW_CREATED_SUCCESSFULLY: 'Review created successfully.',
+  MISSION_REVIEW_ALREADY_EXISTS:
+    'This adventurer has already been reviewed for this mission.',
+  MISSION_REVIEW_NOT_ALLOWED:
+    'Only the mission owner can review adventurers from a completed mission.',
+  MISSION_REVIEW_PARTICIPATION_REQUIRED:
+    'The adventurer must belong to this mission before being reviewed.',
+  MISSION_REVIEW_COMPLETED_REQUIRED:
+    'Only completed missions can be reviewed.',
   CANNOT_DISPUTE_PARTICIPATION_STATE: `Can't dispute participation on current state`,
   CANNOT_REJECT_PARTICIPATION_STATE: `Can't reject participation on current state`,
   CANNOT_ACCEPT_PARTICIPATION_STATE: `Can't accept participation on current state`,

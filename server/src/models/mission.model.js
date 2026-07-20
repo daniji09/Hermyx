@@ -46,11 +46,21 @@ export const getParticipantsForDisplay = async (mid) => {
       mp.description AS vacancy_description,
       mp.monetary_reward AS reward,
       mp.status,
+      owner_review.id AS owner_review_id,
+      owner_review.rating AS owner_review_rating,
+      owner_review.comment AS owner_review_comment,
+      owner_review.created_at AS owner_review_created_at,
+      adventurer_review.id AS adventurer_review_id,
+      adventurer_review.rating AS adventurer_review_rating,
+      adventurer_review.comment AS adventurer_review_comment,
+      adventurer_review.created_at AS adventurer_review_created_at,
       u.uid AS adventurer_id,
       u.username,
       u.avatar
     FROM mission_participation mp
     LEFT JOIN app_user u ON mp.adventurer_id = u.uid
+    LEFT JOIN review owner_review ON owner_review.id = mp.owner_review_id
+    LEFT JOIN review adventurer_review ON adventurer_review.id = mp.adventurer_review_id
     WHERE mp.mid = $1
     ORDER BY mp.id ASC
   `;
@@ -282,13 +292,35 @@ export const getMissionsOpened = async ({
   title = undefined,
   pagination,
   excludeOwnerId = undefined,
+  minPayment = undefined,
+  maxPayment = undefined,
+  maxDistanceKm = undefined,
+  originUserId = undefined,
 }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
-    m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) 
-    WHERE status = $1 OR status = $2`;
   const values = [MISSION_LIFE_CYCLE.OPENED.ID, MISSION_LIFE_CYCLE.REOPENED.ID];
+
+  const shouldFilterByDistance =
+    maxDistanceKm !== undefined && originUserId !== undefined;
+
+  let requesterJoin = '';
+  let distanceSelect = '';
+
+  if (shouldFilterByDistance) {
+    values.push(originUserId);
+
+    requesterJoin = ` JOIN app_user AS requester ON requester.uid = $${values.length}`;
+
+    distanceSelect = `,
+    ROUND((ST_Distance(m.location, requester.location) / 1000)::numeric, 1) AS distance_km`;
+  }
+
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
+    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username${distanceSelect}, COUNT(*) OVER() AS total_count
+    FROM mission AS m
+    JOIN app_user AS a ON (m.owner_id = a.uid)
+    ${requesterJoin}
+    WHERE (m.status = $1 OR m.status = $2)`;
 
   if (title) {
     values.push(title);
@@ -298,7 +330,31 @@ export const getMissionsOpened = async ({
       query += ` AND m.owner_id != $${values.length}`;
     }
   }
-  query += ` ORDER BY m.publication_date DESC`;
+  if (minPayment !== undefined) {
+    values.push(minPayment);
+    query += ` AND m.total_payment >= $${values.length}`;
+  }
+
+  if (maxPayment !== undefined) {
+    values.push(maxPayment);
+    query += ` AND m.total_payment <= $${values.length}`;
+  }
+
+  if (shouldFilterByDistance) {
+    values.push(maxDistanceKm);
+    query += `
+      AND m.location IS NOT NULL
+      AND requester.location IS NOT NULL
+      AND ST_DWithin(m.location, requester.location, $${values.length} * 1000)
+    `;
+  }
+
+  if (shouldFilterByDistance) {
+    query += ` ORDER BY ST_Distance(m.location, requester.location) ASC`;
+  } else {
+    query += ` ORDER BY m.publication_date DESC`;
+  }
+
   if (pagination) {
     values.push(pagination.limit);
     query += ` LIMIT $${values.length}`;

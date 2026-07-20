@@ -30,6 +30,10 @@ import {
   getWaitingForPaymentVacancies,
 } from '../models/mission_participation.model.js';
 import {
+  createAdventurerReview,
+  createOwnerReview,
+} from '../models/review.model.js';
+import {
   createNotification,
   countParticipationReviewAttempts,
   hasPendingJoinNotification,
@@ -80,7 +84,10 @@ export const getMissionById = async (req, res) => {
         (participant) =>
           participant.status === VACANCY_LIFE_CYCLE.EMPTY.ID ||
           participant.status === VACANCY_LIFE_CYCLE.RELEASED.ID,
-      ) && MISSION_LIFE_CYCLE[mission.status].CAN_FINISH;
+      ) &&
+      MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_LIFE_CYCLE.FINISHED.ID,
+      );
 
     return res.status(200).json({
       mission: {
@@ -144,7 +151,7 @@ export const getAllMissionsInDraft = async (req, res) => {
 };
 
 export const getMissionsOpened = async (req, res) => {
-  const { title } = req.query;
+  const { title, minPayment, maxPayment, maxDistanceKm } = req.query;
   const pagination = req.pagination;
   const excludeOwnerId = title ? req.user?.uid : undefined;
 
@@ -152,6 +159,10 @@ export const getMissionsOpened = async (req, res) => {
     // Gets all missions filtering what is needed
     const { rows: missions, totalCount } = await _getMissionsOpened({
       title,
+      minPayment,
+      maxPayment,
+      maxDistanceKm,
+      originUserId: maxDistanceKm !== undefined ? req.user.uid : undefined,
       pagination,
       excludeOwnerId,
     });
@@ -900,6 +911,95 @@ export const submitMissionParticipation = async (req, res) => {
     return res.status(200).json({
       message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
       participation: updatedParticipation,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const reviewAdventurer = async (req, res) => {
+  const { mid, adventurerId } = req.params;
+  const { rating, comment } = req.body;
+  const ownerId = req.user.uid;
+
+  try {
+    const result = await createOwnerReview({
+      missionId: mid,
+      adventurerId,
+      ownerId,
+      rating,
+      comment,
+    });
+
+    if (result.error === 'participation_not_found') {
+      return res.status(404).json({
+        error: messages.MISSION_REVIEW_PARTICIPATION_REQUIRED,
+      });
+    }
+
+    if (result.error === 'not_owner') {
+      return res.status(403).json({
+        error: messages.MISSION_REVIEW_NOT_ALLOWED,
+      });
+    }
+
+    if (result.error === 'mission_not_completed') {
+      return res.status(409).json({
+        error: messages.MISSION_REVIEW_COMPLETED_REQUIRED,
+      });
+    }
+
+    if (result.error === 'already_reviewed') {
+      return res.status(409).json({
+        error: messages.MISSION_REVIEW_ALREADY_EXISTS,
+      });
+    }
+
+    return res.status(201).json({
+      message: messages.MISSION_REVIEW_CREATED_SUCCESSFULLY,
+      review: result.review,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const reviewOwner = async (req, res) => {
+  const { mid } = req.params;
+  const { rating, comment } = req.body;
+  const adventurerId = req.user.uid;
+
+  try {
+    const result = await createAdventurerReview({
+      missionId: mid,
+      adventurerId,
+      rating,
+      comment,
+    });
+
+    if (result.error === 'participation_not_found') {
+      return res.status(404).json({
+        error: messages.MISSION_REVIEW_PARTICIPATION_REQUIRED,
+      });
+    }
+
+    if (result.error === 'mission_not_completed') {
+      return res.status(409).json({
+        error: messages.MISSION_REVIEW_COMPLETED_REQUIRED,
+      });
+    }
+
+    if (result.error === 'already_reviewed') {
+      return res.status(409).json({
+        error: messages.MISSION_REVIEW_ALREADY_EXISTS,
+      });
+    }
+
+    return res.status(201).json({
+      message: messages.MISSION_REVIEW_CREATED_SUCCESSFULLY,
+      review: result.review,
     });
   } catch (error) {
     console.error(error);

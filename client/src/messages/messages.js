@@ -91,6 +91,11 @@ export const messages = {
         'This will notify the mission owner that your part is ready for review.',
       CONFIRM_TEXT: 'Yes, submit participation',
     },
+    REVIEW_ADVENTURER_ALERT: {
+      ERROR_TITLE: `Can't review adventurer`,
+      SUCCESS_TITLE: 'Review sent',
+      SUCCESS_DESCRIPTION: 'Your review is now visible on this profile.',
+    },
     APPROVE_PARTICIPATION_ALERT: {
       TITLE: 'Approve participation?',
       ERROR_TITLE: `Can't approve participation`,

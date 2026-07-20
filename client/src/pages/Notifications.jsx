@@ -20,6 +20,13 @@ import {
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils';
 
+const getInvitationTitle = (notification) => {
+  if (notification.action === 'mission_invite')
+    return 'Mission invitation from ';
+  if (notification.action === 'join_request') return 'Join request from ';
+  return 'Message from ';
+};
+
 export const Notifications = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -225,7 +232,7 @@ export const Notifications = () => {
                                 </>
                               ) : (
                                 <>
-                                  Tienes un mensaje de{' '}
+                                  {getInvitationTitle(notification)}
                                   <span className='break-all'>
                                     {notification.sender_username}
                                   </span>

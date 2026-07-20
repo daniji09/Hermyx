@@ -14,7 +14,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { timestampToDayMonthYear } from './../utils/date';
-import { Users, HandCoins, Plus, Search, User, UserPlus } from 'lucide-react';
+import {
+  Users,
+  HandCoins,
+  Plus,
+  Search,
+  Star,
+  User,
+  UserPlus,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
 import { useCallback, useContext, useRef, useState } from 'react';
@@ -26,6 +34,8 @@ import {
   reopenMission,
   closeMission,
   finishMission,
+  reviewAdventurer,
+  reviewOwner,
 } from '../services/MissionsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -281,19 +291,43 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   );
 };
 
-const VacancyCard = ({ vacancy, onClick }) => {
+const canReviewParticipant = (participant) => {
+  return (
+    !!participant.adventurer_id &&
+    [
+      VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+      VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+      VACANCY_LIFE_CYCLE.RELEASED.ID,
+    ].includes(participant.status)
+  );
+};
+
+const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
   const isAssigned = !!vacancy.adventurer_id;
+  const [reviewDialogType, setReviewDialogType] = useState(null);
+  const isAssignedToUser = vacancy.adventurer_id === currentUser?.id;
+  const canReviewAdventurer = isCreator && canReviewParticipant(vacancy);
+  const canReviewOwner = isAssignedToUser && canReviewParticipant(vacancy);
+  const hasOwnerReview = !!vacancy.owner_review_id;
+  const hasAdventurerReview = !!vacancy.adventurer_review_id;
+
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick(vacancy.vacancy_id);
     }
   };
+
+  const handleReviewClick = (event, type) => {
+    event.stopPropagation();
+    setReviewDialogType(type);
+  };
+
   return (
     <Card
       role='button'
       tabIndex={0}
-      className='relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 group'
+      className='relative shrink-0 w-56 flex flex-col gap-0 overflow-visible p-4 [--card-spacing:0] shadow-sm transition-all hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 group'
       onClick={() => onClick(vacancy.vacancy_id)}
       onKeyDown={handleKeyDown}
     >
@@ -325,9 +359,61 @@ const VacancyCard = ({ vacancy, onClick }) => {
         </span>
       </div>
 
-      <p className='text-xs line-clamp-3 leading-relaxed grow'>
+      <p className='text-xs line-clamp-2 leading-relaxed'>
         {vacancy.vacancy_description || 'No additional description.'}
       </p>
+      <div className='mt-4'>
+        {hasOwnerReview ? (
+          <div className='inline-flex w-full items-center justify-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm font-medium text-amber-700'>
+            <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+            {Number(vacancy.owner_review_rating).toFixed(1)}
+          </div>
+        ) : (
+          canReviewAdventurer && (
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              className='w-full'
+              onClick={(event) => handleReviewClick(event, 'adventurer')}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <Star className='h-4 w-4' aria-hidden='true' />
+              Review adventurer
+            </Button>
+          )
+        )}
+        {canReviewOwner &&
+          (hasAdventurerReview ? (
+            <div className='mt-2 inline-flex w-full items-center justify-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm font-medium text-amber-700'>
+              <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+              {Number(vacancy.adventurer_review_rating).toFixed(1)}
+            </div>
+          ) : (
+            <Button
+              type='button'
+              size='sm'
+              variant='outline'
+              className='mt-2 w-full'
+              onClick={(event) => handleReviewClick(event, 'owner')}
+              onKeyDown={(event) => event.stopPropagation()}
+            >
+              <Star className='h-4 w-4' aria-hidden='true' />
+              Review owner
+            </Button>
+          ))}
+      </div>
+      <ReviewAdventurerDialog
+        mission={mission}
+        participant={vacancy}
+        isOpen={reviewDialogType === 'adventurer'}
+        onClose={() => setReviewDialogType(null)}
+      />
+      <ReviewOwnerDialog
+        mission={mission}
+        isOpen={reviewDialogType === 'owner'}
+        onClose={() => setReviewDialogType(null)}
+      />
     </Card>
   );
 };
@@ -347,7 +433,12 @@ const ViewVacancyDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className='sm:max-w-md'>
+      <DialogContent
+        className='sm:max-w-md'
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle className='text-xl'>
             {vacancy.vacancy_title || 'Adventurer needed'}
@@ -441,7 +532,13 @@ const MissionVacancies = ({ mission, isCreator, currentUser }) => {
       <div className='flex overflow-x-auto gap-4 p-2 snap-x snap-mandatory hide-scrollbar items-center'>
         {mission.participants.map((vac) => (
           <div key={vac.vacancy_id} className='snap-start'>
-            <VacancyCard vacancy={vac} onClick={handleClickVacancy} />
+            <VacancyCard
+              mission={mission}
+              vacancy={vac}
+              isCreator={isCreator}
+              currentUser={currentUser}
+              onClick={handleClickVacancy}
+            />
           </div>
         ))}
       </div>
@@ -480,7 +577,10 @@ const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
           <AddAdventurerButton onClick={onAddAdventurer} />
         )}
       {(mission.participants || []).map((participant) => (
-        <ParticipantRow key={participant.uid} participant={participant} />
+        <ParticipantRow
+          key={participant.vacancy_id}
+          participant={participant}
+        />
       ))}
     </div>
   );
@@ -488,7 +588,7 @@ const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
 
 const ParticipantRow = ({ participant }) => {
   return (
-    <div className='flex items-center gap-2'>
+    <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1 shadow-sm'>
       <div className='inline-flex max-w-full items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-white'>
         <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
           {participant.avatar ? (
@@ -509,6 +609,268 @@ const ParticipantRow = ({ participant }) => {
         </span>
       </div>
     </div>
+  );
+};
+
+const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const { isPending, mutate } = useMutation({
+    mutationFn: () =>
+      reviewAdventurer(mission.mid, participant.adventurer_id, {
+        rating,
+        comment,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(mission.mid)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', mission.mid],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getPublicUserProfile', participant.username],
+      });
+      showAlert({
+        title: messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_TITLE,
+        description:
+          messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_DESCRIPTION,
+      });
+      setRating(5);
+      setComment('');
+      setErrorMessage('');
+      onClose();
+    },
+    onError: (error) => {
+      setErrorMessage(
+        error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0] ||
+          messages.MISSION.REVIEW_ADVENTURER_ALERT.ERROR_TITLE,
+      );
+    },
+  });
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setErrorMessage('');
+
+    if (rating < 1 || rating > 5) {
+      setErrorMessage('Rating must be between 1 and 5.');
+      return;
+    }
+
+    if (comment.length > consts.MISSION.REVIEW.COMMENT_MAX_LENGTH) {
+      setErrorMessage(
+        `Comment must be shorter than ${consts.MISSION.REVIEW.COMMENT_MAX_LENGTH} characters.`,
+      );
+      return;
+    }
+
+    mutate();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className='sm:max-w-md'
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <DialogHeader>
+          <DialogTitle>Review {participant.username}</DialogTitle>
+          <DialogDescription>
+            This review will be linked to this completed mission.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form id='reviewAdventurerForm' onSubmit={handleSubmit}>
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <label htmlFor='adventurerRating' className='text-sm font-medium'>
+                Rating
+              </label>
+              <Input
+                id='adventurerRating'
+                type='number'
+                min={consts.MISSION.REVIEW.RATING_MIN}
+                max={consts.MISSION.REVIEW.RATING_MAX}
+                step={consts.MISSION.REVIEW.RATING_STEP}
+                value={rating}
+                onChange={(event) => setRating(Number(event.target.value))}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <label htmlFor='adventurerReview' className='text-sm font-medium'>
+                Comment
+              </label>
+              <Textarea
+                id='adventurerReview'
+                value={comment}
+                maxLength={consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                onChange={(event) => setComment(event.target.value)}
+                rows={5}
+              />
+              <p className='text-xs text-muted-foreground'>
+                {comment.length}/{consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+              </p>
+            </div>
+
+            {errorMessage && (
+              <p className='rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive'>
+                {errorMessage}
+              </p>
+            )}
+          </div>
+        </form>
+
+        <DialogFooter>
+          <Button type='button' variant='outline' onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type='submit'
+            form='reviewAdventurerForm'
+            disabled={isPending}
+          >
+            {isPending ? 'Sending...' : 'Send review'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const { isPending, mutate } = useMutation({
+    mutationFn: () =>
+      reviewOwner(mission.mid, {
+        rating,
+        comment,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(mission.mid)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', mission.mid],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getUserReviews'],
+      });
+      showAlert({
+        title: messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_TITLE,
+        description:
+          messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_DESCRIPTION,
+      });
+      setRating(5);
+      setComment('');
+      setErrorMessage('');
+      onClose();
+    },
+    onError: (error) => {
+      setErrorMessage(
+        error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0] ||
+          messages.MISSION.REVIEW_ADVENTURER_ALERT.ERROR_TITLE,
+      );
+    },
+  });
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setErrorMessage('');
+
+    if (rating < 1 || rating > 5) {
+      setErrorMessage('Rating must be between 1 and 5.');
+      return;
+    }
+
+    if (comment.length > consts.MISSION.REVIEW.COMMENT_MAX_LENGTH) {
+      setErrorMessage(
+        `Comment must be shorter than ${consts.MISSION.REVIEW.COMMENT_MAX_LENGTH} characters.`,
+      );
+      return;
+    }
+
+    mutate();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className='sm:max-w-md'
+        onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        <DialogHeader>
+          <DialogTitle>Review mission owner</DialogTitle>
+          <DialogDescription>
+            This review will be linked to this completed mission.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form id='reviewOwnerForm' onSubmit={handleSubmit}>
+          <div className='space-y-4'>
+            <div className='space-y-2'>
+              <label htmlFor='ownerRating' className='text-sm font-medium'>
+                Rating
+              </label>
+              <Input
+                id='ownerRating'
+                type='number'
+                min={consts.MISSION.REVIEW.RATING_MIN}
+                max={consts.MISSION.REVIEW.RATING_MAX}
+                step={consts.MISSION.REVIEW.RATING_STEP}
+                value={rating}
+                onChange={(event) => setRating(Number(event.target.value))}
+              />
+            </div>
+
+            <div className='space-y-2'>
+              <label htmlFor='ownerReview' className='text-sm font-medium'>
+                Comment
+              </label>
+              <Textarea
+                id='ownerReview'
+                value={comment}
+                maxLength={consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                onChange={(event) => setComment(event.target.value)}
+                rows={5}
+              />
+              <p className='text-xs text-muted-foreground'>
+                {comment.length}/{consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+              </p>
+            </div>
+
+            {errorMessage && (
+              <p className='rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive'>
+                {errorMessage}
+              </p>
+            )}
+          </div>
+        </form>
+
+        <DialogFooter>
+          <Button type='button' variant='outline' onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type='submit' form='reviewOwnerForm' disabled={isPending}>
+            {isPending ? 'Sending...' : 'Send review'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
