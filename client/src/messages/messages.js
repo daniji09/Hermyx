@@ -26,6 +26,10 @@ export const messages = {
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
     LOCATION_ERROR: 'Please, select a valid location on the map.',
     EDIT_FINISHED_VACANCIES: `Can't edit vacancies from finished adventurers.`,
+    REPORT_VACANCY_DIALOG: {
+      TITLE: `Report vacancy`,
+      DESCRIPTION: `Please provide details about why you are reporting this vacancy. Our team will review it shortly.`,
+    },
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',

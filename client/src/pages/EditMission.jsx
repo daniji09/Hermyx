@@ -21,7 +21,13 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, User, UserPlus } from 'lucide-react';
+import {
+  MessageSquareWarning,
+  Plus,
+  Trash2,
+  User,
+  UserPlus,
+} from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -40,6 +46,7 @@ import {
   VACANCY_LIFE_CYCLE,
 } from '@hermyx/shared/utils/missions.utils';
 import { useAlert } from '../contexts/AlertContext';
+import { reportVacancyAction } from '../actions/ReportActions';
 
 export const EditMission = () => {
   // Mission id
@@ -298,7 +305,13 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
   );
 };
 
-const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
+const CreationVacancyCard = ({
+  vacancy,
+  onDelete,
+  onReport,
+  onClick,
+  canDelete,
+}) => {
   const isAssigned = !!vacancy.adventurer_id;
   const handleKeyDown = (e) => {
     if (!VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT) return;
@@ -321,13 +334,13 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
         VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT && onClick(vacancy.id)
       }
     >
-      {canDelete && (
+      {canDelete ? (
         <Button
           id={`deleteVacancy${vacancy.id}`}
           type='button'
           variant='outline'
           onClick={(e) => {
-            e.stopPropagation(); //
+            e.stopPropagation();
             onDelete(vacancy.id);
           }}
           className='absolute top-2 right-2 hover:text-red-500 transition-colors'
@@ -335,6 +348,21 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
           aria-label='Delete vacancy'
         >
           <Trash2 size={24} />
+        </Button>
+      ) : (
+        <Button
+          id={`reportVacancy${vacancy.id}`}
+          type='button'
+          variant='outline'
+          onClick={(e) => {
+            e.stopPropagation();
+            onReport(vacancy.id);
+          }}
+          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
+          title='Report vacancy'
+          aria-label='Report vacancy'
+        >
+          <MessageSquareWarning size={24} />
         </Button>
       )}
 
@@ -377,6 +405,7 @@ const CreateVacanciesDialog = ({
   vacancies,
   handleDeleteVacancy,
   handleClickVacancy,
+  handleReportVacancy,
   onConfirm,
   canDelete,
 }) => {
@@ -455,6 +484,7 @@ const CreateVacanciesDialog = ({
             <CreationVacancyCard
               vacancy={vac}
               onDelete={handleDeleteVacancy}
+              onReport={handleReportVacancy}
               onClick={handleClickVacancy}
               canDelete={canDelete}
             />
@@ -799,6 +829,7 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
 
   const [vacancies, setVacancies] = useState(formattedVacancies);
   const [editingVacancyId, setEditingVacancyId] = useState(null);
+  const [reportingVacancyId, setReportingVacancyId] = useState(null);
 
   const handleAddVacancies = useCallback(
     ({ quantity, reward, title, description, status }) => {
@@ -826,6 +857,10 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
     },
     [editingVacancyId],
   );
+
+  const handleReportVacancy = useCallback((id) => {
+    setReportingVacancyId(id);
+  }, []);
 
   const handleClickVacancy = useCallback(
     (id) => {
@@ -870,6 +905,7 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
         onConfirm={handleAddVacancies}
         handleDeleteVacancy={handleDeleteVacancy}
         handleClickVacancy={handleClickVacancy}
+        handleReportVacancy={handleReportVacancy}
         vacancies={vacancies}
         canDelete={canDelete}
       />
@@ -881,6 +917,120 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
         onClose={() => setEditingVacancyId(null)}
         onConfirm={handleConfirmEdit}
       />
+
+      <ReportVacancyDialog
+        vacancyId={reportingVacancyId}
+        isOpen={!!reportingVacancyId}
+        onClose={() => setReportingVacancyId(null)}
+      />
     </div>
+  );
+};
+
+const ReportVacancyDialog = ({ vacancyId, isOpen, onClose }) => {
+  const queryClient = useQueryClient();
+
+  // Action handling for update email form
+  const [state, reportVacancyFormAction, isPending] = useActionState(
+    reportVacancyAction,
+    initialStateUseStateAction,
+  );
+
+  // Logic for cleaning errors in fields or alerts when modifications are done
+  const [clearedFields, setClearedFields] = useState({});
+  const [prevServerState, setPrevServerState] = useState(state);
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+
+  // If the state has changed, field errors should be cleared
+  if (state !== prevServerState) {
+    setPrevServerState(state);
+    setClearedFields({});
+    setIsAlertClosed(false);
+  }
+
+  // When user changes field's value, the error is not shown until the form is sent again
+  const handleFieldChange = (e) => {
+    const fieldName = e.target.name;
+    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
+  };
+
+  // Effect for success handling
+  useEffect(() => {
+    if (state.success) {
+      queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
+    }
+  }, [state.success, queryClient]);
+
+  // Handle manual dialog close to reset visual errors
+  const handleOpenChange = (open) => {
+    if (!open) {
+      setIsAlertClosed(true);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className='sm:max-w-sm'>
+        <form
+          action={reportVacancyFormAction}
+          id='reportAdventurerForm'
+          noValidate
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE}
+            </DialogTitle>
+            <DialogDescription>
+              {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <FormTextareaField
+                id='reportVacancyMessage'
+                name='message'
+                label='Message (required):'
+                type='text'
+                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                defaultValue={state.data?.password || ''}
+                error={
+                  !clearedFields.message && state.errors?.message
+                    ? state.errors.message[0]
+                    : undefined
+                }
+                invalid={!clearedFields.message && !!state.errors?.message}
+                aria-invalid={!clearedFields.message && !!state.errors?.message}
+                required
+                autoComplete='off'
+                disabled={isPending}
+                onChange={handleFieldChange}
+              />
+            </div>
+            <input type='hidden' id='vacancyId' value={vacancyId} />
+            {state.errors?.general && !isAlertClosed && (
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.general[0]}
+              </FormAlert>
+            )}
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant='outline' type='button' onClick={onClose}>
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button
+              type='submit'
+              form='reportAdventurerForm'
+              disabled={isPending}
+            >
+              {isPending ? 'Reporting...' : 'Report adventurer'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };

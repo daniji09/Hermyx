@@ -124,6 +124,7 @@ export const consts = {
       STATUS_MAX_LENGTH: 20,
     },
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
+    REPORT_MESSAGE: { MAX: 1000 },
   },
   NOTIFICATION: {
     MESSAGE_MAX_LENGTH: 500,
