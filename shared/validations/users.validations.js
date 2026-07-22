@@ -145,19 +145,6 @@ export const getPublicProfileMissionsQuerySchema = z.object({
     .optional(),
 });
 
-export const getUserReviewsQuerySchema = z.object({
-  page: z.coerce
-    .number(messages.FIELD_NUMBER('Page'))
-    .int(messages.FIELD_INTEGER('Page'))
-    .min(0, messages.FIELD_POSITIVE('Page'))
-    .optional(),
-  limit: z.coerce
-    .number(messages.FIELD_NUMBER('Limit'))
-    .int(messages.FIELD_INTEGER('Limit'))
-    .min(0, messages.FIELD_POSITIVE('Limit'))
-    .optional(),
-});
-
 // Server and client profile update shared validation
 export const updateMyProfileSchema = z.object({
   username: z

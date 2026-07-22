@@ -9,7 +9,6 @@ import {
   getUserMissions,
   getUserPublicProfile,
   getUserPublicProfileMissions,
-  getUserReviews,
   getMyProfile,
   updateMyProfile,
   syncGoogle,
@@ -34,7 +33,6 @@ import {
   getMissionsFromUserQuerySchema,
   syncGoogleSchema,
   getPublicProfileMissionsQuerySchema,
-  getUserReviewsQuerySchema,
   deleteUserByUid,
   updateUserEmailSchema,
   userConfigurationBackendValidation,
@@ -79,15 +77,6 @@ router.get(
   validateQuerySchema(getPublicProfileMissionsQuerySchema),
   pagination(),
   getUserPublicProfileMissions,
-);
-
-// Get user adventurer reviews by username
-router.get(
-  '/:username/reviews',
-  validateParamsSchema(getUserByUsernameParamSchema),
-  validateQuerySchema(getUserReviewsQuerySchema),
-  pagination(),
-  getUserReviews,
 );
 
 // Get users by firebaseUid

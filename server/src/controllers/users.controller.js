@@ -22,7 +22,6 @@ import {
   getMissionsJoinedByUser,
   getUserActiveMissions,
 } from '../models/mission.model.js';
-import { getAdventurerReviewsByUsername } from '../models/review.model.js';
 import {
   createFirebaseUser,
   deleteFirebaseUser,
@@ -178,68 +177,6 @@ export const getUserPublicProfile = async (req, res) => {
     return res.status(200).json({
       user: publicProfile,
       missionsVisible: user.configuration?.show_missions_to_others !== false,
-    });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      errors: { general: [messages.UNEXPECTED_ERROR] },
-    });
-  }
-};
-
-export const getUserReviews = async (req, res) => {
-  try {
-    const username = req.params.username.toLowerCase().trim();
-    const pagination = req.pagination || {
-      page: consts.PAGINATION.DEFAULT_PAGE,
-      limit: consts.PAGINATION.DEFAULT_LIMIT,
-      offset:
-        (consts.PAGINATION.DEFAULT_PAGE - 1) * consts.PAGINATION.DEFAULT_LIMIT,
-    };
-
-    const user = await getByUsername(username);
-
-    if (!user) {
-      return res.status(404).json({
-        errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
-      });
-    }
-
-    const reviewsVisible =
-      user.configuration?.show_missions_to_others !== false;
-
-    if (!reviewsVisible) {
-      return res.status(200).json({
-        averageRating: 0,
-        totalReviews: 0,
-        reviews: [],
-        reviewsVisible,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: 0,
-          totalItems: 0,
-          hasMore: false,
-        },
-      });
-    }
-
-    const reviewsResult = await getAdventurerReviewsByUsername(
-      username,
-      pagination,
-    );
-    const totalItems = reviewsResult.totalReviews;
-    const totalPages = Math.ceil(totalItems / pagination.limit);
-    const hasMore = pagination.page < totalPages;
-
-    return res.status(200).json({
-      ...reviewsResult,
-      reviewsVisible,
-      pagination: {
-        currentPage: pagination.page,
-        totalPages,
-        totalItems,
-        hasMore,
-      },
     });
   } catch (e) {
     console.error(e);
