@@ -966,8 +966,8 @@ const ReportVacancyDialog = ({ mid, vacancyId, isOpen, onClose }) => {
       processedState.current = state;
       onClose();
       showAlert({
-        title: messages.REPORT.ADVENTURER.SUCCESS_ALERT.TITLE,
-        description: messages.REPORT.ADVENTURER.SUCCESS_ALERT.DESCRIPTION,
+        title: messages.REPORT.SUCCESS_ALERT.TITLE,
+        description: messages.REPORT.SUCCESS_ALERT.DESCRIPTION,
       });
     }
   }, [state, onClose, showAlert]);

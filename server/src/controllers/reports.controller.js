@@ -46,12 +46,14 @@ export const disputeAdventurer = async (req, res) => {
         .json({ errors: { general: [messages.USER_NOT_FOUND] } });
 
     // Searches for active report by the same applicant to the same adventurer
-    const activeReport = await checkActiveReport(
-      userId,
-      REPORT_TYPE.REPORT_ADVENTURER.ID,
-      mid,
-      vacancyId,
-    );
+    const activeReport = await checkActiveReport({
+      senderId: userId,
+      type: REPORT_TYPE.REPORT_ADVENTURER.ID,
+      payload: {
+        missionId: mid,
+        vacancyId,
+      },
+    });
     if (activeReport > 0)
       return res
         .status(409)
@@ -94,6 +96,47 @@ export const disputeAdventurer = async (req, res) => {
       receiverId: vacancy.adventurer_id,
       type: NOTIFICATION_TYPE.REPORT.ID,
       message: notificationMessage,
+    });
+
+    return res.status(200).json({});
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const reportUser = async (req, res) => {
+  const { message, uid } = req.body;
+  const userId = req.user.uid;
+  try {
+    // Gets user
+    const user = await getUserById(uid);
+    if (!user)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.USER_NOT_FOUND] } });
+
+    // Searches for active report by the same applicant to the same adventurer
+    const activeReport = await checkActiveReport({
+      senderId: userId,
+      type: REPORT_TYPE.REPORT_PROFILE.ID,
+      payload: {
+        userId: uid,
+      },
+    });
+    if (activeReport > 0)
+      return res
+        .status(409)
+        .json({ errors: { general: [messages.USER_ALREADY_REPORTED] } });
+
+    // Creates report
+    await createReport({
+      senderId: userId,
+      message,
+      type: REPORT_TYPE.REPORT_PROFILE.ID,
+      payload: {
+        associated_user_id: uid,
+      },
     });
 
     return res.status(200).json({});

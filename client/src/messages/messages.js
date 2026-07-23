@@ -197,16 +197,20 @@ export const messages = {
         'Do you want to show your created and joined missions to others in your profile?',
     },
   },
+  PUBLIC_PROFILE: {
+    REPORT_USER_DIALOG: {
+      TITLE: `Report user`,
+      DESCRIPTION: `Please provide details about why you are reporting this user. Our team will review it shortly.`,
+    },
+  },
   MAP: {
     LOCATION_NOT_FOUND: `Couldn't find results for this location.`,
     MAP_SERVICE_ERROR: `Error while connecting to map service.`,
   },
   REPORT: {
-    ADVENTURER: {
-      SUCCESS_ALERT: {
-        TITLE: `Report successfully sent.`,
-        DESCRIPTION: `Wait patiently for our answer on this case!`,
-      },
+    SUCCESS_ALERT: {
+      TITLE: `Report successfully sent.`,
+      DESCRIPTION: `Wait patiently for our answer on this case!`,
     },
   },
 };

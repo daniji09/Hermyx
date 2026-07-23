@@ -191,4 +191,5 @@ export const messages = {
 
   //// Reports
   ADVENTURER_ALREADY_REPORTED: `You already have an active report for this adventurer. Our team is checking it.`,
+  USER_ALREADY_REPORTED: `You already have an active report for this user. Our team is checking it.`,
 };

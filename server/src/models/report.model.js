@@ -1,4 +1,7 @@
-import { REPORT_STATUS } from '@hermyx/shared/utils/reports.utils.js';
+import {
+  REPORT_STATUS,
+  REPORT_TYPE,
+} from '@hermyx/shared/utils/reports.utils.js';
 import pool from '../config/db.config.js';
 
 export const createReport = async ({ senderId, message, type, payload }) => {
@@ -15,27 +18,34 @@ export const createReport = async ({ senderId, message, type, payload }) => {
   return result.rows[0];
 };
 
-export const checkActiveReport = async (
-  senderId,
-  type,
-  missionId,
-  vacancyId,
-) => {
-  const query = `
+export const checkActiveReport = async ({ senderId, type, payload }) => {
+  let query = `
     SELECT rid FROM REPORT 
     WHERE sender_id = $1 
       AND status = $2
       AND type = $3
-      AND payload->>'associated_mission_id' = $4
-      AND payload->>'associated_vacancy_id' = $5
   `;
 
-  const result = await pool.query(query, [
-    senderId,
-    REPORT_STATUS.SENT.ID,
-    type,
-    missionId,
-    vacancyId,
-  ]);
+  let result;
+  if (type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
+    query += `AND payload->>'associated_mission_id' = $4
+      AND payload->>'associated_vacancy_id' = $5`;
+    result = await pool.query(query, [
+      senderId,
+      REPORT_STATUS.SENT.ID,
+      type,
+      payload.missionId,
+      payload.vacancyId,
+    ]);
+  } else if (type === REPORT_TYPE.REPORT_PROFILE.ID) {
+    query += `AND payload->>'associated_user_id' = $4`;
+    result = await pool.query(query, [
+      senderId,
+      REPORT_STATUS.SENT.ID,
+      type,
+      payload.userId,
+    ]);
+  }
+
   return result.rowCount;
 };

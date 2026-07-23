@@ -21,3 +21,19 @@ export const disputeValidation = z.object({
     )
     .default(''),
 });
+
+export const reportUserValidation = z.object({
+  uid: z.coerce
+    .number(messages.FIELD_NUMBER('Uid'))
+    .int(messages.FIELD_INTEGER('Uid'))
+    .min(0, messages.FIELD_POSITIVE('Uid')),
+  message: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Message', consts.REPORT.MESSAGE.MAX),
+    )
+    .default(''),
+});
