@@ -18,3 +18,12 @@ export const reportUser = async ({ message, uid }) => {
   });
   return data;
 };
+
+// Reports user
+export const reportMission = async ({ message, mid }) => {
+  const { data } = await api.post(`/reports/mission`, {
+    message,
+    mid,
+  });
+  return data;
+};

@@ -98,6 +98,17 @@ export const MISSION_LIFE_CYCLE = {
     ADVENTURERS_CAN_UNJOIN: false,
     VALID_NEXT_STATES: [],
   },
+  REPORTED: {
+    ID: 'REPORTED',
+    LABEL: 'Reported',
+    CAN_EDIT: false,
+    CAN_DELETE: false,
+    CAN_CANCEL: false,
+    CAN_ACCEPT_ADVENTURERS: false,
+    CAN_DELETE_ADVENTURERS: false,
+    ADVENTURERS_CAN_UNJOIN: false,
+    VALID_NEXT_STATES: [],
+  },
 };
 
 export const VACANCY_LIFE_CYCLE = {

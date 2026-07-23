@@ -112,6 +112,10 @@ export const messages = {
       DESCRIPTION: 'This will request a revision from the adventurer.',
       CONFIRM_TEXT: 'Yes, reject',
     },
+    REPORT_MISSION_DIALOG: {
+      TITLE: `Report mission`,
+      DESCRIPTION: `Please provide details about why you are reporting this mission. Our team will review it shortly.`,
+    },
     STATUS_LABELS: {
       draft: 'Draft',
       pending_payment: 'Pending payment',

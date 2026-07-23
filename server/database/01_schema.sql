@@ -62,7 +62,8 @@ CREATE TABLE MISSION (
 		'CANCELLED',
 		'DELETED',
 		'IN_DISPUTE',
-		'FINISHED')),
+		'FINISHED',
+		'REPORTED')),
 	completion_date TIMESTAMP,
 	owner_id INT NOT NULL,
 	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid)

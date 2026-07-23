@@ -45,6 +45,14 @@ export const checkActiveReport = async ({ senderId, type, payload }) => {
       type,
       payload.userId,
     ]);
+  } else if (type === REPORT_TYPE.REPORT_MISSION.ID) {
+    query += `AND payload->>'associated_mission_id' = $4`;
+    result = await pool.query(query, [
+      senderId,
+      REPORT_STATUS.SENT.ID,
+      type,
+      payload.missionId,
+    ]);
   }
 
   return result.rowCount;

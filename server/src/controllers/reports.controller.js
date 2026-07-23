@@ -11,6 +11,7 @@ import {
   NOTIFICATION_KIND,
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
+import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 
 export const disputeAdventurer = async (req, res) => {
   const { message, mid, vacancyId } = req.body;
@@ -136,6 +137,57 @@ export const reportUser = async (req, res) => {
       type: REPORT_TYPE.REPORT_PROFILE.ID,
       payload: {
         associated_user_id: uid,
+      },
+    });
+
+    return res.status(200).json({});
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+export const reportMission = async (req, res) => {
+  const { message, mid } = req.body;
+  const userId = req.user.uid;
+  try {
+    // Gets mission
+    const mission = await getById(mid);
+    if (!mission)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.MISSION_NOT_FOUND] } });
+    if (mission.owner_id === userId)
+      return res
+        .status(403)
+        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+
+    // Checks it has not been already successfully reported
+    if (mission.status === MISSION_LIFE_CYCLE.REPORTED.ID)
+      return res
+        .status(409)
+        .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
+
+    // Searches for active report by the same applicant to the same adventurer
+    const activeReport = await checkActiveReport({
+      senderId: userId,
+      type: REPORT_TYPE.REPORT_MISSION.ID,
+      payload: {
+        missionId: mid,
+      },
+    });
+    if (activeReport > 0)
+      return res
+        .status(409)
+        .json({ errors: { general: [messages.MISSION_ALREADY_REPORTED] } });
+
+    // Creates report
+    await createReport({
+      senderId: userId,
+      message,
+      type: REPORT_TYPE.REPORT_MISSION.ID,
+      payload: {
+        associated_mission_id: mid,
       },
     });
 

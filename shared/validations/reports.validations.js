@@ -37,3 +37,19 @@ export const reportUserValidation = z.object({
     )
     .default(''),
 });
+
+export const reportMissionValidation = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Id'))
+    .int(messages.FIELD_INTEGER('Id'))
+    .min(0, messages.FIELD_POSITIVE('Id')),
+  message: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Message', consts.REPORT.MESSAGE.MAX),
+    )
+    .default(''),
+});

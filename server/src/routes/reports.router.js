@@ -1,7 +1,12 @@
-import { disputeValidation, reportUserValidation } from '@hermyx/shared';
+import {
+  disputeValidation,
+  reportMissionValidation,
+  reportUserValidation,
+} from '@hermyx/shared';
 import { Router } from 'express';
 import {
   disputeAdventurer,
+  reportMission,
   reportUser,
 } from '../controllers/reports.controller.js';
 import { validateBodySchema } from '../middlewares/validations.middleware.js';
@@ -19,5 +24,12 @@ router.post(
 
 // Report user
 router.post('/user', validateBodySchema(reportUserValidation), reportUser);
+
+// Report mission
+router.post(
+  '/mission',
+  validateBodySchema(reportMissionValidation),
+  reportMission,
+);
 
 export default router;

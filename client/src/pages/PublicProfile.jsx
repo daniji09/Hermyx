@@ -386,7 +386,7 @@ const ReportUserButton = ({ user }) => {
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
               <FormTextareaField
-                id='reportVacancyMessage'
+                id='reportUserMessage'
                 name='message'
                 label='Message (required):'
                 type='text'
