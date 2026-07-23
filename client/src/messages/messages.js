@@ -201,4 +201,12 @@ export const messages = {
     LOCATION_NOT_FOUND: `Couldn't find results for this location.`,
     MAP_SERVICE_ERROR: `Error while connecting to map service.`,
   },
+  REPORT: {
+    ADVENTURER: {
+      SUCCESS_ALERT: {
+        TITLE: `Report successfully sent.`,
+        DESCRIPTION: `Wait patiently for our answer on this case!`,
+      },
+    },
+  },
 };

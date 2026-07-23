@@ -1,6 +1,7 @@
 export const NOTIFICATION_TYPE = {
   INVITATION: { ID: 'INVITATION', LABEL: 'Invitation' },
   MISSION: { ID: 'MISSION', LABEL: 'Mission' },
+  REPORT: { ID: 'REPORT', LABEL: 'Report' },
 };
 
 export const NOTIFICATION_KIND = {
@@ -54,6 +55,18 @@ export const NOTIFICATION_ACTION = {
   MISSION_REOPEN: {
     ID: 'MISSION_REOPEN',
     LABEL: 'Mission reopen',
+  },
+  ADVENTURER_REPORT: {
+    ID: 'ADVENTURER_REPORT',
+    LABEL: 'Adventurer report',
+  },
+  REVIEW_DISPUTE: {
+    ID: 'REVIEW_DISPUTE',
+    LABEL: 'Review dispute',
+  },
+  REJECTED_REVIEW_DISPUTE: {
+    ID: 'REJECTED_REVIEW_DISPUTE',
+    LABEL: 'Rejected review dispute',
   },
 };
 

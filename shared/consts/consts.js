@@ -129,4 +129,7 @@ export const consts = {
   NOTIFICATION: {
     MESSAGE_MAX_LENGTH: 500,
   },
+  REPORT: {
+    MESSAGE: { MAX: 1000 },
+  },
 };

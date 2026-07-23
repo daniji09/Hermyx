@@ -46,7 +46,7 @@ import {
   VACANCY_LIFE_CYCLE,
 } from '@hermyx/shared/utils/missions.utils';
 import { useAlert } from '../contexts/AlertContext';
-import { reportVacancyAction } from '../actions/ReportActions';
+import { disputeAdventurerAction } from '../actions/ReportActions';
 
 export const EditMission = () => {
   // Mission id
@@ -253,6 +253,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
             canDelete={
               MISSION_LIFE_CYCLE[mission.status].CAN_DELETE_ADVENTURERS
             }
+            mid={mission.mid}
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
             <FormAlert onClose={() => setIsAlertClosed(true)}>
@@ -814,7 +815,11 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
   );
 };
 
-export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
+export const MissionVacanciesCreator = ({
+  initialVacancies,
+  canDelete,
+  mid,
+}) => {
   const { showAlert } = useAlert();
   const formattedVacancies = initialVacancies.map((vac) => ({
     adventurer_id: vac.adventurer_id,
@@ -920,6 +925,7 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
 
       <ReportVacancyDialog
         vacancyId={reportingVacancyId}
+        mid={mid}
         isOpen={!!reportingVacancyId}
         onClose={() => setReportingVacancyId(null)}
       />
@@ -927,12 +933,10 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
   );
 };
 
-const ReportVacancyDialog = ({ vacancyId, isOpen, onClose }) => {
-  const queryClient = useQueryClient();
-
+const ReportVacancyDialog = ({ mid, vacancyId, isOpen, onClose }) => {
   // Action handling for update email form
   const [state, reportVacancyFormAction, isPending] = useActionState(
-    reportVacancyAction,
+    disputeAdventurerAction,
     initialStateUseStateAction,
   );
 
@@ -940,6 +944,8 @@ const ReportVacancyDialog = ({ vacancyId, isOpen, onClose }) => {
   const [clearedFields, setClearedFields] = useState({});
   const [prevServerState, setPrevServerState] = useState(state);
   const [isAlertClosed, setIsAlertClosed] = useState(false);
+  const processedState = useRef(null);
+  const { showAlert } = useAlert();
 
   // If the state has changed, field errors should be cleared
   if (state !== prevServerState) {
@@ -956,35 +962,40 @@ const ReportVacancyDialog = ({ vacancyId, isOpen, onClose }) => {
 
   // Effect for success handling
   useEffect(() => {
-    if (state.success) {
-      queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
+    if (state.success && processedState.current !== state) {
+      processedState.current = state;
+      onClose();
+      showAlert({
+        title: messages.REPORT.ADVENTURER.SUCCESS_ALERT.TITLE,
+        description: messages.REPORT.ADVENTURER.SUCCESS_ALERT.DESCRIPTION,
+      });
     }
-  }, [state.success, queryClient]);
+  }, [state, onClose, showAlert]);
 
   // Handle manual dialog close to reset visual errors
   const handleOpenChange = (open) => {
     if (!open) {
       setIsAlertClosed(true);
+      onClose();
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className='sm:max-w-sm'>
+        <DialogHeader>
+          <DialogTitle>
+            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE}
+          </DialogTitle>
+          <DialogDescription>
+            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION}
+          </DialogDescription>
+        </DialogHeader>
         <form
           action={reportVacancyFormAction}
           id='reportAdventurerForm'
           noValidate
         >
-          <DialogHeader>
-            <DialogTitle>
-              {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE}
-            </DialogTitle>
-            <DialogDescription>
-              {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION}
-            </DialogDescription>
-          </DialogHeader>
-
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
               <FormTextareaField
@@ -993,7 +1004,7 @@ const ReportVacancyDialog = ({ vacancyId, isOpen, onClose }) => {
                 label='Message (required):'
                 type='text'
                 maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
-                defaultValue={state.data?.password || ''}
+                defaultValue={state.data?.message || ''}
                 error={
                   !clearedFields.message && state.errors?.message
                     ? state.errors.message[0]
@@ -1007,29 +1018,34 @@ const ReportVacancyDialog = ({ vacancyId, isOpen, onClose }) => {
                 onChange={handleFieldChange}
               />
             </div>
-            <input type='hidden' id='vacancyId' value={vacancyId} />
+            <input
+              type='hidden'
+              id='vacancyId'
+              name='vacancyId'
+              value={vacancyId || ''}
+            />
+            <input type='hidden' id='mid' name='mid' value={mid} />
             {state.errors?.general && !isAlertClosed && (
               <FormAlert onClose={() => setIsAlertClosed(true)}>
                 {state.errors.general[0]}
               </FormAlert>
             )}
           </div>
-
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant='outline' type='button' onClick={onClose}>
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button
-              type='submit'
-              form='reportAdventurerForm'
-              disabled={isPending}
-            >
-              {isPending ? 'Reporting...' : 'Report adventurer'}
-            </Button>
-          </DialogFooter>
         </form>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant='outline' type='button' onClick={onClose}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type='submit'
+            disabled={isPending}
+            form='reportAdventurerForm'
+          >
+            {isPending ? 'Reporting...' : 'Report adventurer'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

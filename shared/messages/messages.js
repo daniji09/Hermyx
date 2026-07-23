@@ -99,8 +99,7 @@ export const messages = {
     'Only the mission owner can review adventurers from a completed mission.',
   MISSION_REVIEW_PARTICIPATION_REQUIRED:
     'The adventurer must belong to this mission before being reviewed.',
-  MISSION_REVIEW_COMPLETED_REQUIRED:
-    'Only completed missions can be reviewed.',
+  MISSION_REVIEW_COMPLETED_REQUIRED: 'Only completed missions can be reviewed.',
   CANNOT_DISPUTE_PARTICIPATION_STATE: `Can't dispute participation on current state`,
   CANNOT_REJECT_PARTICIPATION_STATE: `Can't reject participation on current state`,
   CANNOT_ACCEPT_PARTICIPATION_STATE: `Can't accept participation on current state`,
@@ -127,6 +126,7 @@ export const messages = {
     'There are no vacancies open left in this mission. Try another one!',
   MISSION_ALREADY_JOINED: 'You have already joined this mission!',
   VACANCY_NOT_FOUND: 'Vacancy not found.',
+  VACANCY_NOT_IN_MISSION: `This vacancy doesn't correspond to this mission.`,
   VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
   MISSION_NOT_JOINED: `Couldn't join mission.`,
   ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
@@ -188,4 +188,7 @@ export const messages = {
   INVALID_RESPONSE_ACTION: 'Invalid response action',
   NOTIFICATION_NOT_ASSOCIATED_WITH_VACANCY:
     'This notification is not associated with a mission vacancy.',
+
+  //// Reports
+  ADVENTURER_ALREADY_REPORTED: `You already have an active report for this adventurer. Our team is checking it.`,
 };

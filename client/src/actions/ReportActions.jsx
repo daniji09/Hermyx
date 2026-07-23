@@ -1,10 +1,13 @@
-// Report vacancy action
-export const reportVacancyAction = async (previousState, formData) => {
+import { disputeValidation, messages } from '@hermyx/shared';
+import { disputeAdventurer } from './../services/ReportsServices';
+
+// Dispute adventurer action: reporting an adventurer
+export const disputeAdventurerAction = async (previousState, formData) => {
   // Data is collected
   const fieldsData = Object.fromEntries(formData);
 
   // Fields validation
-  const validatedFields = reportVacancyValidation.safeParse(fieldsData);
+  const validatedFields = disputeValidation.safeParse(fieldsData);
 
   if (!validatedFields.success) {
     return {
@@ -16,13 +19,14 @@ export const reportVacancyAction = async (previousState, formData) => {
 
   // API call
   try {
-    await updateUserPassword(fieldsData.password);
+    await disputeAdventurer(fieldsData);
     // Success
     return { success: true, data: null, errors: {} };
   } catch (error) {
     // If it some controlled error found in server
+    console.log(error.response.data);
     if (
-      [400, 500].includes(error.response?.status) &&
+      [400, 404, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
