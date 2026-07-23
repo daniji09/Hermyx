@@ -27,7 +27,10 @@ export const checkActiveReport = async ({ senderId, type, payload }) => {
   `;
 
   let result;
-  if (type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
+  if (
+    type === REPORT_TYPE.REPORT_ADVENTURER.ID ||
+    type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID
+  ) {
     query += `AND payload->>'associated_mission_id' = $4
       AND payload->>'associated_vacancy_id' = $5`;
     result = await pool.query(query, [

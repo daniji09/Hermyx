@@ -117,7 +117,7 @@ export const reportUser = async (req, res) => {
         .status(404)
         .json({ errors: { general: [messages.USER_NOT_FOUND] } });
 
-    // Searches for active report by the same applicant to the same adventurer
+    // Searches for active report by the same user to the same user
     const activeReport = await checkActiveReport({
       senderId: userId,
       type: REPORT_TYPE.REPORT_PROFILE.ID,
@@ -168,7 +168,7 @@ export const reportMission = async (req, res) => {
         .status(409)
         .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
 
-    // Searches for active report by the same applicant to the same adventurer
+    // Searches for active report by the same user to the same mission
     const activeReport = await checkActiveReport({
       senderId: userId,
       type: REPORT_TYPE.REPORT_MISSION.ID,
