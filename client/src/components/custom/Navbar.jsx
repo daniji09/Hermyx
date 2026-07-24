@@ -33,7 +33,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   return (
     <>
-      <header className='sticky top-0 z-[10000] w-full bg-secondary py-3'>
+      <header className='sticky top-0 z-10000 w-full bg-secondary py-3'>
         <nav
           aria-label='Main navigation'
           className='flex w-full items-center justify-between max-w-7xl mx-auto px-3 sm:px-6 lg:px-8'
@@ -73,7 +73,7 @@ export function Navbar() {
                       />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end' className='z-[10000] w-48'>
+                  <DropdownMenuContent align='end' className='z-10000 w-48'>
                     <DropdownMenuItem asChild className='cursor-pointer'>
                       <Link to='/missions/new'>Create mission</Link>
                     </DropdownMenuItem>
@@ -254,7 +254,7 @@ const NotificationsButton = () => {
       <DropdownMenuContent
         align='start'
         sideOffset={8}
-        className='z-[1000000] w-80 p-2'
+        className='z-1000000 w-80 p-2'
       >
         <DropdownMenuLabel className='px-2 pt-1 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-900'>
           Notifications

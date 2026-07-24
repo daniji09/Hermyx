@@ -12,6 +12,7 @@ export const AuthProvider = ({ children }) => {
   // States for current user and loading state that happens when this component is mounted
   const [currentUser, setCurrentUser] = useState();
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false); // Detects sync operation not finished, blocking automatic redirects
   const [latestNotification, setLatestNotification] = useState(null);
   const isSyncingRef = useRef(false);
@@ -34,6 +35,9 @@ export const AuthProvider = ({ children }) => {
         }
         let hermyxUser;
         try {
+          const tokenResult = await firebaseUser.getIdTokenResult();
+          const userIsAdmin = !!tokenResult.claims.admin;
+          setIsAdmin(userIsAdmin);
           hermyxUser = await getUserByFirebaseUid(firebaseUser.uid);
 
           setCurrentUser({
@@ -41,13 +45,16 @@ export const AuthProvider = ({ children }) => {
             email: firebaseUser.email,
             id: hermyxUser.uid,
             username: hermyxUser.username,
+            isAdmin: userIsAdmin,
           });
         } catch (e) {
           console.log(e.message);
           setCurrentUser(null);
+          setIsAdmin(false);
         }
       } else {
         setCurrentUser(null);
+        setIsAdmin(false);
       }
       setLoading(false);
     });
@@ -146,6 +153,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
+      setIsAdmin(false);
       queryClient.clear();
     } catch (error) {
       console.error('Could not logout: ', error);
@@ -157,6 +165,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         currentUser,
         setCurrentUser,
+        isAdmin,
         loading,
         logout,
         isSyncing,

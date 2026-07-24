@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { SignUp } from './pages/SignUp';
 import { LogIn } from './pages/LogIn';
 import { Home } from './pages/Home';
-import { ProtectedRoute } from './components/custom/ProtectedRoute';
+import { ProtectedRoute } from './components/custom/routes/ProtectedRoute';
 import { Mission } from './pages/Mission';
 import { NewMission } from './pages/NewMission';
 import { Payment } from './pages/Payment';
@@ -22,124 +22,38 @@ function App() {
     <>
       <Navbar />
       <Routes>
-        {/* Authentication */}
-        <Route
-          path='/signup'
-          element={
-            <ProtectedRoute reverseLogic>
-              <SignUp />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/login'
-          element={
-            <ProtectedRoute reverseLogic>
-              <LogIn />
-            </ProtectedRoute>
-          }
-        ></Route>
-
+        {/* --- Public routes --- */}
         {/* Home */}
         <Route path='/' element={<Home />}></Route>
 
-        {/* Missions */}
-        <Route
-          path='/missions/new'
-          element={
-            <ProtectedRoute>
-              <NewMission />
-            </ProtectedRoute>
-          }
-        ></Route>
-        <Route
-          path='/missions/:id/pay'
-          element={
-            <ProtectedRoute>
-              <Payment />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/missions/:id/edit'
-          element={
-            <ProtectedRoute>
-              <EditMission />
-            </ProtectedRoute>
-          }
-        ></Route>
-        <Route
-          path='/missions/:id'
-          element={
-            <ProtectedRoute>
-              <Mission />
-            </ProtectedRoute>
-          }
-        ></Route>
-        <Route
-          path='/missions'
-          element={
-            <ProtectedRoute>
-              <SearchMission />
-            </ProtectedRoute>
-          }
-        ></Route>
-        <Route
-          path='/missions/mine'
-          element={
-            <ProtectedRoute>
-              <UserMissions />
-            </ProtectedRoute>
-          }
-        ></Route>
-        <Route
-          path='/test'
-          element={
-            <ProtectedRoute>
-              <TestDashboard />
-            </ProtectedRoute>
-          }
-        ></Route>
-        <Route
-          path='/users/search'
-          element={
-            <ProtectedRoute>
-              <SearchUsers />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/users/:username'
-          element={
-            <ProtectedRoute>
-              <PublicProfile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/profile'
-          element={
-            <ProtectedRoute>
-              <MyProfile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/notifications'
-          element={
-            <ProtectedRoute>
-              <Notifications />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path='/stripe/connect/success'
-          element={
-            <ProtectedRoute>
-              <StripeSuccess />
-            </ProtectedRoute>
-          }
-        />
+        {/* --- Authentication routes (not log in needed) --- */}
+        <Route element={<ProtectedRoute reverseLogic />}>
+          {/* Authentication */}
+          <Route path='/signup' element={<SignUp />} />
+          <Route path='/login' element={<LogIn />}></Route>
+        </Route>
+
+        {/* --- Protected routes (log in needed) --- */}
+        <Route element={<ProtectedRoute />}>
+          {/* Missions */}
+          <Route path='/missions/new' element={<NewMission />}></Route>
+          <Route path='/missions/:id/pay' element={<Payment />} />
+          <Route path='/missions/:id/edit' element={<EditMission />}></Route>
+          <Route path='/missions/:id' element={<Mission />}></Route>
+          <Route path='/missions' element={<SearchMission />}></Route>
+          <Route path='/missions/mine' element={<UserMissions />}></Route>
+
+          {/* Users */}
+          <Route path='/users/search' element={<SearchUsers />} />
+          <Route path='/users/:username' element={<PublicProfile />} />
+          <Route path='/profile' element={<MyProfile />} />
+          <Route path='/notifications' element={<Notifications />} />
+          <Route path='/test' element={<TestDashboard />}></Route>
+          <Route path='/stripe/connect/success' element={<StripeSuccess />} />
+        </Route>
+
+        {/* --- Admin routes (admin role needed) --- */}
+        <Route element={<ProtectedRoute requireAdmin={true} />}></Route>
       </Routes>
     </>
   );

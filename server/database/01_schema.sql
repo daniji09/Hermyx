@@ -25,6 +25,7 @@ CREATE TABLE APP_USER (
 	username VARCHAR(20) NOT NULL UNIQUE,
 	email VARCHAR(100) UNIQUE,
 	firebase_uid VARCHAR(255) NOT NULL UNIQUE,
+	role VARCHAR(10) NOT NULL DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN', 'SYSTEM')),
 	description VARCHAR(500),
 	name VARCHAR(50),
 	surnames VARCHAR(100),
@@ -187,4 +188,5 @@ CREATE TABLE REPORT (
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid)
 );
 
-INSERT INTO app_user(username, email, firebase_uid, description, name, surnames) VALUES('Hermyx', 'hermyx@hermyx.com', '---', 'Hermyx admin account.', 'Hermyx', 'account');
+INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames)
+VALUES('Hermyx_system', 'system@hermyx.com', 'firebase-system-uid', 'SYSTEM', 'Hermyx system account.', 'Hermyx', 'system');
