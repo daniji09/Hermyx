@@ -26,6 +26,7 @@ import {
   ComboboxList,
 } from '@/components/ui/combobox';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 // Comboboxes   options
 const DATE_OPTIONS = [
@@ -291,7 +292,9 @@ const ReportSearchCard = ({ report }) => {
           <div className='mb-4 line-clamp-4'>{report.message}</div>
         </CardContent>
         <CardFooter>
-          <Button>See report</Button>
+          <Button asChild>
+            <Link to={`/reports/${report.rid}`}>See report</Link>
+          </Button>
         </CardFooter>
       </article>
     </Card>

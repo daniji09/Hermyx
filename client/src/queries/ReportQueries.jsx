@@ -1,5 +1,13 @@
-import { infiniteQueryOptions } from '@tanstack/react-query';
-import { getReports } from '../services/ReportsServices';
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
+import { getReportById, getReports } from '../services/ReportsServices';
+
+export const getReportByIdQueryOptions = (params, options) => {
+  return queryOptions({
+    queryKey: ['getReport', params],
+    queryFn: () => getReportById(params),
+    ...options,
+  });
+};
 
 export const getReportsInfiniteQueryOptions = (limit, params, options) => {
   return infiniteQueryOptions({

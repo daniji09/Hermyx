@@ -2,6 +2,29 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
+export const getReportsValidation = z.object({
+  sortByDate: z.coerce.string().trim().optional(),
+  type: z.coerce.string().trim().optional(),
+  status: z.coerce.string().trim().optional(),
+  page: z.coerce
+    .number(messages.FIELD_NUMBER('Page'))
+    .int(messages.FIELD_INTEGER('Page'))
+    .min(0, messages.FIELD_POSITIVE('Page'))
+    .optional(),
+  limit: z.coerce
+    .number(messages.FIELD_NUMBER('Limit'))
+    .int(messages.FIELD_INTEGER('Limit'))
+    .min(0, messages.FIELD_POSITIVE('Limit'))
+    .optional(),
+});
+
+export const getReportByIdValidation = z.object({
+  id: z.coerce
+    .number(messages.FIELD_NUMBER('Id'))
+    .int(messages.FIELD_INTEGER('Id'))
+    .min(0, messages.FIELD_POSITIVE('Id')),
+});
+
 export const disputeValidation = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Id'))

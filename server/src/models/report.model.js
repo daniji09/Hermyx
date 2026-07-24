@@ -19,6 +19,13 @@ export const createReport = async ({ senderId, message, type, payload }) => {
   return result.rows[0];
 };
 
+// Get report by id
+export const getReportById = async (id) => {
+  const query = `SELECT * FROM report WHERE rid = $1`;
+  const result = await pool.query(query, [id]);
+  return result.rows[0];
+};
+
 // Gets all reports paginated
 export const getReports = async ({ pagination, filters }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation

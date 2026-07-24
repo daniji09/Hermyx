@@ -28,6 +28,12 @@ export const reportMission = async ({ message, mid }) => {
   return data;
 };
 
+// Finds report by id
+export const getReportById = async (id) => {
+  const { data } = await api.get(`/reports/${id}`);
+  return data.report;
+};
+
 // Finds all reports
 export const getReports = async (options) => {
   const { page, limit } = options;

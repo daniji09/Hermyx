@@ -196,4 +196,5 @@ export const messages = {
   MISSION_CLOSED_BY_REPORT: `This mission has already been close by a report.`,
   MISSION_ALREADY_REPORTED: `You already have an active report for this mission. Our team is checking it.`,
   REPORTS_NOT_FOUND: `Reports not found.`,
+  REPORT_NOT_FOUND: `Report not found.`,
 };

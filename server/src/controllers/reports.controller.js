@@ -6,6 +6,7 @@ import {
   checkActiveReport,
   createReport,
   getReports as getAllReports,
+  getReportById,
 } from '../models/report.model.js';
 import { REPORT_TYPE } from '@hermyx/shared/utils/reports.utils.js';
 import { createNotification } from '../models/notification.model.js';
@@ -18,12 +19,32 @@ import {
 import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 
 /// GET
+// Get report by id
+export const getReport = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Gets all reports filtering what is needed
+    const report = await getReportById(id);
+    if (report) {
+      // Pagination object is built
+      return res.status(200).json({ report });
+    } else
+      return res.status(404).json({
+        errors: { general: [messages.REPORT_NOT_FOUND] },
+      });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
 // Get all reports
 export const getReports = async (req, res) => {
   const pagination = req.pagination;
   const { sortByDate, status, type } = req.query;
   const filters = { sortByDate, status, type };
-  console.log(filters);
+
   try {
     // Gets all reports filtering what is needed
     const { rows: reports, totalCount } = await getAllReports({

@@ -41,7 +41,6 @@ export const verifyToken = async (req, res, next) => {
 
 export const verifyAdmin = async (req, res, next) => {
   // Firebase token is already checked, so only the admin role is checked
-  console.log(req.firebaseToken);
   if (
     req.firebaseToken?.admin === true &&
     req.user?.role === USER_ROLE.ADMIN.ID
