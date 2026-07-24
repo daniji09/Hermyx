@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { BACKEND_URL, CRON_SECRET_TOKEN, PORT } from '../config/config.js';
 
 export const autoAcceptParticipation = cron.schedule(
-  '0 2 * * * *', // Every day at 00 am
+  '0 0 0 * * *', // Every day at 00 am
   async () => {
     console.log(
       `[CRON] Executing auto-accepting expired reviews.. ${new Date().toLocaleTimeString()}`,

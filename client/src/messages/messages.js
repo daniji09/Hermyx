@@ -216,5 +216,10 @@ export const messages = {
       TITLE: `Report successfully sent.`,
       DESCRIPTION: `Wait patiently for our answer on this case!`,
     },
+    SEARCH_REPORTS: {
+      LOADING: 'Searching reports...',
+      ERROR: 'Oops! Something went wrong while loading reports',
+      NO_REPORTS: 'It seems there is no reports yet. Wait for one to be added!',
+    },
   },
 };

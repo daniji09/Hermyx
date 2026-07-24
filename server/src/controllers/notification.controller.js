@@ -162,8 +162,8 @@ const respondToParticipationReview = async ({
       senderId: userId,
       type: REPORT_TYPE.REVIEW_DISPUTE.ID,
       payload: {
-        missionId: missionId,
-        vacancyId: participation.id,
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
       },
     });
     if (activeReport > 0)

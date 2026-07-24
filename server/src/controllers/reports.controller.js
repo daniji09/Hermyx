@@ -2,7 +2,11 @@ import { messages } from '@hermyx/shared';
 import { getById } from '../models/mission.model.js';
 import { getById as getUserById } from './../models/app_user.model.js';
 import { getVacancyById } from './../models/mission_participation.model.js';
-import { checkActiveReport, createReport } from '../models/report.model.js';
+import {
+  checkActiveReport,
+  createReport,
+  getReports as getAllReports,
+} from '../models/report.model.js';
 import { REPORT_TYPE } from '@hermyx/shared/utils/reports.utils.js';
 import { createNotification } from '../models/notification.model.js';
 import { emitToUser } from './../services/socket.service.js';
@@ -13,6 +17,48 @@ import {
 } from '@hermyx/shared/utils/notifications.utils.js';
 import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 
+/// GET
+// Get all reports
+export const getReports = async (req, res) => {
+  const pagination = req.pagination;
+  const { sortByDate, status, type } = req.query;
+  const filters = { sortByDate, status, type };
+  console.log(filters);
+  try {
+    // Gets all reports filtering what is needed
+    const { rows: reports, totalCount } = await getAllReports({
+      pagination,
+      filters,
+    });
+
+    const totalItems = parseInt(totalCount);
+
+    if (reports) {
+      const totalPages = Math.ceil(totalItems / pagination.limit);
+      const hasMore = pagination.page < totalPages;
+
+      // Pagination object is built
+      return res.status(200).json({
+        reports,
+        pagination: {
+          currentPage: pagination.page,
+          totalPages: totalPages,
+          totalItems: totalItems,
+          hasMore: hasMore,
+        },
+      });
+    } else
+      return res.status(404).json({
+        errors: { general: [messages.REPORTS_NOT_FOUND] },
+      });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+/// POST
+// Dispute an adventurer
 export const disputeAdventurer = async (req, res) => {
   const { message, mid, vacancyId } = req.body;
   const userId = req.user.uid;
@@ -106,6 +152,7 @@ export const disputeAdventurer = async (req, res) => {
   }
 };
 
+// Report a user
 export const reportUser = async (req, res) => {
   const { message, uid } = req.body;
   const userId = req.user.uid;
@@ -147,6 +194,7 @@ export const reportUser = async (req, res) => {
   }
 };
 
+// Report a mission
 export const reportMission = async (req, res) => {
   const { message, mid } = req.body;
   const userId = req.user.uid;

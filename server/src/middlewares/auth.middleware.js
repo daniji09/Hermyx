@@ -22,8 +22,9 @@ export const verifyToken = async (req, res, next) => {
     // Firebase verifies that the token is real, is not expired and is not faked
     const decodedToken = await verifyIdToken(token);
 
-    // User is saved
+    // User and token are saved
     req.user = await getByFirebaseUid(decodedToken.uid);
+    req.firebaseToken = decodedToken;
 
     if (!req.user) {
       return res
@@ -40,6 +41,7 @@ export const verifyToken = async (req, res, next) => {
 
 export const verifyAdmin = async (req, res, next) => {
   // Firebase token is already checked, so only the admin role is checked
+  console.log(req.firebaseToken);
   if (
     req.firebaseToken?.admin === true &&
     req.user?.role === USER_ROLE.ADMIN.ID

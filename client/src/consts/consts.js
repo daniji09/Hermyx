@@ -4,4 +4,5 @@ export const initialStateUseStateAction = { success: null, errors: {} };
 export const PAGINATION_LIMIT = {
   MISSIONS: 3,
   REVIEWS: 5,
+  REPORTS: 10,
 };

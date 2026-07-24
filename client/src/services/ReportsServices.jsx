@@ -27,3 +27,15 @@ export const reportMission = async ({ message, mid }) => {
   });
   return data;
 };
+
+// Finds all reports
+export const getReports = async (options) => {
+  const { page, limit } = options;
+
+  // API search
+  const { data } = await api.get('/reports', {
+    params: { page, limit, ...options.params },
+  });
+
+  return data;
+};

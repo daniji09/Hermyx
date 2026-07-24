@@ -6,13 +6,17 @@ import {
 import { Router } from 'express';
 import {
   disputeAdventurer,
+  getReports,
   reportMission,
   reportUser,
 } from '../controllers/reports.controller.js';
 import { validateBodySchema } from '../middlewares/validations.middleware.js';
+import { verifyAdmin } from '../middlewares/auth.middleware.js';
+import { pagination } from '../middlewares/pagination.middleware.js';
 const router = Router();
 
 /// GET
+router.get('/', verifyAdmin, await pagination(), getReports);
 
 /// POST
 // Report adventurer

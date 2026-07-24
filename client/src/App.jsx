@@ -16,6 +16,7 @@ import { Notifications } from './pages/Notifications';
 import { SearchUsers } from './pages/SearchUsers';
 import { EditMission } from './pages/EditMission';
 import { StripeSuccess } from './pages/StripeConnectSuccess';
+import { Reports } from './pages/Reports';
 
 function App() {
   return (
@@ -53,7 +54,9 @@ function App() {
         </Route>
 
         {/* --- Admin routes (admin role needed) --- */}
-        <Route element={<ProtectedRoute requireAdmin={true} />}></Route>
+        <Route element={<ProtectedRoute requireAdmin={true} />}>
+          <Route path='/reports' element={<Reports />}></Route>
+        </Route>
       </Routes>
     </>
   );
