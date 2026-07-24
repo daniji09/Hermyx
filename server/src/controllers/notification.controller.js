@@ -6,6 +6,7 @@ import {
   findById,
   findExpiredParticipationReview,
   getByRecipientId,
+  markAllAsSeenByRecipientId,
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
@@ -83,6 +84,16 @@ export const markMyNotificationAsSeen = async (req, res) => {
 
     const updatedNotification = await markAsSeen(notificationId);
     return res.status(200).json({ notification: updatedNotification });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+};
+
+export const markMyNotificationsAsSeen = async (req, res) => {
+  try {
+    const notifications = await markAllAsSeenByRecipientId(req.user.uid);
+    return res.status(200).json({ notifications });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: 'Database error' });

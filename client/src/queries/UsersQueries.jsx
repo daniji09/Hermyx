@@ -6,7 +6,6 @@ import {
   searchUsersByUsername,
   updateMyProfile,
 } from '../services/UsersServices';
-import { getUserReviews } from '../services/ReviewsServices';
 
 export const getPublicUserProfileQueryOptions = (username, options) => {
   return queryOptions({

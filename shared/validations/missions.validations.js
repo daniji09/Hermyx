@@ -194,6 +194,23 @@ const optionalNumberFromFormSchema = (schema) =>
     return value;
   }, schema.optional());
 
+const decimalQueryNumberSchema = (fieldName) =>
+  z.preprocess(
+    (value) => {
+      if (value === undefined || value === null) return undefined;
+      if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+        if (trimmedValue === '') return undefined;
+        return trimmedValue.replace(',', '.');
+      }
+      return value;
+    },
+    z.coerce
+      .number(messages.FIELD_NUMBER(fieldName))
+      .min(0, messages.FIELD_POSITIVE(fieldName))
+      .optional(),
+  );
+
 export const closeMissionParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Mid'))
@@ -262,18 +279,9 @@ export const getMissionsQuerySchema = z
       )
       .min(1, messages.FIELD_REQUIRED)
       .optional(),
-    minPayment: z.coerce
-      .number(messages.FIELD_NUMBER('Min payment'))
-      .min(0, messages.FIELD_POSITIVE('Min payment'))
-      .optional(),
-    maxPayment: z.coerce
-      .number(messages.FIELD_NUMBER('Max payment'))
-      .min(0, messages.FIELD_POSITIVE('Max payment'))
-      .optional(),
-    maxDistanceKm: z.coerce
-      .number(messages.FIELD_NUMBER('Max distance'))
-      .min(0, messages.FIELD_POSITIVE('Max distance'))
-      .optional(),
+    minPayment: decimalQueryNumberSchema('Min payment'),
+    maxPayment: decimalQueryNumberSchema('Max payment'),
+    maxDistanceKm: decimalQueryNumberSchema('Max distance'),
   })
   .refine(
     (data) =>
