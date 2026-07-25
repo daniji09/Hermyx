@@ -414,6 +414,20 @@ export const submitMissionParticipationSchema = z.object({
     .min(0, messages.FIELD_POSITIVE('Id')),
 });
 
+export const banMissionParamsSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const banMissionBodySchema = z.object({
+  rid: z.coerce
+    .number(messages.FIELD_NUMBER('Rid'))
+    .int(messages.FIELD_INTEGER('Rid'))
+    .min(0, messages.FIELD_POSITIVE('Rid')),
+});
+
 export const addVacanciesSchema = z
   .object({
     vacanciesQuantity: z.coerce

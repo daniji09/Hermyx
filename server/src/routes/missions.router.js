@@ -18,6 +18,7 @@ import {
   finishMission,
   reviewAdventurer,
   reviewOwner,
+  banMission,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -46,9 +47,12 @@ import {
   reviewAdventurerParamSchema,
   reviewAdventurerBodySchema,
   reviewOwnerParamSchema,
+  banMissionParamsSchema,
+  banMissionBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { inviteToMission } from './../controllers/missions.controller.js';
+import { verifyAdmin } from '../middlewares/auth.middleware.js';
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
@@ -150,6 +154,15 @@ router.post(
   '/:mid/finish',
   validateParamsSchema(finishMissionParamSchema),
   finishMission,
+);
+
+// Bans mission
+router.post(
+  '/:mid/ban',
+  validateParamsSchema(banMissionParamsSchema),
+  validateBodySchema(banMissionBodySchema),
+  verifyAdmin,
+  banMission,
 );
 
 //Edit mission

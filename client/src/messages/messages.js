@@ -221,5 +221,11 @@ export const messages = {
       ERROR: 'Oops! Something went wrong while loading reports',
       NO_REPORTS: 'It seems there is no reports yet. Wait for one to be added!',
     },
+    BAN_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to ban the mission?',
+      ERROR_TITLE: `Can't ban mission`,
+      DESCRIPTION: `This will ban and retire the mission from the public, if it's open adventurers will receive their reward.`,
+      CONFIRM_TEXT: 'Yes, ban mission',
+    },
   },
 };

@@ -365,3 +365,14 @@ export const getWaitingForPaymentVacancies = async () => {
   ]);
   return result.rows;
 };
+
+// Unjoin every participant
+export const cleanMissionParticipation = async (mid) => {
+  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status = $3`;
+  const result = await pool.query(query, [
+    VACANCY_LIFE_CYCLE.EMPTY.ID,
+    mid,
+    VACANCY_LIFE_CYCLE.JOINED.ID,
+  ]);
+  return result.rowCount;
+};

@@ -162,6 +162,9 @@ export const messages = {
   STRIPE_ONBOARDING_NOT_COMPLETED:
     'You have not completed the Stripe onboarding yet.',
 
+  /// Ban mission
+  CANNOT_DELETE_VACANCIES: `Couldn't delete every occupied vacancy, please try again.`,
+
   //// Profile
   ///Info
   PROFILE_UPDATED_SUCCESSFULLY: 'Profile updated successfully.',

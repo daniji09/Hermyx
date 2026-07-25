@@ -28,6 +28,7 @@ import {
   updateStatus,
   getJoinedVacancies,
   getWaitingForPaymentVacancies,
+  cleanMissionParticipation,
 } from '../models/mission_participation.model.js';
 import {
   createAdventurerReview,
@@ -58,6 +59,7 @@ import {
   TRANSACTION_TYPE,
   VACANCY_PAYMENT_STATUS,
 } from '@hermyx/shared/utils/payment.utils.js';
+import { closeReport } from '../models/report.model.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -1300,7 +1302,7 @@ export const reopenMission = async (req, res) => {
   }
 };
 
-// Reopens mission
+// Finishes mission
 export const finishMission = async (req, res) => {
   const { mid } = req.params;
   const uid = req.user.uid;
@@ -1344,6 +1346,132 @@ export const finishMission = async (req, res) => {
 
     // Finally, mission is reopened
     await updateMissionStatus(mid, MISSION_LIFE_CYCLE.FINISHED.ID);
+
+    return res.status(200).json({});
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Bans mission
+export const banMission = async (req, res) => {
+  const { mid } = req.params;
+  const { rid } = req.body;
+
+  try {
+    // Mission is searched
+    const mission = await getById(mid);
+    if (!mission)
+      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
+
+    // Participation is got
+    const participation = await getOccupiedVacancies(mid);
+
+    // Mission state changes logic, if payment has been done it has to be release to adventurers
+    if (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE) {
+      const updatedVacancies = await cleanMissionParticipation(mid);
+      if (participation.length !== updatedVacancies)
+        return res
+          .status(409)
+          .json({ error: messages.CANNOT_DELETE_VACANCIES });
+    } else {
+      for (const vacancy of participation) {
+        const adventurer = await getUserById(vacancy.adventurer_id);
+        if (adventurer.stripe_connected_id) {
+          const transferData = {
+            amount: Math.round(vacancy.monetary_reward * 100),
+            currency: 'eur',
+            destination: adventurer.stripe_connected_id,
+            description: `mission_banned`,
+            transfer_group: `mission_${mid}`,
+          };
+
+          const idempotencyKey = `ban_${mid}_vac_${vacancy.id}`;
+          const transfer = await createTransfer(transferData, idempotencyKey);
+
+          // Adds mission payment
+          await createMissionPayment({
+            mid: mission.mid,
+            vacancy_id: vacancy.id,
+            sender_id: HERMYX_TRANSACTION_ID,
+            receiver_id: adventurer.uid,
+            stripe_transaction_id: transfer.id,
+            transaction_type: TRANSACTION_TYPE.BAN_COMPENSATION.ID,
+            amount_paid: vacancy.monetary_reward,
+          });
+
+          await markVacancyAsPaidOut(vacancy.id);
+        }
+      }
+    }
+
+    // Finally, mission is reopened
+    await updateMissionStatus(mid, MISSION_LIFE_CYCLE.REPORTED.ID);
+
+    // Report is closed
+    const reportClosed = await closeReport(rid);
+    if (reportClosed.length < 1)
+      return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
+
+    // Then, applicant and possible adventurers are notified
+    const message = MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL
+      ? `This mission has been banned by Hermyx administration, now is retired from the public and won't be done.`
+      : `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers.`;
+
+    // Applicant is informed
+    const notificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.MISSION_BAN.ID,
+      status: null,
+      message: message,
+      senderId: HERMYX_TRANSACTION_ID,
+      receiverId: mission.owner_id,
+      payload: {
+        associated_mission_id: mission.mid,
+      },
+    });
+    emitToUser(mission.owner_id, 'mission:ban', {
+      notificationId,
+      missionId: mission.mid,
+      vacancyId: null,
+      missionTitle: mission.title,
+      senderId: HERMYX_TRANSACTION_ID,
+      senderUsername: req.user.username,
+      receiverId: mission.owner_id,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      message: message,
+    });
+
+    // All adventurers are informed
+    for (const vacancy of participation) {
+      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+        const notificationId = await createNotification({
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_BAN.ID,
+          status: null,
+          message: message,
+          senderId: HERMYX_TRANSACTION_ID,
+          receiverId: vacancy.adventurer_id,
+          payload: {
+            associated_mission_id: mission.mid,
+          },
+        });
+        emitToUser(vacancy.adventurer_id, 'mission:ban', {
+          notificationId,
+          missionId: mission.mid,
+          vacancyId: vacancy.id,
+          missionTitle: mission.title,
+          senderId: HERMYX_TRANSACTION_ID,
+          senderUsername: req.user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: message,
+        });
+      }
+    }
 
     return res.status(200).json({});
   } catch (error) {

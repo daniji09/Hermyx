@@ -49,7 +49,7 @@ export const NOTIFICATION_ACTION = {
     LABEL: 'Mission delete',
   },
   MISSION_CANCEL: {
-    ID: 'MISSION_EDIT',
+    ID: 'MISSION_CANCEL',
     LABEL: 'Mission cancel',
   },
   MISSION_REOPEN: {
@@ -67,6 +67,10 @@ export const NOTIFICATION_ACTION = {
   REJECTED_REVIEW_DISPUTE: {
     ID: 'REJECTED_REVIEW_DISPUTE',
     LABEL: 'Rejected review dispute',
+  },
+  MISSION_BAN: {
+    ID: 'MISSION_BAN',
+    LABEL: 'Mission ban',
   },
 };
 
