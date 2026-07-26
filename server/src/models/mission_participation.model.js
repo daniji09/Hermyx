@@ -376,3 +376,32 @@ export const cleanMissionParticipation = async (mid) => {
   ]);
   return result.rowCount;
 };
+
+// Unjoin specific participant
+export const unjoinParticipant = async (mid, uid) => {
+  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status NOT IN ($3, $4, $5) AND adventurer_id = $6`;
+  const result = await pool.query(query, [
+    VACANCY_LIFE_CYCLE.EMPTY.ID,
+    mid,
+    VACANCY_LIFE_CYCLE.EMPTY.ID,
+    VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+    VACANCY_LIFE_CYCLE.RELEASED.ID,
+    uid,
+  ]);
+  return result.rowCount;
+};
+
+export const refundBannedVacancy = async (id, amount_refunded) => {
+  const query = `
+    UPDATE mission_participation 
+    SET payment_status = $1, amount_paid = amount_paid - $2 
+    WHERE id = $3 AND payment_status = $4`;
+
+  const result = await pool.query(query, [
+    VACANCY_PAYMENT_STATUS.UNPAID.ID,
+    amount_refunded,
+    id,
+    VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+  ]);
+  return result.rowCount;
+};

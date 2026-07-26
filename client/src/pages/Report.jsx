@@ -9,13 +9,15 @@ import {
 } from '@/components/ui/card';
 import { REPORT_TYPE } from '@hermyx/shared/utils/reports.utils.js';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getReportByIdQueryOptions } from '../queries/ReportQueries';
 import { timestampToDayMonthYear } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { useAlert } from '../contexts/AlertContext';
 import { messages } from '../messages/messages';
 import { banMission } from '../services/MissionsServices';
+import { REPORT_STATUS } from './../../../shared/utils/reports.utils';
+import { banUser } from '../services/UsersServices';
 
 export const Report = () => {
   // Report id
@@ -120,7 +122,9 @@ const ReportContent = ({ report }) => {
             <div className='mb-4'>{report.message}</div>
           </CardContent>
           <CardFooter>
-            {report.type === REPORT_TYPE.REPORT_PROFILE.ID ? (
+            {report.status === REPORT_STATUS.ANSWERED.ID ? (
+              'Report answered'
+            ) : report.type === REPORT_TYPE.REPORT_PROFILE.ID ? (
               <BanUserButton report={report} />
             ) : report.type === REPORT_TYPE.REPORT_MISSION.ID ? (
               <BanMissionButton report={report} />
@@ -132,7 +136,48 @@ const ReportContent = ({ report }) => {
   );
 };
 
-const BanUserButton = ({ report }) => {};
+const BanUserButton = ({ report }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => banUser(report.payload.associated_user_id, report.rid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getReport']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.REPORT.BAN_USER_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.REPORT.BAN_USER_ALERT.TITLE,
+      description: messages.REPORT.BAN_USER_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.REPORT.BAN_USER_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='banUserButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Ban user'}
+    </Button>
+  );
+};
 
 const BanMissionButton = ({ report }) => {
   const { showAlert } = useAlert();
@@ -141,7 +186,7 @@ const BanMissionButton = ({ report }) => {
     mutationFn: () =>
       banMission(report.payload.associated_mission_id, report.rid),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      queryClient.invalidateQueries(['getReport']);
     },
     // Backend error handling
     onError: (error) => {

@@ -159,9 +159,9 @@ router.post(
 // Bans mission
 router.post(
   '/:mid/ban',
+  verifyAdmin,
   validateParamsSchema(banMissionParamsSchema),
   validateBodySchema(banMissionBodySchema),
-  verifyAdmin,
   banMission,
 );
 

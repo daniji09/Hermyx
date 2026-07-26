@@ -2,7 +2,7 @@ import { messages } from '@hermyx/shared';
 import { verifyIdToken } from '../services/auth.service.js';
 import { getByFirebaseUid } from '../models/app_user.model.js';
 import { CRON_SECRET_TOKEN } from '../config/config.js';
-import { USER_ROLE } from '@hermyx/shared/utils/users.utils.js';
+import { USER_ROLE, USER_STATUS } from '@hermyx/shared/utils/users.utils.js';
 
 export const verifyToken = async (req, res, next) => {
   try {
@@ -20,7 +20,7 @@ export const verifyToken = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     // Firebase verifies that the token is real, is not expired and is not faked
-    const decodedToken = await verifyIdToken(token);
+    const decodedToken = await verifyIdToken(token, true);
 
     // User and token are saved
     req.user = await getByFirebaseUid(decodedToken.uid);
@@ -30,6 +30,12 @@ export const verifyToken = async (req, res, next) => {
       return res
         .status(401)
         .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+    }
+
+    if (req.user.status === USER_STATUS.BANNED.ID) {
+      return res
+        .status(403)
+        .json({ errors: { general: [messages.FORBIDDEN_BAN_USER] } });
     }
 
     next();

@@ -23,8 +23,8 @@ export const deleteFirebaseUser = async (uid) => {
   return await firebaseAdmin.auth().deleteUser(uid);
 };
 
-export const verifyIdToken = async (token) => {
-  return await firebaseAdmin.auth().verifyIdToken(token);
+export const verifyIdToken = async (token, checkRevoked) => {
+  return await firebaseAdmin.auth().verifyIdToken(token, checkRevoked);
 };
 
 export const getFirebaseAuthProviders = async (firebaseUid) => {
@@ -44,4 +44,18 @@ export const updateFirebaseAccount = async (firebaseUid, updates) => {
 
 export const getUserByEmail = async (email) => {
   return await firebaseAdmin.auth().getUserByEmail(email);
+};
+
+export const disableUser = async (firebaseUid) => {
+  return await firebaseAdmin.auth().updateUser(firebaseUid, { disabled: true });
+};
+
+export const revokeTokens = async (firebaseUid) => {
+  return await firebaseAdmin.auth().revokeRefreshTokens(firebaseUid);
+};
+
+export const enableUser = async (firebaseUid) => {
+  return await firebaseAdmin
+    .auth()
+    .updateUser(firebaseUid, { disabled: false });
 };

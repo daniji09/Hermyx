@@ -196,6 +196,6 @@ export const reviewOwner = async (mid, review) => {
 
 // Bans a mission
 export const banMission = async (mid, rid) => {
-  const { data } = await api.post(`/missions/${mid}/ban`, rid);
+  const { data } = await api.post(`/missions/${mid}/ban`, { rid });
   return data;
 };

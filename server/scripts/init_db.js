@@ -22,8 +22,8 @@ async function initDB() {
     // First admin user is introduced
     console.log('Inserting initial Admin user...');
     const adminUid = ADMIN_FIREBASE_UID || '--error--';
-    const insertAdminQuery = `INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames)
-    VALUES('admin', 'admin@hermyx.com', $1, 'ADMIN', 'Hermyx admin account.', 'Hermyx', 'admin')
+    const insertAdminQuery = `INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames, status)
+    VALUES('admin', 'admin@hermyx.com', $1, 'ADMIN', 'Hermyx admin account.', 'Hermyx', 'admin', 'ACTIVE')
     ON CONFLICT (firebase_uid) DO NOTHING;`;
     await pool.query(insertAdminQuery, [adminUid]);
 

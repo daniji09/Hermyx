@@ -132,3 +132,9 @@ export const userConfiguration = async (configuration) => {
   const { data } = await api.put('/users/me/configuration', { configuration });
   return data;
 };
+
+// Bans a user
+export const banUser = async (uid, rid) => {
+  const { data } = await api.post(`/users/${uid}/ban`, { rid });
+  return data;
+};

@@ -122,3 +122,9 @@ export async function createLoginLink(accountId) {
 export async function createTransfer(data, idempotencyKey) {
   return await stripe.transfers.create(data, { idempotencyKey });
 }
+
+export async function rejectAccount(stripe_connected_id) {
+  return await stripe.accounts.reject(stripe_connected_id, {
+    reason: 'terms_of_service',
+  });
+}

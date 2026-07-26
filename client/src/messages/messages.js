@@ -222,10 +222,16 @@ export const messages = {
       NO_REPORTS: 'It seems there is no reports yet. Wait for one to be added!',
     },
     BAN_MISSION_ALERT: {
-      TITLE: 'Are you sure you want to ban the mission?',
+      TITLE: 'Are you sure you want to ban this mission?',
       ERROR_TITLE: `Can't ban mission`,
       DESCRIPTION: `This will ban and retire the mission from the public, if it's open adventurers will receive their reward.`,
       CONFIRM_TEXT: 'Yes, ban mission',
+    },
+    BAN_USER_ALERT: {
+      TITLE: 'Are you sure you want to ban this user?',
+      ERROR_TITLE: `Can't ban user`,
+      DESCRIPTION: `This will ban the user and they will be no longer able to access this account, it will be deleted.`,
+      CONFIRM_TEXT: 'Yes, ban user',
     },
   },
 };

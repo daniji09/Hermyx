@@ -31,6 +31,11 @@ export const consts = {
       message: messages.EMAIL_ALREADY_EXISTS(email),
       status: 400,
     }),
+    'auth/id-token-revoked': () => ({
+      field: 'general',
+      message: messages.FORBIDDEN_BAN_USER,
+      status: 403,
+    }),
     'auth/invalid-credential': () => ({
       field: 'general',
       message: messages.INVALID_CREDENTIALS,
@@ -80,6 +85,11 @@ export const consts = {
       field: 'general',
       message: messages.OPERATION_ERROR,
       status: 499,
+    }),
+    'auth/user-disabled': () => ({
+      field: 'general',
+      message: messages.FORBIDDEN_BAN_USER,
+      status: 403,
     }),
     'auth/weak-password': () => ({
       field: 'password',

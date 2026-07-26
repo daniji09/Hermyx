@@ -17,6 +17,7 @@ export const messages = {
   FIELD_REQUIRED: 'This field is required.',
   FORBIDDEN: 'Action is not authorized.',
   SYSTEM_FORBIDDEN: 'Action is only authorize for the system.',
+  FORBIDDEN_BAN_USER: 'This user is banned from Hermyx.',
   OPERATION_ERROR: 'Operation ended abruptly.',
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
   UNEXPECTED_ERROR: 'Unexpected error.',
@@ -200,4 +201,5 @@ export const messages = {
   MISSION_ALREADY_REPORTED: `You already have an active report for this mission. Our team is checking it.`,
   REPORTS_NOT_FOUND: `Reports not found.`,
   REPORT_NOT_FOUND: `Report not found.`,
+  USER_ALREADY_BANNED: `User already banned.`,
 };

@@ -72,6 +72,10 @@ export const NOTIFICATION_ACTION = {
     ID: 'MISSION_BAN',
     LABEL: 'Mission ban',
   },
+  USER_BAN: {
+    ID: 'USER_BAN',
+    LABEL: 'User ban',
+  },
 };
 
 export const NOTIFICATION_STATUS = {

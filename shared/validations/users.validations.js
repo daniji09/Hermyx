@@ -316,3 +316,17 @@ export const userConfigurationValidation = z.object({
 export const userConfigurationBackendValidation = z.object({
   configuration: z.json(),
 });
+
+export const banUserParamsSchema = z.object({
+  uid: z.coerce
+    .number(messages.FIELD_NUMBER('Uid'))
+    .int(messages.FIELD_INTEGER('Uid'))
+    .min(0, messages.FIELD_POSITIVE('Uid')),
+});
+
+export const banUserBodySchema = z.object({
+  rid: z.coerce
+    .number(messages.FIELD_NUMBER('Rid'))
+    .int(messages.FIELD_INTEGER('Rid'))
+    .min(0, messages.FIELD_POSITIVE('Rid')),
+});

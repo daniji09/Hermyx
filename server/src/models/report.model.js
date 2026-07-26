@@ -118,7 +118,7 @@ export const checkActiveReport = async ({ senderId, type, payload }) => {
 };
 
 // Closes a report
-export const closeReport = async ({ rid }) => {
+export const closeReport = async (rid) => {
   const query = `UPDATE report SET status = $1 WHERE rid = $2 RETURNING * `;
   const result = await pool.query(query, [REPORT_STATUS.ANSWERED.ID, rid]);
   return result.rows[0];

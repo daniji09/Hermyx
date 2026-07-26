@@ -26,6 +26,7 @@ CREATE TABLE APP_USER (
 	email VARCHAR(100) UNIQUE,
 	firebase_uid VARCHAR(255) NOT NULL UNIQUE,
 	role VARCHAR(10) NOT NULL DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN', 'SYSTEM')),
+	status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN('ACTIVE', 'DELETED', 'BANNED')),
 	description VARCHAR(500),
 	name VARCHAR(50),
 	surnames VARCHAR(100),
@@ -162,7 +163,8 @@ CREATE TABLE NOTIFICATION (
 		'ADVENTURER_REPORT',
 		'REVIEW_DISPUTE',
 		'REJECTED_REVIEW_DISPUTE',
-		'MISSION_BAN'
+		'MISSION_BAN',
+		'USER_BAN'
 	)),
 	status VARCHAR(20) CHECK (status IS NULL OR status IN ('PENDING','ACCEPTED','REJECTED','DISPUTED')),
 	message VARCHAR(500),
@@ -190,5 +192,5 @@ CREATE TABLE REPORT (
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid)
 );
 
-INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames)
-VALUES('Hermyx_system', 'system@hermyx.com', 'firebase-system-uid', 'SYSTEM', 'Hermyx system account.', 'Hermyx', 'system');
+INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames, status)
+VALUES('Hermyx_system', 'system@hermyx.com', 'firebase-system-uid', 'SYSTEM', 'Hermyx system account.', 'Hermyx', 'system', 'ACTIVE');

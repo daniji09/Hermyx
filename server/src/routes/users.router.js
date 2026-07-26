@@ -17,6 +17,7 @@ import {
   updateUserEmail,
   deleteUser,
   updateUserConfiguration,
+  banUser,
 } from '../controllers/users.controller.js';
 import {
   validateBodySchema,
@@ -38,9 +39,11 @@ import {
   deleteUserByUid,
   updateUserEmailSchema,
   userConfigurationBackendValidation,
+  banUserParamsSchema,
+  banUserBodySchema,
 } from '@hermyx/shared';
 
-import { verifyToken } from '../middlewares/auth.middleware.js';
+import { verifyAdmin, verifyToken } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 
 /// GET
@@ -114,6 +117,16 @@ router.post('/', validateBodySchema(signUpSchema), signUp);
 
 // Sign in user with Google, handling whether is a signup or a login
 router.post('/sync-google', validateBodySchema(syncGoogleSchema), syncGoogle);
+
+// Bans user
+router.post(
+  '/:uid/ban',
+  verifyToken,
+  verifyAdmin,
+  validateParamsSchema(banUserParamsSchema),
+  validateBodySchema(banUserBodySchema),
+  banUser,
+);
 
 /// PUT
 router.put(

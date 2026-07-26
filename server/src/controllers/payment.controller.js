@@ -439,7 +439,7 @@ export async function confirmPayment(req, res) {
         message = `Your new monetary reward for ${mission.title} has been funded. Now you can submit your part!`;
       else
         message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
         const notificationId = await createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,

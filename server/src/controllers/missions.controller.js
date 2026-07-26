@@ -12,6 +12,7 @@ import {
   getMissionsOpened as _getMissionsOpened,
   updateMission,
   adventurerUnjoined,
+  emptyMission,
 } from '../models/mission.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
 import {
@@ -354,7 +355,7 @@ export const editMission = async (req, res) => {
         const vacancy = await getVacancyById(mission.mid, vacancyId);
         if (
           vacancy.adventurer_id &&
-          VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS
+          VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT
         ) {
           const message = `${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
           const notificationId = await createNotification({
@@ -412,7 +413,7 @@ export const editMission = async (req, res) => {
         changes.length > 0 &&
         !(changes.length === 1 && changes.includes('reward')) && // If the only change is the reward, no additional notification is needed
         vacancy.adventurer_id &&
-        VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS
+        VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT
       ) {
         // First, informational notification is sended
         const message = `Your vacancy at ${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
@@ -467,7 +468,7 @@ export const editMission = async (req, res) => {
           });
         } else {
           // If not, the new notification is send
-          if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+          if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
             const message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
             const notificationId = await createNotification({
               type: NOTIFICATION_TYPE.MISSION.ID,
@@ -549,7 +550,7 @@ export const close = async (req, res) => {
       const message = `Mission ${mission.title} has been closed. Waiting for owner payment to start. You can't unjoin anymore, but owner is able to cancel it yet.`;
       // Finally, all occupied vacancies are notified
       for (const vacancy of occupied_vacancies) {
-        if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+        if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
           const notificationId = await createNotification({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -605,7 +606,7 @@ export const close = async (req, res) => {
           ? `Mission ${mission.title} has been closed after being reopened. No new adventurers have joined.`
           : `Mission ${mission.title} has been closed after being reopened. Waiting for owner payment to start new adventurers.`;
       for (const vacancy of occupied_vacancies) {
-        if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+        if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
           const notificationId = await createNotification({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -1183,7 +1184,7 @@ export const cancelMission = async (req, res) => {
 
     // Either way, all adventurers are informed
     for (const vacancy of occupied_vacancies) {
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
         const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
           ? `Mission ${mission.title} has been deleted, so it won't be done, we are sorry.`
           : `Mission ${mission.title} has been cancelled, but don't worry, your reward is on your way!.`;
@@ -1267,7 +1268,7 @@ export const reopenMission = async (req, res) => {
     // And all adventurers are informed
     const occupied_vacancies = await getOccupiedVacancies(mid);
     for (const vacancy of occupied_vacancies) {
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
         const message = `Mission ${mission.title} has been reopened, so new teammates will enter!`;
         const notificationId = await createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1370,11 +1371,17 @@ export const banMission = async (req, res) => {
 
     // Mission state changes logic, if payment has been done it has to be release to adventurers
     if (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE) {
+      // Mission participation is cleaned
       const updatedVacancies = await cleanMissionParticipation(mid);
       if (participation.length !== updatedVacancies)
         return res
           .status(409)
           .json({ error: messages.CANNOT_DELETE_VACANCIES });
+
+      // Occupied vacancies are updated
+      const emptiedMission = await emptyMission(mid);
+      if (emptiedMission < 1)
+        return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
     } else {
       for (const vacancy of participation) {
         const adventurer = await getUserById(vacancy.adventurer_id);
@@ -1411,11 +1418,11 @@ export const banMission = async (req, res) => {
 
     // Report is closed
     const reportClosed = await closeReport(rid);
-    if (reportClosed.length < 1)
+    if (!reportClosed)
       return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 
     // Then, applicant and possible adventurers are notified
-    const message = MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL
+    const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
       ? `This mission has been banned by Hermyx administration, now is retired from the public and won't be done.`
       : `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers.`;
 
@@ -1446,7 +1453,7 @@ export const banMission = async (req, res) => {
 
     // All adventurers are informed
     for (const vacancy of participation) {
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_RECEIVE_NOTIFICATIONS) {
+      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
         const notificationId = await createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
