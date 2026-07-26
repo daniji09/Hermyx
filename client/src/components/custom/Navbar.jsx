@@ -219,11 +219,13 @@ const NotificationsButton = () => {
   const unseenNotifications = notifications.filter(
     (notification) => !notification.seen,
   );
-  const previewPendingNotification = unseenNotifications.find(
-    (notification) => notification.status === 'pending',
-  );
-  const previewNotification =
-    previewPendingNotification || unseenNotifications[0];
+  const previewNotifications = [...unseenNotifications]
+    .sort((left, right) => {
+      if (left.status === 'pending' && right.status !== 'pending') return -1;
+      if (left.status !== 'pending' && right.status === 'pending') return 1;
+      return new Date(right.date) - new Date(left.date);
+    })
+    .slice(0, 5);
   const hasMissionCompletionNotification =
     latestNotification?.type === 'mission';
   const latestNotificationAlreadyPersisted = notifications.some(
@@ -260,13 +262,13 @@ const NotificationsButton = () => {
           Notifications
         </DropdownMenuLabel>
 
-        {previewNotification || hasTransientLatestNotification ? (
+        {previewNotifications.length > 0 || hasTransientLatestNotification ? (
           <>
             {latestNotification?.senderUsername &&
               hasTransientLatestNotification && (
                 <DropdownMenuItem asChild className='p-0 focus:bg-transparent'>
                   <Link
-                    to={`/notifications?notification=${latestNotification.notificationId}`}
+                    to='/notifications'
                     className='flex w-full items-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-slate-300 hover:bg-white'
                   >
                     <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white'>
@@ -287,13 +289,14 @@ const NotificationsButton = () => {
                   {latestNotification.adventurerUsername}
                 </DropdownMenuItem>
               )}
-            {previewNotification && (
+            {previewNotifications.map((notification, index) => (
               <DropdownMenuItem
+                key={notification.nid}
                 asChild
-                className={`${hasTransientLatestNotification ? 'mt-2' : ''} p-0 focus:bg-transparent`}
+                className={`${hasTransientLatestNotification || index > 0 ? 'mt-2' : ''} p-0 focus:bg-transparent`}
               >
                 <Link
-                  to={`/notifications?notification=${previewNotification.nid}`}
+                  to='/notifications'
                   className='flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition-colors hover:border-slate-300 hover:bg-white'
                 >
                   <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white'>
@@ -301,13 +304,30 @@ const NotificationsButton = () => {
                   </span>
                   <span className='flex min-w-0 flex-1 items-center'>
                     <span className='block text-sm font-medium text-slate-700'>
-                      {`Message from ${previewNotification.sender_username}`}
+                      {`Message from ${notification.sender_username}`}
                     </span>
                   </span>
                   <ChevronRight
                     className='h-4 w-4 shrink-0 text-slate-400'
                     aria-hidden='true'
                   />
+                </Link>
+              </DropdownMenuItem>
+            ))}
+            {unseenNotifications.length > previewNotifications.length && (
+              <DropdownMenuItem
+                asChild
+                className='mt-2 p-0 focus:bg-transparent'
+              >
+                <Link
+                  to='/notifications'
+                  className='block w-full rounded-xl px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50'
+                >
+                  {unseenNotifications.length - previewNotifications.length}{' '}
+                  more notification
+                  {unseenNotifications.length - previewNotifications.length > 1
+                    ? 's'
+                    : ''}
                 </Link>
               </DropdownMenuItem>
             )}

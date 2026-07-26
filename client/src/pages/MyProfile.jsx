@@ -31,10 +31,10 @@ import { Card } from '@/components/ui/card';
 import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import {
-  getUserReviewsInfiniteQueryOptions,
   getMyProfileQueryOptions,
   updateMyProfileMutationOptions,
 } from '../queries/UsersQueries';
+import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { AuthContext } from '../contexts/AuthContext';
 import { consts } from '@hermyx/shared';
 import { messages as messagesShared } from '@hermyx/shared';

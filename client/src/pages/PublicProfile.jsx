@@ -8,10 +8,10 @@ import { PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
 import {
-  getUserReviewsInfiniteQueryOptions,
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
 } from '../queries/UsersQueries';
+import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 
 export const PublicProfile = () => {
   const { username } = useParams();

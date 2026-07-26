@@ -4,6 +4,7 @@ const router = Router();
 import {
   autoAcceptParticipation,
   getMyNotifications,
+  markMyNotificationsAsSeen,
   markMyNotificationAsSeen,
   respondToNotification,
 } from '../controllers/notification.controller.js';
@@ -22,6 +23,9 @@ import {
 
 // List current user notifications
 router.get('/me', verifyToken, getMyNotifications);
+
+// Mark all current user notifications as seen
+router.post('/seen', verifyToken, markMyNotificationsAsSeen);
 
 // Respond to a notification
 router.post(

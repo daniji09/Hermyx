@@ -194,6 +194,23 @@ const optionalNumberFromFormSchema = (schema) =>
     return value;
   }, schema.optional());
 
+const decimalQueryNumberSchema = (fieldName) =>
+  z.preprocess(
+    (value) => {
+      if (value === undefined || value === null) return undefined;
+      if (typeof value === 'string') {
+        const trimmedValue = value.trim();
+        if (trimmedValue === '') return undefined;
+        return trimmedValue.replace(',', '.');
+      }
+      return value;
+    },
+    z.coerce
+      .number(messages.FIELD_NUMBER(fieldName))
+      .min(0, messages.FIELD_POSITIVE(fieldName))
+      .optional(),
+  );
+
 export const closeMissionParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Mid'))
@@ -216,49 +233,6 @@ export const reopenMissionParamSchema = z.object({
 });
 
 export const finishMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
-
-export const reviewAdventurerParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-  adventurerId: z.coerce
-    .number(messages.FIELD_NUMBER('Adventurer id'))
-    .int(messages.FIELD_INTEGER('Adventurer id'))
-    .min(0, messages.FIELD_POSITIVE('Adventurer id')),
-});
-
-export const reviewAdventurerBodySchema = z.object({
-  rating: z.coerce
-    .number(messages.FIELD_NUMBER('Rating'))
-    .min(
-      consts.MISSION.REVIEW.RATING_MIN,
-      messages.FIELD_TOO_SMALL('Rating', consts.MISSION.REVIEW.RATING_MIN),
-    )
-    .max(
-      consts.MISSION.REVIEW.RATING_MAX,
-      messages.FIELD_TOO_BIG('Rating', consts.MISSION.REVIEW.RATING_MAX),
-    ),
-  comment: z
-    .string()
-    .trim()
-    .max(
-      consts.MISSION.REVIEW.COMMENT_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Comment',
-        consts.MISSION.REVIEW.COMMENT_MAX_LENGTH,
-      ),
-    )
-    .optional()
-    .or(z.literal('')),
-});
-
-export const reviewOwnerParamSchema = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Mid'))
     .int(messages.FIELD_INTEGER('Mid'))
@@ -305,18 +279,9 @@ export const getMissionsQuerySchema = z
       )
       .min(1, messages.FIELD_REQUIRED)
       .optional(),
-    minPayment: z.coerce
-      .number(messages.FIELD_NUMBER('Min payment'))
-      .min(0, messages.FIELD_POSITIVE('Min payment'))
-      .optional(),
-    maxPayment: z.coerce
-      .number(messages.FIELD_NUMBER('Max payment'))
-      .min(0, messages.FIELD_POSITIVE('Max payment'))
-      .optional(),
-    maxDistanceKm: z.coerce
-      .number(messages.FIELD_NUMBER('Max distance'))
-      .min(0, messages.FIELD_POSITIVE('Max distance'))
-      .optional(),
+    minPayment: decimalQueryNumberSchema('Min payment'),
+    maxPayment: decimalQueryNumberSchema('Max payment'),
+    maxDistanceKm: decimalQueryNumberSchema('Max distance'),
   })
   .refine(
     (data) =>
