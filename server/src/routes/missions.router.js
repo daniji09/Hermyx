@@ -19,6 +19,7 @@ import {
   reviewAdventurer,
   reviewOwner,
   banMission,
+  kickAdventurerOut,
 } from '../controllers/missions.controller.js';
 
 import {
@@ -49,6 +50,8 @@ import {
   reviewOwnerParamSchema,
   banMissionParamsSchema,
   banMissionBodySchema,
+  kickAdventurerOutParamsSchema,
+  kickAdventurerOutBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { inviteToMission } from './../controllers/missions.controller.js';
@@ -163,6 +166,15 @@ router.post(
   validateParamsSchema(banMissionParamsSchema),
   validateBodySchema(banMissionBodySchema),
   banMission,
+);
+
+// Kicks an adventurer out
+router.post(
+  '/:mid/kick/:vacancyId',
+  verifyAdmin,
+  validateParamsSchema(kickAdventurerOutParamsSchema),
+  validateBodySchema(kickAdventurerOutBodySchema),
+  kickAdventurerOut,
 );
 
 //Edit mission

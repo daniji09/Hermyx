@@ -13,6 +13,8 @@ import {
   updateMission,
   adventurerUnjoined,
   emptyMission,
+  updateMissionPayment,
+  openMission,
 } from '../models/mission.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
 import {
@@ -30,6 +32,9 @@ import {
   getJoinedVacancies,
   getWaitingForPaymentVacancies,
   cleanMissionParticipation,
+  unjoinParticipant,
+  updatePaymentStatus,
+  refundBannedVacancy,
 } from '../models/mission_participation.model.js';
 import {
   createAdventurerReview,
@@ -43,7 +48,7 @@ import {
   updateNotification,
 } from '../models/notification.model.js';
 import { emitToUser } from '../services/socket.service.js';
-import { createTransfer } from '../services/payment.service.js';
+import { createRefund, createTransfer } from '../services/payment.service.js';
 import {
   MISSION_LIFE_CYCLE,
   VACANCY_LIFE_CYCLE,
@@ -54,8 +59,13 @@ import {
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
-import { createMissionPayment } from '../models/mission_payment.model.js';
 import {
+  createMissionPayment,
+  getMissionPaymentsByVacancy,
+  refundFromPayment,
+} from '../models/mission_payment.model.js';
+import {
+  HERMYX_FEE,
   HERMYX_TRANSACTION_ID,
   TRANSACTION_TYPE,
   VACANCY_PAYMENT_STATUS,
@@ -1480,6 +1490,179 @@ export const banMission = async (req, res) => {
       }
     }
 
+    return res.status(200).json({});
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Bans mission
+export const kickAdventurerOut = async (req, res) => {
+  const { mid, vacancyId } = req.params;
+  const { rid } = req.body;
+
+  try {
+    // Mission is searched
+    const mission = await getById(mid);
+    if (!mission)
+      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
+
+    // Adventurer participation is got
+    const vacancy = await getVacancyById(mid, vacancyId);
+    if (!vacancy)
+      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
+    if (vacancy.mid !== mid)
+      return res.status(409).json({ error: messages.VACANCY_NOT_IN_MISSION });
+
+    // Adventurer is got
+    const adventurer = await getUserById(vacancy.adventurer_id);
+    if (!adventurer)
+      return res.status(404).json({ error: messages.USER_NOT_FOUND });
+
+    // Unjoin user
+    const unjoin = await unjoinParticipant(mission.mid, vacancy.adventurer_id);
+    if (unjoin < 1)
+      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+
+    // Updates mission
+    const unjoinMission = await adventurerUnjoined(mission.mid);
+    if (unjoinMission < 1)
+      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
+
+    // If payment has been made, is refunded
+    if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) {
+      // Refunds payment to the applicant
+      await updatePaymentStatus(
+        vacancyId,
+        VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+      );
+
+      // First, payments for this mission are get
+      const payments = await getMissionPaymentsByVacancy(vacancyId);
+
+      // Amount to refund is calculated
+      let amountToRefund = vacancy.monetary_reward;
+
+      // That amount is refunded from every payment that is associated with the vacancy, if needed
+      for (const payment of payments) {
+        if (amountToRefund <= 0) break;
+
+        // Amount to refund from this payment is calculated
+        const availableBalance = payment.amount_paid - payment.amount_refunded;
+        const paymentRefund = Math.min(amountToRefund, availableBalance);
+
+        // Refund is made on Stripe
+        const refund = await createRefund(
+          {
+            payment_intent: payment.stripe_transaction_id,
+            amount: Math.round(paymentRefund * 100),
+            metadata: {
+              mission_id: mid,
+              vacancy_id: vacancyId,
+              reason: 'adventurer_kicked_out_refund',
+            },
+          },
+          `adventurer_kicked_out_refund_${mid}_${vacancyId}_${Date.now()}`,
+        );
+
+        // Payment is updated on db
+        await refundFromPayment(paymentRefund, payment.pid);
+
+        // And new transaction is added to db
+        await createMissionPayment({
+          mid: mid,
+          vacancy_id: vacancyId,
+          sender_id: HERMYX_TRANSACTION_ID,
+          receiver_id: mission.owner_id,
+          stripe_transaction_id: refund.id,
+          transaction_type:
+            TRANSACTION_TYPE.ADVENTURER_KICKED_OUT_COMPENSATION.ID,
+          amount_paid: paymentRefund,
+        });
+
+        amountToRefund -= paymentRefund;
+      }
+      // When refund is complete, is marked as that
+      await refundBannedVacancy(vacancyId, vacancy.monetary_reward);
+
+      // Updates total payment on mission
+      const occupied_vacancies = await getOccupiedVacancies(mid);
+      await updateMissionPayment(
+        mission.mid,
+        occupied_vacancies.reduce(
+          (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+          0,
+        ) * HERMYX_FEE || 0,
+      );
+    } else {
+      // If not, mission is closed, so it checks if it was the only adventurer
+      const occupied_vacancies = await getOccupiedVacancies(mid);
+      if (occupied_vacancies.length === 0) await openMission(mid);
+    }
+
+    // Report is closed
+    const reportClosed = await closeReport(rid);
+    if (!reportClosed)
+      return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
+
+    // Notifies owner of the mission
+    let messageOwner = `Adventurer ${adventurer.username} of your mission ${mission.title} has been kicked out by Hermyx administration, so this vacancy has been emptied.`;
+    if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL)
+      messageOwner += ` Their reward is being refunded to you.`;
+    const notificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,
+      status: null,
+      message: messageOwner,
+      senderId: HERMYX_TRANSACTION_ID,
+      receiverId: mission.owner_id,
+      payload: {
+        associated_mission_id: mission.mid,
+        associated_vacancy_id: vacancyId,
+      },
+    });
+    emitToUser(mission.owner_id, 'mission:adventurer-kicked-out', {
+      notificationId,
+      missionId: mission.mid,
+      vacancyId: null,
+      missionTitle: mission.title,
+      senderId: HERMYX_TRANSACTION_ID,
+      senderUsername: req.user.username,
+      receiverId: mission.owner_id,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      message: messageOwner,
+    });
+
+    // And notifies adventurer
+    const messageAdventurer = `You have been kicked out of the mission ${mission.title}, so you won't be able to receive the reward.`;
+    if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL)
+      messageOwner += `Their reward is being refunded to you.`;
+    const notificationAdventurerId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,
+      status: null,
+      message: messageAdventurer,
+      senderId: HERMYX_TRANSACTION_ID,
+      receiverId: vacancy.adventurer_id,
+      payload: {
+        associated_mission_id: mission.mid,
+        associated_vacancy_id: vacancyId,
+      },
+    });
+    emitToUser(mission.owner_id, 'mission:adventurer-kicked-out', {
+      notificationAdventurerId,
+      missionId: mission.mid,
+      vacancyId: null,
+      missionTitle: mission.title,
+      senderId: HERMYX_TRANSACTION_ID,
+      senderUsername: req.user.username,
+      receiverId: vacancy.adventurer_id,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      message: messageAdventurer,
+    });
     return res.status(200).json({});
   } catch (error) {
     console.error(error);

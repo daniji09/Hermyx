@@ -72,6 +72,10 @@ export const NOTIFICATION_ACTION = {
     ID: 'MISSION_BAN',
     LABEL: 'Mission ban',
   },
+  ADVENTURER_KICKED_OUT: {
+    ID: 'ADVENTURER_KICKED_OUT',
+    LABEL: 'Adventurer kicked out',
+  },
   USER_BAN: {
     ID: 'USER_BAN',
     LABEL: 'User ban',

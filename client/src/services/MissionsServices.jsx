@@ -199,3 +199,11 @@ export const banMission = async (mid, rid) => {
   const { data } = await api.post(`/missions/${mid}/ban`, { rid });
   return data;
 };
+
+// Kicks an adventurer out
+export const kickAdventurerOut = async (mid, vacancyId, rid) => {
+  const { data } = await api.post(`/missions/${mid}/kick/${vacancyId}`, {
+    rid,
+  });
+  return data;
+};

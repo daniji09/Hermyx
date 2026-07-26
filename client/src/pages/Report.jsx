@@ -15,7 +15,7 @@ import { timestampToDayMonthYear } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { useAlert } from '../contexts/AlertContext';
 import { messages } from '../messages/messages';
-import { banMission } from '../services/MissionsServices';
+import { banMission, kickAdventurerOut } from '../services/MissionsServices';
 import { REPORT_STATUS } from './../../../shared/utils/reports.utils';
 import { banUser } from '../services/UsersServices';
 
@@ -128,6 +128,8 @@ const ReportContent = ({ report }) => {
               <BanUserButton report={report} />
             ) : report.type === REPORT_TYPE.REPORT_MISSION.ID ? (
               <BanMissionButton report={report} />
+            ) : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
+              <KickAdventurerOutButton report={report} />
             ) : null}
           </CardFooter>
         </article>
@@ -219,6 +221,54 @@ const BanMissionButton = ({ report }) => {
       disabled={isPending}
     >
       {'Ban mission'}
+    </Button>
+  );
+};
+
+const KickAdventurerOutButton = ({ report }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () =>
+      kickAdventurerOut(
+        report.payload.associated_mission_id,
+        report.payload.associated_vacancy_id,
+        report.rid,
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getReport']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.REPORT.KICK_ADVENTURER_OUT_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.REPORT.KICK_ADVENTURER_OUT_ALERT.TITLE,
+      description: messages.REPORT.KICK_ADVENTURER_OUT_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.REPORT.KICK_ADVENTURER_OUT_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='kickAdventurerOutButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {'Kick adventurer out'}
     </Button>
   );
 };

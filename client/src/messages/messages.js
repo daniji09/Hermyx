@@ -233,5 +233,11 @@ export const messages = {
       DESCRIPTION: `This will ban the user and they will be no longer able to access this account, it will be deleted.`,
       CONFIRM_TEXT: 'Yes, ban user',
     },
+    KICK_ADVENTURER_OUT_ALERT: {
+      TITLE: 'Are you sure you want to kick the adventurer out of the mission?',
+      ERROR_TITLE: `Can't kick adventurer out`,
+      DESCRIPTION: `This will expel the adventurer from the mission and their reward will be refunded to the applicant.`,
+      CONFIRM_TEXT: 'Yes, kick adventurer out',
+    },
   },
 };

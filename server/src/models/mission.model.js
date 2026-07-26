@@ -767,3 +767,10 @@ export const emptyMission = async (mid) => {
   const result = pool.query(query, [mid]);
   return result.rowCount;
 };
+
+// Opens a mission again
+export const openMission = async (mid) => {
+  const query = `UPDATE mission SET status = $2 WHERE mid = $1 RETURNING *`;
+  const result = pool.query(query, [mid, MISSION_LIFE_CYCLE.OPENED.ID]);
+  return result.rowCount;
+};
