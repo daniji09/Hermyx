@@ -70,14 +70,6 @@ export const getPublicUserProfileMissions = async (
   return data;
 };
 
-//Get user reviews by username
-export const getUserReviews = async (username, page, limit) => {
-  const { data } = await api.get(`/users/${username}/reviews`, {
-    params: { page, limit },
-  });
-  return data;
-};
-
 // Gets logged user's profile
 export const getMyProfile = async () => {
   const { data } = await api.get('/users/me/profile');

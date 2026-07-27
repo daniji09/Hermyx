@@ -8,7 +8,6 @@ import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
 import {
-  getUserReviewsInfiniteQueryOptions,
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
 } from '../queries/UsersQueries';
@@ -28,6 +27,7 @@ import { messages } from '../messages/messages.js';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField.jsx';
 import { consts } from '@hermyx/shared';
 import { FormAlert } from '../components/custom/form/FormAlert.jsx';
+import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 
 export const PublicProfile = () => {
   const { username } = useParams();

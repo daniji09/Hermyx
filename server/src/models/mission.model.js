@@ -330,14 +330,33 @@ export const getMissionsOpened = async ({
       query += ` AND m.owner_id != $${values.length}`;
     }
   }
-  if (minPayment !== undefined) {
-    values.push(minPayment);
-    query += ` AND m.total_payment >= $${values.length}`;
-  }
+  if (minPayment !== undefined || maxPayment !== undefined) {
+    const vacancyPaymentConditions = [
+      'mp_payment.mid = m.mid',
+      'mp_payment.adventurer_id IS NULL',
+    ];
 
-  if (maxPayment !== undefined) {
-    values.push(maxPayment);
-    query += ` AND m.total_payment <= $${values.length}`;
+    if (minPayment !== undefined) {
+      values.push(minPayment);
+      vacancyPaymentConditions.push(
+        `mp_payment.monetary_reward >= $${values.length}`,
+      );
+    }
+
+    if (maxPayment !== undefined) {
+      values.push(maxPayment);
+      vacancyPaymentConditions.push(
+        `mp_payment.monetary_reward <= $${values.length}`,
+      );
+    }
+
+    query += `
+      AND EXISTS (
+        SELECT 1
+        FROM mission_participation AS mp_payment
+        WHERE ${vacancyPaymentConditions.join(' AND ')}
+      )
+    `;
   }
 
   if (shouldFilterByDistance) {

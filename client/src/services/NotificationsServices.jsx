@@ -16,3 +16,8 @@ export const markNotificationAsSeen = async (notificationId) => {
   const { data } = await api.post(`/notifications/${notificationId}/seen`);
   return data;
 };
+
+export const markAllNotificationsAsSeen = async () => {
+  const { data } = await api.post('/notifications/seen');
+  return data;
+};

@@ -52,6 +52,18 @@ export const markAsSeen = async (notificationId) => {
   return result.rows[0];
 };
 
+export const markAllAsSeenByRecipientId = async (recipientId) => {
+  const query = `
+    UPDATE notification
+    SET seen = TRUE
+    WHERE recipient_id = $1
+      AND seen = FALSE
+    RETURNING *
+  `;
+  const result = await pool.query(query, [recipientId]);
+  return result.rows;
+};
+
 export const findById = async (id) => {
   const query = 'SELECT * FROM notification WHERE nid = $1';
   const result = await pool.query(query, [id]);
@@ -138,7 +150,7 @@ export const countParticipationReviewAttempts = async (
     missionId,
     adventurerId,
     NOTIFICATION_TYPE.MISSION.ID,
-    NOTIFICATION_ACTION.PARTICIPATION_REVIEW,
+    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
   ]);
   return result.rows[0].attempts;
 };

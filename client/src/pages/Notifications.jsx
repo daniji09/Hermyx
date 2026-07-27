@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   getMyNotificationsQueryOptions,
-  markNotificationAsSeenMutationOptions,
+  markAllNotificationsAsSeenMutationOptions,
   respondToNotificationMutationOptions,
 } from '../queries/NotificationsQueries';
 import { timestampToDayMonthYear } from '../utils/date';
@@ -52,9 +52,10 @@ export const Notifications = () => {
       },
     }),
   );
-  const { mutate: markAsSeen } = useMutation(
-    markNotificationAsSeenMutationOptions({
+  const { mutate: markAllAsSeen } = useMutation(
+    markAllNotificationsAsSeenMutationOptions({
       onSuccess: async () => {
+        setLatestNotification(null);
         await queryClient.invalidateQueries({
           queryKey: ['getMyNotifications'],
         });
@@ -78,20 +79,25 @@ export const Notifications = () => {
 
     if (!notificationId) return;
 
-    const targetNotification = notifications.find(
-      (notification) => notification.nid === Number(notificationId),
-    );
-
-    if (targetNotification && !targetNotification.seen) {
-      markAsSeen(Number(notificationId));
-    }
-
     setSearchParams((currentParams) => {
       const nextParams = new URLSearchParams(currentParams);
       nextParams.delete('notification');
       return nextParams;
     });
-  }, [notifications, markAsSeen, searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const unseenIds = notifications
+      .filter((notification) => !notification.seen)
+      .map((notification) => notification.nid);
+
+    if (unseenIds.length === 0) {
+      setLatestNotification(null);
+      return;
+    }
+
+    markAllAsSeen();
+  }, [markAllAsSeen, notifications, setLatestNotification]);
 
   const actionableCount = useMemo(() => {
     return notifications.filter(

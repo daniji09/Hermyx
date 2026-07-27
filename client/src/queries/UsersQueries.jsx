@@ -3,7 +3,6 @@ import {
   getMyProfile,
   getPublicUserProfile,
   getPublicUserProfileMissions,
-  getUserReviews,
   searchUsersByUsername,
   updateMyProfile,
 } from '../services/UsersServices';
@@ -27,25 +26,6 @@ export const getPublicUserProfileMissionsInfiniteQueryOptions = (
     queryKey: ['getPublicUserProfileMissions', username, type, limit],
     queryFn: ({ pageParam }) =>
       getPublicUserProfileMissions(username, type, pageParam, limit),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      return lastPage.pagination.hasMore
-        ? lastPage.pagination.currentPage + 1
-        : undefined;
-    },
-    enabled: !!username,
-    ...options,
-  });
-};
-
-export const getUserReviewsInfiniteQueryOptions = (
-  username,
-  limit,
-  options,
-) => {
-  return infiniteQueryOptions({
-    queryKey: ['getUserReviews', username, limit],
-    queryFn: ({ pageParam }) => getUserReviews(username, pageParam, limit),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
       return lastPage.pagination.hasMore

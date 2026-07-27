@@ -16,8 +16,6 @@ import {
   reopenMission,
   close,
   finishMission,
-  reviewAdventurer,
-  reviewOwner,
   banMission,
   kickAdventurerOut,
 } from '../controllers/missions.controller.js';
@@ -45,9 +43,6 @@ import {
   inviteToMissionSchema,
   closeMissionParamSchema,
   finishMissionParamSchema,
-  reviewAdventurerParamSchema,
-  reviewAdventurerBodySchema,
-  reviewOwnerParamSchema,
   banMissionParamsSchema,
   banMissionBodySchema,
   kickAdventurerOutParamsSchema,
@@ -120,22 +115,6 @@ router.post(
   '/:mid/submit',
   validateParamsSchema(submitMissionParticipationSchema),
   submitMissionParticipation,
-);
-
-// Reviews an adventurer after a completed mission
-router.post(
-  '/:mid/adventurers/:adventurerId/review',
-  validateParamsSchema(reviewAdventurerParamSchema),
-  validateBodySchema(reviewAdventurerBodySchema),
-  reviewAdventurer,
-);
-
-// Reviews a mission owner after a completed participation
-router.post(
-  '/:mid/owner/review',
-  validateParamsSchema(reviewOwnerParamSchema),
-  validateBodySchema(reviewAdventurerBodySchema),
-  reviewOwner,
 );
 
 // Cancels a mission

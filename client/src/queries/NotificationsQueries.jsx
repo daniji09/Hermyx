@@ -1,6 +1,7 @@
 import { queryOptions } from '@tanstack/react-query';
 import {
   getMyNotifications,
+  markAllNotificationsAsSeen,
   markNotificationAsSeen,
   respondToNotification,
 } from '../services/NotificationsServices';
@@ -23,6 +24,13 @@ export const respondToNotificationMutationOptions = (options) => {
 export const markNotificationAsSeenMutationOptions = (options) => {
   return {
     mutationFn: markNotificationAsSeen,
+    ...options,
+  };
+};
+
+export const markAllNotificationsAsSeenMutationOptions = (options) => {
+  return {
+    mutationFn: markAllNotificationsAsSeen,
     ...options,
   };
 };

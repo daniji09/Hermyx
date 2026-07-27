@@ -42,9 +42,8 @@ import {
   reopenMission,
   closeMission,
   finishMission,
-  reviewAdventurer,
-  reviewOwner,
 } from '../services/MissionsServices';
+import { reviewAdventurer, reviewOwner } from '../services/ReviewsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
 import { Input } from '@/components/ui/input';
