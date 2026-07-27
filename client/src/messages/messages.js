@@ -239,5 +239,11 @@ export const messages = {
       DESCRIPTION: `This will expel the adventurer from the mission and their reward will be refunded to the applicant.`,
       CONFIRM_TEXT: 'Yes, kick adventurer out',
     },
+    ACCEPT_ADVENTURERS_WORK_ALERT: {
+      TITLE: 'Are you sure you want to accept the work of the adventurer?',
+      ERROR_TITLE: `Can't accept adventurer's work`,
+      DESCRIPTION: `This will accept the work of this vacancy, finishing it and sending the reward to the adventurer.`,
+      CONFIRM_TEXT: `Yes, accept adventurer's work`,
+    },
   },
 };

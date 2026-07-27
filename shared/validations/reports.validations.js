@@ -76,3 +76,10 @@ export const reportMissionValidation = z.object({
     )
     .default(''),
 });
+
+export const acceptAdventurersWorkValidation = z.object({
+  rid: z.coerce
+    .number(messages.FIELD_NUMBER('Rid'))
+    .int(messages.FIELD_INTEGER('Rid'))
+    .min(0, messages.FIELD_POSITIVE('Rid')),
+});

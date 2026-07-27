@@ -202,4 +202,5 @@ export const messages = {
   REPORTS_NOT_FOUND: `Reports not found.`,
   REPORT_NOT_FOUND: `Report not found.`,
   USER_ALREADY_BANNED: `User already banned.`,
+  VACANCY_NOT_DISPUTED: `This vacancy is not disputed currently.`,
 };

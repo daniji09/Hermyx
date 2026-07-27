@@ -454,7 +454,10 @@ export const syncMissionCompletionStatus = async (mid) => {
 
   let nextStatus = null;
 
-  if (summary.active_count > 0) {
+  if (
+    summary.active_count > 0 ||
+    (summary.active_count === 0 && summary.dispute_count === 0)
+  ) {
     nextStatus = MISSION_LIFE_CYCLE.IN_PROGRESS.ID;
   } else if (summary.dispute_count > 0) {
     nextStatus = MISSION_LIFE_CYCLE.IN_DISPUTE.ID;

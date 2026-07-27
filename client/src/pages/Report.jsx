@@ -18,6 +18,7 @@ import { messages } from '../messages/messages';
 import { banMission, kickAdventurerOut } from '../services/MissionsServices';
 import { REPORT_STATUS } from './../../../shared/utils/reports.utils';
 import { banUser } from '../services/UsersServices';
+import { acceptAdventurersWork } from '../services/ReportsServices';
 
 export const Report = () => {
   // Report id
@@ -130,6 +131,8 @@ const ReportContent = ({ report }) => {
               <BanMissionButton report={report} />
             ) : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
               <KickAdventurerOutButton report={report} />
+            ) : report.type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID ? (
+              <AcceptAdventurersWorkButton report={report} />
             ) : null}
           </CardFooter>
         </article>
@@ -269,6 +272,49 @@ const KickAdventurerOutButton = ({ report }) => {
       disabled={isPending}
     >
       {'Kick adventurer out'}
+    </Button>
+  );
+};
+
+const AcceptAdventurersWorkButton = ({ report }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => acceptAdventurersWork(report.rid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getReport']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.TITLE,
+      description: messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='acceptAdventurersWorkOutButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {`Accept adventurer's work`}
     </Button>
   );
 };

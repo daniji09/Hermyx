@@ -1,9 +1,18 @@
 import { messages } from '@hermyx/shared';
-import { getById } from '../models/mission.model.js';
+import {
+  getById,
+  syncMissionCompletionStatus,
+} from '../models/mission.model.js';
 import { getById as getUserById } from './../models/app_user.model.js';
-import { getVacancyById } from './../models/mission_participation.model.js';
+import {
+  approveParticipation,
+  getVacancyById,
+  markVacancyAsPaidOut,
+  releaseParticipation,
+} from './../models/mission_participation.model.js';
 import {
   checkActiveReport,
+  closeReport,
   createReport,
   getReports as getAllReports,
   getReportById,
@@ -16,7 +25,16 @@ import {
   NOTIFICATION_KIND,
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils.js';
-import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
+import {
+  MISSION_LIFE_CYCLE,
+  VACANCY_LIFE_CYCLE,
+} from '@hermyx/shared/utils/missions.utils.js';
+import { createTransfer } from '../services/payment.service.js';
+import { createMissionPayment } from '../models/mission_payment.model.js';
+import {
+  HERMYX_TRANSACTION_ID,
+  TRANSACTION_TYPE,
+} from '@hermyx/shared/utils/payment.utils.js';
 
 /// GET
 // Get report by id
@@ -259,6 +277,158 @@ export const reportMission = async (req, res) => {
         associated_mission_id: mid,
       },
     });
+
+    return res.status(200).json({});
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Accept adventurer's work
+export const acceptAdventurersWork = async (req, res) => {
+  const { rid } = req.params;
+  const userId = req.user.uid;
+
+  try {
+    // Gets report
+    const report = await getReportById(rid);
+    if (!report)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
+
+    // Gets mission
+    const mission = await getById(report.payload.associated_mission_id);
+    if (!mission)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.MISSION_NOT_FOUND] } });
+
+    // Checks it has not been already successfully reported
+    if (mission.status === MISSION_LIFE_CYCLE.REPORTED.ID)
+      return res
+        .status(409)
+        .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
+
+    // Gets vacancy
+    const vacancy = await getVacancyById(
+      report.payload.associated_mission_id,
+      report.payload.associated_vacancy_id,
+    );
+    if (!vacancy)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.VACANCY_NOT_FOUND] } });
+
+    // Checks vacancy is in mission
+    if (vacancy.mid !== report.payload.associated_mission_id)
+      return res.status(409).json({ error: messages.VACANCY_NOT_IN_MISSION });
+
+    // Checks if vacancy is disputed
+    if (vacancy.status !== VACANCY_LIFE_CYCLE.IN_DISPUTE.ID)
+      return res.status(409).json({ error: messages.VACANCY_NOT_DISPUTED });
+
+    // Work is accepted
+    await approveParticipation(
+      report.payload.associated_mission_id,
+      vacancy.adventurer_id,
+    );
+
+    // Reward is payed
+    const adventurer = await getUserById(vacancy.adventurer_id);
+    if (adventurer.stripe_connected_id) {
+      const transferData = {
+        amount: Math.round(vacancy.monetary_reward * 100),
+        currency: 'eur',
+        destination: adventurer.stripe_connected_id,
+        description: `mission_payed`,
+        transfer_group: `mission_${report.payload.associated_mission_id}`,
+      };
+
+      const idempotencyKey = `pay_${report.payload.associated_mission_id}_vac_${report.payload.associated_vacancy_id}`;
+      const transfer = await createTransfer(transferData, idempotencyKey);
+
+      // Adds mission payment
+      await createMissionPayment({
+        mid: report.payload.associated_mission_id,
+        vacancy_id: report.payload.associated_vacancy_id,
+        sender_id: HERMYX_TRANSACTION_ID,
+        receiver_id: adventurer.uid,
+        stripe_transaction_id: transfer.id,
+        transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
+        amount_paid: vacancy.monetary_reward,
+      });
+
+      await markVacancyAsPaidOut(report.payload.associated_vacancy_id);
+      await releaseParticipation(
+        report.payload.associated_mission_id,
+        vacancy.adventurer_id,
+      );
+    }
+
+    // Mission state is synced
+    await syncMissionCompletionStatus(report.payload.associated_mission_id);
+
+    // Report is closed
+    const reportClosed = await closeReport(rid);
+    if (!reportClosed)
+      return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
+
+    // Adventurer and applicant are informed
+    const approvedMessage = `Your participation in "${mission.title}" was approved by the administration after resolving the dispute. Reward is being payed to you!`;
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+      status: null,
+      message: approvedMessage,
+      senderId: HERMYX_TRANSACTION_ID,
+      receiverId: vacancy.adventurer_id,
+      payload: { associated_mission_id: report.payload.associated_mission_id },
+    });
+
+    emitToUser(
+      vacancy.adventurer_id,
+      'mission:participation-approved-dispute',
+      {
+        notificationId: followUpNotificationId,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+        missionId: report.payload.associated_mission_id,
+        missionTitle: mission.title,
+        ownerId: userId,
+        ownerUsername: adventurer.username,
+        message: approvedMessage,
+      },
+    );
+
+    const approvedApplicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was accepted by the administration after they disputed your review. Reward is being payed to the,`;
+    const followUpNotificationApplicantId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+      status: null,
+      message: approvedApplicantMessage,
+      senderId: HERMYX_TRANSACTION_ID,
+      receiverId: mission.owner_id,
+      payload: { associated_mission_id: report.payload.associated_mission_id },
+    });
+
+    emitToUser(
+      vacancy.adventurer_id,
+      'mission:participation-approved-dispute',
+      {
+        notificationId: followUpNotificationApplicantId,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+        missionId: report.payload.associated_mission_id,
+        missionTitle: mission.title,
+        ownerId: userId,
+        ownerUsername: adventurer.username,
+        message: approvedApplicantMessage,
+      },
+    );
 
     return res.status(200).json({});
   } catch (e) {

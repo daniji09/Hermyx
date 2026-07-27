@@ -45,3 +45,9 @@ export const getReports = async (options) => {
 
   return data;
 };
+
+// Accepts adventurer's work
+export const acceptAdventurersWork = async (rid) => {
+  const { data } = await api.post(`/reports/${rid}/accept`);
+  return data;
+};

@@ -404,8 +404,8 @@ const respondToParticipationRejection = async ({
       message: disputeMessage,
       type: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
       payload: {
-        missionId: missionId,
-        vacancyId: participation.id,
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
       },
     });
 

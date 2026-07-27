@@ -1,4 +1,5 @@
 import {
+  acceptAdventurersWorkValidation,
   disputeValidation,
   getReportByIdValidation,
   getReportsValidation,
@@ -7,6 +8,7 @@ import {
 } from '@hermyx/shared';
 import { Router } from 'express';
 import {
+  acceptAdventurersWork,
   disputeAdventurer,
   getReport,
   getReports,
@@ -56,6 +58,14 @@ router.post(
   '/mission',
   validateBodySchema(reportMissionValidation),
   reportMission,
+);
+
+// Accept adventurer's work
+router.post(
+  '/:rid/accept',
+  verifyAdmin,
+  validateParamsSchema(acceptAdventurersWorkValidation),
+  acceptAdventurersWork,
 );
 
 export default router;
