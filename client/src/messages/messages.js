@@ -245,5 +245,11 @@ export const messages = {
       DESCRIPTION: `This will accept the work of this vacancy, finishing it and sending the reward to the adventurer.`,
       CONFIRM_TEXT: `Yes, accept adventurer's work`,
     },
+    REJECT_ADVENTURERS_WORK_ALERT: {
+      TITLE: 'Are you sure you want to reject the work of the adventurer?',
+      ERROR_TITLE: `Can't reject adventurer's work`,
+      DESCRIPTION: `This will reject the work of this vacancy, putting it into progress again.`,
+      CONFIRM_TEXT: `Yes, reject adventurer's work`,
+    },
   },
 };

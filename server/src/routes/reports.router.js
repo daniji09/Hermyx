@@ -3,6 +3,7 @@ import {
   disputeValidation,
   getReportByIdValidation,
   getReportsValidation,
+  rejectAdventurersWorkValidation,
   reportMissionValidation,
   reportUserValidation,
 } from '@hermyx/shared';
@@ -12,6 +13,7 @@ import {
   disputeAdventurer,
   getReport,
   getReports,
+  rejectAdventurersWork,
   reportMission,
   reportUser,
 } from '../controllers/reports.controller.js';
@@ -66,6 +68,14 @@ router.post(
   verifyAdmin,
   validateParamsSchema(acceptAdventurersWorkValidation),
   acceptAdventurersWork,
+);
+
+// Reject adventurer's work
+router.post(
+  '/:rid/reject',
+  verifyAdmin,
+  validateParamsSchema(rejectAdventurersWorkValidation),
+  rejectAdventurersWork,
 );
 
 export default router;

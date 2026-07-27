@@ -24,6 +24,10 @@ export const NOTIFICATION_ACTION = {
     ID: 'PARTICIPATION_APPROVED',
     LABEL: 'Participation approved',
   },
+  PARTICIPATION_REJECTED: {
+    ID: 'PARTICIPATION_REJECTED',
+    LABEL: 'Participation rejected',
+  },
   PARTICIPATION_DISPUTED: {
     ID: 'PARTICIPATION_DISPUTED',
     LABEL: 'Participation disputed',

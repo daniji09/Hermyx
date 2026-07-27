@@ -9,6 +9,7 @@ import {
   getVacancyById,
   markVacancyAsPaidOut,
   releaseParticipation,
+  reopenParticipation,
 } from './../models/mission_participation.model.js';
 import {
   checkActiveReport,
@@ -337,6 +338,10 @@ export const acceptAdventurersWork = async (req, res) => {
 
     // Reward is payed
     const adventurer = await getUserById(vacancy.adventurer_id);
+    if (!adventurer)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.USER_NOT_FOUND] } });
     if (adventurer.stripe_connected_id) {
       const transferData = {
         amount: Math.round(vacancy.monetary_reward * 100),
@@ -403,7 +408,7 @@ export const acceptAdventurersWork = async (req, res) => {
       },
     );
 
-    const approvedApplicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was accepted by the administration after they disputed your review. Reward is being payed to the,`;
+    const approvedApplicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was accepted by the administration after they disputed your review. Reward is being payed to the adventurer.`;
     const followUpNotificationApplicantId = await createNotification({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -427,6 +432,132 @@ export const acceptAdventurersWork = async (req, res) => {
         ownerId: userId,
         ownerUsername: adventurer.username,
         message: approvedApplicantMessage,
+      },
+    );
+
+    return res.status(200).json({});
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Accept adventurer's work
+export const rejectAdventurersWork = async (req, res) => {
+  const { rid } = req.params;
+  const userId = req.user.uid;
+
+  try {
+    // Gets report
+    const report = await getReportById(rid);
+    if (!report)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
+
+    // Gets mission
+    const mission = await getById(report.payload.associated_mission_id);
+    if (!mission)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.MISSION_NOT_FOUND] } });
+
+    // Checks it has not been already successfully reported
+    if (mission.status === MISSION_LIFE_CYCLE.REPORTED.ID)
+      return res
+        .status(409)
+        .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
+
+    // Gets vacancy
+    const vacancy = await getVacancyById(
+      report.payload.associated_mission_id,
+      report.payload.associated_vacancy_id,
+    );
+    if (!vacancy)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.VACANCY_NOT_FOUND] } });
+
+    // Checks vacancy is in mission
+    if (vacancy.mid !== report.payload.associated_mission_id)
+      return res.status(409).json({ error: messages.VACANCY_NOT_IN_MISSION });
+
+    // Checks if vacancy is disputed
+    if (vacancy.status !== VACANCY_LIFE_CYCLE.IN_DISPUTE.ID)
+      return res.status(409).json({ error: messages.VACANCY_NOT_DISPUTED });
+
+    const adventurer = await getUserById(vacancy.adventurer_id);
+    if (!adventurer)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.USER_NOT_FOUND] } });
+
+    // Work is rejected
+    await reopenParticipation(
+      report.payload.associated_mission_id,
+      vacancy.adventurer_id,
+    );
+
+    // Mission state is synced
+    await syncMissionCompletionStatus(report.payload.associated_mission_id);
+
+    // Report is closed
+    const reportClosed = await closeReport(rid);
+    if (!reportClosed)
+      return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
+
+    // Adventurer and applicant are informed
+    const rejectedMessage = `Your participation in "${mission.title}" was rejected by the administration after resolving the dispute. Now this vacancy is in progress again, so be sure to accomplish your applicant's goals for your work!`;
+    const followUpNotificationId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
+      status: null,
+      message: rejectedMessage,
+      senderId: HERMYX_TRANSACTION_ID,
+      receiverId: vacancy.adventurer_id,
+      payload: { associated_mission_id: report.payload.associated_mission_id },
+    });
+
+    emitToUser(
+      vacancy.adventurer_id,
+      'mission:participation-rejected-dispute',
+      {
+        notificationId: followUpNotificationId,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
+        missionId: report.payload.associated_mission_id,
+        missionTitle: mission.title,
+        ownerId: userId,
+        ownerUsername: adventurer.username,
+        message: rejectedMessage,
+      },
+    );
+
+    const rejectedApplicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was rejected by the administration after they disputed your review. Now this vacancy is in progress again, so be sure to guide your adventurer again.`;
+    const followUpNotificationApplicantId = await createNotification({
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
+      status: null,
+      message: rejectedApplicantMessage,
+      senderId: HERMYX_TRANSACTION_ID,
+      receiverId: mission.owner_id,
+      payload: { associated_mission_id: report.payload.associated_mission_id },
+    });
+
+    emitToUser(
+      vacancy.adventurer_id,
+      'mission:participation-rejected-dispute',
+      {
+        notificationId: followUpNotificationApplicantId,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
+        missionId: report.payload.associated_mission_id,
+        missionTitle: mission.title,
+        ownerId: userId,
+        ownerUsername: adventurer.username,
+        message: rejectedApplicantMessage,
       },
     );
 

@@ -51,3 +51,9 @@ export const acceptAdventurersWork = async (rid) => {
   const { data } = await api.post(`/reports/${rid}/accept`);
   return data;
 };
+
+// Rejects adventurer's work
+export const rejectAdventurersWork = async (rid) => {
+  const { data } = await api.post(`/reports/${rid}/reject`);
+  return data;
+};
