@@ -35,7 +35,7 @@ app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
 app.use('/api/notifications', notificationRouter);
-app.use('/api/reviews', reviewsRouter);
+app.use('/api/reviews', verifyToken, reviewsRouter);
 app.use('/api/reports', verifyToken, reportsRouter);
 
 export default app;

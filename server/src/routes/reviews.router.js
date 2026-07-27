@@ -4,7 +4,6 @@ import {
   reviewAdventurer,
   reviewOwner,
 } from '../controllers/reviews.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import {
   validateBodySchema,
@@ -33,7 +32,6 @@ router.get(
 // Reviews an adventurer after a completed mission
 router.post(
   '/missions/:mid/adventurers/:adventurerId',
-  verifyToken,
   validateParamsSchema(reviewAdventurerParamSchema),
   validateBodySchema(reviewAdventurerBodySchema),
   reviewAdventurer,
@@ -42,7 +40,6 @@ router.post(
 // Reviews a mission owner after a completed participation
 router.post(
   '/missions/:mid/owner',
-  verifyToken,
   validateParamsSchema(reviewOwnerParamSchema),
   validateBodySchema(reviewAdventurerBodySchema),
   reviewOwner,
