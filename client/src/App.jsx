@@ -16,6 +16,8 @@ import { Notifications } from './pages/Notifications';
 import { SearchUsers } from './pages/SearchUsers';
 import { EditMission } from './pages/EditMission';
 import { StripeSuccess } from './pages/StripeConnectSuccess';
+import { Conversation } from './pages/Conversation';
+import { Conversations } from './pages/Conversations';
 
 function App() {
   return (
@@ -137,6 +139,22 @@ function App() {
           element={
             <ProtectedRoute>
               <StripeSuccess />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/conversations/:conversationId'
+          element={
+            <ProtectedRoute>
+              <Conversation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path='/conversations'
+          element={
+            <ProtectedRoute>
+              <Conversations />
             </ProtectedRoute>
           }
         />

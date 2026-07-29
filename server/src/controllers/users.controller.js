@@ -166,6 +166,7 @@ export const getUserPublicProfile = async (req, res) => {
     }
 
     const publicProfile = {
+      uid: user.uid,
       username: user.username,
       name: user.name,
       surnames: user.surnames,

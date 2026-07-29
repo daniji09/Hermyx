@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { corsOptions } from '../app.js';
 import { getByFirebaseUid } from '../models/app_user.model.js';
 import { verifyIdToken } from './auth.service.js';
+import { isConversationParticipant } from '../models/conversation.model.js';
 
 let io;
 
@@ -49,6 +50,25 @@ export const initializeSocketServer = (httpServer) => {
     socket.on('disconnect', () => {
       socket.leave(`user:${socket.user.uid}`);
     });
+
+    socket.on('conversation:join', async (conversationId) => {
+      try {
+        const isParticipant = await isConversationParticipant(
+          conversationId,
+          socket.user.uid,
+        );
+
+        if (!isParticipant) return;
+
+        socket.join(`conversation:${conversationId}`);
+      } catch (error) {
+        console.error('Error joining conversation:', error);
+      }
+    });
+
+    socket.on('conversation:leave', (conversationId) => {
+      socket.leave(`conversation:${conversationId}`);
+    });
   });
 
   return io;
@@ -60,4 +80,10 @@ export const emitToUser = (userId, eventName, payload) => {
   if (!io) return;
 
   io.to(`user:${userId}`).emit(eventName, payload);
+};
+
+export const emitToConversation = (conversationId, eventName, payload) => {
+  if (!io) return;
+
+  io.to(`conversation:${conversationId}`).emit(eventName, payload);
 };
