@@ -19,6 +19,7 @@ import {
   getReportById,
 } from '../models/report.model.js';
 import {
+  REPORT_DECISION,
   REPORT_STATUS,
   REPORT_TYPE,
 } from '@hermyx/shared/utils/reports.utils.js';
@@ -292,6 +293,7 @@ export const reportMission = async (req, res) => {
 // Accept adventurer's work
 export const acceptAdventurersWork = async (req, res) => {
   const { rid } = req.params;
+  const { reason } = req.body;
   const userId = req.user.uid;
 
   try {
@@ -389,7 +391,12 @@ export const acceptAdventurersWork = async (req, res) => {
     await syncMissionCompletionStatus(report.payload.associated_mission_id);
 
     // Report is closed
-    const reportClosed = await closeReport(rid);
+    const reportClosed = await closeReport(
+      rid,
+      REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID,
+      reason,
+      req.user.uid,
+    );
     if (!reportClosed)
       return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 
@@ -458,6 +465,7 @@ export const acceptAdventurersWork = async (req, res) => {
 // Accept adventurer's work
 export const rejectAdventurersWork = async (req, res) => {
   const { rid } = req.params;
+  const { reason } = req.body;
   const userId = req.user.uid;
 
   try {
@@ -526,7 +534,12 @@ export const rejectAdventurersWork = async (req, res) => {
     await syncMissionCompletionStatus(report.payload.associated_mission_id);
 
     // Report is closed
-    const reportClosed = await closeReport(rid);
+    const reportClosed = await closeReport(
+      rid,
+      REPORT_DECISION.REJECT_ADVENTURERS_WORK.ID,
+      reason,
+      req.user.uid,
+    );
     if (!reportClosed)
       return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 
@@ -595,7 +608,7 @@ export const rejectAdventurersWork = async (req, res) => {
 // Dismisses report
 export const dismiss = async (req, res) => {
   const { rid } = req.params;
-
+  const { reason } = req.body;
   try {
     // Gets report
     const report = await getReportById(rid);
@@ -615,7 +628,12 @@ export const dismiss = async (req, res) => {
         .json({ errors: messages.INCORRECT_ANSWER_FOR_REPORT });
 
     // Report is closed
-    const reportClosed = await closeReport(rid);
+    const reportClosed = await closeReport(
+      rid,
+      REPORT_DECISION.DISMISS.ID,
+      reason,
+      req.user.uid,
+    );
     if (!reportClosed)
       return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 

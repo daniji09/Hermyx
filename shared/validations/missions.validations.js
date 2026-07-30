@@ -391,6 +391,15 @@ export const banMissionBodySchema = z.object({
     .number(messages.FIELD_NUMBER('Rid'))
     .int(messages.FIELD_INTEGER('Rid'))
     .min(0, messages.FIELD_POSITIVE('Rid')),
+  reason: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.REASON_MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+    )
+    .default(''),
 });
 
 export const kickAdventurerOutParamsSchema = z.object({

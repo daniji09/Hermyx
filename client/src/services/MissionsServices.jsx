@@ -195,15 +195,16 @@ export const reviewOwner = async (mid, review) => {
 };
 
 // Bans a mission
-export const banMission = async (mid, rid) => {
-  const { data } = await api.post(`/missions/${mid}/ban`, { rid });
+export const banMission = async (mid, rid, reason) => {
+  const { data } = await api.post(`/missions/${mid}/ban`, { rid, reason });
   return data;
 };
 
 // Kicks an adventurer out
-export const kickAdventurerOut = async (mid, vacancyId, rid) => {
+export const kickAdventurerOut = async (mid, vacancyId, rid, reason) => {
   const { data } = await api.post(`/missions/${mid}/kick/${vacancyId}`, {
     rid,
+    reason,
   });
   return data;
 };

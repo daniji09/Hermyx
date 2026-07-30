@@ -192,8 +192,18 @@ CREATE TABLE REPORT (
 		'REVIEW_DISPUTE',
 		'REJECTED_REVIEW_DISPUTE'
 	)),
+	decision VARCHAR(255) CHECK (decision IN(
+		'BAN_USER', 
+		'BAN_MISSION', 
+		'KICK_ADVENTURER_OUT', 
+		'ACCEPT_ADVENTURERS_WORK', 
+		'REJECT_ADVENTURERS_WORK',
+		'DISMISS')),
+	decision_reason VARCHAR(1000),
+	resolved_by INT,
 	payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid)
+	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid),
+	FOREIGN KEY (resolved_by) REFERENCES APP_USER(uid)
 );
 
 INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames, status)

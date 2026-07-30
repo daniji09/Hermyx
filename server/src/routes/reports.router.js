@@ -1,10 +1,13 @@
 import {
-  acceptAdventurersWorkValidation,
-  dismissValidation,
+  acceptAdventurersWorkBodyValidation,
+  acceptAdventurersWorkParamsValidation,
+  dismissBodyValidation,
+  dismissParamValidation,
   disputeValidation,
   getReportByIdValidation,
   getReportsValidation,
-  rejectAdventurersWorkValidation,
+  rejectAdventurersWorkBodyValidation,
+  rejectAdventurersWorkParamValidation,
   reportMissionValidation,
   reportUserValidation,
 } from '@hermyx/shared';
@@ -68,7 +71,8 @@ router.post(
 router.post(
   '/:rid/accept',
   verifyAdmin,
-  validateParamsSchema(acceptAdventurersWorkValidation),
+  validateParamsSchema(acceptAdventurersWorkParamsValidation),
+  validateBodySchema(acceptAdventurersWorkBodyValidation),
   acceptAdventurersWork,
 );
 
@@ -76,7 +80,8 @@ router.post(
 router.post(
   '/:rid/reject',
   verifyAdmin,
-  validateParamsSchema(rejectAdventurersWorkValidation),
+  validateParamsSchema(rejectAdventurersWorkParamValidation),
+  validateBodySchema(rejectAdventurersWorkBodyValidation),
   rejectAdventurersWork,
 );
 
@@ -84,7 +89,8 @@ router.post(
 router.post(
   '/:rid/dismiss',
   verifyAdmin,
-  validateParamsSchema(dismissValidation),
+  validateParamsSchema(dismissParamValidation),
+  validateBodySchema(dismissBodyValidation),
   dismiss,
 );
 

@@ -1,4 +1,5 @@
 import {
+  answerReportValidation,
   disputeValidation,
   messages,
   reportMissionValidation,
@@ -143,4 +144,24 @@ export const reportMissionAction = async (previousState, formData) => {
       data: fieldsData,
     };
   }
+};
+
+// Anser report action
+export const answerReportAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedFields = answerReportValidation.safeParse(fieldsData);
+
+  if (!validatedFields.success) {
+    return {
+      success: false,
+      errors: validatedFields.error.flatten().fieldErrors,
+      data: fieldsData,
+    };
+  }
+
+  // Success
+  return { success: true, data: validatedFields, errors: {} };
 };

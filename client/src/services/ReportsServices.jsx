@@ -47,19 +47,19 @@ export const getReports = async (options) => {
 };
 
 // Accepts adventurer's work
-export const acceptAdventurersWork = async (rid) => {
-  const { data } = await api.post(`/reports/${rid}/accept`);
+export const acceptAdventurersWork = async (rid, reason) => {
+  const { data } = await api.post(`/reports/${rid}/accept`, { reason });
   return data;
 };
 
 // Rejects adventurer's work
-export const rejectAdventurersWork = async (rid) => {
-  const { data } = await api.post(`/reports/${rid}/reject`);
+export const rejectAdventurersWork = async (rid, reason) => {
+  const { data } = await api.post(`/reports/${rid}/reject`, { reason });
   return data;
 };
 
 // Dismiss report
-export const dismiss = async (rid) => {
-  const { data } = await api.post(`/reports/${rid}/dismiss`);
+export const dismiss = async (rid, reason) => {
+  const { data } = await api.post(`/reports/${rid}/dismiss`, { reason });
   return data;
 };

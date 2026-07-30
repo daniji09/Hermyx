@@ -126,7 +126,7 @@ export const userConfiguration = async (configuration) => {
 };
 
 // Bans a user
-export const banUser = async (uid, rid) => {
-  const { data } = await api.post(`/users/${uid}/ban`, { rid });
+export const banUser = async (uid, rid, reason) => {
+  const { data } = await api.post(`/users/${uid}/ban`, { rid, reason });
   return data;
 };

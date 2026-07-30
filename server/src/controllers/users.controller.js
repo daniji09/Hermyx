@@ -75,7 +75,10 @@ import {
   refundFromPayment,
 } from '../models/mission_payment.model.js';
 import { USER_STATUS } from '@hermyx/shared/utils/users.utils.js';
-import { REPORT_STATUS } from '@hermyx/shared/utils/reports.utils.js';
+import {
+  REPORT_DECISION,
+  REPORT_STATUS,
+} from '@hermyx/shared/utils/reports.utils.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -753,7 +756,7 @@ function generateUniqueUsername(username) {
 // Bans user
 export const banUser = async (req, res) => {
   const { uid } = req.params;
-  const { rid } = req.body;
+  const { rid, reason } = req.body;
 
   try {
     // Gets user
@@ -1056,7 +1059,12 @@ export const banUser = async (req, res) => {
       }
 
       // Report is closed
-      const reportClosed = await closeReport(rid);
+      const reportClosed = await closeReport(
+        rid,
+        REPORT_DECISION.BAN_USER.ID,
+        reason,
+        req.user.uid,
+      );
       if (!reportClosed)
         return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 

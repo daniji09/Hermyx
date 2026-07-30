@@ -141,5 +141,6 @@ export const consts = {
   },
   REPORT: {
     MESSAGE: { MAX: 1000 },
+    REASON_MESSAGE: { MAX: 1000 },
   },
 };

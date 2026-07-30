@@ -230,7 +230,7 @@ export const messages = {
     BAN_USER_ALERT: {
       TITLE: 'Are you sure you want to ban this user?',
       ERROR_TITLE: `Can't ban user`,
-      DESCRIPTION: `This will ban the user and they will be no longer able to access this account, it will be deleted.`,
+      DESCRIPTION: `This will ban the user and they will be no longer able to access this account.`,
       CONFIRM_TEXT: 'Yes, ban user',
     },
     KICK_ADVENTURER_OUT_ALERT: {
@@ -254,7 +254,7 @@ export const messages = {
     DISMISS_ALERT: {
       TITLE: 'Are you sure you want to dismiss the report?',
       ERROR_TITLE: `Can't dismiss report`,
-      DESCRIPTION: `This dismiss this report, without taking any actions.`,
+      DESCRIPTION: `This will dismiss this report, without taking any actions.`,
       CONFIRM_TEXT: `Yes, dismiss report`,
     },
   },

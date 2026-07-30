@@ -1698,7 +1698,7 @@ const ReportMissionButton = ({ mission }) => {
           {'Report mission'}
         </Button>
       </DialogTrigger>
-      <DialogContent className='sm:max-w-sm'>
+      <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>
             {messages.PUBLIC_PROFILE.REPORT_USER_DIALOG.TITLE}

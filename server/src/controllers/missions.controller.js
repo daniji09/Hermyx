@@ -67,7 +67,10 @@ import {
   VACANCY_PAYMENT_STATUS,
 } from '@hermyx/shared/utils/payment.utils.js';
 import { closeReport, getReportById } from '../models/report.model.js';
-import { REPORT_STATUS } from '@hermyx/shared/utils/reports.utils.js';
+import {
+  REPORT_DECISION,
+  REPORT_STATUS,
+} from '@hermyx/shared/utils/reports.utils.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -1276,7 +1279,7 @@ export const finishMission = async (req, res) => {
 // Bans mission
 export const banMission = async (req, res) => {
   const { mid } = req.params;
-  const { rid } = req.body;
+  const { rid, reason } = req.body;
 
   try {
     // Gets report
@@ -1346,7 +1349,12 @@ export const banMission = async (req, res) => {
     await updateMissionStatus(mid, MISSION_LIFE_CYCLE.REPORTED.ID);
 
     // Report is closed
-    const reportClosed = await closeReport(rid);
+    const reportClosed = await closeReport(
+      rid,
+      REPORT_DECISION.BAN_MISSION.ID,
+      reason,
+      req.user.uid,
+    );
     if (!reportClosed)
       return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 
@@ -1419,7 +1427,7 @@ export const banMission = async (req, res) => {
 // Bans mission
 export const kickAdventurerOut = async (req, res) => {
   const { mid, vacancyId } = req.params;
-  const { rid } = req.body;
+  const { rid, reason } = req.body;
 
   try {
     // Mission is searched
@@ -1521,7 +1529,12 @@ export const kickAdventurerOut = async (req, res) => {
     }
 
     // Report is closed
-    const reportClosed = await closeReport(rid);
+    const reportClosed = await closeReport(
+      rid,
+      REPORT_DECISION.KICK_ADVENTURER_OUT.ID,
+      reason,
+      req.user.uid,
+    );
     if (!reportClosed)
       return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 

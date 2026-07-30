@@ -35,3 +35,30 @@ export const REPORT_TYPE = {
     CAN_BE_DISMISSED: false,
   },
 };
+
+export const REPORT_DECISION = {
+  BAN_USER: {
+    ID: 'BAN_USER',
+    LABEL: 'Ban user',
+  },
+  BAN_MISSION: {
+    ID: 'BAN_MISSION',
+    LABEL: 'Ban mission',
+  },
+  KICK_ADVENTURER_OUT: {
+    ID: 'KICK_ADVENTURER_OUT',
+    LABEL: 'Kick adventurer out',
+  },
+  ACCEPT_ADVENTURERS_WORK: {
+    ID: 'ACCEPT_ADVENTURERS_WORK',
+    LABEL: `Accept adventurer's work`,
+  },
+  REJECT_ADVENTURERS_WORK: {
+    ID: 'REJECT_ADVENTURERS_WORK',
+    LABEL: `Reject adventurer's work`,
+  },
+  DISMISS: {
+    ID: 'DISMISS',
+    LABEL: 'Dismiss',
+  },
+};

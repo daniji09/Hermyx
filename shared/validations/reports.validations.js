@@ -77,23 +77,71 @@ export const reportMissionValidation = z.object({
     .default(''),
 });
 
-export const acceptAdventurersWorkValidation = z.object({
+export const acceptAdventurersWorkParamsValidation = z.object({
   rid: z.coerce
     .number(messages.FIELD_NUMBER('Rid'))
     .int(messages.FIELD_INTEGER('Rid'))
     .min(0, messages.FIELD_POSITIVE('Rid')),
 });
 
-export const rejectAdventurersWorkValidation = z.object({
+export const acceptAdventurersWorkBodyValidation = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.REASON_MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+    )
+    .default(''),
+});
+
+export const rejectAdventurersWorkParamValidation = z.object({
   rid: z.coerce
     .number(messages.FIELD_NUMBER('Rid'))
     .int(messages.FIELD_INTEGER('Rid'))
     .min(0, messages.FIELD_POSITIVE('Rid')),
 });
 
-export const dismissValidation = z.object({
+export const rejectAdventurersWorkBodyValidation = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.REASON_MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+    )
+    .default(''),
+});
+
+export const dismissParamValidation = z.object({
   rid: z.coerce
     .number(messages.FIELD_NUMBER('Rid'))
     .int(messages.FIELD_INTEGER('Rid'))
     .min(0, messages.FIELD_POSITIVE('Rid')),
+});
+
+export const dismissBodyValidation = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.REASON_MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+    )
+    .default(''),
+});
+
+export const answerReportValidation = z.object({
+  reason: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.REASON_MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+    )
+    .default(''),
 });
