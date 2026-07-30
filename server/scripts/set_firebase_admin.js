@@ -22,7 +22,7 @@ async function grantAdminRole() {
 
     // Checks that the user actually exists on Firebase
     const userRecord = await admin.auth().getUser(targetUid);
-    console.log(`Usuario found: ${userRecord.email}`);
+    console.log(`User found: ${userRecord.email}`);
 
     // Injects Custom Claim
     await admin.auth().setCustomUserClaims(targetUid, { admin: true });

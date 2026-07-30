@@ -166,7 +166,7 @@ export const VACANCY_LIFE_CYCLE = {
     LABEL: 'In dispute',
     CAN_EDIT: false,
     CAN_INTERACT: true,
-    VALID_NEXT_STATES: ['IN_PROGRESS', 'ACCEPTED'],
+    VALID_NEXT_STATES: ['IN_PROGRESS', 'ACCEPTED', 'REOPENED'],
   },
   RELEASED: {
     ID: 'RELEASED',

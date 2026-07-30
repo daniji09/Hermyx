@@ -90,3 +90,10 @@ export const rejectAdventurersWorkValidation = z.object({
     .int(messages.FIELD_INTEGER('Rid'))
     .min(0, messages.FIELD_POSITIVE('Rid')),
 });
+
+export const dismissValidation = z.object({
+  rid: z.coerce
+    .number(messages.FIELD_NUMBER('Rid'))
+    .int(messages.FIELD_INTEGER('Rid'))
+    .min(0, messages.FIELD_POSITIVE('Rid')),
+});

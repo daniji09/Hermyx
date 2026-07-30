@@ -18,7 +18,10 @@ import {
   getReports as getAllReports,
   getReportById,
 } from '../models/report.model.js';
-import { REPORT_TYPE } from '@hermyx/shared/utils/reports.utils.js';
+import {
+  REPORT_STATUS,
+  REPORT_TYPE,
+} from '@hermyx/shared/utils/reports.utils.js';
 import { createNotification } from '../models/notification.model.js';
 import { emitToUser } from './../services/socket.service.js';
 import {
@@ -299,6 +302,16 @@ export const acceptAdventurersWork = async (req, res) => {
         .status(404)
         .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
 
+    // Checks if report has not been answered yet
+    if (report.status === REPORT_STATUS.ANSWERED.ID)
+      return res.status(409).json({ errors: messages.REPORT_ALREADY_ANSWERED });
+
+    // Check if reports type is correct for this action
+    if (!REPORT_TYPE[report.type].CAN_BE_REJECTED_ACCEPTED)
+      return res
+        .status(409)
+        .json({ errors: messages.INCORRECT_ANSWER_FOR_REPORT });
+
     // Gets mission
     const mission = await getById(report.payload.associated_mission_id);
     if (!mission)
@@ -455,6 +468,16 @@ export const rejectAdventurersWork = async (req, res) => {
         .status(404)
         .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
 
+    // Checks if report has not been answered yet
+    if (report.status === REPORT_STATUS.ANSWERED.ID)
+      return res.status(409).json({ errors: messages.REPORT_ALREADY_ANSWERED });
+
+    // Check if reports type is correct for this action
+    if (!REPORT_TYPE[report.type].CAN_BE_REJECTED_ACCEPTED)
+      return res
+        .status(409)
+        .json({ errors: messages.INCORRECT_ANSWER_FOR_REPORT });
+
     // Gets mission
     const mission = await getById(report.payload.associated_mission_id);
     if (!mission)
@@ -486,6 +509,7 @@ export const rejectAdventurersWork = async (req, res) => {
     if (vacancy.status !== VACANCY_LIFE_CYCLE.IN_DISPUTE.ID)
       return res.status(409).json({ error: messages.VACANCY_NOT_DISPUTED });
 
+    // Gets adventurer
     const adventurer = await getUserById(vacancy.adventurer_id);
     if (!adventurer)
       return res
@@ -560,6 +584,92 @@ export const rejectAdventurersWork = async (req, res) => {
         message: rejectedApplicantMessage,
       },
     );
+
+    return res.status(200).json({});
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+  }
+};
+
+// Dismisses report
+export const dismiss = async (req, res) => {
+  const { rid } = req.params;
+
+  try {
+    // Gets report
+    const report = await getReportById(rid);
+    if (!report)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
+
+    // Checks if report has not been answered yet
+    if (report.status === REPORT_STATUS.ANSWERED.ID)
+      return res.status(409).json({ errors: messages.REPORT_ALREADY_ANSWERED });
+
+    // Check if reports type is correct for this action
+    if (!REPORT_TYPE[report.type].CAN_BE_DISMISSED)
+      return res
+        .status(409)
+        .json({ errors: messages.INCORRECT_ANSWER_FOR_REPORT });
+
+    // Report is closed
+    const reportClosed = await closeReport(rid);
+    if (!reportClosed)
+      return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
+
+    // If the report was an adventurer kick out one, applicant must be informed about the decision
+    if (report.type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
+      // Gets mission
+      const mission = await getById(report.payload.associated_mission_id);
+      if (!mission)
+        return res
+          .status(404)
+          .json({ errors: { general: [messages.MISSION_NOT_FOUND] } });
+
+      // Gets vacancy
+      const vacancy = await getVacancyById(
+        report.payload.associated_mission_id,
+        report.payload.associated_vacancy_id,
+      );
+      if (!vacancy)
+        return res
+          .status(404)
+          .json({ errors: { general: [messages.VACANCY_NOT_FOUND] } });
+
+      // Gets adventurer
+      const adventurer = await getUserById(vacancy.adventurer_id);
+      if (!adventurer)
+        return res
+          .status(404)
+          .json({ errors: { general: [messages.USER_NOT_FOUND] } });
+
+      // Applicant is informed
+      const message = `Your report on adventurer ${adventurer.username} from mission ${mission.title} has been dismissed, so it won't be kicked out.`;
+      const followUpNotificationId = await createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.REPORT_DISMISSED.ID,
+        status: null,
+        message: message,
+        senderId: HERMYX_TRANSACTION_ID,
+        receiverId: report.sender_id,
+        payload: {
+          associated_mission_id: report.payload.associated_mission_id,
+        },
+      });
+
+      emitToUser(report.sender_id, 'dispute:dismissed', {
+        notificationId: followUpNotificationId,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        action: NOTIFICATION_ACTION.REPORT_DISMISSED.ID,
+        missionId: report.payload.associated_mission_id,
+        missionTitle: mission.title,
+        ownerId: report.sender_id,
+        message: message,
+      });
+    }
 
     return res.status(200).json({});
   } catch (e) {

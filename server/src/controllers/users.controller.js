@@ -68,13 +68,14 @@ import {
   VACANCY_PAYMENT_STATUS,
 } from '@hermyx/shared/utils/payment.utils.js';
 import { emitToUser } from '../services/socket.service.js';
-import { closeReport } from '../models/report.model.js';
+import { closeReport, getReportById } from '../models/report.model.js';
 import {
   createMissionPayment,
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission_payment.model.js';
 import { USER_STATUS } from '@hermyx/shared/utils/users.utils.js';
+import { REPORT_STATUS } from '@hermyx/shared/utils/reports.utils.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -762,6 +763,19 @@ export const banUser = async (req, res) => {
       // First of all, checks if user has already been banned
       if (user.status === USER_STATUS.BANNED.ID)
         return res.status(409).json({ error: messages.USER_ALREADY_BANNED });
+
+      // Gets report
+      const report = await getReportById(rid);
+      if (!report)
+        return res
+          .status(404)
+          .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
+
+      // Checks if report has not been answered yet
+      if (report.status === REPORT_STATUS.ANSWERED.ID)
+        return res
+          .status(409)
+          .json({ errors: messages.REPORT_ALREADY_ANSWERED });
 
       // Checks if user has active missions, created or joined
       const activeMissions = await getUserActiveMissions(user.uid);

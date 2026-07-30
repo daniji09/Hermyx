@@ -1,5 +1,6 @@
 import {
   acceptAdventurersWorkValidation,
+  dismissValidation,
   disputeValidation,
   getReportByIdValidation,
   getReportsValidation,
@@ -10,6 +11,7 @@ import {
 import { Router } from 'express';
 import {
   acceptAdventurersWork,
+  dismiss,
   disputeAdventurer,
   getReport,
   getReports,
@@ -76,6 +78,14 @@ router.post(
   verifyAdmin,
   validateParamsSchema(rejectAdventurersWorkValidation),
   rejectAdventurersWork,
+);
+
+// Dismiss report
+router.post(
+  '/:rid/dismiss',
+  verifyAdmin,
+  validateParamsSchema(dismissValidation),
+  dismiss,
 );
 
 export default router;

@@ -66,7 +66,8 @@ import {
   TRANSACTION_TYPE,
   VACANCY_PAYMENT_STATUS,
 } from '@hermyx/shared/utils/payment.utils.js';
-import { closeReport } from '../models/report.model.js';
+import { closeReport, getReportById } from '../models/report.model.js';
+import { REPORT_STATUS } from '@hermyx/shared/utils/reports.utils.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -1278,6 +1279,17 @@ export const banMission = async (req, res) => {
   const { rid } = req.body;
 
   try {
+    // Gets report
+    const report = await getReportById(rid);
+    if (!report)
+      return res
+        .status(404)
+        .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
+
+    // Checks if report has not been answered yet
+    if (report.status === REPORT_STATUS.ANSWERED.ID)
+      return res.status(409).json({ errors: messages.REPORT_ALREADY_ANSWERED });
+
     // Mission is searched
     const mission = await getById(mid);
     if (!mission)

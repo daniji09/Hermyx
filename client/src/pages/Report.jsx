@@ -20,6 +20,7 @@ import { REPORT_STATUS } from './../../../shared/utils/reports.utils';
 import { banUser } from '../services/UsersServices';
 import {
   acceptAdventurersWork,
+  dismiss,
   rejectAdventurersWork,
 } from '../services/ReportsServices';
 
@@ -129,11 +130,20 @@ const ReportContent = ({ report }) => {
             {report.status === REPORT_STATUS.ANSWERED.ID ? (
               'Report answered'
             ) : report.type === REPORT_TYPE.REPORT_PROFILE.ID ? (
-              <BanUserButton report={report} />
+              <>
+                <BanUserButton report={report} />
+                <DismissButton report={report} />
+              </>
             ) : report.type === REPORT_TYPE.REPORT_MISSION.ID ? (
-              <BanMissionButton report={report} />
+              <>
+                <BanMissionButton report={report} />
+                <DismissButton report={report} />
+              </>
             ) : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
-              <KickAdventurerOutButton report={report} />
+              <>
+                <KickAdventurerOutButton report={report} />
+                <DismissButton report={report} />
+              </>
             ) : (
               <>
                 <AcceptAdventurersWorkButton report={report} />
@@ -367,6 +377,49 @@ const RejectAdventurersWorkButton = ({ report }) => {
       disabled={isPending}
     >
       {`Reject adventurer's work`}
+    </Button>
+  );
+};
+
+const DismissButton = ({ report }) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => dismiss(report.rid),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getReport']);
+    },
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.REPORT.DISMISS_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.REPORT.DISMISS_ALERT.TITLE,
+      description: messages.REPORT.DISMISS_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.REPORT.DISMISS_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='dismissButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+    >
+      {`Dismiss`}
     </Button>
   );
 };

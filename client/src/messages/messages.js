@@ -251,5 +251,11 @@ export const messages = {
       DESCRIPTION: `This will reject the work of this vacancy, putting it into progress again.`,
       CONFIRM_TEXT: `Yes, reject adventurer's work`,
     },
+    DISMISS_ALERT: {
+      TITLE: 'Are you sure you want to dismiss the report?',
+      ERROR_TITLE: `Can't dismiss report`,
+      DESCRIPTION: `This dismiss this report, without taking any actions.`,
+      CONFIRM_TEXT: `Yes, dismiss report`,
+    },
   },
 };

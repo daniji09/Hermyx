@@ -203,4 +203,6 @@ export const messages = {
   REPORT_NOT_FOUND: `Report not found.`,
   USER_ALREADY_BANNED: `User already banned.`,
   VACANCY_NOT_DISPUTED: `This vacancy is not disputed currently.`,
+  INCORRECT_ANSWER_FOR_REPORT: `This type of report can't be answered like this.`,
+  REPORT_ALREADY_ANSWERED: `Can't answer a report that has been already answered.`,
 };

@@ -168,7 +168,7 @@ const respondToParticipationReview = async ({
     );
     await markAsSeen(notificationId);
 
-    // Searches for active report by the same adventurer to the same applicant
+    // Searches for active report by the same applicant to the same adventurer
     const activeReport = await checkActiveReport({
       senderId: userId,
       type: REPORT_TYPE.REVIEW_DISPUTE.ID,
@@ -189,8 +189,8 @@ const respondToParticipationReview = async ({
       message: disputeMessage,
       type: REPORT_TYPE.REVIEW_DISPUTE.ID,
       payload: {
-        missionId: missionId,
-        vacancyId: participation.id,
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
       },
     });
 
@@ -399,8 +399,8 @@ const respondToParticipationRejection = async ({
       senderId: userId,
       type: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
       payload: {
-        missionId: missionId,
-        vacancyId: participation.id,
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
       },
     });
     if (activeReport > 0)

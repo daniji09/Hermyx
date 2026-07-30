@@ -57,3 +57,9 @@ export const rejectAdventurersWork = async (rid) => {
   const { data } = await api.post(`/reports/${rid}/reject`);
   return data;
 };
+
+// Dismiss report
+export const dismiss = async (rid) => {
+  const { data } = await api.post(`/reports/${rid}/dismiss`);
+  return data;
+};

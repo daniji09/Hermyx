@@ -84,6 +84,10 @@ export const NOTIFICATION_ACTION = {
     ID: 'USER_BAN',
     LABEL: 'User ban',
   },
+  REPORT_DISMISSED: {
+    ID: 'REPORT_DISMISSED',
+    LABEL: 'Report dismissed',
+  },
 };
 
 export const NOTIFICATION_STATUS = {
