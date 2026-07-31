@@ -32,7 +32,16 @@ export const Conversation = () => {
   const otherParticipant = conversationData?.participants?.find(
     (participant) => participant.uid !== currentUser?.id,
   );
-  const conversationTitle = otherParticipant?.username || 'Conversation';
+  const currentParticipant = conversationData?.participants?.find(
+    (participant) => participant.uid === currentUser?.id,
+  );
+  const conversation = conversationData?.conversation;
+  const isMissionConversation = conversation?.type === 'mission';
+  const conversationTitle = isMissionConversation
+    ? conversation?.mission_title
+    : otherParticipant?.username;
+  const canSendMessages =
+    !conversation?.closed_at && currentParticipant?.can_send !== false;
 
   const {
     data: initialMessages = [],
@@ -163,8 +172,16 @@ export const Conversation = () => {
             </Link>
           </Button>
           <h1 className='text-3xl font-bold tracking-tight'>
-            {conversationTitle}
+            {conversationTitle || 'Conversation'}
           </h1>
+          {isMissionConversation && (
+            <p className='mt-1 text-sm text-muted-foreground'>
+              Mission group · {conversationData.participants.length}{' '}
+              {conversationData.participants.length === 1
+                ? 'participant'
+                : 'participants'}
+            </p>
+          )}
         </div>
       </div>
 
@@ -203,27 +220,35 @@ export const Conversation = () => {
         )}
       </section>
 
-      <form onSubmit={handleSubmit} className='flex flex-col gap-3'>
-        <Textarea
-          value={content}
-          onChange={(event) => {
-            setContent(event.target.value);
-            setErrorMessage('');
-          }}
-          placeholder='Write a message'
-          disabled={isPending}
-          maxLength={1000}
-        />
-        {errorMessage && (
-          <p className='text-sm text-destructive'>{errorMessage}</p>
-        )}
-        <div className='flex justify-end'>
-          <Button type='submit' className='gap-2' disabled={isPending}>
-            <Send className='h-4 w-4' aria-hidden='true' />
-            {isPending ? 'Sending' : 'Send'}
-          </Button>
+      {canSendMessages ? (
+        <form onSubmit={handleSubmit} className='flex flex-col gap-3'>
+          <Textarea
+            value={content}
+            onChange={(event) => {
+              setContent(event.target.value);
+              setErrorMessage('');
+            }}
+            placeholder='Write a message'
+            disabled={isPending}
+            maxLength={1000}
+          />
+          {errorMessage && (
+            <p className='text-sm text-destructive'>{errorMessage}</p>
+          )}
+          <div className='flex justify-end'>
+            <Button type='submit' className='gap-2' disabled={isPending}>
+              <Send className='h-4 w-4' aria-hidden='true' />
+              {isPending ? 'Sending' : 'Send'}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className='rounded-lg border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground'>
+          {conversation?.closed_at
+            ? 'This mission conversation is closed. You can still read its history.'
+            : 'Your mission participation is complete. This conversation is now read-only.'}
         </div>
-      </form>
+      )}
     </main>
   );
 };

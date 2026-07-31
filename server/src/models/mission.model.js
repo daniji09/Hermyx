@@ -3,6 +3,10 @@ import {
   MISSION_LIFE_CYCLE,
   VACANCY_LIFE_CYCLE,
 } from '@hermyx/shared/utils/missions.utils.js';
+import {
+  closeMissionConversation,
+  createMissionConversation,
+} from './conversation.model.js';
 
 //Get mission by its ID
 export const getById = async (mid) => {
@@ -200,10 +204,43 @@ export const createMission = async (missionData) => {
     // All promises are executed at the same time
     await Promise.all(insertPromises);
 
+    await createMissionConversation(missionId, ownerId, client);
+
     // Last step, confirm every operation was successful
     await client.query('COMMIT');
 
     return newMission;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+export const finishMissionAndCloseConversation = async (mid) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const missionResult = await client.query(
+      `
+        UPDATE mission
+        SET status = $2
+        WHERE mid = $1
+        RETURNING *
+      `,
+      [mid, MISSION_LIFE_CYCLE.FINISHED.ID],
+    );
+
+    const conversation = await closeMissionConversation(mid, client);
+    await client.query('COMMIT');
+
+    return {
+      mission: missionResult.rows[0] || null,
+      conversation,
+    };
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

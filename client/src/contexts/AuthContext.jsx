@@ -87,11 +87,19 @@ export const AuthProvider = ({ children }) => {
           console.log('New notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
         socketRef.current.on('conversation:message-received', () => {
           queryClient.invalidateQueries({
             queryKey: ['getUnreadMessageCount'],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+        });
+
+        socketRef.current.on('conversation:closed', (payload) => {
+          queryClient.invalidateQueries({
+            queryKey: ['getConversation', String(payload.conversationId)],
           });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
@@ -116,6 +124,8 @@ export const AuthProvider = ({ children }) => {
           });
           queryClient.invalidateQueries({ queryKey: ['getMission'] });
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getConversation'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
         socketRef.current.on('mission:participation-revision', (payload) => {
@@ -138,6 +148,14 @@ export const AuthProvider = ({ children }) => {
           });
           queryClient.invalidateQueries({ queryKey: ['getMission'] });
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        });
+
+        socketRef.current.on('mission:unjoined', () => {
+          queryClient.invalidateQueries({ queryKey: ['getConversation'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getUnreadMessageCount'],
+          });
         });
       } catch (error) {
         console.error('Could not connect socket:', error);

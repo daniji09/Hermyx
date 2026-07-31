@@ -64,8 +64,121 @@ export const getOrCreatePrivateConversation = async (userAId, userBId) => {
   return createPrivateConversation(userAId, userBId);
 };
 
+export const createMissionConversation = async (
+  missionId,
+  ownerId,
+  database = pool,
+) => {
+  const conversationQuery = `
+    INSERT INTO conversation (type, mission_id)
+    VALUES ('mission', $1)
+    ON CONFLICT (mission_id) DO UPDATE
+      SET mission_id = EXCLUDED.mission_id
+    RETURNING *
+  `;
+  const conversationResult = await database.query(conversationQuery, [
+    missionId,
+  ]);
+  const conversation = conversationResult.rows[0];
+
+  await database.query(
+    `
+      INSERT INTO conversation_participant (conversation_id, user_id)
+      VALUES ($1, $2)
+      ON CONFLICT (conversation_id, user_id) DO NOTHING
+    `,
+    [conversation.cid, ownerId],
+  );
+
+  return conversation;
+};
+
+export const addMissionConversationParticipant = async (
+  missionId,
+  userId,
+  database = pool,
+) => {
+  const query = `
+    INSERT INTO conversation_participant (conversation_id, user_id)
+    SELECT cid, $2
+    FROM conversation
+    WHERE mission_id = $1
+      AND type = 'mission'
+    ON CONFLICT (conversation_id, user_id) DO NOTHING
+    RETURNING *
+  `;
+
+  const result = await database.query(query, [missionId, userId]);
+  return result.rows[0] || null;
+};
+
+export const leaveMissionConversation = async (
+  missionId,
+  userId,
+  database = pool,
+) => {
+  const query = `
+    UPDATE conversation_participant cp
+    SET
+      left_at = CURRENT_TIMESTAMP,
+      can_send = FALSE
+    FROM conversation c
+    WHERE cp.conversation_id = c.cid
+      AND c.mission_id = $1
+      AND c.type = 'mission'
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
+    RETURNING cp.*
+  `;
+
+  const result = await database.query(query, [missionId, userId]);
+  return result.rows[0] || null;
+};
+
+export const makeMissionConversationParticipantReadOnly = async (
+  missionId,
+  userId,
+  database = pool,
+) => {
+  const query = `
+    UPDATE conversation_participant cp
+    SET can_send = FALSE
+    FROM conversation c
+    WHERE cp.conversation_id = c.cid
+      AND c.mission_id = $1
+      AND c.type = 'mission'
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
+    RETURNING cp.*
+  `;
+
+  const result = await database.query(query, [missionId, userId]);
+  return result.rows[0] || null;
+};
+
+export const closeMissionConversation = async (missionId, database = pool) => {
+  const query = `
+    UPDATE conversation
+    SET closed_at = CURRENT_TIMESTAMP
+    WHERE mission_id = $1
+      AND type = 'mission'
+      AND closed_at IS NULL
+    RETURNING *
+  `;
+
+  const result = await database.query(query, [missionId]);
+  return result.rows[0] || null;
+};
+
 export const getConversationById = async (conversationId) => {
-  const query = 'SELECT * FROM conversation WHERE cid = $1';
+  const query = `
+    SELECT
+      c.*,
+      m.title AS mission_title
+    FROM conversation c
+    LEFT JOIN mission m ON m.mid = c.mission_id
+    WHERE c.cid = $1
+  `;
   const result = await pool.query(query, [conversationId]);
   return result.rows[0];
 };
@@ -77,10 +190,12 @@ export const getConversationParticipants = async (conversationId) => {
       u.username,
       u.avatar,
       cp.joined_at,
-      cp.left_at
+      cp.left_at,
+      cp.can_send
     FROM conversation_participant cp
     JOIN app_user u ON u.uid = cp.user_id
     WHERE cp.conversation_id = $1
+      AND cp.left_at IS NULL
     ORDER BY cp.joined_at ASC
   `;
 
@@ -145,6 +260,23 @@ export const isConversationParticipant = async (conversationId, userId) => {
   return result.rowCount > 0;
 };
 
+export const canSendMessageToConversation = async (conversationId, userId) => {
+  const query = `
+    SELECT 1
+    FROM conversation_participant cp
+    JOIN conversation c ON c.cid = cp.conversation_id
+    WHERE cp.conversation_id = $1
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
+      AND cp.can_send = TRUE
+      AND c.closed_at IS NULL
+    LIMIT 1
+  `;
+
+  const result = await pool.query(query, [conversationId, userId]);
+  return result.rowCount > 0;
+};
+
 export const getActiveConversationParticipantIds = async (conversationId) => {
   const query = `
     SELECT user_id
@@ -167,7 +299,6 @@ export const getUnreadMessageCountByUserId = async (userId) => {
       ON m.conversation_id = cp.conversation_id
     WHERE cp.user_id = $1
       AND cp.left_at IS NULL
-      AND c.closed_at IS NULL
       AND m.sender_id <> $1
       AND m.created_at > cp.last_read_at
   `;
@@ -201,6 +332,9 @@ export const getConversationsByUserId = async (userId) => {
       c.mission_id,
       c.created_at,
       c.closed_at,
+      current_participant.can_send,
+      mission_details.title AS mission_title,
+      participant_summary.participant_count,
       other_user.uid AS other_user_id,
       other_user.username AS other_username,
       other_user.avatar AS other_avatar,
@@ -212,12 +346,27 @@ export const getConversationsByUserId = async (userId) => {
     FROM conversation c
     JOIN conversation_participant current_participant
       ON current_participant.conversation_id = c.cid
-    LEFT JOIN conversation_participant other_participant
-      ON other_participant.conversation_id = c.cid
-      AND other_participant.user_id <> $1
-      AND other_participant.left_at IS NULL
-    LEFT JOIN app_user other_user
-      ON other_user.uid = other_participant.user_id
+    LEFT JOIN mission mission_details
+      ON mission_details.mid = c.mission_id
+    LEFT JOIN LATERAL (
+      SELECT
+        u.uid,
+        u.username,
+        u.avatar
+      FROM conversation_participant other_participant
+      JOIN app_user u ON u.uid = other_participant.user_id
+      WHERE other_participant.conversation_id = c.cid
+        AND other_participant.user_id <> $1
+        AND other_participant.left_at IS NULL
+      ORDER BY other_participant.joined_at ASC
+      LIMIT 1
+    ) other_user ON c.type = 'private'
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*)::int AS participant_count
+      FROM conversation_participant participant
+      WHERE participant.conversation_id = c.cid
+        AND participant.left_at IS NULL
+    ) participant_summary ON true
     LEFT JOIN LATERAL (
       SELECT m.*
       FROM message m
@@ -229,7 +378,6 @@ export const getConversationsByUserId = async (userId) => {
       ON last_sender.uid = last_message.sender_id
     WHERE current_participant.user_id = $1
       AND current_participant.left_at IS NULL
-      AND c.closed_at IS NULL
     ORDER BY last_message.created_at DESC NULLS LAST, c.created_at DESC
   `;
 

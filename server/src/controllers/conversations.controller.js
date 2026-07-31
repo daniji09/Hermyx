@@ -13,6 +13,7 @@ import {
   getActiveConversationParticipantIds,
   getUnreadMessageCountByUserId,
   markConversationAsReadByUserId,
+  canSendMessageToConversation,
 } from '../models/conversation.model.js';
 
 import { emitToConversation, emitToUser } from '../services/socket.service.js';
@@ -66,6 +67,17 @@ export const sendMessage = async (req, res) => {
     if (!isParticipant) {
       return res.status(403).json({
         errors: { general: ['You are not part of this conversation.'] },
+      });
+    }
+
+    const canSendMessage = await canSendMessageToConversation(
+      conversationId,
+      senderId,
+    );
+
+    if (!canSendMessage) {
+      return res.status(403).json({
+        errors: { general: ['This conversation is read-only.'] },
       });
     }
 
