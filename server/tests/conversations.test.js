@@ -5,6 +5,7 @@ import pool from '../src/config/db.config.js';
 import {
   createMission as createMissionRecord,
   finishMissionAndCloseConversation,
+  getMissionById,
 } from '../src/models/mission.model.js';
 import {
   joinVacancy,
@@ -169,9 +170,12 @@ describe('Unread direct messages', () => {
 describe('Mission conversation lifecycle', () => {
   it('creates a mission conversation containing only its owner', async () => {
     const owner = await createUser('mission_owner');
+    const outsider = await createUser('mission_outsider');
     const { mission, conversation } = await createMissionWithConversation(
       owner.uid,
     );
+    const ownerMissionView = await getMissionById(mission.mid, owner.uid);
+    const outsiderMissionView = await getMissionById(mission.mid, outsider.uid);
 
     const participantsResult = await pool.query(
       `
@@ -187,6 +191,8 @@ describe('Mission conversation lifecycle', () => {
     expect(participantsResult.rows).toHaveLength(1);
     expect(participantsResult.rows[0].user_id).toBe(owner.uid);
     expect(participantsResult.rows[0].can_send).toBe(true);
+    expect(ownerMissionView.conversation_id).toBe(conversation.cid);
+    expect(outsiderMissionView.conversation_id).toBeNull();
   });
 
   it('adds an accepted adventurer and permanently removes access after unjoining', async () => {
@@ -196,6 +202,8 @@ describe('Mission conversation lifecycle', () => {
       await createMissionWithConversation(owner.uid);
 
     await joinVacancy(mission.mid, vacancy.id, adventurer.uid);
+
+    const joinedMissionView = await getMissionById(mission.mid, adventurer.uid);
 
     const joinedParticipant = await pool.query(
       `
@@ -207,8 +215,14 @@ describe('Mission conversation lifecycle', () => {
     );
     expect(joinedParticipant.rows[0].left_at).toBeNull();
     expect(joinedParticipant.rows[0].can_send).toBe(true);
+    expect(joinedMissionView.conversation_id).toBe(conversation.cid);
 
     await unjoinVacancy(mission.mid, vacancy.id, adventurer.uid);
+
+    const unjoinedMissionView = await getMissionById(
+      mission.mid,
+      adventurer.uid,
+    );
 
     const accessResponse = await request(app)
       .get(`/api/conversations/${conversation.cid}/messages`)
@@ -225,6 +239,7 @@ describe('Mission conversation lifecycle', () => {
     expect(accessResponse.status).toBe(403);
     expect(leftParticipant.rows[0].left_at).not.toBeNull();
     expect(leftParticipant.rows[0].can_send).toBe(false);
+    expect(unjoinedMissionView.conversation_id).toBeNull();
   });
 
   it('keeps the history read-only after an adventurer finishes', async () => {
@@ -241,6 +256,11 @@ describe('Mission conversation lifecycle', () => {
 
     await releaseParticipation(mission.mid, adventurer.uid);
 
+    const releasedMissionView = await getMissionById(
+      mission.mid,
+      adventurer.uid,
+    );
+
     const historyResponse = await request(app)
       .get(`/api/conversations/${conversation.cid}/messages`)
       .set('x-test-user-id', adventurer.uid);
@@ -252,6 +272,7 @@ describe('Mission conversation lifecycle', () => {
     expect(historyResponse.status).toBe(200);
     expect(historyResponse.body.messages).toHaveLength(1);
     expect(sendResponse.status).toBe(403);
+    expect(releasedMissionView.conversation_id).toBe(conversation.cid);
   });
 
   it('closes sending for everyone while preserving history', async () => {

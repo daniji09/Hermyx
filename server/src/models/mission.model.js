@@ -458,6 +458,17 @@ export const getMissionById = async (id, uid) => {
       WHERE ma.mid = m.mid AND ma.adventurer_id = $2
       LIMIT 1
     ), NULL) AS participation_status,
+    (
+      SELECT c.cid
+      FROM conversation c
+      JOIN conversation_participant cp
+        ON cp.conversation_id = c.cid
+      WHERE c.mission_id = m.mid
+        AND c.type = 'mission'
+        AND cp.user_id = $2
+        AND cp.left_at IS NULL
+      LIMIT 1
+    ) AS conversation_id,
     EXISTS (
       SELECT 1
       FROM notification n
