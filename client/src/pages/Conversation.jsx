@@ -1,9 +1,36 @@
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft, ArrowUp, MessageCircleDashed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from '@/components/ui/input-group';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Bubble, BubbleContent } from '@/components/ui/bubble';
+import {
+  Message,
+  MessageContent,
+  MessageHeader,
+} from '@/components/ui/message';
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from '@/components/ui/message-scroller';
 import { AuthContext } from '../contexts/AuthContext';
 import {
   getConversationMessages,
@@ -20,7 +47,6 @@ export const Conversation = () => {
   const [content, setContent] = useState('');
   const [messages, setMessages] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
-  const messagesEndRef = useRef(null);
   const queryClient = useQueryClient();
 
   const {
@@ -73,10 +99,6 @@ export const Conversation = () => {
 
     markCurrentConversationAsRead();
   }, [conversationData, conversationId, queryClient]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
 
   useEffect(() => {
     if (!socket || !conversationId) return;
@@ -162,93 +184,152 @@ export const Conversation = () => {
   }
 
   return (
-    <main className='container mx-auto flex max-w-3xl flex-col gap-6 p-4 sm:p-6'>
-      <div className='flex items-center justify-between gap-4 border-b pb-4'>
-        <div>
-          <Button asChild variant='ghost' className='mb-2 gap-2 px-0'>
-            <Link to={backTo}>
-              <ArrowLeft className='h-4 w-4' aria-hidden='true' />
-              Back
-            </Link>
-          </Button>
-          <h1 className='text-3xl font-bold tracking-tight'>
-            {conversationTitle || 'Conversation'}
-          </h1>
-          {isMissionConversation && (
-            <p className='mt-1 text-sm text-muted-foreground'>
-              Mission group · {conversationData.participants.length}{' '}
-              {conversationData.participants.length === 1
-                ? 'participant'
-                : 'participants'}
+    <main className='container mx-auto flex max-w-3xl flex-col gap-4 p-4 sm:p-6'>
+      <Button asChild variant='ghost' className='w-fit gap-2 px-0'>
+        <Link to={backTo}>
+          <ArrowLeft className='h-4 w-4' aria-hidden='true' />
+          Back
+        </Link>
+      </Button>
+
+      <Card className='mx-auto h-140 w-full max-w-3xl gap-0 py-0'>
+        <CardHeader className='gap-1 border-b py-5'>
+          <CardTitle asChild>
+            <h1>{conversationTitle || 'Conversation'}</h1>
+          </CardTitle>
+          <CardDescription>
+            {isMissionConversation
+              ? `Mission group · ${conversationData.participants.length} ${
+                  conversationData.participants.length === 1
+                    ? 'participant'
+                    : 'participants'
+                }`
+              : `Conversation with ${otherParticipant?.username || 'adventurer'}`}
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent
+          className='min-h-0 flex-1 overflow-hidden p-0'
+          aria-label='Conversation messages'
+        >
+          <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
+            <MessageScroller>
+              <MessageScrollerViewport>
+                <MessageScrollerContent className='p-5'>
+                  {isLoading ? (
+                    <MessageScrollerItem
+                      messageId='loading-messages'
+                      className='flex flex-1 items-center justify-center'
+                    >
+                      <p className='text-muted-foreground'>Loading messages</p>
+                    </MessageScrollerItem>
+                  ) : isError ? (
+                    <MessageScrollerItem
+                      messageId='messages-error'
+                      className='flex flex-1 items-center justify-center'
+                    >
+                      <p className='text-destructive'>
+                        Could not load messages.
+                      </p>
+                    </MessageScrollerItem>
+                  ) : messages.length === 0 ? (
+                    <MessageScrollerItem
+                      messageId='no-messages'
+                      className='flex flex-1 items-center justify-center'
+                    >
+                      <div className='flex flex-col items-center gap-3 text-center'>
+                        <div className='flex size-10 items-center justify-center rounded-xl bg-muted'>
+                          <MessageCircleDashed
+                            className='size-5'
+                            aria-hidden='true'
+                          />
+                        </div>
+                        <div>
+                          <p className='font-medium'>No messages yet</p>
+                          <p className='mt-1 text-sm text-muted-foreground'>
+                            Send a message to start the conversation.
+                          </p>
+                        </div>
+                      </div>
+                    </MessageScrollerItem>
+                  ) : (
+                    messages.map((message) => {
+                      const isOwnMessage =
+                        message.sender_id === currentUser?.id;
+
+                      return (
+                        <MessageScrollerItem
+                          key={message.mid}
+                          messageId={String(message.mid)}
+                        >
+                          <Message align={isOwnMessage ? 'end' : 'start'}>
+                            <MessageContent>
+                              <MessageHeader>
+                                {message.sender_username}
+                              </MessageHeader>
+                              <Bubble
+                                variant={isOwnMessage ? 'default' : 'secondary'}
+                              >
+                                <BubbleContent className='whitespace-pre-line'>
+                                  {message.content}
+                                </BubbleContent>
+                              </Bubble>
+                            </MessageContent>
+                          </Message>
+                        </MessageScrollerItem>
+                      );
+                    })
+                  )}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton className='left-1/2' />
+            </MessageScroller>
+          </MessageScrollerProvider>
+        </CardContent>
+
+        <CardFooter className='flex-col gap-2 border-t-0 bg-card'>
+          {canSendMessages ? (
+            <form onSubmit={handleSubmit} className='w-full space-y-2'>
+              <InputGroup className='h-auto rounded-2xl border-transparent bg-input/50'>
+                <InputGroupTextarea
+                  value={content}
+                  onChange={(event) => {
+                    setContent(event.target.value);
+                    setErrorMessage('');
+                  }}
+                  placeholder='Write a message'
+                  disabled={isPending}
+                  maxLength={1000}
+                  className='min-h-14 max-h-32 px-3 py-2.5'
+                />
+                <InputGroupAddon align='block-end' className='pt-1'>
+                  <InputGroupButton
+                    type='submit'
+                    variant='default'
+                    size='icon-sm'
+                    className='ml-auto rounded-2xl'
+                    disabled={isPending}
+                  >
+                    <ArrowUp className='h-4 w-4' aria-hidden='true' />
+                    <span className='sr-only'>
+                      {isPending ? 'Sending message' : 'Send message'}
+                    </span>
+                  </InputGroupButton>
+                </InputGroupAddon>
+              </InputGroup>
+              {errorMessage && (
+                <p className='text-sm text-destructive'>{errorMessage}</p>
+              )}
+            </form>
+          ) : (
+            <p className='text-sm text-muted-foreground'>
+              {conversation?.closed_at
+                ? 'This mission conversation is closed. You can still read its history.'
+                : 'Your mission participation is complete. This conversation is now read-only.'}
             </p>
           )}
-        </div>
-      </div>
-
-      <section className='h-[calc(100vh-22rem)] min-h-80 overflow-y-auto rounded-lg border bg-card p-4'>
-        {isLoading ? (
-          <p className='text-muted-foreground'>Loading messages</p>
-        ) : isError ? (
-          <p className='text-destructive'>Could not load messages.</p>
-        ) : messages.length === 0 ? (
-          <p className='text-muted-foreground'>No messages yet.</p>
-        ) : (
-          <div className='flex flex-col gap-3'>
-            {messages.map((message) => {
-              const isOwnMessage = message.sender_id === currentUser?.id;
-
-              return (
-                <article
-                  key={message.mid}
-                  className={`max-w-[80%] rounded-lg border px-4 py-3 ${
-                    isOwnMessage
-                      ? 'ml-auto bg-primary text-primary-foreground'
-                      : 'mr-auto bg-background'
-                  }`}
-                >
-                  <p className='mb-1 text-xs font-medium opacity-80'>
-                    {message.sender_username}
-                  </p>
-                  <p className='whitespace-pre-line text-sm leading-6'>
-                    {message.content}
-                  </p>
-                </article>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
-      </section>
-
-      {canSendMessages ? (
-        <form onSubmit={handleSubmit} className='flex flex-col gap-3'>
-          <Textarea
-            value={content}
-            onChange={(event) => {
-              setContent(event.target.value);
-              setErrorMessage('');
-            }}
-            placeholder='Write a message'
-            disabled={isPending}
-            maxLength={1000}
-          />
-          {errorMessage && (
-            <p className='text-sm text-destructive'>{errorMessage}</p>
-          )}
-          <div className='flex justify-end'>
-            <Button type='submit' className='gap-2' disabled={isPending}>
-              <Send className='h-4 w-4' aria-hidden='true' />
-              {isPending ? 'Sending' : 'Send'}
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <div className='rounded-lg border border-dashed bg-muted/40 p-4 text-sm text-muted-foreground'>
-          {conversation?.closed_at
-            ? 'This mission conversation is closed. You can still read its history.'
-            : 'Your mission participation is complete. This conversation is now read-only.'}
-        </div>
-      )}
+        </CardFooter>
+      </Card>
     </main>
   );
 };

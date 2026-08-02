@@ -217,17 +217,6 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               </CardContent>
               <CardFooter>
                 <>
-                  {mission.conversation_id && (
-                    <Button asChild variant='outline'>
-                      <Link
-                        to={`/conversations/${mission.conversation_id}`}
-                        state={{ from: `/missions/${mission.mid}` }}
-                      >
-                        <MessageCircle aria-hidden='true' />
-                        Open mission chat
-                      </Link>
-                    </Button>
-                  )}
                   {isCreator ? (
                     mission.status === MISSION_LIFE_CYCLE.CLOSED.ID ||
                     mission.waitingForPaymentVacancies.length > 0 ? (
@@ -284,6 +273,17 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     mission.status !== MISSION_LIFE_CYCLE.FINISHED.ID && (
                       <FinishMissionButton mission={mission} />
                     )}
+                  {mission.conversation_id && (
+                    <Button asChild>
+                      <Link
+                        to={`/conversations/${mission.conversation_id}`}
+                        state={{ from: `/missions/${mission.mid}` }}
+                      >
+                        <MessageCircle aria-hidden='true' />
+                        Open mission chat
+                      </Link>
+                    </Button>
+                  )}
                 </>
               </CardFooter>
             </section>
