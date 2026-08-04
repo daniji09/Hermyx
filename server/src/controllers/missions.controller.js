@@ -8,12 +8,13 @@ import {
   getById,
   getParticipantsForDisplay,
   updateMissionStatus,
+  finishMissionAndCloseConversation,
   getByUidAndTitle,
   getMissionsOpened as _getMissionsOpened,
   updateMission,
-  adventurerUnjoined,
 } from '../models/mission.model.js';
 import { getById as getUserById } from '../models/app_user.model.js';
+import { getConversationParticipants } from '../models/conversation.model.js';
 import {
   getById as getMissionParticipationById,
   submitParticipation as submitMissionParticipationRecord,
@@ -956,10 +957,7 @@ export const unjoinMission = async (req, res) => {
         .json({ error: messages.VACANCY_NOT_JOINED_BY_USER });
 
     // Unjoin is done
-    await unjoinVacancy(mid, vacancyId);
-
-    // Mission info is update
-    await adventurerUnjoined(mid);
+    await unjoinVacancy(mid, vacancyId, uid);
 
     // Gets adventurer fled information
     const adventurer = await getUserById(vacancy.adventurer_id);
@@ -1249,8 +1247,22 @@ export const finishMission = async (req, res) => {
         },
       });
 
-    // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSION_LIFE_CYCLE.FINISHED.ID);
+    // Finally, mission and its conversation are closed
+    const { conversation } = await finishMissionAndCloseConversation(mid);
+
+    if (conversation) {
+      const conversationParticipants = await getConversationParticipants(
+        conversation.cid,
+      );
+
+      for (const participant of conversationParticipants) {
+        emitToUser(participant.uid, 'conversation:closed', {
+          conversationId: conversation.cid,
+          missionId: Number(mid),
+          closedAt: conversation.closed_at,
+        });
+      }
+    }
 
     return res.status(200).json({});
   } catch (error) {

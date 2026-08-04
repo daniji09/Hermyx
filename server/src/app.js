@@ -28,6 +28,7 @@ import missionsRouter from './routes/missions.router.js';
 import notificationRouter from './routes/notification.router.js';
 import reviewsRouter from './routes/reviews.router.js';
 import { verifyToken } from './middlewares/auth.middleware.js';
+import conversationsRouter from './routes/conversations.router.js';
 
 // Application routes
 app.use('/api/stripe', verifyToken, paymentRouter);
@@ -35,5 +36,6 @@ app.use('/api/users', usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
 app.use('/api/notifications', notificationRouter);
 app.use('/api/reviews', reviewsRouter);
+app.use('/api/conversations', conversationsRouter);
 
 export default app;

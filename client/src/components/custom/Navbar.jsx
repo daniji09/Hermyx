@@ -26,11 +26,18 @@ import { SearchBar } from './form/SearchBar';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext, useState } from 'react';
 import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueries';
+import { getUnreadMessageCountQueryOptions } from '../../queries/ConversationsQueries';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
   const { currentUser, logout } = useContext(AuthContext);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { data: unreadMessageCount = 0 } = useQuery(
+    getUnreadMessageCountQueryOptions({
+      enabled: !!currentUser,
+      staleTime: 30000,
+    }),
+  );
   return (
     <>
       <header className='sticky top-0 z-[10000] w-full bg-secondary py-3'>
@@ -83,6 +90,7 @@ export function Navbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                <MessagesLink unreadMessageCount={unreadMessageCount} />
                 <NotificationsButton />
                 <ProfileLink currentUser={currentUser} />
               </>
@@ -155,6 +163,21 @@ export function Navbar() {
                   </span>
                   Notifications
                 </Link>
+                <Link
+                  to='/conversations'
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                >
+                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                    <Mail className='h-4 w-4' aria-hidden='true' />
+                  </span>
+                  Messages
+                  {unreadMessageCount > 0 && (
+                    <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+                      {unreadMessageCount}
+                    </span>
+                  )}
+                </Link>
               </div>
             )}
 
@@ -185,6 +208,36 @@ const LogButton = ({ currentUser, logout }) => {
   return (
     <Button className='self-center' onClick={onClick}>
       {currentUser ? 'Log out' : 'Log in'}
+    </Button>
+  );
+};
+
+const MessagesLink = ({ unreadMessageCount }) => {
+  return (
+    <Button
+      asChild
+      variant='ghost'
+      size='icon'
+      className='rounded-full hover:bg-slate-200/50'
+    >
+      <Link
+        to='/conversations'
+        aria-label={`Go to my conversations${
+          unreadMessageCount > 0
+            ? `, ${unreadMessageCount} unread message${
+                unreadMessageCount === 1 ? '' : 's'
+              }`
+            : ''
+        }`}
+        className='relative'
+      >
+        <Mail className='h-5 w-5' aria-hidden='true' />
+        {unreadMessageCount > 0 && (
+          <span className='absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+            {unreadMessageCount}
+          </span>
+        )}
+      </Link>
     </Button>
   );
 };

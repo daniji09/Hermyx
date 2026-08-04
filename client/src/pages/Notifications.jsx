@@ -1,10 +1,11 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, Check, ShieldAlert, User, X } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAlert } from '../contexts/AlertContext';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   getMyNotificationsQueryOptions,
@@ -19,6 +20,7 @@ import {
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
 } from '@hermyx/shared/utils/notifications.utils';
+import { messages as messagesShared } from '@hermyx/shared';
 
 const getInvitationTitle = (notification) => {
   if (notification.action === 'mission_invite')
@@ -29,9 +31,12 @@ const getInvitationTitle = (notification) => {
 
 export const Notifications = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { setLatestNotification } = useContext(AuthContext);
   const [filter, setFilter] = useState('all');
+  const { showAlert } = useAlert();
+
   const { data, isLoading, isError } = useQuery(
     getMyNotificationsQueryOptions({
       onSuccess: () => {
@@ -49,6 +54,29 @@ export const Notifications = () => {
         await queryClient.invalidateQueries({ queryKey: ['getMission'] });
         await queryClient.invalidateQueries({ queryKey: ['getMissions'] });
         await queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+      },
+      onError: (error, variables) => {
+        const backendMessage =
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0] ||
+          'An unexpected error occurred.';
+        const mustConfigureBankAccount =
+          backendMessage ===
+          messagesShared.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED;
+
+        showAlert({
+          title:
+            variables?.response === 'accepted'
+              ? 'Could not accept invitation'
+              : 'Could not reject invitation',
+          description: backendMessage,
+          ...(mustConfigureBankAccount && {
+            variant: 'warning',
+            cancelText: 'OK',
+            confirmText: 'Configure bank account',
+            onConfirm: () => navigate('/profile#payment-settings'),
+          }),
+        });
       },
     }),
   );
