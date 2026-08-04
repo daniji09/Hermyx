@@ -1,7 +1,13 @@
 import { useActionState, useContext, useEffect, useRef, useState } from 'react';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { Navigate, useParams } from 'react-router-dom';
-import { MapPin, MessageSquareWarning, Star, User } from 'lucide-react';
+import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import {
+  MapPin,
+  MessageCircle,
+  MessageSquareWarning,
+  Star,
+  User,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
@@ -28,11 +34,14 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField.j
 import { consts } from '@hermyx/shared';
 import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
+import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 
 export const PublicProfile = () => {
   const { username } = useParams();
+  const navigate = useNavigate();
   const { currentUser } = useContext(AuthContext);
   const [filter, setFilter] = useState('created');
+  const [messageError, setMessageError] = useState('');
   const isOwnProfile =
     username?.toLowerCase() === currentUser?.username?.toLowerCase();
 
@@ -88,6 +97,24 @@ export const PublicProfile = () => {
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
+  const { mutate: openConversation, isPending: isOpeningConversation } =
+    useMutation({
+      mutationFn: () => getOrCreatePrivateConversation(user.uid),
+      onSuccess: (conversation) => {
+        setMessageError('');
+        navigate(`/conversations/${conversation.cid}`, {
+          state: {
+            from: `/users/${user.username}`,
+          },
+        });
+      },
+      onError: (error) => {
+        setMessageError(
+          error?.response?.data?.errors?.general?.[0] ||
+            'Could not open conversation.',
+        );
+      },
+    });
 
   if (isOwnProfile) {
     return <Navigate to='/profile' replace />;
@@ -160,6 +187,22 @@ export const PublicProfile = () => {
             <p className='mt-4 max-w-3xl whitespace-pre-line text-sm leading-6 sm:text-base'>
               {user.description}
             </p>
+          )}
+
+          <Button
+            type='button'
+            className='mt-5 gap-2'
+            onClick={() => {
+              setMessageError('');
+              openConversation();
+            }}
+            disabled={isOpeningConversation}
+          >
+            <MessageCircle className='h-4 w-4' aria-hidden='true' />
+            {isOpeningConversation ? 'Opening' : 'Message'}
+          </Button>
+          {messageError && (
+            <p className='mt-2 text-sm text-destructive'>{messageError}</p>
           )}
         </div>
       </section>

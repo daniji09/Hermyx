@@ -164,7 +164,7 @@ export const StripeManagement = ({ user }) => {
   console.log(user);
   return (
     <Card asChild>
-      <section className='p-4 sm:p-6 mt-6'>
+      <section id='payment-settings' className='p-4 sm:p-6 mt-6'>
         <h2 className='text-xl font-semibold'>Payment settings</h2>
         <div className='flex flex-col gap-y-2'>
           <h3 className='text-lg font-medium'>Payout methods</h3>

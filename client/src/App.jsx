@@ -16,6 +16,8 @@ import { Notifications } from './pages/Notifications';
 import { SearchUsers } from './pages/SearchUsers';
 import { EditMission } from './pages/EditMission';
 import { StripeSuccess } from './pages/StripeConnectSuccess';
+import { Conversation } from './pages/Conversation';
+import { Conversations } from './pages/Conversations';
 import { Reports } from './pages/Reports';
 import { Report } from './pages/Report';
 
@@ -31,7 +33,7 @@ function App() {
         {/* --- Authentication routes (not log in needed) --- */}
         <Route element={<ProtectedRoute reverseLogic />}>
           {/* Authentication */}
-          <Route path='/signup' element={<SignUp />} />
+          <Route path='/signup' element={<SignUp />}></Route>
           <Route path='/login' element={<LogIn />}></Route>
         </Route>
 
@@ -52,6 +54,11 @@ function App() {
           <Route path='/notifications' element={<Notifications />} />
           <Route path='/test' element={<TestDashboard />}></Route>
           <Route path='/stripe/connect/success' element={<StripeSuccess />} />
+          <Route
+            path='/conversations/:conversationId'
+            element={<Conversation />}
+          />
+          <Route path='/conversations' element={<Conversations />} />
         </Route>
 
         {/* --- Admin routes (admin role needed) --- */}

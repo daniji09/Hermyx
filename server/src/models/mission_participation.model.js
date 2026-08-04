@@ -1,6 +1,11 @@
 import { VACANCY_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 import pool from '../config/db.config.js';
 import { VACANCY_PAYMENT_STATUS } from '@hermyx/shared/utils/payment.utils.js';
+import {
+  addMissionConversationParticipant,
+  leaveMissionConversation,
+  makeMissionConversationParticipantReadOnly,
+} from './conversation.model.js';
 
 export const updateTransferInfo = async (mid, uid, transferId, amount) => {
   const query = `
@@ -74,18 +79,36 @@ export const approveParticipation = async (mid, adventurerId) => {
 };
 
 export const releaseParticipation = async (mid, adventurerId) => {
-  const query = `
-    UPDATE mission_participation
-    SET status = $3
-    WHERE mid = $1 AND adventurer_id = $2
-    RETURNING *
-  `;
-  const result = await pool.query(query, [
-    mid,
-    adventurerId,
-    VACANCY_LIFE_CYCLE.RELEASED.ID,
-  ]);
-  return result.rows[0] || null;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `
+        UPDATE mission_participation
+        SET status = $3
+        WHERE mid = $1 AND adventurer_id = $2
+        RETURNING *
+      `,
+      [mid, adventurerId, VACANCY_LIFE_CYCLE.RELEASED.ID],
+    );
+
+    if (!result.rows[0]) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    await makeMissionConversationParticipantReadOnly(mid, adventurerId, client);
+    await client.query('COMMIT');
+
+    return result.rows[0];
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const requestParticipationRevision = async (mid, adventurerId) => {
@@ -172,6 +195,9 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
       `,
       [mid],
     );
+
+    await addMissionConversationParticipant(mid, uid, client);
+
     await client.query('COMMIT');
     return joinedVacancy;
   } catch (error) {
@@ -182,14 +208,47 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
   }
 };
 
-export const unjoinVacancy = async (mid, vacancyId) => {
-  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $3 WHERE mid = $1 AND id = $2`;
-  const result = await pool.query(query, [
-    mid,
-    vacancyId,
-    VACANCY_LIFE_CYCLE.EMPTY.ID,
-  ]);
-  return result.rowCount;
+export const unjoinVacancy = async (mid, vacancyId, adventurerId) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query(
+      `
+        UPDATE mission_participation
+        SET adventurer_id = NULL, status = $4
+        WHERE mid = $1
+          AND id = $2
+          AND adventurer_id = $3
+      `,
+      [mid, vacancyId, adventurerId, VACANCY_LIFE_CYCLE.EMPTY.ID],
+    );
+
+    if (result.rowCount < 1) {
+      await client.query('ROLLBACK');
+      return 0;
+    }
+
+    await client.query(
+      `
+        UPDATE mission
+        SET occupied_vacancies = occupied_vacancies - 1
+        WHERE mid = $1
+      `,
+      [mid],
+    );
+
+    await leaveMissionConversation(mid, adventurerId, client);
+    await client.query('COMMIT');
+
+    return result.rowCount;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const deleteUnoccupiedVacancies = async (mid, existingIds) => {

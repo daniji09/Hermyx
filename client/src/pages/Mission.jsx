@@ -22,6 +22,7 @@ import {
   Star,
   User,
   UserPlus,
+  MessageCircle,
   MessageSquareWarning,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -299,6 +300,17 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     mission.status !== MISSION_LIFE_CYCLE.FINISHED.ID && (
                       <FinishMissionButton mission={mission} />
                     )}
+                  {mission.conversation_id && (
+                    <Button asChild>
+                      <Link
+                        to={`/conversations/${mission.conversation_id}`}
+                        state={{ from: `/missions/${mission.mid}` }}
+                      >
+                        <MessageCircle aria-hidden='true' />
+                        Open mission chat
+                      </Link>
+                    </Button>
+                  )}
                   {!isCreator &&
                     mission.status !== MISSION_LIFE_CYCLE.REPORTED.ID && (
                       <ReportMissionButton mission={mission} />

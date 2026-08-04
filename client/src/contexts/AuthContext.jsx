@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
   const isSyncingRef = useRef(false);
   const queryClient = useQueryClient();
   const socketRef = useRef(null);
+  const [socket, setSocket] = useState(null);
 
   const updateIsSyncing = (value) => {
     setIsSyncing(value);
@@ -67,6 +68,7 @@ export const AuthProvider = ({ children }) => {
       if (!auth.currentUser || !currentUser) {
         socketRef.current?.disconnect();
         socketRef.current = null;
+        setSocket(null);
         return;
       }
 
@@ -78,6 +80,7 @@ export const AuthProvider = ({ children }) => {
         const token = await auth.currentUser.getIdToken();
 
         socketRef.current = createSocketConnection(token);
+        setSocket(socketRef.current);
 
         socketRef.current.on('connect', () => {
           console.log('Socket connected:', socketRef.current.id);
@@ -91,6 +94,21 @@ export const AuthProvider = ({ children }) => {
           console.log('New notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+        });
+
+        socketRef.current.on('conversation:message-received', () => {
+          queryClient.invalidateQueries({
+            queryKey: ['getUnreadMessageCount'],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+        });
+
+        socketRef.current.on('conversation:closed', (payload) => {
+          queryClient.invalidateQueries({
+            queryKey: ['getConversation', String(payload.conversationId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
         socketRef.current.on('mission:participation-submitted', (payload) => {
@@ -113,6 +131,8 @@ export const AuthProvider = ({ children }) => {
           });
           queryClient.invalidateQueries({ queryKey: ['getMission'] });
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getConversation'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
         socketRef.current.on('mission:participation-revision', (payload) => {
@@ -136,6 +156,14 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMission'] });
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
         });
+
+        socketRef.current.on('mission:unjoined', () => {
+          queryClient.invalidateQueries({ queryKey: ['getConversation'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getUnreadMessageCount'],
+          });
+        });
       } catch (error) {
         console.error('Could not connect socket:', error);
       }
@@ -146,6 +174,7 @@ export const AuthProvider = ({ children }) => {
     return () => {
       socketRef.current?.disconnect();
       socketRef.current = null;
+      setSocket(null);
     };
   }, [currentUser, queryClient]);
 
@@ -172,6 +201,7 @@ export const AuthProvider = ({ children }) => {
         setIsSyncing: updateIsSyncing,
         latestNotification,
         setLatestNotification,
+        socket,
       }}
     >
       {!loading && children}
