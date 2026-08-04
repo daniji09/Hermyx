@@ -80,6 +80,29 @@ export const publishMissionSchema = z.object({
         consts.MISSION.DESCRIPTION_MAX_LENGTH,
       ),
     ),
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
   vacancies: z.coerce
     .number(messages.FIELD_NUMBER('Vacancies'))
     .int(messages.FIELD_INTEGER('Vacancies'))
@@ -107,7 +130,10 @@ export const publishMissionSchema = z.object({
     .pipe(
       z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
     ),
-  isDraft: z.boolean().optional(),
+  isDraft: z
+    .union([z.boolean(), z.string()])
+    .transform((val) => val === 'true' || val === true)
+    .optional(),
   latitude: z.preprocess(
     (val) => (val === '' || val === null ? undefined : val),
     z.coerce.number().optional(),
@@ -116,6 +142,32 @@ export const publishMissionSchema = z.object({
     (val) => (val === '' || val === null ? undefined : val),
     z.coerce.number().optional(),
   ),
+});
+
+export const publishMissionFilesSchema = z.object({
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
 });
 
 // Server and client edit mission shared validation

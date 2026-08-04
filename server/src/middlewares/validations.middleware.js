@@ -65,3 +65,22 @@ export const validateQuerySchema = (schema) => (req, res, next) => {
   // Successful validation
   next();
 };
+
+export const validateFilesSchema = (schema) => (req, res, next) => {
+  // Frontend data is evaluated with Zod schema.
+  // If no files are provided it is interpreted as a void array, so it can be validated
+  const result = schema.safeParse({ photos: req.files || [] });
+
+  // If errors are detected, it returns them
+  if (!result.success) {
+    return res.status(400).json({
+      errors: result.error.flatten().fieldErrors,
+    });
+  }
+
+  // Data is sanitize
+  req.files = result.data;
+
+  // Successful validation
+  next();
+};

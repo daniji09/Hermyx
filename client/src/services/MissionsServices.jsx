@@ -55,20 +55,34 @@ export const getMissionsOpened = async (options) => {
 
 // Create a mission in data base
 export const createMission = async (missionData) => {
-  const data = {
-    title: missionData.title,
-    description: missionData.description,
-    vacancies: missionData.vacancies,
-    vacanciesData: JSON.stringify(missionData.vacanciesData),
-    longitude: missionData.longitude || null,
-    latitude: missionData.latitude || null,
-    isDraft: missionData.status === 'draft',
-  };
+  // Creates a formData object
+  const formData = new FormData();
 
-  const response = await api.post('/missions', data);
-  const mission = response.data?.mission;
+  // Adds text fields
+  formData.append('title', missionData.title);
+  formData.append('description', missionData.description);
+  formData.append('vacancies', missionData.vacancies);
+  formData.append('vacanciesData', JSON.stringify(missionData.vacanciesData));
 
-  return mission;
+  if (missionData.longitude)
+    formData.append('longitude', missionData.longitude);
+  if (missionData.latitude) formData.append('latitude', missionData.latitude);
+
+  formData.append('isDraft', Boolean(missionData.status === 'draft'));
+
+  // Adds photos as files
+  if (missionData.photos && missionData.photos.length > 0) {
+    missionData.photos.forEach((photoObj) => {
+      if (photoObj.file instanceof File) {
+        formData.append('photos', photoObj.file);
+      }
+    });
+  }
+
+  // Sends formData
+  const response = await api.post('/missions', formData);
+
+  return response.data?.mission;
 };
 
 // Edits a mission in data base

@@ -20,15 +20,18 @@
   "license": "",
   "type": "module",
   "dependencies": {
+    "@azure/storage-blob": "^12.33.0",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "firebase-admin": "^13.6.0",
+    "multer": "^2.2.0",
     "node-cron": "^4.6.0",
     "nodemon": "^3.1.11",
     "pg": "^8.17.2",
     "socket.io": "^4.8.3",
-    "stripe": "^20.2.0"
+    "stripe": "^20.2.0",
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

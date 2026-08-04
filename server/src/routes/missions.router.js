@@ -1,6 +1,7 @@
 // External modules
 import { Router } from 'express';
 const router = Router();
+import multer from 'multer';
 import {
   createMission,
   getMissions,
@@ -24,6 +25,7 @@ import {
   validateBodySchema,
   validateQuerySchema,
   validateParamsSchema,
+  validateFilesSchema,
 } from '../middlewares/validations.middleware.js';
 
 import {
@@ -47,10 +49,14 @@ import {
   banMissionBodySchema,
   kickAdventurerOutParamsSchema,
   kickAdventurerOutBodySchema,
+  publishMissionFilesSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { inviteToMission } from './../controllers/missions.controller.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
+
+// Multer config
+const upload = multer({ storage: multer.memoryStorage() });
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
@@ -86,7 +92,13 @@ router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
 /// POST
 
 //Create mission
-router.post('/', dynamicValidation, createMission);
+router.post(
+  '/',
+  upload.array('photos', 5),
+  dynamicValidation,
+  validateFilesSchema(publishMissionFilesSchema),
+  createMission,
+);
 
 //Closes a mission
 router.post(

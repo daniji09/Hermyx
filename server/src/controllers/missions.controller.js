@@ -71,6 +71,11 @@ import {
   REPORT_DECISION,
   REPORT_STATUS,
 } from '@hermyx/shared/utils/reports.utils.js';
+import {
+  saveToLocalStorage,
+  uploadToAzureBlob,
+} from '../services/storage.service.js';
+import { insertPhoto } from '../models/mission_photo.model.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -211,7 +216,6 @@ Depending on that, the fields are checked or not, and the status is updated acco
 export const createMission = async (req, res) => {
   try {
     const { uid } = req.user;
-
     const {
       title,
       description,
@@ -220,7 +224,7 @@ export const createMission = async (req, res) => {
       latitude,
       longitude,
     } = req.body;
-
+    const photos = req.files.photos;
     const missionData = {
       title: title || 'Mission not titled',
       description: description || 'No description',
@@ -242,6 +246,27 @@ export const createMission = async (req, res) => {
 
     // Creates the new mission
     const newMission = await _createMission(missionData);
+    console.log(photos);
+    // Saves photos
+    let uploadedPhotoUrls = [];
+    if (photos.length > 0) {
+      // Environment variable determines whether photos are uploaded locally or to Azure
+      const isProduction = process.env.NODE_ENV === 'production';
+      uploadedPhotoUrls = await Promise.all(
+        photos.map(async (file) => {
+          if (isProduction) {
+            return await uploadToAzureBlob(file);
+          } else {
+            return await saveToLocalStorage(file);
+          }
+        }),
+      );
+    }
+
+    // Inserts photos
+    for (const photoURL of uploadedPhotoUrls)
+      await insertPhoto(newMission.mid, photoURL);
+
     return res.status(201).json({ mission: newMission });
   } catch (e) {
     console.error(e);

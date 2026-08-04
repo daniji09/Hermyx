@@ -3,6 +3,7 @@ import 'dotenv/config';
 
 // External modules
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 export const corsOptions = {
   // Cors configuration for accepting only allowed urls
@@ -15,11 +16,13 @@ export const corsOptions = {
 
 // Application initialization
 const app = express();
+const staticFiles = path.join(process.cwd(), 'public');
 
 // Application middlewares
 app.use(cors(corsOptions));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(express.static(staticFiles));
 
 // Application routers
 import usersRouter from './routes/users.router.js';

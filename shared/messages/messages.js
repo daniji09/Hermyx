@@ -111,6 +111,8 @@ export const messages = {
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',
   MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
+  MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB`,
+  MISSION_PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
 
   //// Edit mission
   CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,

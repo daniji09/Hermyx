@@ -13,6 +13,13 @@ export const messages = {
   NEW_MISSION: {
     FORM_TITLE: 'Create a mission',
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
+    PHOTOS_DESCRIPTION:
+      'Each photo has to weight less than 5MB and the only types accepted are .jpeg, .png and .webp.',
+    PHOTOS_DRAGGING_DESCRIPTION: 'Drop the photos here...',
+    PHOTOS_DRAG_AND_DROP_DESCRIPTION:
+      'Drag and drop up to 5 photos, or click to select.',
+    PHOTOS_ERROR: (duplicateNames) =>
+      `The following image(s) are already added: ${duplicateNames}`,
     VACANCIES_DESCRIPTION:
       'Define how many adventurers you need for this mission.',
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',

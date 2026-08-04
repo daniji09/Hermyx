@@ -119,6 +119,11 @@ export const consts = {
   MISSION: {
     TITLE_MAX_LENGTH: 100,
     DESCRIPTION_MAX_LENGTH: 1000,
+    PHOTOS: {
+      MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
+      ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+      MAX: 5,
+    },
     REVIEW: {
       RATING_MIN: 1,
       RATING_MAX: 5,
