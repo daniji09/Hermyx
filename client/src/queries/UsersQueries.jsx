@@ -4,6 +4,7 @@ import {
   getPublicUserProfile,
   getPublicUserProfileMissions,
   searchUsersByUsername,
+  updateMyAvatar,
   updateMyProfile,
 } from '../services/UsersServices';
 
@@ -57,6 +58,13 @@ export const searchUsersByUsernameQueryOptions = (username, options) => {
 export const updateMyProfileMutationOptions = (options) => {
   return {
     mutationFn: updateMyProfile,
+    ...options,
+  };
+};
+
+export const updateMyAvatarMutationOptions = (options) => {
+  return {
+    mutationFn: updateMyAvatar,
     ...options,
   };
 };

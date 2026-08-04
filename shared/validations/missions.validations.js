@@ -1,4 +1,4 @@
-import { coerce, z } from 'zod';
+import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
@@ -80,6 +80,29 @@ export const publishMissionSchema = z.object({
         consts.MISSION.DESCRIPTION_MAX_LENGTH,
       ),
     ),
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
   vacancies: z.coerce
     .number(messages.FIELD_NUMBER('Vacancies'))
     .int(messages.FIELD_INTEGER('Vacancies'))
@@ -107,7 +130,10 @@ export const publishMissionSchema = z.object({
     .pipe(
       z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
     ),
-  isDraft: z.boolean().optional(),
+  isDraft: z
+    .union([z.boolean(), z.string()])
+    .transform((val) => val === 'true' || val === true)
+    .optional(),
   latitude: z.preprocess(
     (val) => (val === '' || val === null ? undefined : val),
     z.coerce.number().optional(),
@@ -118,12 +144,38 @@ export const publishMissionSchema = z.object({
   ),
 });
 
+export const publishMissionFilesSchema = z.object({
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
+});
+
 // Server and client edit mission shared validation
 export const editMissionBodySchema = z.object({
   mid: z.coerce
-    .number(messages.FIELD_NUMBER('Id'))
-    .int(messages.FIELD_INTEGER('Id'))
-    .min(0, messages.FIELD_POSITIVE('Id')),
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
   title: z
     .string()
     .trim()
@@ -143,6 +195,36 @@ export const editMissionBodySchema = z.object({
         consts.MISSION.DESCRIPTION_MAX_LENGTH,
       ),
     ),
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
   vacancies: z.coerce
     .number(messages.FIELD_NUMBER('Vacancies'))
     .int(messages.FIELD_INTEGER('Vacancies'))
@@ -185,6 +267,39 @@ export const editMissionParamSchema = z.object({
     .number(messages.FIELD_NUMBER('Mid'))
     .int(messages.FIELD_INTEGER('Mid'))
     .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const editMissionFilesSchema = z.object({
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
 });
 
 const optionalNumberFromFormSchema = (schema) =>
@@ -377,6 +492,47 @@ export const submitMissionParticipationSchema = z.object({
     .number(messages.FIELD_NUMBER('Id'))
     .int(messages.FIELD_INTEGER('Id'))
     .min(0, messages.FIELD_POSITIVE('Id')),
+});
+
+export const banMissionParamsSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const banMissionBodySchema = z.object({
+  rid: z.coerce
+    .number(messages.FIELD_NUMBER('Rid'))
+    .int(messages.FIELD_INTEGER('Rid'))
+    .min(0, messages.FIELD_POSITIVE('Rid')),
+  reason: z
+    .string()
+    .trim()
+    .min(1, messages.FIELD_REQUIRED)
+    .max(
+      consts.REPORT.REASON_MESSAGE.MAX,
+      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+    )
+    .default(''),
+});
+
+export const kickAdventurerOutParamsSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+  vacancyId: z.coerce
+    .number(messages.FIELD_NUMBER('Vacancy id'))
+    .int(messages.FIELD_INTEGER('Vacancy id'))
+    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
+});
+
+export const kickAdventurerOutBodySchema = z.object({
+  rid: z.coerce
+    .number(messages.FIELD_NUMBER('Rid'))
+    .int(messages.FIELD_INTEGER('Rid'))
+    .min(0, messages.FIELD_POSITIVE('Rid')),
 });
 
 export const addVacanciesSchema = z

@@ -31,6 +31,11 @@ export const consts = {
       message: messages.EMAIL_ALREADY_EXISTS(email),
       status: 400,
     }),
+    'auth/id-token-revoked': () => ({
+      field: 'general',
+      message: messages.FORBIDDEN_BAN_USER,
+      status: 403,
+    }),
     'auth/invalid-credential': () => ({
       field: 'general',
       message: messages.INVALID_CREDENTIALS,
@@ -81,6 +86,11 @@ export const consts = {
       message: messages.OPERATION_ERROR,
       status: 499,
     }),
+    'auth/user-disabled': () => ({
+      field: 'general',
+      message: messages.FORBIDDEN_BAN_USER,
+      status: 403,
+    }),
     'auth/weak-password': () => ({
       field: 'password',
       message: messages.FIELD_NOT_VALID('password'),
@@ -109,6 +119,11 @@ export const consts = {
   MISSION: {
     TITLE_MAX_LENGTH: 100,
     DESCRIPTION_MAX_LENGTH: 1000,
+    PHOTOS: {
+      MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
+      ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+      MAX: 5,
+    },
     REVIEW: {
       RATING_MIN: 1,
       RATING_MAX: 5,
@@ -124,8 +139,13 @@ export const consts = {
       STATUS_MAX_LENGTH: 20,
     },
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
+    REPORT_MESSAGE: { MAX: 1000 },
   },
   NOTIFICATION: {
     MESSAGE_MAX_LENGTH: 500,
+  },
+  REPORT: {
+    MESSAGE: { MAX: 1000 },
+    REASON_MESSAGE: { MAX: 1000 },
   },
 };

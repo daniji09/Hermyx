@@ -484,6 +484,7 @@ export const getMissionById = async (id, uid) => {
 };
 
 export const updateMissionStatus = async (id, updateData) => {
+  console.log(id, updateData);
   const query = `
     UPDATE mission
     SET status = $2
@@ -520,7 +521,10 @@ export const syncMissionCompletionStatus = async (mid) => {
 
   let nextStatus = null;
 
-  if (summary.active_count > 0) {
+  if (
+    summary.active_count > 0 ||
+    (summary.active_count === 0 && summary.dispute_count === 0)
+  ) {
     nextStatus = MISSION_LIFE_CYCLE.IN_PROGRESS.ID;
   } else if (summary.dispute_count > 0) {
     nextStatus = MISSION_LIFE_CYCLE.IN_DISPUTE.ID;
@@ -571,7 +575,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
     m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft' AND status != $2 AND m.owner_id = $1 
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != 'draft' AND m.status != $2 AND m.owner_id = $1 
     ORDER BY m.publication_date DESC`;
   const values = [uid, MISSION_LIFE_CYCLE.DELETED.ID];
 
@@ -790,14 +794,34 @@ export const getPublicProfileJoinedMissions = async (
 // Gets user active missions, created or joined
 export const getUserActiveMissions = async (uid) => {
   const query = `
-  SELECT COUNT(DISTINCT m.mid) AS total_active
+  SELECT m.mid, 
+      m.publication_date, 
+      m.title, 
+      m.description, 
+      m.total_vacancies,
+      m.occupied_vacancies,
+      m.location,
+      m.total_payment,
+      m.completion_date,
+      ma.monetary_reward,
+      ma.amount_paid,
+      ma.payment_status,
+      ma.owner_review_id,
+      ma.adventurer_review_id,
+      m.owner_id, m.status AS status, ma.status AS participation_status, ma.id AS vacancy_id, COUNT(*) OVER() AS total_active
   FROM mission m
     LEFT JOIN mission_participation ma ON m.mid = ma.mid AND ma.adventurer_id = $1
-  WHERE m.status = 'in_progress'
+  WHERE m.status NOT IN ($2, $3, $4, $5)
     AND (m.owner_id = $1 OR ma.adventurer_id = $1)
   `;
-  const result = await pool.query(query, [uid]);
-  return result.rows[0];
+  const result = await pool.query(query, [
+    uid,
+    MISSION_LIFE_CYCLE.DELETED.ID,
+    MISSION_LIFE_CYCLE.CANCELLING.ID,
+    MISSION_LIFE_CYCLE.CANCELLED.ID,
+    MISSION_LIFE_CYCLE.FINISHED.ID,
+  ]);
+  return result.rows;
 };
 
 // Gets number of participants in mission
@@ -805,4 +829,18 @@ export const getMissionParticipation = async (mid) => {
   const query = `SELECT count(*) FROM mission_participation WHERE mid = $1`;
   const result = await pool.query(query, [mid]);
   return result.rows[0].count;
+};
+
+// Empties a mission
+export const emptyMission = async (mid) => {
+  const query = `UPDATE mission SET occupied_vacancies = 0 WHERE mid = $1 RETURNING *`;
+  const result = pool.query(query, [mid]);
+  return result.rowCount;
+};
+
+// Opens a mission again
+export const openMission = async (mid) => {
+  const query = `UPDATE mission SET status = $2 WHERE mid = $1 RETURNING *`;
+  const result = pool.query(query, [mid, MISSION_LIFE_CYCLE.OPENED.ID]);
+  return result.rowCount;
 };

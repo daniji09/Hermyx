@@ -1,16 +1,38 @@
-import { useContext, useState } from 'react';
+import { useActionState, useContext, useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { MapPin, MessageCircle, Star, User } from 'lucide-react';
+import {
+  MapPin,
+  MessageCircle,
+  MessageSquareWarning,
+  Star,
+  User,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PAGINATION_LIMIT } from '../consts/consts';
+import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
 import {
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
 } from '../queries/UsersQueries';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { useAlert } from '../contexts/AlertContext';
+import { reportUserAction } from '../actions/ReportActions';
+import { messages } from '../messages/messages.js';
+import { FormTextareaField } from '../components/custom/form/FormTextareaField.jsx';
+import { consts } from '@hermyx/shared';
+import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 
@@ -151,6 +173,7 @@ export const PublicProfile = () => {
               {reviewsData?.totalReviews || 0}{' '}
               {(reviewsData?.totalReviews || 0) === 1 ? 'review' : 'reviews'}
             </span>
+            <ReportUserButton user={user}></ReportUserButton>
           </div>
 
           {user.location && (
@@ -326,5 +349,124 @@ const AdventurerReviewsSection = ({
         </>
       )}
     </section>
+  );
+};
+
+const ReportUserButton = ({ user }) => {
+  // Action handling for update email form
+  const [state, reportUserFormAction, isPending] = useActionState(
+    reportUserAction,
+    initialStateUseStateAction,
+  );
+
+  // Logic for cleaning errors in fields or alerts when modifications are done
+  const [clearedFields, setClearedFields] = useState({});
+  const [prevServerState, setPrevServerState] = useState(state);
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const processedState = useRef(null);
+  const { showAlert } = useAlert();
+
+  // If the state has changed, field errors should be cleared
+  if (state !== prevServerState) {
+    setPrevServerState(state);
+    setClearedFields({});
+    setIsAlertClosed(false);
+    if (state.success) {
+      setIsOpen(false);
+    }
+  }
+
+  // When user changes field's value, the error is not shown until the form is sent again
+  const handleFieldChange = (e) => {
+    const fieldName = e.target.name;
+    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
+  };
+
+  // Effect for success handling
+  useEffect(() => {
+    if (state.success && processedState.current !== state) {
+      processedState.current = state;
+      showAlert({
+        title: messages.REPORT.SUCCESS_ALERT.TITLE,
+        description: messages.REPORT.SUCCESS_ALERT.DESCRIPTION,
+      });
+    }
+  }, [state, showAlert]);
+
+  // Handle manual dialog close to reset visual errors
+  const handleOpenChange = (open) => {
+    setIsOpen(open);
+    if (!open) {
+      setIsAlertClosed(true);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button
+          id='reportUserButton'
+          variant='destructive'
+          type='button'
+          disabled={isPending}
+          className='me-2'
+        >
+          <MessageSquareWarning className='w-4 h-4 mr-2' aria-hidden='true' />
+          {'Report user'}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
+        <DialogHeader>
+          <DialogTitle>
+            {messages.PUBLIC_PROFILE.REPORT_USER_DIALOG.TITLE}
+          </DialogTitle>
+          <DialogDescription>
+            {messages.PUBLIC_PROFILE.REPORT_USER_DIALOG.DESCRIPTION}
+          </DialogDescription>
+        </DialogHeader>
+        <form action={reportUserFormAction} id='reportUserForm' noValidate>
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <FormTextareaField
+                id='reportUserMessage'
+                name='message'
+                label='Message (required):'
+                type='text'
+                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                defaultValue={state.data?.message || ''}
+                error={
+                  !clearedFields.message && state.errors?.message
+                    ? state.errors.message[0]
+                    : undefined
+                }
+                invalid={!clearedFields.message && !!state.errors?.message}
+                aria-invalid={!clearedFields.message && !!state.errors?.message}
+                required
+                autoComplete='off'
+                disabled={isPending}
+                onChange={handleFieldChange}
+              />
+            </div>
+            <input type='hidden' id='uid' name='uid' value={user.uid || ''} />
+            {state.errors?.general && !isAlertClosed && (
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.general[0]}
+              </FormAlert>
+            )}
+          </div>
+        </form>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant='outline' type='button'>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button type='submit' disabled={isPending} form='reportUserForm'>
+            {isPending ? 'Reporting...' : 'Report user'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };

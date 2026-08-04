@@ -28,6 +28,14 @@ export const TRANSACTION_TYPE = {
     ID: 'CANCELLATION_COMPENSATION',
     LABEL: 'Cancellation compensation',
   },
+  BAN_COMPENSATION: {
+    ID: 'BAN_COMPENSATION',
+    LABEL: 'Ban compensation',
+  },
+  ADVENTURER_KICKED_OUT_COMPENSATION: {
+    ID: 'ADVENTURER_KICKED_OUT_COMPENSATION',
+    LABEL: 'Adventurer kicked out compensation',
+  },
   PAYOUT: { ID: 'PAYOUT', LABEL: 'Payout' },
 };
 

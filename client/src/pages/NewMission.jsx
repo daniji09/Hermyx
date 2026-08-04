@@ -21,7 +21,7 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, UserPlus } from 'lucide-react';
+import { Plus, Trash2, UploadCloud, UserPlus, X } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -33,6 +33,7 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import { useDropzone } from 'react-dropzone';
 
 export const NewMission = () => {
   // Form action handling
@@ -62,8 +63,9 @@ export const NewMission = () => {
 };
 
 const NewMissionForm = ({ state, action, isPending }) => {
-  // State for map
+  // States for map and images
   const [missionCoords, setMissionCoords] = useState(null);
+  const [missionPhotos, setMissionPhotos] = useState([]);
 
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [clearedFields, setClearedFields] = useState({});
@@ -75,6 +77,10 @@ const NewMissionForm = ({ state, action, isPending }) => {
     setPrevServerState(state);
     setClearedFields({});
     setIsAlertClosed(false);
+
+    if (state.success) {
+      setMissionPhotos([]);
+    }
   }
 
   // When user changes field's value, the error is not shown until the form is sent again
@@ -82,9 +88,22 @@ const NewMissionForm = ({ state, action, isPending }) => {
     const fieldName = e.target.name;
     setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
   };
+
+  // Handle for including photos
+  const handleFormAction = (formData) => {
+    missionPhotos.forEach((photo) => {
+      formData.append('photos', photo);
+    });
+    action(formData);
+  };
+
   return (
     <div className='flex flex-col w-full max-w-4xl gap-4'>
-      <CardForm id='newMissionForm' action={action}>
+      <CardForm
+        id='newMissionForm'
+        action={handleFormAction}
+        encType='multipart/form-data'
+      >
         <CardForm.Header>
           <CardForm.Title>{messages.NEW_MISSION.FORM_TITLE}</CardForm.Title>
         </CardForm.Header>
@@ -135,6 +154,25 @@ const NewMissionForm = ({ state, action, isPending }) => {
             disabled={isPending}
             onChange={handleFieldChange}
           ></FormTextareaField>
+
+          <div className='pt-4 pb-2 space-y-2'>
+            <Label className='group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5 has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border *:data-[slot=field]:p-2.5 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10'>
+              Photos:
+            </Label>
+            <MissionPhotoUpload
+              files={missionPhotos}
+              setFiles={setMissionPhotos}
+            />
+            <p className='text-left text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5'>
+              {messages.NEW_MISSION.PHOTOS_DESCRIPTION}
+            </p>
+            {state.errors?.photos && !isAlertClosed && (
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.photos}
+              </FormAlert>
+            )}
+          </div>
+
           {missionCoords && (
             <>
               <input type='hidden' name='latitude' value={missionCoords.lat} />
@@ -725,3 +763,129 @@ export const MissionVacanciesCreator = () => {
     </div>
   );
 };
+
+export function MissionPhotoUpload({ files, setFiles }) {
+  // States for errors and alert
+  const [uploadError, setUploadError] = useState(null);
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+
+  // Handle accepted files
+  const onDrop = useCallback(
+    (acceptedFiles) => {
+      setUploadError(null);
+
+      // Filter duplicates images
+      const duplicates = acceptedFiles.filter((newFile) =>
+        files.some((existingFile) => existingFile.name === newFile.name),
+      );
+
+      if (duplicates.length > 0) {
+        const duplicateNames = duplicates.map((f) => f.name).join(', ');
+        setUploadError(messages.NEW_MISSION.PHOTOS_ERROR(duplicateNames));
+        setIsAlertClosed(false);
+      }
+
+      const newUniqueFiles = acceptedFiles.filter(
+        (newFile) =>
+          !files.some((existingFile) => existingFile.name === newFile.name),
+      );
+
+      const remainingSlots = 5 - files.length;
+      const filesToAdd = newUniqueFiles.slice(0, remainingSlots);
+
+      const newFiles = filesToAdd.map((file) =>
+        Object.assign(file, {
+          preview: URL.createObjectURL(file),
+        }),
+      );
+
+      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    },
+    [files, setFiles],
+  );
+
+  // Handles incorrect photos by type or weight
+  const onDropRejected = useCallback((fileRejections) => {
+    const errorMessages = fileRejections.map(({ file, errors }) => {
+      if (errors[0].code === 'file-too-large') {
+        return `${file.name} (Exceeds 5MB limit)`;
+      }
+      return `${file.name} (${errors[0].message})`;
+    });
+
+    setUploadError(`Could not upload: ${errorMessages.join(', ')}`);
+    setIsAlertClosed(false);
+  }, []);
+
+  const removeFile = (name) => {
+    setFiles((files) => files.filter((file) => file.name !== name));
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    onDropRejected,
+    accept: {
+      'image/jpeg': [],
+      'image/png': [],
+      'image/webp': [],
+    },
+    maxSize: 5242880, // 5MB
+    maxFiles: 5,
+    disabled: files.length >= 5,
+  });
+
+  return (
+    <div className='space-y-4'>
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer transition-colors
+          ${isDragActive ? 'border-primary bg-primary/10' : 'border-muted-foreground/25 hover:border-primary/50'}
+          ${files.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}
+        `}
+      >
+        <input {...getInputProps()} />
+        <UploadCloud className='w-10 h-10 text-muted-foreground mb-4' />
+        <p className='text-sm text-muted-foreground text-center'>
+          {isDragActive
+            ? messages.NEW_MISSION.PHOTOS_DRAGGING_DESCRIPTION
+            : messages.NEW_MISSION.PHOTOS_DRAG_AND_DROP_DESCRIPTION}
+        </p>
+      </div>
+
+      {uploadError && !isAlertClosed && (
+        <FormAlert onClose={() => setIsAlertClosed(true)}>
+          {uploadError}
+        </FormAlert>
+      )}
+
+      {files.length > 0 && (
+        <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-4'>
+          {files.map((file) => (
+            <div
+              key={file.name}
+              className='relative group aspect-square rounded-md overflow-hidden border'
+            >
+              <img
+                src={file.preview}
+                alt='Preview'
+                className='object-cover w-full h-full'
+                onLoad={() => {
+                  URL.revokeObjectURL(file.preview);
+                }}
+              />
+              <Button
+                type='button'
+                variant='destructive'
+                size='icon'
+                className='absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity'
+                onClick={() => removeFile(file.name)}
+              >
+                <X className='w-4 h-4' />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

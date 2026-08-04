@@ -55,6 +55,8 @@ import {
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission_payment.model.js';
+import { checkActiveReport, createReport } from '../models/report.model.js';
+import { REPORT_TYPE } from '@hermyx/shared/utils/reports.utils.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -166,7 +168,32 @@ const respondToParticipationReview = async ({
     );
     await markAsSeen(notificationId);
 
+    // Searches for active report by the same applicant to the same adventurer
+    const activeReport = await checkActiveReport({
+      senderId: userId,
+      type: REPORT_TYPE.REVIEW_DISPUTE.ID,
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
+      },
+    });
+    if (activeReport > 0)
+      return res
+        .status(409)
+        .json({ errors: { general: [messages.APPLICANT_ALREADY_REPORTED] } });
+
+    // Creates report
     const disputeMessage = `Your participation in "${mission.title}" was disputed by ${username}.`;
+    const report = await createReport({
+      senderId: userId,
+      message: disputeMessage,
+      type: REPORT_TYPE.REVIEW_DISPUTE.ID,
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
+      },
+    });
+
     const followUpNotificationId = await createNotification({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -175,7 +202,11 @@ const respondToParticipationReview = async ({
       message: disputeMessage,
       senderId: userId,
       receiverId: notification.sender_id,
-      payload: { associated_mission_id: missionId },
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
+        associated_report_id: report.rid,
+      },
     });
 
     emitToUser(notification.sender_id, 'mission:participation-disputed', {
@@ -363,7 +394,33 @@ const respondToParticipationRejection = async ({
     );
     await markAsSeen(notificationId);
 
+    // Searches for active report by the same adventurer to the same applicant
+    const activeReport = await checkActiveReport({
+      senderId: userId,
+      type: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
+      },
+    });
+    if (activeReport > 0)
+      return res
+        .status(409)
+        .json({ errors: { general: [messages.APPLICANT_ALREADY_REPORTED] } });
+
+    // Creates report
     const disputeMessage = `${username} opened a dispute for "${mission.title}".`;
+    const report = await createReport({
+      senderId: userId,
+      message: disputeMessage,
+      type: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
+      },
+    });
+
+    // Sends informative notification
     const followUpNotificationId = await createNotification({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -372,7 +429,11 @@ const respondToParticipationRejection = async ({
       message: disputeMessage,
       senderId: userId,
       receiverId: mission.owner_id,
-      payload: { associated_mission_id: missionId },
+      payload: {
+        associated_mission_id: missionId,
+        associated_vacancy_id: participation.id,
+        associated_report_id: report.rid,
+      },
     });
 
     emitToUser(mission.owner_id, 'mission:participation-disputed', {
@@ -667,7 +728,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     emitToUser(mission.owner_id, 'mission:participation-negotiation-rejected', {
       notificationId: followUpNotificationId,
       type: NOTIFICATION_TYPE.MISSION.ID,
-      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+      action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
       missionId,
       missionTitle: mission.title,
       adventurerId: userId,
@@ -798,7 +859,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
   emitToUser(mission.owner_id, 'mission:participation-negotiation-accepted', {
     notificationId: followUpNotificationId,
     type: NOTIFICATION_TYPE.MISSION.ID,
-    action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
+    action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
     missionId,
     missionTitle: mission.title,
     adventurerId: userId,

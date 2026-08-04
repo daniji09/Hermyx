@@ -21,7 +21,15 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, User, UserPlus } from 'lucide-react';
+import {
+  MessageSquareWarning,
+  Plus,
+  Trash2,
+  UploadCloud,
+  User,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
@@ -40,6 +48,9 @@ import {
   VACANCY_LIFE_CYCLE,
 } from '@hermyx/shared/utils/missions.utils';
 import { useAlert } from '../contexts/AlertContext';
+import { disputeAdventurerAction } from '../actions/ReportActions';
+import { useDropzone } from 'react-dropzone';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export const EditMission = () => {
   // Mission id
@@ -154,10 +165,30 @@ const EditMissionError = ({ isError, children }) => {
 };
 
 const EditMissionForm = ({ state, action, isPending, mission }) => {
-  // State for map
+  // State for map and photos
   const [missionCoords, setMissionCoords] = useState({
     lat: mission.latitude || '',
     lng: mission.longitude || '',
+  });
+
+  const [missionPhotos, setMissionPhotos] = useState(() => {
+    if (!mission?.photos) return [];
+
+    return mission.photos.map((photo) => {
+      const pathString =
+        typeof photo === 'object'
+          ? photo.url || photo.path || photo.name
+          : photo;
+      const fullUrl = pathString.startsWith('http')
+        ? pathString
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${pathString}`;
+
+      return {
+        name: pathString,
+        preview: fullUrl,
+        isExisting: true,
+      };
+    });
   });
 
   // Logic for cleaning errors in fields or alerts when modifications are done
@@ -177,9 +208,26 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
     const fieldName = e.target.name;
     setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
   };
+
+  // Handle for including photos
+  const handleFormAction = (formData) => {
+    const existing = [];
+    missionPhotos.forEach((photo) => {
+      if (photo.isExisting) existing.push(photo.name);
+      else formData.append('photos', photo);
+    });
+    if (existing.length > 0) {
+      formData.append('existingPhotos', JSON.stringify(existing));
+    }
+    action(formData);
+  };
   return (
     <div className='flex flex-col w-full max-w-4xl gap-4'>
-      <CardForm id='editMissionForm' action={action}>
+      <CardForm
+        id='editMissionForm'
+        action={handleFormAction}
+        encType='multipart/form-data'
+      >
         <CardForm.Header>
           <CardForm.Title>{messages.EDIT_MISSION.FORM_TITLE}</CardForm.Title>
         </CardForm.Header>
@@ -231,6 +279,24 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
             onChange={handleFieldChange}
           ></FormTextareaField>
 
+          <div className='pt-4 pb-2 space-y-2'>
+            <Label className='group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5 has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border *:data-[slot=field]:p-2.5 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10'>
+              Photos:
+            </Label>
+            <MissionPhotoUpload
+              files={missionPhotos}
+              setFiles={setMissionPhotos}
+            />
+            <p className='text-left text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5'>
+              {messages.NEW_MISSION.PHOTOS_DESCRIPTION}
+            </p>
+            {state.errors?.photos && !isAlertClosed && (
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.photos}
+              </FormAlert>
+            )}
+          </div>
+
           <input type='hidden' name='mid' value={mission?.mid} />
 
           {missionCoords && (
@@ -246,6 +312,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
             canDelete={
               MISSION_LIFE_CYCLE[mission.status].CAN_DELETE_ADVENTURERS
             }
+            mid={mission.mid}
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
             <FormAlert onClose={() => setIsAlertClosed(true)}>
@@ -298,7 +365,13 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
   );
 };
 
-const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
+const CreationVacancyCard = ({
+  vacancy,
+  onDelete,
+  onReport,
+  onClick,
+  canDelete,
+}) => {
   const isAssigned = !!vacancy.adventurer_id;
   const handleKeyDown = (e) => {
     if (!VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT) return;
@@ -321,13 +394,13 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
         VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT && onClick(vacancy.id)
       }
     >
-      {canDelete && (
+      {canDelete ? (
         <Button
           id={`deleteVacancy${vacancy.id}`}
           type='button'
           variant='outline'
           onClick={(e) => {
-            e.stopPropagation(); //
+            e.stopPropagation();
             onDelete(vacancy.id);
           }}
           className='absolute top-2 right-2 hover:text-red-500 transition-colors'
@@ -335,6 +408,21 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
           aria-label='Delete vacancy'
         >
           <Trash2 size={24} />
+        </Button>
+      ) : (
+        <Button
+          id={`reportVacancy${vacancy.id}`}
+          type='button'
+          variant='outline'
+          onClick={(e) => {
+            e.stopPropagation();
+            onReport(vacancy.id);
+          }}
+          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
+          title='Report vacancy'
+          aria-label='Report vacancy'
+        >
+          <MessageSquareWarning size={24} />
         </Button>
       )}
 
@@ -344,9 +432,17 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick, canDelete }) => {
 
       <div className='flex justify-center mb-4'>
         {isAssigned ? (
-          // TODO: avatar del usuario
           <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
-            <User size={24} />
+            <Avatar size='md' className='h-full w-full'>
+              <AvatarImage
+                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${vacancy.avatar}`}
+                alt={`${vacancy.username} avatar`}
+                className='h-full w-full object-cover'
+              />
+              <AvatarFallback>
+                <User className='h-12 w-12 text-muted-foreground' />
+              </AvatarFallback>
+            </Avatar>
           </div>
         ) : (
           <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>
@@ -377,6 +473,7 @@ const CreateVacanciesDialog = ({
   vacancies,
   handleDeleteVacancy,
   handleClickVacancy,
+  handleReportVacancy,
   onConfirm,
   canDelete,
 }) => {
@@ -455,6 +552,7 @@ const CreateVacanciesDialog = ({
             <CreationVacancyCard
               vacancy={vac}
               onDelete={handleDeleteVacancy}
+              onReport={handleReportVacancy}
               onClick={handleClickVacancy}
               canDelete={canDelete}
             />
@@ -784,7 +882,11 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
   );
 };
 
-export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
+export const MissionVacanciesCreator = ({
+  initialVacancies,
+  canDelete,
+  mid,
+}) => {
   const { showAlert } = useAlert();
   const formattedVacancies = initialVacancies.map((vac) => ({
     adventurer_id: vac.adventurer_id,
@@ -799,6 +901,7 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
 
   const [vacancies, setVacancies] = useState(formattedVacancies);
   const [editingVacancyId, setEditingVacancyId] = useState(null);
+  const [reportingVacancyId, setReportingVacancyId] = useState(null);
 
   const handleAddVacancies = useCallback(
     ({ quantity, reward, title, description, status }) => {
@@ -826,6 +929,10 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
     },
     [editingVacancyId],
   );
+
+  const handleReportVacancy = useCallback((id) => {
+    setReportingVacancyId(id);
+  }, []);
 
   const handleClickVacancy = useCallback(
     (id) => {
@@ -870,6 +977,7 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
         onConfirm={handleAddVacancies}
         handleDeleteVacancy={handleDeleteVacancy}
         handleClickVacancy={handleClickVacancy}
+        handleReportVacancy={handleReportVacancy}
         vacancies={vacancies}
         canDelete={canDelete}
       />
@@ -881,6 +989,257 @@ export const MissionVacanciesCreator = ({ initialVacancies, canDelete }) => {
         onClose={() => setEditingVacancyId(null)}
         onConfirm={handleConfirmEdit}
       />
+
+      <ReportVacancyDialog
+        vacancyId={reportingVacancyId}
+        mid={mid}
+        isOpen={!!reportingVacancyId}
+        onClose={() => setReportingVacancyId(null)}
+      />
     </div>
   );
 };
+
+const ReportVacancyDialog = ({ mid, vacancyId, isOpen, onClose }) => {
+  // Action handling for update email form
+  const [state, reportVacancyFormAction, isPending] = useActionState(
+    disputeAdventurerAction,
+    initialStateUseStateAction,
+  );
+
+  // Logic for cleaning errors in fields or alerts when modifications are done
+  const [clearedFields, setClearedFields] = useState({});
+  const [prevServerState, setPrevServerState] = useState(state);
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+  const processedState = useRef(null);
+  const { showAlert } = useAlert();
+
+  // If the state has changed, field errors should be cleared
+  if (state !== prevServerState) {
+    setPrevServerState(state);
+    setClearedFields({});
+    setIsAlertClosed(false);
+  }
+
+  // When user changes field's value, the error is not shown until the form is sent again
+  const handleFieldChange = (e) => {
+    const fieldName = e.target.name;
+    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
+  };
+
+  // Effect for success handling
+  useEffect(() => {
+    if (state.success && processedState.current !== state) {
+      processedState.current = state;
+      onClose();
+      showAlert({
+        title: messages.REPORT.SUCCESS_ALERT.TITLE,
+        description: messages.REPORT.SUCCESS_ALERT.DESCRIPTION,
+      });
+    }
+  }, [state, onClose, showAlert]);
+
+  // Handle manual dialog close to reset visual errors
+  const handleOpenChange = (open) => {
+    if (!open) {
+      setIsAlertClosed(true);
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className='sm:max-w-sm'>
+        <DialogHeader>
+          <DialogTitle>
+            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE}
+          </DialogTitle>
+          <DialogDescription>
+            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION}
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          action={reportVacancyFormAction}
+          id='reportAdventurerForm'
+          noValidate
+        >
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <FormTextareaField
+                id='reportVacancyMessage'
+                name='message'
+                label='Message (required):'
+                type='text'
+                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                defaultValue={state.data?.message || ''}
+                error={
+                  !clearedFields.message && state.errors?.message
+                    ? state.errors.message[0]
+                    : undefined
+                }
+                invalid={!clearedFields.message && !!state.errors?.message}
+                aria-invalid={!clearedFields.message && !!state.errors?.message}
+                required
+                autoComplete='off'
+                disabled={isPending}
+                onChange={handleFieldChange}
+              />
+            </div>
+            <input
+              type='hidden'
+              id='vacancyId'
+              name='vacancyId'
+              value={vacancyId || ''}
+            />
+            <input type='hidden' id='mid' name='mid' value={mid} />
+            {state.errors?.general && !isAlertClosed && (
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.general[0]}
+              </FormAlert>
+            )}
+          </div>
+        </form>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant='outline' type='button' onClick={onClose}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type='submit'
+            disabled={isPending}
+            form='reportAdventurerForm'
+          >
+            {isPending ? 'Reporting...' : 'Report adventurer'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export function MissionPhotoUpload({ files, setFiles }) {
+  // States for errors and alert
+  const [uploadError, setUploadError] = useState(null);
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+
+  // Handle accepted files
+  const onDrop = useCallback(
+    (acceptedFiles) => {
+      setUploadError(null);
+
+      // Filter duplicates images
+      const duplicates = acceptedFiles.filter((newFile) =>
+        files.some((existingFile) => existingFile.name === newFile.name),
+      );
+
+      if (duplicates.length > 0) {
+        const duplicateNames = duplicates.map((f) => f.name).join(', ');
+        setUploadError(messages.NEW_MISSION.PHOTOS_ERROR(duplicateNames));
+        setIsAlertClosed(false);
+      }
+
+      const newUniqueFiles = acceptedFiles.filter(
+        (newFile) =>
+          !files.some((existingFile) => existingFile.name === newFile.name),
+      );
+
+      const remainingSlots = 5 - files.length;
+      const filesToAdd = newUniqueFiles.slice(0, remainingSlots);
+
+      const newFiles = filesToAdd.map((file) =>
+        Object.assign(file, {
+          preview: URL.createObjectURL(file),
+        }),
+      );
+
+      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
+    },
+    [files, setFiles],
+  );
+
+  // Handles incorrect photos by type or weight
+  const onDropRejected = useCallback((fileRejections) => {
+    const errorMessages = fileRejections.map(({ file, errors }) => {
+      if (errors[0].code === 'file-too-large') {
+        return `${file.name} (Exceeds 5MB limit)`;
+      }
+      return `${file.name} (${errors[0].message})`;
+    });
+
+    setUploadError(`Could not upload: ${errorMessages.join(', ')}`);
+    setIsAlertClosed(false);
+  }, []);
+
+  const removeFile = (name) => {
+    setFiles((files) => files.filter((file) => file.name !== name));
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    onDropRejected,
+    accept: {
+      'image/jpeg': [],
+      'image/png': [],
+      'image/webp': [],
+    },
+    maxSize: 5242880, // 5MB
+    maxFiles: 5,
+    disabled: files.length >= 5,
+  });
+
+  return (
+    <div className='space-y-4'>
+      <div
+        {...getRootProps()}
+        className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer transition-colors
+          ${isDragActive ? 'border-primary bg-primary/10' : 'border-muted-foreground/25 hover:border-primary/50'}
+          ${files.length >= 5 ? 'opacity-50 cursor-not-allowed' : ''}
+        `}
+      >
+        <input {...getInputProps()} />
+        <UploadCloud className='w-10 h-10 text-muted-foreground mb-4' />
+        <p className='text-sm text-muted-foreground text-center'>
+          {isDragActive
+            ? messages.NEW_MISSION.PHOTOS_DRAGGING_DESCRIPTION
+            : messages.NEW_MISSION.PHOTOS_DRAG_AND_DROP_DESCRIPTION}
+        </p>
+      </div>
+
+      {uploadError && !isAlertClosed && (
+        <FormAlert onClose={() => setIsAlertClosed(true)}>
+          {uploadError}
+        </FormAlert>
+      )}
+
+      {files.length > 0 && (
+        <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-4'>
+          {files.map((file, index) => (
+            <div
+              key={file.name}
+              className='relative group aspect-square rounded-md overflow-hidden border'
+            >
+              <img
+                src={file.preview}
+                alt={`Mission - Photo ${index + 1}`}
+                className='object-cover w-full h-full'
+                onLoad={() => {
+                  URL.revokeObjectURL(file.preview);
+                }}
+              />
+              <Button
+                type='button'
+                variant='destructive'
+                size='icon'
+                className='absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity'
+                onClick={() => removeFile(file.name)}
+              >
+                <X className='w-4 h-4' />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

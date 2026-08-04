@@ -23,10 +23,18 @@ import {
   User,
   UserPlus,
   MessageCircle,
+  MessageSquareWarning,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
-import { useCallback, useContext, useRef, useState } from 'react';
+import {
+  useActionState,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   joinMission,
   submitMissionParticipation,
@@ -50,10 +58,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import {
   Dialog,
+  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -63,6 +73,11 @@ import {
   MISSION_LIFE_CYCLE,
   VACANCY_LIFE_CYCLE,
 } from '@hermyx/shared/utils/missions.utils';
+import { reportMissionAction } from '../actions/ReportActions';
+import { initialStateUseStateAction } from './../consts/consts';
+import { FormTextareaField } from '../components/custom/form/FormTextareaField';
+import { FormAlert } from '../components/custom/form/FormAlert';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export const Mission = () => {
   // Mission id
@@ -214,6 +229,18 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     }
                   ></Map>
                 )}
+                {mission.photos && (
+                  <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
+                    {mission.photos.map((photo, index) => (
+                      <img
+                        key={index}
+                        src={getImageUrl(photo.url)}
+                        alt={`Mission ${mission.title} - Photo ${index + 1}`}
+                        className='w-full h-48 object-cover rounded-lg shadow-md border border-gray-200'
+                      />
+                    ))}
+                  </div>
+                )}
               </CardContent>
               <CardFooter>
                 <>
@@ -284,6 +311,10 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       </Link>
                     </Button>
                   )}
+                  {!isCreator &&
+                    mission.status !== MISSION_LIFE_CYCLE.REPORTED.ID && (
+                      <ReportMissionButton mission={mission} />
+                    )}
                 </>
               </CardFooter>
             </section>
@@ -348,9 +379,17 @@ const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
 
       <div className='flex justify-center mb-4'>
         {isAssigned ? (
-          // TODO: avatar del usuario
           <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
-            <User size={24} />
+            <Avatar size='md' className='h-full w-full'>
+              <AvatarImage
+                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${vacancy.avatar}`}
+                alt={`${vacancy.username} avatar`}
+                className='h-full w-full object-cover'
+              />
+              <AvatarFallback>
+                <User className='h-12 w-12 text-muted-foreground' />
+              </AvatarFallback>
+            </Avatar>
           </div>
         ) : (
           <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>
@@ -1628,10 +1667,144 @@ const FinishMissionButton = ({ mission }) => {
   );
 };
 
+const ReportMissionButton = ({ mission }) => {
+  // Action handling for update email form
+  const [state, reportMissionFormAction, isPending] = useActionState(
+    reportMissionAction,
+    initialStateUseStateAction,
+  );
+
+  // Logic for cleaning errors in fields or alerts when modifications are done
+  const [clearedFields, setClearedFields] = useState({});
+  const [prevServerState, setPrevServerState] = useState(state);
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const processedState = useRef(null);
+  const { showAlert } = useAlert();
+
+  // If the state has changed, field errors should be cleared
+  if (state !== prevServerState) {
+    setPrevServerState(state);
+    setClearedFields({});
+    setIsAlertClosed(false);
+    if (state.success) {
+      setIsOpen(false);
+    }
+  }
+
+  // When user changes field's value, the error is not shown until the form is sent again
+  const handleFieldChange = (e) => {
+    const fieldName = e.target.name;
+    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
+  };
+
+  // Effect for success handling
+  useEffect(() => {
+    if (state.success && processedState.current !== state) {
+      processedState.current = state;
+      showAlert({
+        title: messages.REPORT.SUCCESS_ALERT.TITLE,
+        description: messages.REPORT.SUCCESS_ALERT.DESCRIPTION,
+      });
+    }
+  }, [state, showAlert]);
+
+  // Handle manual dialog close to reset visual errors
+  const handleOpenChange = (open) => {
+    setIsOpen(open);
+    if (!open) {
+      setIsAlertClosed(true);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button
+          id='reportMissionButton'
+          variant='destructive'
+          type='button'
+          disabled={isPending}
+          className='me-2'
+        >
+          <MessageSquareWarning className='w-4 h-4 mr-2' aria-hidden='true' />
+          {'Report mission'}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
+        <DialogHeader>
+          <DialogTitle>
+            {messages.PUBLIC_PROFILE.REPORT_USER_DIALOG.TITLE}
+          </DialogTitle>
+          <DialogDescription>
+            {messages.PUBLIC_PROFILE.REPORT_USER_DIALOG.DESCRIPTION}
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          action={reportMissionFormAction}
+          id='reportMissionForm'
+          noValidate
+        >
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <FormTextareaField
+                id='reportMissionMessage'
+                name='message'
+                label='Message (required):'
+                type='text'
+                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                defaultValue={state.data?.message || ''}
+                error={
+                  !clearedFields.message && state.errors?.message
+                    ? state.errors.message[0]
+                    : undefined
+                }
+                invalid={!clearedFields.message && !!state.errors?.message}
+                aria-invalid={!clearedFields.message && !!state.errors?.message}
+                required
+                autoComplete='off'
+                disabled={isPending}
+                onChange={handleFieldChange}
+              />
+            </div>
+            <input
+              type='hidden'
+              id='mid'
+              name='mid'
+              value={mission.mid || ''}
+            />
+            {state.errors?.general && !isAlertClosed && (
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.general[0]}
+              </FormAlert>
+            )}
+          </div>
+        </form>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant='outline' type='button'>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button type='submit' disabled={isPending} form='reportMissionForm'>
+            {isPending ? 'Reporting...' : 'Report mission'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const getParticipationStatusLabel = (status) => {
   if (!status) {
     return messages.MISSION.MISSION_JOINED;
   }
 
   return messages.MISSION.STATUS_LABELS[status] || status.replaceAll('_', ' ');
+};
+
+const getImageUrl = (photoPath) => {
+  if (photoPath.startsWith('http')) return photoPath;
+  // Adjusts "/uploads/" so it calls the actual backend
+  return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${photoPath}`;
 };

@@ -1,6 +1,7 @@
 export const NOTIFICATION_TYPE = {
   INVITATION: { ID: 'INVITATION', LABEL: 'Invitation' },
   MISSION: { ID: 'MISSION', LABEL: 'Mission' },
+  REPORT: { ID: 'REPORT', LABEL: 'Report' },
 };
 
 export const NOTIFICATION_KIND = {
@@ -22,6 +23,10 @@ export const NOTIFICATION_ACTION = {
   PARTICIPATION_APPROVED: {
     ID: 'PARTICIPATION_APPROVED',
     LABEL: 'Participation approved',
+  },
+  PARTICIPATION_REJECTED: {
+    ID: 'PARTICIPATION_REJECTED',
+    LABEL: 'Participation rejected',
   },
   PARTICIPATION_DISPUTED: {
     ID: 'PARTICIPATION_DISPUTED',
@@ -48,12 +53,40 @@ export const NOTIFICATION_ACTION = {
     LABEL: 'Mission delete',
   },
   MISSION_CANCEL: {
-    ID: 'MISSION_EDIT',
+    ID: 'MISSION_CANCEL',
     LABEL: 'Mission cancel',
   },
   MISSION_REOPEN: {
     ID: 'MISSION_REOPEN',
     LABEL: 'Mission reopen',
+  },
+  ADVENTURER_REPORT: {
+    ID: 'ADVENTURER_REPORT',
+    LABEL: 'Adventurer report',
+  },
+  REVIEW_DISPUTE: {
+    ID: 'REVIEW_DISPUTE',
+    LABEL: 'Review dispute',
+  },
+  REJECTED_REVIEW_DISPUTE: {
+    ID: 'REJECTED_REVIEW_DISPUTE',
+    LABEL: 'Rejected review dispute',
+  },
+  MISSION_BAN: {
+    ID: 'MISSION_BAN',
+    LABEL: 'Mission ban',
+  },
+  ADVENTURER_KICKED_OUT: {
+    ID: 'ADVENTURER_KICKED_OUT',
+    LABEL: 'Adventurer kicked out',
+  },
+  USER_BAN: {
+    ID: 'USER_BAN',
+    LABEL: 'User ban',
+  },
+  REPORT_DISMISSED: {
+    ID: 'REPORT_DISMISSED',
+    LABEL: 'Report dismissed',
   },
 };
 

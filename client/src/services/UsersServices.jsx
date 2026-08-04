@@ -82,6 +82,12 @@ export const updateMyProfile = async (profile) => {
   return data;
 };
 
+// Updates logged user's avatar
+export const updateMyAvatar = async (profile) => {
+  const { data } = await api.patch('/users/me/avatar', profile);
+  return data;
+};
+
 // Updates users email on DB and Firebase
 export const updateUserEmail = async (email) => {
   // API search
@@ -122,5 +128,11 @@ export const addEmailAuthentication = async ({
 export const userConfiguration = async (configuration) => {
   // API search
   const { data } = await api.put('/users/me/configuration', { configuration });
+  return data;
+};
+
+// Bans a user
+export const banUser = async (uid, rid, reason) => {
+  const { data } = await api.post(`/users/${uid}/ban`, { rid, reason });
   return data;
 };

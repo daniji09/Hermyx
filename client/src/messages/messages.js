@@ -13,6 +13,13 @@ export const messages = {
   NEW_MISSION: {
     FORM_TITLE: 'Create a mission',
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
+    PHOTOS_DESCRIPTION:
+      'Each photo has to weight less than 5MB and the only types accepted are .jpeg, .png and .webp.',
+    PHOTOS_DRAGGING_DESCRIPTION: 'Drop the photos here...',
+    PHOTOS_DRAG_AND_DROP_DESCRIPTION:
+      'Drag and drop up to 5 photos, or click to select.',
+    PHOTOS_ERROR: (duplicateNames) =>
+      `The following image(s) are already added: ${duplicateNames}`,
     VACANCIES_DESCRIPTION:
       'Define how many adventurers you need for this mission.',
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
@@ -26,6 +33,10 @@ export const messages = {
     LOCATION_DESCRIPTION: 'Add a location if your mission needs it.',
     LOCATION_ERROR: 'Please, select a valid location on the map.',
     EDIT_FINISHED_VACANCIES: `Can't edit vacancies from finished adventurers.`,
+    REPORT_VACANCY_DIALOG: {
+      TITLE: `Report vacancy`,
+      DESCRIPTION: `Please provide details about why you are reporting this vacancy. Our team will review it shortly.`,
+    },
   },
   MISSION: {
     MISSION_CLOSED: 'Mission already closed!',
@@ -107,6 +118,10 @@ export const messages = {
       ERROR_TITLE: `Can't reject participation`,
       DESCRIPTION: 'This will request a revision from the adventurer.',
       CONFIRM_TEXT: 'Yes, reject',
+    },
+    REPORT_MISSION_DIALOG: {
+      TITLE: `Report mission`,
+      DESCRIPTION: `Please provide details about why you are reporting this mission. Our team will review it shortly.`,
     },
     STATUS_LABELS: {
       draft: 'Draft',
@@ -193,8 +208,61 @@ export const messages = {
         'Do you want to show your created and joined missions to others in your profile?',
     },
   },
+  PUBLIC_PROFILE: {
+    REPORT_USER_DIALOG: {
+      TITLE: `Report user`,
+      DESCRIPTION: `Please provide details about why you are reporting this user. Our team will review it shortly.`,
+    },
+  },
   MAP: {
     LOCATION_NOT_FOUND: `Couldn't find results for this location.`,
     MAP_SERVICE_ERROR: `Error while connecting to map service.`,
+  },
+  REPORT: {
+    SUCCESS_ALERT: {
+      TITLE: `Report successfully sent.`,
+      DESCRIPTION: `Wait patiently for our answer on this case!`,
+    },
+    SEARCH_REPORTS: {
+      LOADING: 'Searching reports...',
+      ERROR: 'Oops! Something went wrong while loading reports',
+      NO_REPORTS: 'It seems there is no reports yet. Wait for one to be added!',
+    },
+    BAN_MISSION_ALERT: {
+      TITLE: 'Are you sure you want to ban this mission?',
+      ERROR_TITLE: `Can't ban mission`,
+      DESCRIPTION: `This will ban and retire the mission from the public, if it's open adventurers will receive their reward.`,
+      CONFIRM_TEXT: 'Yes, ban mission',
+    },
+    BAN_USER_ALERT: {
+      TITLE: 'Are you sure you want to ban this user?',
+      ERROR_TITLE: `Can't ban user`,
+      DESCRIPTION: `This will ban the user and they will be no longer able to access this account.`,
+      CONFIRM_TEXT: 'Yes, ban user',
+    },
+    KICK_ADVENTURER_OUT_ALERT: {
+      TITLE: 'Are you sure you want to kick the adventurer out of the mission?',
+      ERROR_TITLE: `Can't kick adventurer out`,
+      DESCRIPTION: `This will expel the adventurer from the mission and their reward will be refunded to the applicant.`,
+      CONFIRM_TEXT: 'Yes, kick adventurer out',
+    },
+    ACCEPT_ADVENTURERS_WORK_ALERT: {
+      TITLE: 'Are you sure you want to accept the work of the adventurer?',
+      ERROR_TITLE: `Can't accept adventurer's work`,
+      DESCRIPTION: `This will accept the work of this vacancy, finishing it and sending the reward to the adventurer.`,
+      CONFIRM_TEXT: `Yes, accept adventurer's work`,
+    },
+    REJECT_ADVENTURERS_WORK_ALERT: {
+      TITLE: 'Are you sure you want to reject the work of the adventurer?',
+      ERROR_TITLE: `Can't reject adventurer's work`,
+      DESCRIPTION: `This will reject the work of this vacancy, putting it into progress again.`,
+      CONFIRM_TEXT: `Yes, reject adventurer's work`,
+    },
+    DISMISS_ALERT: {
+      TITLE: 'Are you sure you want to dismiss the report?',
+      ERROR_TITLE: `Can't dismiss report`,
+      DESCRIPTION: `This will dismiss this report, without taking any actions.`,
+      CONFIRM_TEXT: `Yes, dismiss report`,
+    },
   },
 };

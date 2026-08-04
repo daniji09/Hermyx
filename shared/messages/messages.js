@@ -17,6 +17,7 @@ export const messages = {
   FIELD_REQUIRED: 'This field is required.',
   FORBIDDEN: 'Action is not authorized.',
   SYSTEM_FORBIDDEN: 'Action is only authorize for the system.',
+  FORBIDDEN_BAN_USER: 'This user is banned from Hermyx.',
   OPERATION_ERROR: 'Operation ended abruptly.',
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
   UNEXPECTED_ERROR: 'Unexpected error.',
@@ -99,8 +100,7 @@ export const messages = {
     'Only the mission owner can review adventurers from a completed mission.',
   MISSION_REVIEW_PARTICIPATION_REQUIRED:
     'The adventurer must belong to this mission before being reviewed.',
-  MISSION_REVIEW_COMPLETED_REQUIRED:
-    'Only completed missions can be reviewed.',
+  MISSION_REVIEW_COMPLETED_REQUIRED: 'Only completed missions can be reviewed.',
   CANNOT_DISPUTE_PARTICIPATION_STATE: `Can't dispute participation on current state`,
   CANNOT_REJECT_PARTICIPATION_STATE: `Can't reject participation on current state`,
   CANNOT_ACCEPT_PARTICIPATION_STATE: `Can't accept participation on current state`,
@@ -111,6 +111,9 @@ export const messages = {
   //// Create mission
   MISSION_SAME_TITLE: 'You already have a mission titled like this.',
   MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
+  MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB`,
+  MISSION_PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
+  MISSION_PHOTOS_SURPASSED: `You are adding more than ${consts.MISSION.PHOTOS.MAX} photos.`,
 
   //// Edit mission
   CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
@@ -127,6 +130,7 @@ export const messages = {
     'There are no vacancies open left in this mission. Try another one!',
   MISSION_ALREADY_JOINED: 'You have already joined this mission!',
   VACANCY_NOT_FOUND: 'Vacancy not found.',
+  VACANCY_NOT_IN_MISSION: `This vacancy doesn't correspond to this mission.`,
   VACANCY_NOT_JOINED: `Couldn't join vacancy.`,
   MISSION_NOT_JOINED: `Couldn't join mission.`,
   ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
@@ -162,6 +166,9 @@ export const messages = {
   STRIPE_ONBOARDING_NOT_COMPLETED:
     'You have not completed the Stripe onboarding yet.',
 
+  /// Ban mission
+  CANNOT_DELETE_VACANCIES: `Couldn't delete every occupied vacancy, please try again.`,
+
   //// Profile
   ///Info
   PROFILE_UPDATED_SUCCESSFULLY: 'Profile updated successfully.',
@@ -176,6 +183,7 @@ export const messages = {
     'This Google account is already linked to another Hermyx account',
   CHANGING_EMAIL_TO_CURRENT:
     'The new email cannot be the same as your current one.',
+  NO_IMAGE_PROVIDED: 'No image provided',
 
   //// Notification
   PENDING_NOTIFICATION_EXISTS:
@@ -188,4 +196,17 @@ export const messages = {
   INVALID_RESPONSE_ACTION: 'Invalid response action',
   NOTIFICATION_NOT_ASSOCIATED_WITH_VACANCY:
     'This notification is not associated with a mission vacancy.',
+
+  //// Reports
+  ADVENTURER_ALREADY_REPORTED: `You already have an active report for this adventurer. Our team is checking it.`,
+  APPLICANT_ALREADY_REPORTED: `You already have an active report for this applicant. Our team is checking it.`,
+  USER_ALREADY_REPORTED: `You already have an active report for this user. Our team is checking it.`,
+  MISSION_CLOSED_BY_REPORT: `This mission has already been close by a report.`,
+  MISSION_ALREADY_REPORTED: `You already have an active report for this mission. Our team is checking it.`,
+  REPORTS_NOT_FOUND: `Reports not found.`,
+  REPORT_NOT_FOUND: `Report not found.`,
+  USER_ALREADY_BANNED: `User already banned.`,
+  VACANCY_NOT_DISPUTED: `This vacancy is not disputed currently.`,
+  INCORRECT_ANSWER_FOR_REPORT: `This type of report can't be answered like this.`,
+  REPORT_ALREADY_ANSWERED: `Can't answer a report that has been already answered.`,
 };
