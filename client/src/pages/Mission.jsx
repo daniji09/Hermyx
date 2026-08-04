@@ -1734,10 +1734,10 @@ const ReportMissionButton = ({ mission }) => {
       <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>
-            {messages.PUBLIC_PROFILE.REPORT_USER_DIALOG.TITLE}
+            {messages.PUBLIC_PROFILE.REPORT_MISSION_DIALOG.TITLE}
           </DialogTitle>
           <DialogDescription>
-            {messages.PUBLIC_PROFILE.REPORT_USER_DIALOG.DESCRIPTION}
+            {messages.PUBLIC_PROFILE.REPORT_MISSION_DIALOG.DESCRIPTION}
           </DialogDescription>
         </DialogHeader>
         <form

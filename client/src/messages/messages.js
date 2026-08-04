@@ -213,6 +213,10 @@ export const messages = {
       TITLE: `Report user`,
       DESCRIPTION: `Please provide details about why you are reporting this user. Our team will review it shortly.`,
     },
+    REPORT_MISSION_DIALOG: {
+      TITLE: `Report mission`,
+      DESCRIPTION: `Please provide details about why you are reporting this mission. Our team will review it shortly.`,
+    },
   },
   MAP: {
     LOCATION_NOT_FOUND: `Couldn't find results for this location.`,
