@@ -1,5 +1,5 @@
 //External modules
-import { messages } from '@hermyx/shared';
+import { consts, messages } from '@hermyx/shared';
 import {
   createMission as _createMission,
   getAllMissionsInDraft as _getAllMissionsInDraft,
@@ -72,10 +72,16 @@ import {
   REPORT_STATUS,
 } from '@hermyx/shared/utils/reports.utils.js';
 import {
+  deleteFromAzureBlob,
+  deleteFromLocalStorage,
   saveToLocalStorage,
   uploadToAzureBlob,
 } from '../services/storage.service.js';
-import { insertPhoto } from '../models/mission_photo.model.js';
+import {
+  deletePhoto,
+  getMissionPhotos,
+  insertPhoto,
+} from '../models/mission_photo.model.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -84,11 +90,12 @@ export const getMissionById = async (req, res) => {
     const uid = req.user.uid;
 
     // Searches mission by id
-    const [mission, participants, waitingForPaymentVacancies] =
+    const [mission, participants, waitingForPaymentVacancies, photos] =
       await Promise.all([
         _getMissionById(id, uid),
         getParticipantsForDisplay(id),
         getWaitingForPaymentVacancies(),
+        getMissionPhotos(id),
       ]);
 
     // Returns success or error
@@ -113,6 +120,7 @@ export const getMissionById = async (req, res) => {
         participants,
         waitingForPaymentVacancies,
         canFinish,
+        photos,
       },
     });
   } catch (e) {
@@ -247,6 +255,14 @@ export const createMission = async (req, res) => {
     // Creates the new mission
     const newMission = await _createMission(missionData);
     console.log(photos);
+
+    // Checks if photo number is correct
+    if (photos.length > consts.MISSION.PHOTOS.MAX) {
+      return res.status(400).json({
+        errors: { general: [messages.MISSION_SAME_TITLE] },
+      });
+    }
+
     // Saves photos
     let uploadedPhotoUrls = [];
     if (photos.length > 0) {
@@ -278,6 +294,25 @@ export const editMission = async (req, res) => {
   try {
     const { uid } = req.user;
     const mission = req.body;
+
+    // New and old photos are extracted
+    const newPhotos = req.files?.photos
+      ? Array.isArray(req.files.photos)
+        ? req.files.photos
+        : [req.files.photos]
+      : [];
+    const existingPhotos = req.body.existingPhotos
+      ? Array.isArray(req.body.existingPhotos)
+        ? req.body.existingPhotos
+        : [req.body.existingPhotos]
+      : [];
+
+    // Checks if photo number is correct
+    if (newPhotos.length + existingPhotos.length > consts.MISSION.PHOTOS.MAX) {
+      return res.status(400).json({
+        errors: { general: [messages.MISSION_SAME_TITLE] },
+      });
+    }
 
     // Gets original mission info
     const originalMission = await _getMissionById(mission.mid);
@@ -329,6 +364,39 @@ export const editMission = async (req, res) => {
 
     // Updates mission
     const updatedMission = await updateMission(mission);
+    console.log(newPhotos, existingPhotos);
+    // Photos management, first uploading and saving new photos
+    const currentPhotosInDb = await getMissionPhotos(mission.mid);
+    const isProduction = process.env.NODE_ENV === 'production';
+    let uploadedPhotoUrls = [];
+    if (newPhotos.length > 0) {
+      uploadedPhotoUrls = await Promise.all(
+        newPhotos.map(async (file) => {
+          if (isProduction) {
+            return await uploadToAzureBlob(file);
+          } else {
+            return await saveToLocalStorage(file);
+          }
+        }),
+      );
+    }
+
+    // Then, inserting them on db
+    for (const photoURL of uploadedPhotoUrls) {
+      await insertPhoto(mission.mid, photoURL);
+    }
+
+    // Photos that are not in existingPhotos but exist in db, must be deleted physically and from db
+    for (const dbPhoto of currentPhotosInDb) {
+      if (!existingPhotos.includes(dbPhoto.url)) {
+        if (isProduction) {
+          await deleteFromAzureBlob(dbPhoto.url);
+        } else {
+          await deleteFromLocalStorage(dbPhoto.url);
+        }
+        await deletePhoto(dbPhoto.id);
+      }
+    }
 
     // First operation, deleting vacancies that are not occupied from the original mission
     await deleteUnoccupiedVacancies(mission.mid, existingIds);

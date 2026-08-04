@@ -14,7 +14,6 @@ import { createMission, editMission } from '../services/MissionsServices';
 
 export const createMissionAction = async (previousState, formData) => {
   const fieldsData = Object.fromEntries(formData);
-
   const intent = formData.get('intent');
 
   // Photos are extracted
@@ -91,7 +90,6 @@ export const createMissionAction = async (previousState, formData) => {
     };
   } catch (error) {
     // If it some controlled error found in server
-    console.log(error.response.data);
     if (
       [400, 500].includes(error.response?.status) &&
       error.response.data?.errors
@@ -117,6 +115,18 @@ export const createMissionAction = async (previousState, formData) => {
 // Edit mission action, executed when form is sent
 export const editMissionAction = async (previousState, formData) => {
   const fieldsData = Object.fromEntries(formData);
+
+  // Photos are extracted
+  const filesArray = formData.getAll('photos');
+
+  // Array is formatted
+  fieldsData.photos = filesArray
+    .filter((file) => file instanceof File && file.size > 0)
+    .map((file) => ({
+      size: file.size,
+      mimetype: file.type,
+      file: file,
+    }));
   const validatedFields = editMissionBodySchema.safeParse(fieldsData);
 
   if (!validatedFields.success) {
@@ -132,7 +142,7 @@ export const editMissionAction = async (previousState, formData) => {
     const success = await editMission({
       ...validatedFields.data,
     });
-    console.log(success);
+
     if (!success?.mission?.mid) {
       throw {
         response: {
@@ -162,6 +172,7 @@ export const editMissionAction = async (previousState, formData) => {
     };
   } catch (error) {
     // If it some controlled error found in server
+    console.log(error.response.data);
     if (
       [400, 500].includes(error.response?.status) &&
       error.response.data?.errors

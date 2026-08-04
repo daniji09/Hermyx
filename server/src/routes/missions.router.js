@@ -50,6 +50,7 @@ import {
   kickAdventurerOutParamsSchema,
   kickAdventurerOutBodySchema,
   publishMissionFilesSchema,
+  editMissionFilesSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { inviteToMission } from './../controllers/missions.controller.js';
@@ -171,8 +172,10 @@ router.post(
 //Edit mission
 router.post(
   '/:mid',
+  upload.array('photos', 5),
   validateParamsSchema(editMissionParamSchema),
   validateBodySchema(editMissionBodySchema),
+  validateFilesSchema(editMissionFilesSchema),
   editMission,
 );
 

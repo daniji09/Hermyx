@@ -101,7 +101,7 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
-
+  console.log(mission);
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
@@ -226,6 +226,18 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       }
                     }
                   ></Map>
+                )}
+                {mission.photos && (
+                  <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
+                    {mission.photos.map((photo, index) => (
+                      <img
+                        key={index}
+                        src={getImageUrl(photo.url)}
+                        alt={`Mission ${mission.title} - Photo ${index + 1}`}
+                        className='w-full h-48 object-cover rounded-lg shadow-md border border-gray-200'
+                      />
+                    ))}
+                  </div>
                 )}
               </CardContent>
               <CardFooter>
@@ -1768,4 +1780,10 @@ const getParticipationStatusLabel = (status) => {
   }
 
   return messages.MISSION.STATUS_LABELS[status] || status.replaceAll('_', ' ');
+};
+
+const getImageUrl = (photoPath) => {
+  if (photoPath.startsWith('http')) return photoPath;
+  // Adjusts "/uploads/" so it calls the actual backend
+  return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${photoPath}`;
 };

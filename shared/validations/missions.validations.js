@@ -173,9 +173,9 @@ export const publishMissionFilesSchema = z.object({
 // Server and client edit mission shared validation
 export const editMissionBodySchema = z.object({
   mid: z.coerce
-    .number(messages.FIELD_NUMBER('Id'))
-    .int(messages.FIELD_INTEGER('Id'))
-    .min(0, messages.FIELD_POSITIVE('Id')),
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
   title: z
     .string()
     .trim()
@@ -195,6 +195,36 @@ export const editMissionBodySchema = z.object({
         consts.MISSION.DESCRIPTION_MAX_LENGTH,
       ),
     ),
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
   vacancies: z.coerce
     .number(messages.FIELD_NUMBER('Vacancies'))
     .int(messages.FIELD_INTEGER('Vacancies'))
@@ -237,6 +267,39 @@ export const editMissionParamSchema = z.object({
     .number(messages.FIELD_NUMBER('Mid'))
     .int(messages.FIELD_INTEGER('Mid'))
     .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+export const editMissionFilesSchema = z.object({
+  photos: z
+    .array(
+      z
+        .object({
+          size: z
+            .number()
+            .max(
+              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+              messages.MISSION_PHOTO_TOO_BIG,
+            ),
+          mimetype: z.refine(
+            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+            messages.MISSION_PHOTO_INVALID_TYPE,
+          ),
+        })
+        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,,
+    )
+    .max(
+      consts.MISSION.PHOTOS.MAX,
+      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    )
+    .optional()
+    .default([]),
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
 });
 
 const optionalNumberFromFormSchema = (schema) =>
