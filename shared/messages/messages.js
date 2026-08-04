@@ -183,6 +183,7 @@ export const messages = {
     'This Google account is already linked to another Hermyx account',
   CHANGING_EMAIL_TO_CURRENT:
     'The new email cannot be the same as your current one.',
+  NO_IMAGE_PROVIDED: 'No image provided',
 
   //// Notification
   PENDING_NOTIFICATION_EXISTS:

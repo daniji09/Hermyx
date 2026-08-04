@@ -82,6 +82,12 @@ export const updateMyProfile = async (profile) => {
   return data;
 };
 
+// Updates logged user's avatar
+export const updateMyAvatar = async (profile) => {
+  const { data } = await api.patch('/users/me/avatar', profile);
+  return data;
+};
+
 // Updates users email on DB and Firebase
 export const updateUserEmail = async (email) => {
   // API search

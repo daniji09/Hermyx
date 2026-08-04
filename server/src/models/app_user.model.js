@@ -203,3 +203,9 @@ export const unban = async (uid) => {
   ]);
   return result.rows[0];
 };
+
+export const updateAvatar = async (uid, avatar) => {
+  const query = `UPDATE app_user SET avatar = $1 WHERE uid = $2`;
+  const result = await pool.query(query, [avatar, uid]);
+  return result.rowCount;
+};

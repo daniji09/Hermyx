@@ -97,7 +97,7 @@ export const getMissionById = async (req, res) => {
         getWaitingForPaymentVacancies(),
         getMissionPhotos(id),
       ]);
-
+    console.log(participants);
     // Returns success or error
     if (!mission) {
       return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
@@ -254,7 +254,6 @@ export const createMission = async (req, res) => {
 
     // Creates the new mission
     const newMission = await _createMission(missionData);
-    console.log(photos);
 
     // Checks if photo number is correct
     if (photos.length > consts.MISSION.PHOTOS.MAX) {
@@ -271,9 +270,9 @@ export const createMission = async (req, res) => {
       uploadedPhotoUrls = await Promise.all(
         photos.map(async (file) => {
           if (isProduction) {
-            return await uploadToAzureBlob(file);
+            return await uploadToAzureBlob(file, 'mission-photos');
           } else {
-            return await saveToLocalStorage(file);
+            return await saveToLocalStorage(file, 'uploads/mission-photos');
           }
         }),
       );
@@ -373,9 +372,9 @@ export const editMission = async (req, res) => {
       uploadedPhotoUrls = await Promise.all(
         newPhotos.map(async (file) => {
           if (isProduction) {
-            return await uploadToAzureBlob(file);
+            return await uploadToAzureBlob(file, 'mission-photos');
           } else {
-            return await saveToLocalStorage(file);
+            return await saveToLocalStorage(file, 'uploads/mission-photos');
           }
         }),
       );
@@ -390,7 +389,7 @@ export const editMission = async (req, res) => {
     for (const dbPhoto of currentPhotosInDb) {
       if (!existingPhotos.includes(dbPhoto.url)) {
         if (isProduction) {
-          await deleteFromAzureBlob(dbPhoto.url);
+          await deleteFromAzureBlob(dbPhoto.url, 'mission-photos');
         } else {
           await deleteFromLocalStorage(dbPhoto.url);
         }

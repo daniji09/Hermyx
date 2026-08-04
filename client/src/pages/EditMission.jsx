@@ -50,6 +50,7 @@ import {
 import { useAlert } from '../contexts/AlertContext';
 import { disputeAdventurerAction } from '../actions/ReportActions';
 import { useDropzone } from 'react-dropzone';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export const EditMission = () => {
   // Mission id
@@ -431,9 +432,17 @@ const CreationVacancyCard = ({
 
       <div className='flex justify-center mb-4'>
         {isAssigned ? (
-          // TODO: avatar del usuario
           <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
-            <User size={24} />
+            <Avatar size='md' className='h-full w-full'>
+              <AvatarImage
+                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${vacancy.avatar}`}
+                alt={`${vacancy.username} avatar`}
+                className='h-full w-full object-cover'
+              />
+              <AvatarFallback>
+                <User className='h-12 w-12 text-muted-foreground' />
+              </AvatarFallback>
+            </Avatar>
           </div>
         ) : (
           <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>

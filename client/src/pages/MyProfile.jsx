@@ -3,6 +3,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -12,6 +13,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  Camera,
   Edit,
   Info,
   LockKeyhole,
@@ -32,6 +34,7 @@ import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import {
   getMyProfileQueryOptions,
+  updateMyAvatarMutationOptions,
   updateMyProfileMutationOptions,
 } from '../queries/UsersQueries';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
@@ -173,18 +176,7 @@ const ProfileHeader = ({ user }) => {
   const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
   return (
     <header className='mb-8 flex flex-col gap-6 border-b pb-8 sm:flex-row sm:items-center'>
-      <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
-        <Avatar size='profile'>
-          <AvatarImage
-            src={user.avatar}
-            alt={`${user.username} avatar`}
-            className='h-full w-full object-cover'
-          />
-          <AvatarFallback>
-            <User className='h-12 w-12 text-muted-foreground' />
-          </AvatarFallback>
-        </Avatar>
-      </div>
+      <ProfileAvatar user={user}></ProfileAvatar>
 
       <div className='min-w-0 flex-1'>
         <h1 className='break-all text-3xl font-bold tracking-tight sm:text-4xl'>
@@ -196,6 +188,86 @@ const ProfileHeader = ({ user }) => {
         </p>
       </div>
     </header>
+  );
+};
+
+const ProfileAvatar = ({ user }) => {
+  const fileInputRef = useRef(null);
+  const queryClient = useQueryClient();
+  const { showAlert } = useAlert();
+
+  // Mutation for changing avatar
+  const { mutate, isPending } = useMutation(
+    updateMyAvatarMutationOptions({
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
+      },
+      onError: (error) => {
+        showAlert({
+          title: 'Error',
+          description:
+            error.response?.data?.errors?.general?.[0] ||
+            `Couldn't update photo`,
+          variant: 'danger',
+        });
+      },
+    }),
+  );
+
+  const handleAvatarClick = () => {
+    // Avoids multiple clicks
+    if (!isPending) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      mutate(formData);
+    }
+    e.target.value = '';
+  };
+
+  return (
+    <div
+      className={`group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border bg-muted transition-opacity ${isPending ? 'opacity-50' : ''}`}
+      onClick={handleAvatarClick}
+    >
+      <Avatar size='profile' className='h-full w-full'>
+        <AvatarImage
+          src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${user.avatar}`}
+          alt={`${user.username} avatar`}
+          className='h-full w-full object-cover'
+        />
+        <AvatarFallback>
+          <User className='h-12 w-12 text-muted-foreground' />
+        </AvatarFallback>
+      </Avatar>
+
+      {!isPending && (
+        <div className='absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100'>
+          <Camera className='mb-1 h-6 w-6' />
+          <span className='text-xs font-medium'>Change</span>
+        </div>
+      )}
+
+      {isPending && (
+        <div className='absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white'>
+          <span className='text-xs font-medium'>Uploading...</span>
+        </div>
+      )}
+
+      <input
+        type='file'
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept='image/jpeg, image/png, image/webp'
+        className='hidden'
+      />
+    </div>
   );
 };
 

@@ -17,6 +17,7 @@ import {
   getById,
   ban,
   unban,
+  updateAvatar,
 } from '../models/app_user.model.js';
 import {
   getPublicProfileCreatedMissions,
@@ -79,6 +80,12 @@ import {
   REPORT_DECISION,
   REPORT_STATUS,
 } from '@hermyx/shared/utils/reports.utils.js';
+import {
+  deleteFromAzureBlob,
+  deleteFromLocalStorage,
+  saveToLocalStorage,
+  uploadToAzureBlob,
+} from '../services/storage.service.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -509,6 +516,54 @@ export const updateMyProfile = async (req, res) => {
         description: updatedUser.description,
       },
     });
+  } catch (e) {
+    console.error(e);
+    return res
+      .status(500)
+      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  }
+};
+
+export const updateMyAvatar = async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user)
+      return res
+        .status(401)
+        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ errors: { general: [messages.NO_IMAGE_PROVIDED] } });
+    }
+
+    // Gets user
+    const currentUser = await getById(user.uid);
+
+    // Deletes old photo physically
+    if (currentUser.avatar) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      if (isProduction) {
+        await deleteFromAzureBlob(currentUser.avatar, 'avatars');
+      } else {
+        await deleteFromLocalStorage(currentUser.avatar);
+      }
+    }
+
+    // Uploads new photo
+    const isProduction = process.env.NODE_ENV === 'production';
+    let updatedPhotUrl;
+    if (isProduction) {
+      updatedPhotUrl = await uploadToAzureBlob(req.file, 'avatars');
+    } else {
+      updatedPhotUrl = await saveToLocalStorage(req.file, 'uploads/avatars');
+    }
+
+    // Updates photo from db
+    await updateAvatar(user.uid, updatedPhotUrl);
+
+    return res.status(200).json({});
   } catch (e) {
     console.error(e);
     return res

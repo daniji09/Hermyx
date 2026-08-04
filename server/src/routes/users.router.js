@@ -17,6 +17,7 @@ import {
   deleteUser,
   updateUserConfiguration,
   banUser,
+  updateMyAvatar,
 } from '../controllers/users.controller.js';
 import {
   validateBodySchema,
@@ -43,6 +44,10 @@ import {
 
 import { verifyAdmin, verifyToken } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
+import multer from 'multer';
+
+// Multer config
+const upload = multer({ storage: multer.memoryStorage() });
 
 /// GET
 // Get users
@@ -59,11 +64,20 @@ router.get(
 //Get my profile
 router.get('/me/profile', verifyToken, getMyProfile);
 
+// Updates profile
 router.patch(
   '/me/profile',
   verifyToken,
   validateBodySchema(updateMyProfileSchema),
   updateMyProfile,
+);
+
+// Updates avatar
+router.patch(
+  '/me/avatar',
+  verifyToken,
+  upload.single('avatar'), // Multer procesa el archivo
+  updateMyAvatar,
 );
 
 //Get user by username
