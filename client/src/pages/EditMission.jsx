@@ -1214,14 +1214,14 @@ export function MissionPhotoUpload({ files, setFiles }) {
 
       {files.length > 0 && (
         <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-4'>
-          {files.map((file) => (
+          {files.map((file, index) => (
             <div
               key={file.name}
               className='relative group aspect-square rounded-md overflow-hidden border'
             >
               <img
                 src={file.preview}
-                alt='Preview'
+                alt={`Mission - Photo ${index + 1}`}
                 className='object-cover w-full h-full'
                 onLoad={() => {
                   URL.revokeObjectURL(file.preview);
