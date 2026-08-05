@@ -401,7 +401,11 @@ export const getMissionsOpened = async ({
     query += `
       AND m.location IS NOT NULL
       AND requester.location IS NOT NULL
-      AND ST_DWithin(m.location, requester.location, $${values.length} * 1000)
+      AND ST_DWithin(
+        m.location,
+        requester.location,
+        $${values.length}::double precision * 1000
+      )
     `;
   }
 

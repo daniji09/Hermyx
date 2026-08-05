@@ -563,7 +563,7 @@ export const updateMyAvatar = async (req, res) => {
     // Updates photo from db
     await updateAvatar(user.uid, updatedPhotUrl);
 
-    return res.status(200).json({});
+    return res.status(200).json({ avatar: updatedPhotUrl });
   } catch (e) {
     console.error(e);
     return res

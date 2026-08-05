@@ -43,6 +43,7 @@ export const UseGoogleAuth = () => {
           email: user.email,
           id: dbUser.id || dbUser.uid,
           username: dbUser.username,
+          avatar: dbUser.avatar,
         });
         return data;
       } catch (error) {
