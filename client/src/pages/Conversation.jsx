@@ -1,7 +1,14 @@
 import { useContext, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUp, MessageCircleDashed } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUp,
+  MessageCircleDashed,
+  PlusIcon,
+  X,
+} from 'lucide-react';
+import { consts } from '@hermyx/shared';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -67,15 +74,31 @@ const getInitials = (username) =>
     .join('')
     .toUpperCase() || '?';
 
+const MessageBubbleContent = ({ message }) => (
+  <BubbleContent className='space-y-2 whitespace-pre-line'>
+    {message.attachment_type === 'image' && message.attachment_url && (
+      <img
+        src={getImageUrl(message.attachment_url)}
+        alt='Message attachment'
+        className='max-h-64 w-full rounded-lg object-cover'
+      />
+    )}
+    {message.content && <p>{message.content}</p>}
+  </BubbleContent>
+);
+
 export const Conversation = () => {
   const { conversationId } = useParams();
   const location = useLocation();
   const { currentUser, socket } = useContext(AuthContext);
   const backTo = location.state?.from || '/conversations';
   const [content, setContent] = useState('');
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [selectedPhotoPreview, setSelectedPhotoPreview] = useState('');
   const [messages, setMessages] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const formRef = useRef(null);
+  const photoInputRef = useRef(null);
   const messageInputRef = useRef(null);
   const shouldRestoreInputFocusRef = useRef(false);
   const queryClient = useQueryClient();
@@ -114,6 +137,18 @@ export const Conversation = () => {
   useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
+
+  useEffect(() => {
+    if (!selectedPhoto) {
+      setSelectedPhotoPreview('');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(selectedPhoto);
+    setSelectedPhotoPreview(previewUrl);
+
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [selectedPhoto]);
 
   useEffect(() => {
     if (!conversationData || !conversationId) return;
@@ -171,9 +206,10 @@ export const Conversation = () => {
   }, [socket, conversationId, currentUser?.id, queryClient]);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: () => sendMessage(conversationId, content),
+    mutationFn: () => sendMessage(conversationId, content, selectedPhoto),
     onSuccess: () => {
       setContent('');
+      setSelectedPhoto(null);
       setErrorMessage('');
     },
     onError: (error) => {
@@ -205,7 +241,7 @@ export const Conversation = () => {
       document.activeElement,
     );
 
-    if (!content.trim()) {
+    if (!content.trim() && !selectedPhoto) {
       setErrorMessage('Message cannot be empty.');
       shouldRestoreInputFocusRef.current = false;
       messageInputRef.current?.focus();
@@ -213,6 +249,34 @@ export const Conversation = () => {
     }
 
     mutate();
+  };
+
+  const handlePhotoChange = (event) => {
+    const [photo] = event.target.files || [];
+    event.target.value = '';
+
+    if (!photo) return;
+
+    if (!consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(photo.type)) {
+      setSelectedPhoto(null);
+      setErrorMessage('Only .jpeg, .png and .webp images are accepted.');
+      return;
+    }
+
+    if (photo.size > consts.MISSION.PHOTOS.MAX_FILE_SIZE) {
+      setSelectedPhoto(null);
+      setErrorMessage('Each photo has to weight less than 5MB.');
+      return;
+    }
+
+    setSelectedPhoto(photo);
+    setErrorMessage('');
+    messageInputRef.current?.focus();
+  };
+
+  const removeSelectedPhoto = () => {
+    setSelectedPhoto(null);
+    messageInputRef.current?.focus();
   };
 
   const handleMessageKeyDown = (event) => {
@@ -266,15 +330,14 @@ export const Conversation = () => {
             <CardTitle asChild>
               <h1>{conversationTitle || 'Conversation'}</h1>
             </CardTitle>
-            <CardDescription>
-              {isMissionConversation
-                ? `Mission group · ${conversationData.participants.length} ${
-                    conversationData.participants.length === 1
-                      ? 'participant'
-                      : 'participants'
-                  }`
-                : `Conversation with ${otherParticipant?.username || 'adventurer'}`}
-            </CardDescription>
+            {isMissionConversation && (
+              <CardDescription>
+                Mission group · {conversationData.participants.length}{' '}
+                {conversationData.participants.length === 1
+                  ? 'participant'
+                  : 'participants'}
+              </CardDescription>
+            )}
           </CardHeader>
 
           <CardContent
@@ -337,9 +400,9 @@ export const Conversation = () => {
                                 <Bubble
                                   variant={isOwnMessage ? 'default' : 'muted'}
                                 >
-                                  <BubbleContent className='whitespace-pre-line'>
-                                    {firstMessage.content}
-                                  </BubbleContent>
+                                  <MessageBubbleContent
+                                    message={firstMessage}
+                                  />
                                 </Bubble>
                               ) : (
                                 <BubbleGroup className='w-full'>
@@ -350,9 +413,7 @@ export const Conversation = () => {
                                         isOwnMessage ? 'default' : 'muted'
                                       }
                                     >
-                                      <BubbleContent className='whitespace-pre-line'>
-                                        {message.content}
-                                      </BubbleContent>
+                                      <MessageBubbleContent message={message} />
                                     </Bubble>
                                   ))}
                                 </BubbleGroup>
@@ -376,7 +437,39 @@ export const Conversation = () => {
                 onSubmit={handleSubmit}
                 className='w-full space-y-2'
               >
+                {selectedPhotoPreview && (
+                  <div className='flex items-center gap-3 rounded-xl border bg-muted/30 p-2'>
+                    <img
+                      src={selectedPhotoPreview}
+                      alt='Selected attachment preview'
+                      className='size-14 rounded-lg object-cover'
+                    />
+                    <span className='min-w-0 flex-1 truncate text-sm text-muted-foreground'>
+                      {selectedPhoto?.name}
+                    </span>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon-sm'
+                      onClick={removeSelectedPhoto}
+                      disabled={isPending}
+                      aria-label='Remove selected photo'
+                    >
+                      <X className='h-4 w-4' aria-hidden='true' />
+                    </Button>
+                  </div>
+                )}
                 <InputGroup className='h-auto rounded-2xl border-transparent bg-input/50'>
+                  <input
+                    ref={photoInputRef}
+                    type='file'
+                    accept={consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
+                      ',',
+                    )}
+                    className='sr-only'
+                    onChange={handlePhotoChange}
+                    disabled={isPending}
+                  />
                   <InputGroupTextarea
                     ref={messageInputRef}
                     value={content}
@@ -391,6 +484,16 @@ export const Conversation = () => {
                     className='min-h-14 max-h-32 px-3 py-2.5'
                   />
                   <InputGroupAddon align='block-end' className='pt-1'>
+                    <InputGroupButton
+                      type='button'
+                      variant='outline'
+                      size='icon-sm'
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={isPending}
+                      aria-label='Add photo'
+                    >
+                      <PlusIcon className='h-4 w-4' aria-hidden='true' />
+                    </InputGroupButton>
                     <InputGroupButton
                       type='submit'
                       variant='default'

@@ -203,11 +203,23 @@ export const getConversationParticipants = async (conversationId) => {
   return result.rows;
 };
 
-export const createMessage = async (conversationId, senderId, content) => {
+export const createMessage = async ({
+  conversationId,
+  senderId,
+  content,
+  attachmentUrl = null,
+  attachmentType = null,
+}) => {
   const query = `
     WITH inserted_message AS (
-      INSERT INTO message (conversation_id, sender_id, content)
-      VALUES ($1, $2, $3)
+      INSERT INTO message (
+        conversation_id,
+        sender_id,
+        content,
+        attachment_url,
+        attachment_type
+      )
+      VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     )
     SELECT
@@ -215,6 +227,8 @@ export const createMessage = async (conversationId, senderId, content) => {
       m.conversation_id,
       m.sender_id,
       m.content,
+      m.attachment_url,
+      m.attachment_type,
       m.created_at,
       u.username AS sender_username,
       u.avatar AS sender_avatar
@@ -222,7 +236,13 @@ export const createMessage = async (conversationId, senderId, content) => {
     JOIN app_user u ON u.uid = m.sender_id
   `;
 
-  const result = await pool.query(query, [conversationId, senderId, content]);
+  const result = await pool.query(query, [
+    conversationId,
+    senderId,
+    content,
+    attachmentUrl,
+    attachmentType,
+  ]);
   return result.rows[0];
 };
 
@@ -233,6 +253,8 @@ export const getMessagesByConversationId = async (conversationId) => {
       m.conversation_id,
       m.sender_id,
       m.content,
+      m.attachment_url,
+      m.attachment_type,
       m.created_at,
       u.username AS sender_username,
       u.avatar AS sender_avatar
@@ -340,6 +362,7 @@ export const getConversationsByUserId = async (userId) => {
       other_user.avatar AS other_avatar,
       last_message.mid AS last_message_id,
       last_message.content AS last_message_content,
+      last_message.attachment_type AS last_message_attachment_type,
       last_message.created_at AS last_message_created_at,
       last_sender.uid AS last_message_sender_id,
       last_sender.username AS last_message_sender_username

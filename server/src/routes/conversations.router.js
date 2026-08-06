@@ -1,6 +1,8 @@
 import { Router } from 'express';
+import multer from 'multer';
 import {
   conversationIdParamsSchema,
+  createMessageFileSchema,
   createMessageSchema,
   privateConversationSchema,
 } from '@hermyx/shared';
@@ -13,50 +15,48 @@ import {
   getMyUnreadMessageCount,
   markConversationAsRead,
 } from '../controllers/conversations.controller.js';
-import { verifyToken } from '../middlewares/auth.middleware.js';
 import {
   validateBodySchema,
+  validateFileSchema,
   validateParamsSchema,
 } from '../middlewares/validations.middleware.js';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.post(
   '/private',
-  verifyToken,
   validateBodySchema(privateConversationSchema),
   getOrCreatePrivateConversationWithUser,
 );
 
-router.get('/', verifyToken, getMyConversations);
+router.get('/', getMyConversations);
 
-router.get('/unread-count', verifyToken, getMyUnreadMessageCount);
+router.get('/unread-count', getMyUnreadMessageCount);
 
 router.patch(
   '/:conversationId/read',
-  verifyToken,
   validateParamsSchema(conversationIdParamsSchema),
   markConversationAsRead,
 );
 
 router.get(
   '/:conversationId',
-  verifyToken,
   validateParamsSchema(conversationIdParamsSchema),
   getConversation,
 );
 
 router.post(
   '/:conversationId/messages',
-  verifyToken,
+  upload.single('photo'),
   validateParamsSchema(conversationIdParamsSchema),
   validateBodySchema(createMessageSchema),
+  validateFileSchema(createMessageFileSchema),
   sendMessage,
 );
 
 router.get(
   '/:conversationId/messages',
-  verifyToken,
   validateParamsSchema(conversationIdParamsSchema),
   getConversationMessages,
 );

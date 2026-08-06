@@ -4,6 +4,18 @@ import { MessageCircle, User, Users } from 'lucide-react';
 import { getMyConversationsQueryOptions } from '../queries/ConversationsQueries';
 import { getImageUrl } from '../utils/media';
 
+const getLastMessagePreview = (conversation) => {
+  if (conversation.last_message_content) {
+    return conversation.last_message_content;
+  }
+
+  if (conversation.last_message_attachment_type === 'image') {
+    return 'Photo';
+  }
+
+  return 'No messages yet.';
+};
+
 export const Conversations = () => {
   const {
     data: conversations = [],
@@ -98,7 +110,7 @@ export const Conversations = () => {
                   )}
 
                   <p className='mt-1 truncate text-sm text-muted-foreground'>
-                    {conversation.last_message_content || 'No messages yet.'}
+                    {getLastMessagePreview(conversation)}
                   </p>
                 </div>
 

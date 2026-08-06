@@ -14,6 +14,10 @@ import {
 } from '../src/models/mission_participation.model.js';
 import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
 
+const saveToLocalStorageMock = vi.hoisted(() =>
+  vi.fn(async () => '/uploads/conversation-photos/test-photo.png'),
+);
+
 vi.mock('../src/middlewares/auth.middleware.js', () => {
   return {
     verifyToken: (req, res, next) => {
@@ -25,6 +29,16 @@ vi.mock('../src/middlewares/auth.middleware.js', () => {
     verifyCronToken: (req, res, next) => {
       next();
     },
+    verifyAdmin: (req, res, next) => {
+      next();
+    },
+  };
+});
+
+vi.mock('../src/services/storage.service.js', () => {
+  return {
+    saveToLocalStorage: saveToLocalStorageMock,
+    uploadToAzureBlob: vi.fn(async () => 'https://storage.test/photo.png'),
   };
 });
 
@@ -87,6 +101,7 @@ const createMissionWithConversation = async (ownerId) => {
 };
 
 beforeEach(async () => {
+  saveToLocalStorageMock.mockClear();
   await pool.query('TRUNCATE TABLE app_user CASCADE');
 });
 
@@ -164,6 +179,47 @@ describe('Unread direct messages', () => {
       .set('x-test-user-id', outsider.uid);
 
     expect(response.status).toBe(403);
+  });
+});
+
+describe('Conversation photo messages', () => {
+  it('allows sending a photo without text', async () => {
+    const sender = await createUser('photo_sender');
+    const recipient = await createUser('photo_recipient');
+    const conversation = await createPrivateConversation(
+      sender.uid,
+      recipient.uid,
+    );
+
+    const sendResponse = await request(app)
+      .post(`/api/conversations/${conversation.cid}/messages`)
+      .set('x-test-user-id', sender.uid)
+      .attach('photo', Buffer.from('fake image'), {
+        filename: 'chat-photo.png',
+        contentType: 'image/png',
+      });
+    const messagesResponse = await request(app)
+      .get(`/api/conversations/${conversation.cid}/messages`)
+      .set('x-test-user-id', recipient.uid);
+
+    expect(sendResponse.status).toBe(201);
+    expect(sendResponse.body.message).toMatchObject({
+      content: '',
+      attachment_url: '/uploads/conversation-photos/test-photo.png',
+      attachment_type: 'image',
+    });
+    expect(messagesResponse.status).toBe(200);
+    expect(messagesResponse.body.messages[0]).toMatchObject({
+      attachment_url: '/uploads/conversation-photos/test-photo.png',
+      attachment_type: 'image',
+    });
+    expect(saveToLocalStorageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originalname: 'chat-photo.png',
+        mimetype: 'image/png',
+      }),
+      'uploads/conversation-photos',
+    );
   });
 });
 
