@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ import {
 import { consts } from '@hermyx/shared';
 import { useNavigate } from 'react-router-dom';
 import { SearchBar } from './form/SearchBar';
+import { getImageUrl } from '@/utils/media';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext, useState } from 'react';
 import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueries';
@@ -250,9 +252,15 @@ const ProfileLink = ({ currentUser }) => {
       className='gap-2 rounded-full px-2 hover:bg-slate-200/50'
     >
       <Link to='/profile' aria-label='Go to my profile'>
-        <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-          <User className='h-4 w-4' aria-hidden='true' />
-        </span>
+        <Avatar className='size-7'>
+          <AvatarImage
+            src={getImageUrl(currentUser.avatar)}
+            alt={`${currentUser.username} avatar`}
+          />
+          <AvatarFallback>
+            <User className='h-4 w-4' aria-hidden='true' />
+          </AvatarFallback>
+        </Avatar>
         <span className='max-w-20 lg:max-w-28 truncate'>
           {currentUser.username}
         </span>

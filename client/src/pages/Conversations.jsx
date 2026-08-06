@@ -2,6 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { MessageCircle, User, Users } from 'lucide-react';
 import { getMyConversationsQueryOptions } from '../queries/ConversationsQueries';
+import { getImageUrl } from '../utils/media';
+
+const getLastMessagePreview = (conversation) => {
+  if (conversation.last_message_content) {
+    return conversation.last_message_content;
+  }
+
+  if (conversation.last_message_attachment_type === 'image') {
+    return 'Photo';
+  }
+
+  return 'No messages yet.';
+};
 
 export const Conversations = () => {
   const {
@@ -63,7 +76,7 @@ export const Conversations = () => {
                     <Users className='h-5 w-5 text-muted-foreground' />
                   ) : conversation.other_avatar ? (
                     <img
-                      src={conversation.other_avatar}
+                      src={getImageUrl(conversation.other_avatar)}
                       alt={`${conversation.other_username} avatar`}
                       className='h-full w-full object-cover'
                     />
@@ -97,7 +110,7 @@ export const Conversations = () => {
                   )}
 
                   <p className='mt-1 truncate text-sm text-muted-foreground'>
-                    {conversation.last_message_content || 'No messages yet.'}
+                    {getLastMessagePreview(conversation)}
                   </p>
                 </div>
 

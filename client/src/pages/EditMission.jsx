@@ -51,6 +51,7 @@ import { useAlert } from '../contexts/AlertContext';
 import { disputeAdventurerAction } from '../actions/ReportActions';
 import { useDropzone } from 'react-dropzone';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getImageUrl } from '../utils/media';
 
 export const EditMission = () => {
   // Mission id
@@ -179,13 +180,9 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         typeof photo === 'object'
           ? photo.url || photo.path || photo.name
           : photo;
-      const fullUrl = pathString.startsWith('http')
-        ? pathString
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${pathString}`;
-
       return {
         name: pathString,
-        preview: fullUrl,
+        preview: getImageUrl(pathString),
         isExisting: true,
       };
     });
@@ -435,7 +432,7 @@ const CreationVacancyCard = ({
           <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
             <Avatar size='md' className='h-full w-full'>
               <AvatarImage
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${vacancy.avatar}`}
+                src={getImageUrl(vacancy.avatar)}
                 alt={`${vacancy.username} avatar`}
                 className='h-full w-full object-cover'
               />

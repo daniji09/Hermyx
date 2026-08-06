@@ -10,10 +10,18 @@ export const getConversation = async (conversationId) => {
   return data;
 };
 
-export const sendMessage = async (conversationId, content) => {
-  const response = await api.post(`/conversations/${conversationId}/messages`, {
-    content,
-  });
+export const sendMessage = async (conversationId, content, photo) => {
+  const formData = new FormData();
+  formData.append('content', content);
+
+  if (photo) {
+    formData.append('photo', photo);
+  }
+
+  const response = await api.post(
+    `/conversations/${conversationId}/messages`,
+    formData,
+  );
 
   return response.data.message;
 };

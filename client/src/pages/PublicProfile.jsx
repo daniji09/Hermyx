@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
+import { getImageUrl } from '../utils/media';
 import {
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
@@ -148,7 +149,7 @@ export const PublicProfile = () => {
         <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
           {user.avatar ? (
             <img
-              src={user.avatar}
+              src={getImageUrl(user.avatar)}
               alt={`${user.username} avatar`}
               className='h-full w-full object-cover'
             />

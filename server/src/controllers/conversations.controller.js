@@ -17,6 +17,10 @@ import {
 } from '../models/conversation.model.js';
 
 import { emitToConversation, emitToUser } from '../services/socket.service.js';
+import {
+  saveToLocalStorage,
+  uploadToAzureBlob,
+} from '../services/storage.service.js';
 
 export const getOrCreatePrivateConversationWithUser = async (req, res) => {
   try {
@@ -58,6 +62,7 @@ export const sendMessage = async (req, res) => {
     const senderId = req.user.uid;
     const { conversationId } = req.params;
     const { content } = req.body;
+    const photo = req.file;
 
     const isParticipant = await isConversationParticipant(
       conversationId,
@@ -81,7 +86,30 @@ export const sendMessage = async (req, res) => {
       });
     }
 
-    const message = await createMessage(conversationId, senderId, content);
+    if (!content.trim() && !photo) {
+      return res.status(400).json({
+        errors: { general: ['Message cannot be empty.'] },
+      });
+    }
+
+    let attachmentUrl = null;
+    let attachmentType = null;
+
+    if (photo) {
+      const isProduction = process.env.NODE_ENV === 'production';
+      attachmentUrl = isProduction
+        ? await uploadToAzureBlob(photo, 'conversation-photos')
+        : await saveToLocalStorage(photo, 'uploads/conversation-photos');
+      attachmentType = 'image';
+    }
+
+    const message = await createMessage({
+      conversationId,
+      senderId,
+      content,
+      attachmentUrl,
+      attachmentType,
+    });
 
     emitToConversation(conversationId, 'conversation:message-created', message);
 

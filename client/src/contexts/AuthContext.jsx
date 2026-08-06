@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
             email: firebaseUser.email,
             id: hermyxUser.uid,
             username: hermyxUser.username,
+            avatar: hermyxUser.avatar,
             isAdmin: userIsAdmin,
           });
         } catch (e) {

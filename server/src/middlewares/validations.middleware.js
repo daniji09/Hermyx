@@ -84,3 +84,16 @@ export const validateFilesSchema = (schema) => (req, res, next) => {
   // Successful validation
   next();
 };
+
+export const validateFileSchema = (schema) => (req, res, next) => {
+  const result = schema.safeParse({ photo: req.file });
+
+  if (!result.success) {
+    return res.status(400).json({
+      errors: result.error.flatten().fieldErrors,
+    });
+  }
+
+  req.file = result.data.photo;
+  next();
+};

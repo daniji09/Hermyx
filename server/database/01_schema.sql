@@ -106,8 +106,14 @@ CREATE TABLE MESSAGE (
 	mid SERIAL PRIMARY KEY,
 	conversation_id INT NOT NULL,
 	sender_id INT NOT NULL,
-	content VARCHAR(1000) NOT NULL CHECK (LENGTH(TRIM(content)) > 0),
+	content VARCHAR(1000),
+	attachment_url TEXT,
+	attachment_type VARCHAR(20) CHECK (attachment_type IS NULL OR attachment_type IN ('image')),
 	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CHECK (
+		LENGTH(TRIM(COALESCE(content, ''))) > 0
+		OR attachment_url IS NOT NULL
+	),
 	FOREIGN KEY (conversation_id) REFERENCES CONVERSATION(cid) ON DELETE CASCADE,
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
 );

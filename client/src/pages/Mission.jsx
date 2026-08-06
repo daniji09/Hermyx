@@ -78,6 +78,7 @@ import { initialStateUseStateAction } from './../consts/consts';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getImageUrl } from '../utils/media';
 
 export const Mission = () => {
   // Mission id
@@ -382,7 +383,7 @@ const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
           <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
             <Avatar size='md' className='h-full w-full'>
               <AvatarImage
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${vacancy.avatar}`}
+                src={getImageUrl(vacancy.avatar)}
                 alt={`${vacancy.username} avatar`}
                 className='h-full w-full object-cover'
               />
@@ -643,7 +644,7 @@ const ParticipantRow = ({ participant }) => {
         <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
           {participant.avatar ? (
             <img
-              src={participant.avatar}
+              src={getImageUrl(participant.avatar)}
               alt={`${participant.username} avatar`}
               className='h-full w-full object-cover'
             />
@@ -1801,10 +1802,4 @@ const getParticipationStatusLabel = (status) => {
   }
 
   return messages.MISSION.STATUS_LABELS[status] || status.replaceAll('_', ' ');
-};
-
-const getImageUrl = (photoPath) => {
-  if (photoPath.startsWith('http')) return photoPath;
-  // Adjusts "/uploads/" so it calls the actual backend
-  return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${photoPath}`;
 };
