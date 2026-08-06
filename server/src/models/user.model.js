@@ -1,4 +1,4 @@
-import { USER_STATUS } from '@hermyx/shared/utils/users.utils.js';
+import { USER_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
 //Get the user by their ID

@@ -1,7 +1,4 @@
-import {
-  MISSION_PAYMENT_STATUS,
-  TRANSACTION_TYPE,
-} from '@hermyx/shared/utils/payment.utils.js';
+import { MISSION_PAYMENT_STATUS, TRANSACTION_TYPE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
 export const createMissionPayment = async (missionPaymentData) => {

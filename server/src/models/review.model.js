@@ -1,10 +1,10 @@
 import pool from '../config/db.config.js';
-import { VACANCY_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
+import { MISSION_PARTICIPATION_STATUS } from '@hermyx/shared';
 
 const REVIEWABLE_PARTICIPATION_STATUSES = [
-  VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-  VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
-  VACANCY_LIFE_CYCLE.RELEASED.ID,
+  MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+  MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
+  MISSION_PARTICIPATION_STATUS.RELEASED.ID,
 ];
 
 export const createOwnerReview = async ({

@@ -1,6 +1,8 @@
-import { VACANCY_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
+import {
+  MISSION_PARTICIPATION_STATUS,
+  MISSION_PARTICIPATION_PAYMENT_STATUS,
+} from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { VACANCY_PAYMENT_STATUS } from '@hermyx/shared/utils/payment.utils.js';
 import {
   addMissionConversationParticipant,
   leaveMissionConversation,
@@ -25,8 +27,8 @@ export const startParticipants = async (mid) => {
   `;
   const result = await pool.query(query, [
     mid,
-    VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
-    VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
   ]);
   return result.rows;
 };
@@ -58,7 +60,7 @@ export const submitParticipation = async (mid, adventurerId) => {
   const result = await pool.query(query, [
     mid,
     adventurerId,
-    VACANCY_LIFE_CYCLE.SUBMITTED.ID,
+    MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
   ]);
   return result.rows[0] || null;
 };
@@ -73,7 +75,7 @@ export const approveParticipation = async (mid, adventurerId) => {
   const result = await pool.query(query, [
     mid,
     adventurerId,
-    VACANCY_LIFE_CYCLE.ACCEPTED.ID,
+    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
   ]);
   return result.rows[0] || null;
 };
@@ -91,7 +93,7 @@ export const releaseParticipation = async (mid, adventurerId) => {
         WHERE mid = $1 AND adventurer_id = $2
         RETURNING *
       `,
-      [mid, adventurerId, VACANCY_LIFE_CYCLE.RELEASED.ID],
+      [mid, adventurerId, MISSION_PARTICIPATION_STATUS.RELEASED.ID],
     );
 
     if (!result.rows[0]) {
@@ -121,7 +123,7 @@ export const requestParticipationRevision = async (mid, adventurerId) => {
   const result = await pool.query(query, [
     mid,
     adventurerId,
-    VACANCY_LIFE_CYCLE.REJECTED.ID,
+    MISSION_PARTICIPATION_STATUS.REJECTED.ID,
   ]);
   return result.rows[0] || null;
 };
@@ -136,7 +138,7 @@ export const reopenParticipation = async (mid, adventurerId) => {
   const result = await pool.query(query, [
     mid,
     adventurerId,
-    VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
+    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
   ]);
   return result.rows[0] || null;
 };
@@ -151,7 +153,7 @@ export const disputeParticipation = async (mid, adventurerId) => {
   const result = await pool.query(query, [
     mid,
     adventurerId,
-    VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+    MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
   ]);
   return result.rows[0] || null;
 };
@@ -178,7 +180,7 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
         WHERE mid = $2 AND id = $3 AND adventurer_id IS NULL
         RETURNING *
       `,
-      [uid, mid, vacancyId, VACANCY_LIFE_CYCLE.JOINED.ID],
+      [uid, mid, vacancyId, MISSION_PARTICIPATION_STATUS.JOINED.ID],
     );
     const joinedVacancy = result.rows[0];
 
@@ -222,7 +224,7 @@ export const unjoinVacancy = async (mid, vacancyId, adventurerId) => {
           AND id = $2
           AND adventurer_id = $3
       `,
-      [mid, vacancyId, adventurerId, VACANCY_LIFE_CYCLE.EMPTY.ID],
+      [mid, vacancyId, adventurerId, MISSION_PARTICIPATION_STATUS.EMPTY.ID],
     );
 
     if (result.rowCount < 1) {
@@ -305,7 +307,7 @@ export const insertVacancies = async (mid, vacancies) => {
       vacancy.reward,
       vacancy.title || null,
       vacancy.description || null,
-      VACANCY_LIFE_CYCLE.EMPTY.ID,
+      MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     ]);
   });
   const result = await Promise.all([...insertPromises]);
@@ -314,7 +316,10 @@ export const insertVacancies = async (mid, vacancies) => {
 
 export const getJoinedVacancies = async (mid) => {
   const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
-  const result = await pool.query(query, [mid, VACANCY_LIFE_CYCLE.JOINED.ID]);
+  const result = await pool.query(query, [
+    mid,
+    MISSION_PARTICIPATION_STATUS.JOINED.ID,
+  ]);
   return result.rows;
 };
 
@@ -340,7 +345,7 @@ export const getMissionPayment = async (mid) => {
   const query = `SELECT SUM(monetary_reward - amount_paid) FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
   const result = await pool.query(query, [
     mid,
-    VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
   ]);
   return result.rows[0].sum;
 };
@@ -348,10 +353,10 @@ export const getMissionPayment = async (mid) => {
 export const payVacancies = async (mid, amount_paid) => {
   const query = `UPDATE mission_participation SET payment_status = $1, amount_paid = $5 WHERE mid = $2 AND adventurer_id IS NOT NULL AND payment_status = $3 AND status = $4`;
   const result = await pool.query(query, [
-    VACANCY_PAYMENT_STATUS.PAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID,
     mid,
-    VACANCY_PAYMENT_STATUS.UNPAID.ID,
-    VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
     amount_paid,
   ]);
   return result.rowCount;
@@ -364,12 +369,12 @@ export const payVacancy = async (id, amount_paid) => {
     WHERE id = $2 AND adventurer_id IS NOT NULL AND payment_status IN ($3, $6) AND status = $4`;
 
   const result = await pool.query(query, [
-    VACANCY_PAYMENT_STATUS.PAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID,
     id,
-    VACANCY_PAYMENT_STATUS.UNPAID.ID,
-    VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
     amount_paid,
-    VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
   ]);
   return result.rowCount;
 };
@@ -381,10 +386,10 @@ export const refundVacancy = async (id, amount_refunded) => {
     WHERE id = $3 AND adventurer_id IS NOT NULL AND payment_status = $4`;
 
   const result = await pool.query(query, [
-    VACANCY_PAYMENT_STATUS.PAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID,
     amount_refunded,
     id,
-    VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
   ]);
   return result.rowCount;
 };
@@ -393,7 +398,7 @@ export const markVacancyAsPaidOut = async (id) => {
   const query = `UPDATE mission_participation SET payment_status = $2 WHERE id = $1`;
   const result = await pool.query(query, [
     id,
-    VACANCY_PAYMENT_STATUS.LIQUIDATED.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
   ]);
   return result.rowCount;
 };
@@ -418,9 +423,9 @@ export const getWaitingForPaymentVacancies = async () => {
   const query =
     'SELECT * FROM mission_participation WHERE status = $1 AND payment_status IN ($2, $3)';
   const result = await pool.query(query, [
-    VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
-    VACANCY_PAYMENT_STATUS.UNPAID.ID,
-    VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
   ]);
   return result.rows;
 };
@@ -429,9 +434,9 @@ export const getWaitingForPaymentVacancies = async () => {
 export const cleanMissionParticipation = async (mid) => {
   const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status = $3`;
   const result = await pool.query(query, [
-    VACANCY_LIFE_CYCLE.EMPTY.ID,
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     mid,
-    VACANCY_LIFE_CYCLE.JOINED.ID,
+    MISSION_PARTICIPATION_STATUS.JOINED.ID,
   ]);
   return result.rowCount;
 };
@@ -440,11 +445,11 @@ export const cleanMissionParticipation = async (mid) => {
 export const unjoinParticipant = async (mid, uid) => {
   const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status NOT IN ($3, $4, $5) AND adventurer_id = $6`;
   const result = await pool.query(query, [
-    VACANCY_LIFE_CYCLE.EMPTY.ID,
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     mid,
-    VACANCY_LIFE_CYCLE.EMPTY.ID,
-    VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-    VACANCY_LIFE_CYCLE.RELEASED.ID,
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+    MISSION_PARTICIPATION_STATUS.RELEASED.ID,
     uid,
   ]);
   return result.rowCount;
@@ -457,10 +462,10 @@ export const refundBannedVacancy = async (id, amount_refunded) => {
     WHERE id = $3 AND payment_status = $4`;
 
   const result = await pool.query(query, [
-    VACANCY_PAYMENT_STATUS.UNPAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
     amount_refunded,
     id,
-    VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
   ]);
   return result.rowCount;
 };

@@ -1,4 +1,4 @@
-export const MISSION_LIFE_CYCLE = {
+export const MISSION_STATUS = {
   OPENED: {
     ID: 'OPENED',
     LABEL: 'Opened',
@@ -111,7 +111,7 @@ export const MISSION_LIFE_CYCLE = {
   },
 };
 
-export const VACANCY_LIFE_CYCLE = {
+export const MISSION_PARTICIPATION_STATUS = {
   EMPTY: {
     ID: 'EMPTY',
     LABEL: 'Empty',

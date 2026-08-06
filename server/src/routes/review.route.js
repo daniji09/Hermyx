@@ -3,13 +3,13 @@ import {
   getUserReviews,
   reviewAdventurer,
   reviewOwner,
-} from '../controllers/reviews.controller.js';
+} from '../controllers/review.controller.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import {
   validateBodySchema,
   validateParamsSchema,
   validateQuerySchema,
-} from '../middlewares/validations.middleware.js';
+} from '../middlewares/validation.middleware.js';
 import {
   getUserReviewsQuerySchema,
   reviewAdventurerBodySchema,

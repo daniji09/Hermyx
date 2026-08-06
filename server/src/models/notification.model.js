@@ -2,7 +2,7 @@ import {
   NOTIFICATION_ACTION,
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils.js';
+} from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
 export const createNotification = async (notificationData) => {

@@ -1,8 +1,5 @@
 import pool from '../config/db.config.js';
-import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils.js';
+import { MISSION_STATUS, MISSION_PARTICIPATION_STATUS } from '@hermyx/shared';
 import {
   closeMissionConversation,
   createMissionConversation,
@@ -196,7 +193,7 @@ export const createMission = async (missionData) => {
         vacancy.reward,
         vacancy.title || null,
         vacancy.description || null,
-        VACANCY_LIFE_CYCLE.EMPTY.ID,
+        MISSION_PARTICIPATION_STATUS.EMPTY.ID,
         0,
       ]);
     });
@@ -231,7 +228,7 @@ export const finishMissionAndCloseConversation = async (mid) => {
         WHERE mid = $1
         RETURNING *
       `,
-      [mid, MISSION_LIFE_CYCLE.FINISHED.ID],
+      [mid, MISSION_STATUS.FINISHED.ID],
     );
 
     const conversation = await closeMissionConversation(mid, client);
@@ -335,7 +332,7 @@ export const getMissionsOpened = async ({
   originUserId = undefined,
 }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  const values = [MISSION_LIFE_CYCLE.OPENED.ID, MISSION_LIFE_CYCLE.REOPENED.ID];
+  const values = [MISSION_STATUS.OPENED.ID, MISSION_STATUS.REOPENED.ID];
 
   const shouldFilterByDistance =
     maxDistanceKm !== undefined && originUserId !== undefined;
@@ -512,10 +509,10 @@ export const syncMissionCompletionStatus = async (mid) => {
   `;
   const summaryResult = await pool.query(summaryQuery, [
     mid,
-    VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
-    VACANCY_LIFE_CYCLE.SUBMITTED.ID,
-    VACANCY_LIFE_CYCLE.REJECTED.ID,
-    VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
+    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
+    MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
+    MISSION_PARTICIPATION_STATUS.REJECTED.ID,
+    MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
   ]);
   const summary = summaryResult.rows[0];
 
@@ -529,9 +526,9 @@ export const syncMissionCompletionStatus = async (mid) => {
     summary.active_count > 0 ||
     (summary.active_count === 0 && summary.dispute_count === 0)
   ) {
-    nextStatus = MISSION_LIFE_CYCLE.IN_PROGRESS.ID;
+    nextStatus = MISSION_STATUS.IN_PROGRESS.ID;
   } else if (summary.dispute_count > 0) {
-    nextStatus = MISSION_LIFE_CYCLE.IN_DISPUTE.ID;
+    nextStatus = MISSION_STATUS.IN_DISPUTE.ID;
   }
 
   if (!nextStatus) {
@@ -549,8 +546,8 @@ export const syncMissionCompletionStatus = async (mid) => {
   const updateResult = await pool.query(updateQuery, [
     mid,
     nextStatus,
-    MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
-    MISSION_LIFE_CYCLE.IN_DISPUTE.ID,
+    MISSION_STATUS.IN_PROGRESS.ID,
+    MISSION_STATUS.IN_DISPUTE.ID,
   ]);
   return updateResult.rows[0] || null;
 };
@@ -581,7 +578,7 @@ export const getMissionsByUid = async (uid, pagination = null) => {
     m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != 'draft' AND m.status != $2 AND m.owner_id = $1 
     ORDER BY m.publication_date DESC`;
-  const values = [uid, MISSION_LIFE_CYCLE.DELETED.ID];
+  const values = [uid, MISSION_STATUS.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);
@@ -618,7 +615,7 @@ export const getMissionsJoinedByUser = async (uid, pagination = null) => {
     JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
     WHERE adventurer_id = $1 AND m.status != $2
     ORDER BY m.publication_date DESC`;
-  const values = [uid, MISSION_LIFE_CYCLE.DELETED.ID];
+  const values = [uid, MISSION_STATUS.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);
@@ -716,7 +713,7 @@ export const getPublicProfileCreatedMissions = async (
       AND m.status != $2
     ORDER BY m.publication_date DESC
   `;
-  const values = [userId, MISSION_LIFE_CYCLE.DELETED.ID];
+  const values = [userId, MISSION_STATUS.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);
@@ -769,7 +766,7 @@ export const getPublicProfileJoinedMissions = async (
     WHERE mp.adventurer_id = $1 AND status != $2
     ORDER BY m.completion_date DESC NULLS LAST, m.publication_date DESC
   `;
-  const values = [userId, MISSION_LIFE_CYCLE.DELETED.ID];
+  const values = [userId, MISSION_STATUS.DELETED.ID];
 
   if (pagination) {
     values.push(pagination.limit);
@@ -820,10 +817,10 @@ export const getUserActiveMissions = async (uid) => {
   `;
   const result = await pool.query(query, [
     uid,
-    MISSION_LIFE_CYCLE.DELETED.ID,
-    MISSION_LIFE_CYCLE.CANCELLING.ID,
-    MISSION_LIFE_CYCLE.CANCELLED.ID,
-    MISSION_LIFE_CYCLE.FINISHED.ID,
+    MISSION_STATUS.DELETED.ID,
+    MISSION_STATUS.CANCELLING.ID,
+    MISSION_STATUS.CANCELLED.ID,
+    MISSION_STATUS.FINISHED.ID,
   ]);
   return result.rows;
 };
@@ -845,6 +842,6 @@ export const emptyMission = async (mid) => {
 // Opens a mission again
 export const openMission = async (mid) => {
   const query = `UPDATE mission SET status = $2 WHERE mid = $1 RETURNING *`;
-  const result = pool.query(query, [mid, MISSION_LIFE_CYCLE.OPENED.ID]);
+  const result = pool.query(query, [mid, MISSION_STATUS.OPENED.ID]);
   return result.rowCount;
 };

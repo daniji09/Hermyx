@@ -18,12 +18,12 @@ import {
   updateUserConfiguration,
   banUser,
   updateMyAvatar,
-} from '../controllers/users.controller.js';
+} from '../controllers/user.controller.js';
 import {
   validateBodySchema,
   validateParamsSchema,
   validateQuerySchema,
-} from '../middlewares/validations.middleware.js';
+} from '../middlewares/validation.middleware.js';
 import {
   getUsersQuerySchema,
   searchUsersByUsernameQuerySchema,

@@ -39,8 +39,7 @@ import {
 } from '../queries/UsersQueries';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { AuthContext } from '../contexts/AuthContext';
-import { consts } from '@hermyx/shared';
-import { messages as messagesShared } from '@hermyx/shared';
+import { consts, messages as messagesShared } from '@hermyx/shared';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { StripeManagement } from '../components/custom/StripeManagement';

@@ -1,4 +1,17 @@
-import { messages } from '@hermyx/shared';
+import {
+  messages,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_STATUS,
+  NOTIFICATION_TYPE,
+  REPORT_TYPE,
+  HERMYX_FEE,
+  HERMYX_SYSTEM_ID,
+  TRANSACTION_TYPE,
+  MISSION_PARTICIPATION_PAYMENT_STATUS,
+} from '@hermyx/shared';
 import {
   createNotification,
   findByActionStatusAndVacancy,
@@ -10,7 +23,7 @@ import {
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
-import { getById as getUserById } from '../models/app_user.model.js';
+import { getById as getUserById } from '../models/user.model.js';
 import {
   getById,
   syncMissionCompletionStatus,
@@ -31,32 +44,15 @@ import {
   updatePaymentStatus,
   updateStatus,
   updateVacancyMonetaryReward,
-} from '../models/mission_participation.model.js';
-import { emitToUser } from '../services/socket.service.js';
-import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils.js';
-import {
-  NOTIFICATION_ACTION,
-  NOTIFICATION_KIND,
-  NOTIFICATION_STATUS,
-  NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils.js';
-import { createRefund, createTransfer } from '../services/payment.service.js';
-import {
-  HERMYX_FEE,
-  HERMYX_TRANSACTION_ID,
-  TRANSACTION_TYPE,
-  VACANCY_PAYMENT_STATUS,
-} from '@hermyx/shared/utils/payment.utils.js';
+} from '../models/mission-participation.model.js';
+import { emitToUser } from '../providers/socket.provider.js';
+import { createRefund, createTransfer } from '../providers/payment.provider.js';
 import {
   createMissionPayment,
   getMissionPaymentsByVacancy,
   refundFromPayment,
-} from '../models/mission_payment.model.js';
+} from '../models/mission-payment.model.js';
 import { checkActiveReport, createReport } from '../models/report.model.js';
-import { REPORT_TYPE } from '@hermyx/shared/utils/reports.utils.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -121,7 +117,7 @@ const respondToParticipationReview = async ({
     return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
   }
 
-  if (mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
+  if (mission.status !== MISSION_STATUS.IN_PROGRESS.ID) {
     return res.status(409).json({ error: messages.MISSION_NOT_IN_PROGRESS });
   }
 
@@ -136,7 +132,7 @@ const respondToParticipationReview = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (participation.status !== VACANCY_LIFE_CYCLE.SUBMITTED.ID) {
+  if (participation.status !== MISSION_PARTICIPATION_STATUS.SUBMITTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
@@ -152,9 +148,9 @@ const respondToParticipationReview = async ({
 
     // Checks if vacancy can be in dispute by states
     if (
-      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
-        VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
-      )
+      !MISSION_PARTICIPATION_STATUS[
+        participation.status
+      ].VALID_NEXT_STATES.includes(MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID)
     )
       return res
         .status(400)
@@ -228,9 +224,9 @@ const respondToParticipationReview = async ({
   if (response === 'rejected') {
     // Checks if vacancy can be rejected by states
     if (
-      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
-        VACANCY_LIFE_CYCLE.REJECTED.ID,
-      )
+      !MISSION_PARTICIPATION_STATUS[
+        participation.status
+      ].VALID_NEXT_STATES.includes(MISSION_PARTICIPATION_STATUS.REJECTED.ID)
     )
       return res
         .status(400)
@@ -273,9 +269,9 @@ const respondToParticipationReview = async ({
   }
   // Checks if vacancy can be accepted by states
   if (
-    !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
-      VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-    )
+    !MISSION_PARTICIPATION_STATUS[
+      participation.status
+    ].VALID_NEXT_STATES.includes(MISSION_PARTICIPATION_STATUS.ACCEPTED.ID)
   )
     return res
       .status(400)
@@ -301,7 +297,7 @@ const respondToParticipationReview = async ({
     await createMissionPayment({
       mid: missionId,
       vacancy_id: participation.id,
-      sender_id: HERMYX_TRANSACTION_ID,
+      sender_id: HERMYX_SYSTEM_ID,
       receiver_id: adventurer.uid,
       stripe_transaction_id: transfer.id,
       transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
@@ -370,7 +366,7 @@ const respondToParticipationRejection = async ({
       .json({ error: messages.MISSION_PARTICIPATION_NOT_FOUND });
   }
 
-  if (participation.status !== VACANCY_LIFE_CYCLE.REJECTED.ID) {
+  if (participation.status !== MISSION_PARTICIPATION_STATUS.REJECTED.ID) {
     return res
       .status(409)
       .json({ error: messages.MISSION_PARTICIPATION_ALREADY_REVIEWED });
@@ -379,9 +375,9 @@ const respondToParticipationRejection = async ({
   if (response === 'disputed') {
     // Checks if vacancy can be in dispute by states
     if (
-      !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
-        VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
-      )
+      !MISSION_PARTICIPATION_STATUS[
+        participation.status
+      ].VALID_NEXT_STATES.includes(MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID)
     )
       return res
         .status(400)
@@ -459,9 +455,9 @@ const respondToParticipationRejection = async ({
 
   // Checks if vacancy can be in progress by states
   if (
-    !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
-      VACANCY_LIFE_CYCLE.IN_PROGRESS.ID,
-    )
+    !MISSION_PARTICIPATION_STATUS[
+      participation.status
+    ].VALID_NEXT_STATES.includes(MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID)
   )
     return res
       .status(400)
@@ -546,8 +542,8 @@ const respondToMissionJoinNotification = async ({
 
   // Checks if vacancy can be joined by states
   if (
-    !VACANCY_LIFE_CYCLE[vacancy.status].VALID_NEXT_STATES.includes(
-      VACANCY_LIFE_CYCLE.JOINED.ID,
+    !MISSION_PARTICIPATION_STATUS[vacancy.status].VALID_NEXT_STATES.includes(
+      MISSION_PARTICIPATION_STATUS.JOINED.ID,
     )
   )
     return res
@@ -698,7 +694,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
   }
 
   // Checks that mission is in a editable status
-  if (!MISSION_LIFE_CYCLE[mission.status].CAN_EDIT)
+  if (!MISSION_STATUS[mission.status].CAN_EDIT)
     return res.status(400).json({
       errors: { general: [messages.CANNOT_EDIT_MISSION] },
     });
@@ -761,7 +757,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     // Partially refunded
     await updatePaymentStatus(
       notification.payload.associated_vacancy_id,
-      VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+      MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
     );
 
     // First, payments for this mission are get
@@ -803,7 +799,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
       await createMissionPayment({
         mid: missionId,
         vacancy_id: notification.payload.associated_vacancy_id,
-        sender_id: HERMYX_TRANSACTION_ID,
+        sender_id: HERMYX_SYSTEM_ID,
         receiver_id: mission.owner_id,
         stripe_transaction_id: refund.id,
         transaction_type: TRANSACTION_TYPE.NEGOTIATION_REFUND.ID,
@@ -829,14 +825,17 @@ const respondToVacancyMonetaryRewardEdition = async ({
     );
   } else {
     // If new offer is higher, mission and vacancy states change if vacancy was already paid
-    if (participation.payment_status === VACANCY_PAYMENT_STATUS.PAID.ID) {
+    if (
+      participation.payment_status ===
+      MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID
+    ) {
       await updateStatus(
         notification.payload.associated_vacancy_id,
-        VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID,
+        MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
       );
       await updatePaymentStatus(
         notification.payload.associated_vacancy_id,
-        VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
       );
     }
   }
@@ -988,9 +987,9 @@ export const autoAcceptParticipation = async (req, res) => {
         );
         // Checks if vacancy can be accepted by states
         if (
-          !VACANCY_LIFE_CYCLE[participation.status].VALID_NEXT_STATES.includes(
-            VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-          )
+          !MISSION_PARTICIPATION_STATUS[
+            participation.status
+          ].VALID_NEXT_STATES.includes(MISSION_PARTICIPATION_STATUS.ACCEPTED.ID)
         )
           errors.push(
             `${messages.CANNOT_ACCEPT_PARTICIPATION_STATE}. Notification: ${expiredReview.nid}.`,
@@ -1019,7 +1018,7 @@ export const autoAcceptParticipation = async (req, res) => {
             await createMissionPayment({
               mid: expiredReview.payload.associated_mission_id,
               vacancy_id: participation.id,
-              sender_id: HERMYX_TRANSACTION_ID,
+              sender_id: HERMYX_SYSTEM_ID,
               receiver_id: adventurer.uid,
               stripe_transaction_id: transfer.id,
               transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
@@ -1049,7 +1048,7 @@ export const autoAcceptParticipation = async (req, res) => {
             action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
             status: null,
             message: approvedMessage,
-            senderId: HERMYX_TRANSACTION_ID,
+            senderId: HERMYX_SYSTEM_ID,
             receiverId: expiredReview.sender_id,
             payload: {
               associated_mission_id:
@@ -1066,7 +1065,7 @@ export const autoAcceptParticipation = async (req, res) => {
               action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
               missionId: expiredReview.payload.associated_mission_id,
               missionTitle: mission.title,
-              ownerId: HERMYX_TRANSACTION_ID,
+              ownerId: HERMYX_SYSTEM_ID,
               ownerUsername: 'SYSTEM',
               message: approvedMessage,
             },

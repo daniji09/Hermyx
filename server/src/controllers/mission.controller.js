@@ -1,5 +1,20 @@
 //External modules
-import { consts, messages } from '@hermyx/shared';
+import {
+  consts,
+  messages,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_STATUS,
+  NOTIFICATION_TYPE,
+  HERMYX_FEE,
+  HERMYX_SYSTEM_ID,
+  TRANSACTION_TYPE,
+  MISSION_PARTICIPATION_PAYMENT_STATUS,
+  REPORT_DECISION,
+  REPORT_STATUS,
+} from '@hermyx/shared';
 import {
   createMission as _createMission,
   getAllMissionsInDraft as _getAllMissionsInDraft,
@@ -17,7 +32,7 @@ import {
   updateMissionPayment,
   openMission,
 } from '../models/mission.model.js';
-import { getById as getUserById } from '../models/app_user.model.js';
+import { getById as getUserById } from '../models/user.model.js';
 import { getConversationParticipants } from '../models/conversation.model.js';
 import {
   getById as getMissionParticipationById,
@@ -37,7 +52,7 @@ import {
   unjoinParticipant,
   updatePaymentStatus,
   refundBannedVacancy,
-} from '../models/mission_participation.model.js';
+} from '../models/mission-participation.model.js';
 import {
   createNotification,
   countParticipationReviewAttempts,
@@ -45,45 +60,25 @@ import {
   findByActionStatusAndVacancy,
   updateNotification,
 } from '../models/notification.model.js';
-import { emitToUser } from '../services/socket.service.js';
-import { createRefund, createTransfer } from '../services/payment.service.js';
-import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from './../../../node_modules/@hermyx/shared/utils/missions.utils.js';
-import {
-  NOTIFICATION_ACTION,
-  NOTIFICATION_KIND,
-  NOTIFICATION_STATUS,
-  NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils.js';
+import { emitToUser } from '../providers/socket.provider.js';
+import { createRefund, createTransfer } from '../providers/payment.provider.js';
 import {
   createMissionPayment,
   getMissionPaymentsByVacancy,
   refundFromPayment,
-} from '../models/mission_payment.model.js';
-import {
-  HERMYX_FEE,
-  HERMYX_TRANSACTION_ID,
-  TRANSACTION_TYPE,
-  VACANCY_PAYMENT_STATUS,
-} from '@hermyx/shared/utils/payment.utils.js';
+} from '../models/mission-payment.model.js';
 import { closeReport, getReportById } from '../models/report.model.js';
-import {
-  REPORT_DECISION,
-  REPORT_STATUS,
-} from '@hermyx/shared/utils/reports.utils.js';
 import {
   deleteFromAzureBlob,
   deleteFromLocalStorage,
   saveToLocalStorage,
   uploadToAzureBlob,
-} from '../services/storage.service.js';
+} from '../providers/storage.provider.js';
 import {
   deletePhoto,
   getMissionPhotos,
   insertPhoto,
-} from '../models/mission_photo.model.js';
+} from '../models/mission-photo.model.js';
 
 export const getMissionById = async (req, res) => {
   try {
@@ -109,11 +104,11 @@ export const getMissionById = async (req, res) => {
     const canFinish =
       participants.every(
         (participant) =>
-          participant.status === VACANCY_LIFE_CYCLE.EMPTY.ID ||
-          participant.status === VACANCY_LIFE_CYCLE.RELEASED.ID,
+          participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||
+          participant.status === MISSION_PARTICIPATION_STATUS.RELEASED.ID,
       ) &&
-      MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_LIFE_CYCLE.FINISHED.ID,
+      MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.FINISHED.ID,
       );
 
     return res.status(200).json({
@@ -243,7 +238,7 @@ export const createMission = async (req, res) => {
       totalPayment: 0,
       latitude: latitude || null,
       longitude: longitude || null,
-      status: MISSION_LIFE_CYCLE.OPENED.ID,
+      status: MISSION_STATUS.OPENED.ID,
       ownerId: uid,
     };
 
@@ -320,7 +315,7 @@ export const editMission = async (req, res) => {
     mission.totalPayment = originalMission.total_payment;
 
     // Checks that mission is in a editable status
-    if (!MISSION_LIFE_CYCLE[originalMission.status].CAN_EDIT)
+    if (!MISSION_STATUS[originalMission.status].CAN_EDIT)
       return res.status(400).json({
         errors: { general: [messages.CANNOT_EDIT_MISSION] },
       });
@@ -343,17 +338,19 @@ export const editMission = async (req, res) => {
     const newVacancies = mission.vacanciesData.filter(
       (v) =>
         typeof v.id === 'string' ||
-        (typeof v.id === 'number' && v.status === VACANCY_LIFE_CYCLE.EMPTY.ID),
+        (typeof v.id === 'number' &&
+          v.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID),
     );
     const existingVacancies = mission.vacanciesData.filter(
       (v) =>
-        typeof v.id === 'number' && v.status !== VACANCY_LIFE_CYCLE.EMPTY.ID,
+        typeof v.id === 'number' &&
+        v.status !== MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     );
     // Id array including existing vacancies that stayed
     const existingIds = existingVacancies.map((v) => v.id);
 
     // New mission info can delete existing vacancies only in opened state
-    if (!MISSION_LIFE_CYCLE[originalMission.status].CAN_DELETE_ADVENTURERS) {
+    if (!MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS) {
       if (existingIds.length < originalVacancies.length) {
         return res.status(400).json({
           errors: {
@@ -419,7 +416,7 @@ export const editMission = async (req, res) => {
           currentOriginalVacancy?.title + '' !== vacancy.title
         ) {
           // If that vacancy is not editable, its an error
-          if (!VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT)
+          if (!MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT)
             return res.status(400).json({
               errors: { general: [messages.CANNOT_EDIT_VACANCY] },
             });
@@ -459,7 +456,7 @@ export const editMission = async (req, res) => {
         const vacancy = await getVacancyById(mission.mid, vacancyId);
         if (
           vacancy.adventurer_id &&
-          VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT
+          MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
         ) {
           const message = `${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
           const notificationId = await createNotification({
@@ -517,7 +514,7 @@ export const editMission = async (req, res) => {
         changes.length > 0 &&
         !(changes.length === 1 && changes.includes('reward')) && // If the only change is the reward, no additional notification is needed
         vacancy.adventurer_id &&
-        VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT
+        MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
       ) {
         // First, informational notification is sended
         const message = `Your vacancy at ${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
@@ -572,7 +569,7 @@ export const editMission = async (req, res) => {
           });
         } else {
           // If not, the new notification is send
-          if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
+          if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
             const message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
             const notificationId = await createNotification({
               type: NOTIFICATION_TYPE.MISSION.ID,
@@ -634,27 +631,30 @@ export const close = async (req, res) => {
         .json({ error: messages.CLOSE_WITHOUT_ADVENTURERS });
     }
     // Different close for opened or reopened mission+
-    if (mission.status === MISSION_LIFE_CYCLE.OPENED.ID) {
+    if (mission.status === MISSION_STATUS.OPENED.ID) {
       // Checks if mission can be closed by states
       if (
-        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_LIFE_CYCLE.CLOSED.ID,
+        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_STATUS.CLOSED.ID,
         )
       )
         return res.status(400).json({ error: messages.CANNOT_CLOSE_STATE });
 
       // Then, it updates the mission
-      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CLOSED.ID);
+      await updateMissionStatus(mid, MISSION_STATUS.CLOSED.ID);
 
       // Updates vacancies status, there is 2 for because if a vacancy fails when a notification has been sent, there is no rollback possible
       for (const vacancy of occupied_vacancies)
-        if (vacancy.status !== VACANCY_LIFE_CYCLE.RELEASED.ID)
-          updateStatus(vacancy.id, VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID);
+        if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID)
+          updateStatus(
+            vacancy.id,
+            MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+          );
 
       const message = `Mission ${mission.title} has been closed. Waiting for owner payment to start. You can't unjoin anymore, but owner is able to cancel it yet.`;
       // Finally, all occupied vacancies are notified
       for (const vacancy of occupied_vacancies) {
-        if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
+        if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
           const notificationId = await createNotification({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -681,14 +681,14 @@ export const close = async (req, res) => {
         }
       }
       return res.status(200).json({
-        status: MISSION_LIFE_CYCLE.CLOSED.ID,
+        status: MISSION_STATUS.CLOSED.ID,
         participants: occupied_vacancies,
       });
-    } else if (mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) {
+    } else if (mission.status === MISSION_STATUS.REOPENED.ID) {
       // Checks if mission can be started by states
       if (
-        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
+        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_STATUS.IN_PROGRESS.ID,
         )
       )
         return res
@@ -696,12 +696,15 @@ export const close = async (req, res) => {
           .json({ error: messages.CANNOT_REOPEN_MISSION_STATE });
 
       // Then, it updates the mission
-      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.IN_PROGRESS.ID);
+      await updateMissionStatus(mid, MISSION_STATUS.IN_PROGRESS.ID);
 
       // And the vacancies are updated
       const joined_vacancies = await getJoinedVacancies(mission.mid);
       for (const vacancy of joined_vacancies)
-        updateStatus(vacancy.id, VACANCY_LIFE_CYCLE.PENDING_PAYMENT.ID);
+        updateStatus(
+          vacancy.id,
+          MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+        );
 
       // Finally, all occupied vacancies are notified
       const occupied_vacancies = await getOccupiedVacancies(mission.mid);
@@ -710,7 +713,7 @@ export const close = async (req, res) => {
           ? `Mission ${mission.title} has been closed after being reopened. No new adventurers have joined.`
           : `Mission ${mission.title} has been closed after being reopened. Waiting for owner payment to start new adventurers.`;
       for (const vacancy of occupied_vacancies) {
-        if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
+        if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
           const notificationId = await createNotification({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -737,7 +740,7 @@ export const close = async (req, res) => {
         }
       }
       return res.status(200).json({
-        status: MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
+        status: MISSION_STATUS.IN_PROGRESS.ID,
         participants: occupied_vacancies,
       });
     }
@@ -764,7 +767,7 @@ export const joinMission = async (req, res) => {
       return res.status(403).json({ error: messages.JOIN_OWN_MISSION });
 
     // Checks if mission status is valid for accepting adventurers
-    if (!MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS)
+    if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS)
       return res.status(409).json({
         error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
       });
@@ -877,7 +880,7 @@ export const inviteToMission = async (req, res) => {
       return res.status(409).json({ error: messages.VACANCY_ALREADY_OCCUPIED });
     }
 
-    if (!MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS) {
+    if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS) {
       return res.status(409).json({
         error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
       });
@@ -968,13 +971,16 @@ export const submitMissionParticipation = async (req, res) => {
       });
     }
 
-    if (participation.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
+    if (participation.status !== MISSION_STATUS.IN_PROGRESS.ID) {
       return res.status(409).json({
         error: messages.MISSION_PART_ALREADY_SUBMITTED,
       });
     }
 
-    if (participation.payment_status !== VACANCY_PAYMENT_STATUS.PAID.ID) {
+    if (
+      participation.payment_status !==
+      MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID
+    ) {
       return res.status(409).json({
         error: messages.CANNOT_SUBMIT_UNPAID,
       });
@@ -1038,7 +1044,7 @@ export const unjoinMission = async (req, res) => {
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
     // Checks if mission is opened, so unjoin can be done
-    if (!MISSION_LIFE_CYCLE[mission.status].ADVENTURERS_CAN_UNJOIN) {
+    if (!MISSION_STATUS[mission.status].ADVENTURERS_CAN_UNJOIN) {
       return res.status(400).json({
         errors: {
           general: [messages.CANNOT_UNJOIN_IN_PROGRESS_MISSION],
@@ -1051,8 +1057,8 @@ export const unjoinMission = async (req, res) => {
 
     // Checks if adventurer can unjoin can be deleted by states
     if (
-      !VACANCY_LIFE_CYCLE[vacancy.status].VALID_NEXT_STATES.includes(
-        VACANCY_LIFE_CYCLE.EMPTY.ID,
+      !MISSION_PARTICIPATION_STATUS[vacancy.status].VALID_NEXT_STATES.includes(
+        MISSION_PARTICIPATION_STATUS.EMPTY.ID,
       )
     )
       return res
@@ -1124,11 +1130,11 @@ export const cancelMission = async (req, res) => {
     const occupied_vacancies = await getOccupiedVacancies(mid);
 
     // If mission has to be "deleted", it will be
-    if (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE) {
+    if (MISSION_STATUS[mission.status].CAN_DELETE) {
       // Checks if mission can be deleted by states
       if (
-        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_LIFE_CYCLE.DELETED.ID,
+        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_STATUS.DELETED.ID,
         )
       )
         return res
@@ -1136,14 +1142,14 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.DELETED.ID);
+      await updateMissionStatus(mid, MISSION_STATUS.DELETED.ID);
     }
     // If mission has to be cancelled, it will be
-    else if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) {
+    else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
       // Checks if mission can be cancelled by states
       if (
-        !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_LIFE_CYCLE.CANCELLING.ID,
+        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+          MISSION_STATUS.CANCELLING.ID,
         )
       )
         return res
@@ -1151,11 +1157,11 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLING.ID);
+      await updateMissionStatus(mid, MISSION_STATUS.CANCELLING.ID);
 
       // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
       for (const vacancy of occupied_vacancies) {
-        if (vacancy.status !== VACANCY_LIFE_CYCLE.RELEASED.ID) {
+        if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID) {
           const adventurer = await getUserById(vacancy.adventurer_id);
           if (adventurer.stripe_connected_id) {
             const transferData = {
@@ -1173,7 +1179,7 @@ export const cancelMission = async (req, res) => {
             await createMissionPayment({
               mid: mission.mid,
               vacancy_id: vacancy.id,
-              sender_id: HERMYX_TRANSACTION_ID,
+              sender_id: HERMYX_SYSTEM_ID,
               receiver_id: adventurer.uid,
               stripe_transaction_id: transfer.id,
               transaction_type: TRANSACTION_TYPE.CANCELLATION_COMPENSATION.ID,
@@ -1184,7 +1190,7 @@ export const cancelMission = async (req, res) => {
           }
         }
       }
-      await updateMissionStatus(mid, MISSION_LIFE_CYCLE.CANCELLED.ID);
+      await updateMissionStatus(mid, MISSION_STATUS.CANCELLED.ID);
     }
     // Otherwise, mission can't be deleted or cancelled
     else
@@ -1196,14 +1202,14 @@ export const cancelMission = async (req, res) => {
 
     // Either way, all adventurers are informed
     for (const vacancy of occupied_vacancies) {
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
-        const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+        const message = MISSION_STATUS[mission.status].CAN_DELETE
           ? `Mission ${mission.title} has been deleted, so it won't be done, we are sorry.`
           : `Mission ${mission.title} has been cancelled, but don't worry, your reward is on your way!.`;
         const notificationId = await createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-          action: MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+          action: MISSION_STATUS[mission.status].CAN_DELETE
             ? NOTIFICATION_ACTION.MISSION_DELETE.ID
             : NOTIFICATION_ACTION.MISSION_CANCEL.ID,
           status: null,
@@ -1214,7 +1220,7 @@ export const cancelMission = async (req, res) => {
             associated_mission_id: mission.mid,
           },
         });
-        const eventName = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+        const eventName = MISSION_STATUS[mission.status].CAN_DELETE
           ? 'mission:delete'
           : 'mission:cancel';
         emitToUser(vacancy.adventurer_id, eventName, {
@@ -1254,8 +1260,8 @@ export const reopenMission = async (req, res) => {
 
     // Checks if mission can be reopened by state
     if (
-      !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_LIFE_CYCLE.REOPENED.ID,
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.REOPENED.ID,
       )
     )
       return res.status(400).json({
@@ -1275,12 +1281,12 @@ export const reopenMission = async (req, res) => {
       });
 
     // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSION_LIFE_CYCLE.REOPENED.ID);
+    await updateMissionStatus(mid, MISSION_STATUS.REOPENED.ID);
 
     // And all adventurers are informed
     const occupied_vacancies = await getOccupiedVacancies(mid);
     for (const vacancy of occupied_vacancies) {
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const message = `Mission ${mission.title} has been reopened, so new teammates will enter!`;
         const notificationId = await createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1332,8 +1338,8 @@ export const finishMission = async (req, res) => {
 
     // Checks if mission can be reopened by state
     if (
-      !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_LIFE_CYCLE.FINISHED.ID,
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.FINISHED.ID,
       )
     )
       return res.status(400).json({
@@ -1346,8 +1352,8 @@ export const finishMission = async (req, res) => {
     const participants = await getParticipantsForDisplay(mid);
     const canFinish = participants.every(
       (participant) =>
-        participant.status === VACANCY_LIFE_CYCLE.EMPTY.ID ||
-        participant.status === VACANCY_LIFE_CYCLE.RELEASED.ID,
+        participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||
+        participant.status === MISSION_PARTICIPATION_STATUS.RELEASED.ID,
     );
 
     if (!canFinish)
@@ -1407,7 +1413,7 @@ export const banMission = async (req, res) => {
     const participation = await getOccupiedVacancies(mid);
 
     // Mission state changes logic, if payment has been done it has to be release to adventurers
-    if (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE) {
+    if (MISSION_STATUS[mission.status].CAN_DELETE) {
       // Mission participation is cleaned
       const updatedVacancies = await cleanMissionParticipation(mid);
       if (participation.length !== updatedVacancies)
@@ -1438,7 +1444,7 @@ export const banMission = async (req, res) => {
           await createMissionPayment({
             mid: mission.mid,
             vacancy_id: vacancy.id,
-            sender_id: HERMYX_TRANSACTION_ID,
+            sender_id: HERMYX_SYSTEM_ID,
             receiver_id: adventurer.uid,
             stripe_transaction_id: transfer.id,
             transaction_type: TRANSACTION_TYPE.BAN_COMPENSATION.ID,
@@ -1451,7 +1457,7 @@ export const banMission = async (req, res) => {
     }
 
     // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSION_LIFE_CYCLE.REPORTED.ID);
+    await updateMissionStatus(mid, MISSION_STATUS.REPORTED.ID);
 
     // Report is closed
     const reportClosed = await closeReport(
@@ -1464,7 +1470,7 @@ export const banMission = async (req, res) => {
       return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
 
     // Then, applicant and possible adventurers are notified
-    const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+    const message = MISSION_STATUS[mission.status].CAN_DELETE
       ? `This mission has been banned by Hermyx administration, now is retired from the public and won't be done.`
       : `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers.`;
 
@@ -1475,7 +1481,7 @@ export const banMission = async (req, res) => {
       action: NOTIFICATION_ACTION.MISSION_BAN.ID,
       status: null,
       message: message,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       receiverId: mission.owner_id,
       payload: {
         associated_mission_id: mission.mid,
@@ -1486,7 +1492,7 @@ export const banMission = async (req, res) => {
       missionId: mission.mid,
       vacancyId: null,
       missionTitle: mission.title,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       senderUsername: req.user.username,
       receiverId: mission.owner_id,
       type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1495,14 +1501,14 @@ export const banMission = async (req, res) => {
 
     // All adventurers are informed
     for (const vacancy of participation) {
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const notificationId = await createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
           action: NOTIFICATION_ACTION.MISSION_BAN.ID,
           status: null,
           message: message,
-          senderId: HERMYX_TRANSACTION_ID,
+          senderId: HERMYX_SYSTEM_ID,
           receiverId: vacancy.adventurer_id,
           payload: {
             associated_mission_id: mission.mid,
@@ -1513,7 +1519,7 @@ export const banMission = async (req, res) => {
           missionId: mission.mid,
           vacancyId: vacancy.id,
           missionTitle: mission.title,
-          senderId: HERMYX_TRANSACTION_ID,
+          senderId: HERMYX_SYSTEM_ID,
           senderUsername: req.user.username,
           receiverId: vacancy.adventurer_id,
           type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1563,11 +1569,11 @@ export const kickAdventurerOut = async (req, res) => {
       return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
     // If payment has been made, is refunded
-    if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) {
+    if (MISSION_STATUS[mission.status].CAN_CANCEL) {
       // Refunds payment to the applicant
       await updatePaymentStatus(
         vacancyId,
-        VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
       );
 
       // First, payments for this mission are get
@@ -1605,7 +1611,7 @@ export const kickAdventurerOut = async (req, res) => {
         await createMissionPayment({
           mid: mid,
           vacancy_id: vacancyId,
-          sender_id: HERMYX_TRANSACTION_ID,
+          sender_id: HERMYX_SYSTEM_ID,
           receiver_id: mission.owner_id,
           stripe_transaction_id: refund.id,
           transaction_type:
@@ -1645,7 +1651,7 @@ export const kickAdventurerOut = async (req, res) => {
 
     // Notifies owner of the mission
     let messageOwner = `Adventurer ${adventurer.username} of your mission ${mission.title} has been kicked out by Hermyx administration, so this vacancy has been emptied.`;
-    if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL)
+    if (MISSION_STATUS[mission.status].CAN_CANCEL)
       messageOwner += ` Their reward is being refunded to you.`;
     const notificationId = await createNotification({
       type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1653,7 +1659,7 @@ export const kickAdventurerOut = async (req, res) => {
       action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,
       status: null,
       message: messageOwner,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       receiverId: mission.owner_id,
       payload: {
         associated_mission_id: mission.mid,
@@ -1665,7 +1671,7 @@ export const kickAdventurerOut = async (req, res) => {
       missionId: mission.mid,
       vacancyId: null,
       missionTitle: mission.title,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       senderUsername: req.user.username,
       receiverId: mission.owner_id,
       type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1674,7 +1680,7 @@ export const kickAdventurerOut = async (req, res) => {
 
     // And notifies adventurer
     const messageAdventurer = `You have been kicked out of the mission ${mission.title}, so you won't be able to receive the reward.`;
-    if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL)
+    if (MISSION_STATUS[mission.status].CAN_CANCEL)
       messageOwner += `Their reward is being refunded to you.`;
     const notificationAdventurerId = await createNotification({
       type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1682,7 +1688,7 @@ export const kickAdventurerOut = async (req, res) => {
       action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,
       status: null,
       message: messageAdventurer,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       receiverId: vacancy.adventurer_id,
       payload: {
         associated_mission_id: mission.mid,
@@ -1694,7 +1700,7 @@ export const kickAdventurerOut = async (req, res) => {
       missionId: mission.mid,
       vacancyId: null,
       missionTitle: mission.title,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       senderUsername: req.user.username,
       receiverId: vacancy.adventurer_id,
       type: NOTIFICATION_TYPE.MISSION.ID,

@@ -1,16 +1,28 @@
-import { messages } from '@hermyx/shared';
+import {
+  messages,
+  REPORT_DECISION,
+  REPORT_STATUS,
+  REPORT_TYPE,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_TYPE,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+  HERMYX_SYSTEM_ID,
+  TRANSACTION_TYPE,
+} from '@hermyx/shared';
 import {
   getById,
   syncMissionCompletionStatus,
 } from '../models/mission.model.js';
-import { getById as getUserById } from './../models/app_user.model.js';
+import { getById as getUserById } from '../models/user.model.js';
 import {
   approveParticipation,
   getVacancyById,
   markVacancyAsPaidOut,
   releaseParticipation,
   reopenParticipation,
-} from './../models/mission_participation.model.js';
+} from '../models/mission-participation.model.js';
 import {
   checkActiveReport,
   closeReport,
@@ -18,28 +30,10 @@ import {
   getReports as getAllReports,
   getReportById,
 } from '../models/report.model.js';
-import {
-  REPORT_DECISION,
-  REPORT_STATUS,
-  REPORT_TYPE,
-} from '@hermyx/shared/utils/reports.utils.js';
 import { createNotification } from '../models/notification.model.js';
-import { emitToUser } from './../services/socket.service.js';
-import {
-  NOTIFICATION_ACTION,
-  NOTIFICATION_KIND,
-  NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils.js';
-import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils.js';
-import { createTransfer } from '../services/payment.service.js';
-import { createMissionPayment } from '../models/mission_payment.model.js';
-import {
-  HERMYX_TRANSACTION_ID,
-  TRANSACTION_TYPE,
-} from '@hermyx/shared/utils/payment.utils.js';
+import { emitToUser } from '../providers/socket.provider.js';
+import { createTransfer } from '../providers/payment.provider.js';
+import { createMissionPayment } from '../models/mission-payment.model.js';
 
 /// GET
 // Get report by id
@@ -255,7 +249,7 @@ export const reportMission = async (req, res) => {
         .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
 
     // Checks it has not been already successfully reported
-    if (mission.status === MISSION_LIFE_CYCLE.REPORTED.ID)
+    if (mission.status === MISSION_STATUS.REPORTED.ID)
       return res
         .status(409)
         .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
@@ -322,7 +316,7 @@ export const acceptAdventurersWork = async (req, res) => {
         .json({ errors: { general: [messages.MISSION_NOT_FOUND] } });
 
     // Checks it has not been already successfully reported
-    if (mission.status === MISSION_LIFE_CYCLE.REPORTED.ID)
+    if (mission.status === MISSION_STATUS.REPORTED.ID)
       return res
         .status(409)
         .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
@@ -342,7 +336,7 @@ export const acceptAdventurersWork = async (req, res) => {
       return res.status(409).json({ error: messages.VACANCY_NOT_IN_MISSION });
 
     // Checks if vacancy is disputed
-    if (vacancy.status !== VACANCY_LIFE_CYCLE.IN_DISPUTE.ID)
+    if (vacancy.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID)
       return res.status(409).json({ error: messages.VACANCY_NOT_DISPUTED });
 
     // Work is accepted
@@ -373,7 +367,7 @@ export const acceptAdventurersWork = async (req, res) => {
       await createMissionPayment({
         mid: report.payload.associated_mission_id,
         vacancy_id: report.payload.associated_vacancy_id,
-        sender_id: HERMYX_TRANSACTION_ID,
+        sender_id: HERMYX_SYSTEM_ID,
         receiver_id: adventurer.uid,
         stripe_transaction_id: transfer.id,
         transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
@@ -408,7 +402,7 @@ export const acceptAdventurersWork = async (req, res) => {
       action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
       status: null,
       message: approvedMessage,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       receiverId: vacancy.adventurer_id,
       payload: { associated_mission_id: report.payload.associated_mission_id },
     });
@@ -435,7 +429,7 @@ export const acceptAdventurersWork = async (req, res) => {
       action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
       status: null,
       message: approvedApplicantMessage,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       receiverId: mission.owner_id,
       payload: { associated_mission_id: report.payload.associated_mission_id },
     });
@@ -494,7 +488,7 @@ export const rejectAdventurersWork = async (req, res) => {
         .json({ errors: { general: [messages.MISSION_NOT_FOUND] } });
 
     // Checks it has not been already successfully reported
-    if (mission.status === MISSION_LIFE_CYCLE.REPORTED.ID)
+    if (mission.status === MISSION_STATUS.REPORTED.ID)
       return res
         .status(409)
         .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
@@ -514,7 +508,7 @@ export const rejectAdventurersWork = async (req, res) => {
       return res.status(409).json({ error: messages.VACANCY_NOT_IN_MISSION });
 
     // Checks if vacancy is disputed
-    if (vacancy.status !== VACANCY_LIFE_CYCLE.IN_DISPUTE.ID)
+    if (vacancy.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID)
       return res.status(409).json({ error: messages.VACANCY_NOT_DISPUTED });
 
     // Gets adventurer
@@ -551,7 +545,7 @@ export const rejectAdventurersWork = async (req, res) => {
       action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
       status: null,
       message: rejectedMessage,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       receiverId: vacancy.adventurer_id,
       payload: { associated_mission_id: report.payload.associated_mission_id },
     });
@@ -578,7 +572,7 @@ export const rejectAdventurersWork = async (req, res) => {
       action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
       status: null,
       message: rejectedApplicantMessage,
-      senderId: HERMYX_TRANSACTION_ID,
+      senderId: HERMYX_SYSTEM_ID,
       receiverId: mission.owner_id,
       payload: { associated_mission_id: report.payload.associated_mission_id },
     });
@@ -671,7 +665,7 @@ export const dismiss = async (req, res) => {
         action: NOTIFICATION_ACTION.REPORT_DISMISSED.ID,
         status: null,
         message: message,
-        senderId: HERMYX_TRANSACTION_ID,
+        senderId: HERMYX_SYSTEM_ID,
         receiverId: report.sender_id,
         payload: {
           associated_mission_id: report.payload.associated_mission_id,

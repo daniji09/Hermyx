@@ -11,7 +11,7 @@ import {
 import {
   validateBodySchema,
   validateParamsSchema,
-} from '../middlewares/validations.middleware.js';
+} from '../middlewares/validation.middleware.js';
 import {
   respondToNotificationBodySchema,
   respondToNotificationParamSchema,

@@ -21,7 +21,9 @@ import {
 import {
   REPORT_DECISION,
   REPORT_TYPE,
-} from '@hermyx/shared/utils/reports.utils.js';
+  REPORT_STATUS,
+  consts,
+} from '@hermyx/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { getReportByIdQueryOptions } from '../queries/ReportQueries';
@@ -30,7 +32,6 @@ import { Button } from '@/components/ui/button';
 import { useAlert } from '../contexts/AlertContext';
 import { messages } from '../messages/messages';
 import { banMission, kickAdventurerOut } from '../services/MissionsServices';
-import { REPORT_STATUS } from './../../../shared/utils/reports.utils';
 import { banUser } from '../services/UsersServices';
 import {
   acceptAdventurersWork,
@@ -38,7 +39,6 @@ import {
   rejectAdventurersWork,
 } from '../services/ReportsServices';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
-import { consts } from '@hermyx/shared';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { answerReportAction } from '../actions/ReportActions';
 import { initialStateUseStateAction } from '../consts/consts';

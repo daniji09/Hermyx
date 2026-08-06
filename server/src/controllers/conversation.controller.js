@@ -1,6 +1,6 @@
 import { messages } from '@hermyx/shared';
 
-import { getById } from '../models/app_user.model.js';
+import { getById } from '../models/user.model.js';
 
 import {
   createMessage,
@@ -16,11 +16,14 @@ import {
   canSendMessageToConversation,
 } from '../models/conversation.model.js';
 
-import { emitToConversation, emitToUser } from '../services/socket.service.js';
+import {
+  emitToConversation,
+  emitToUser,
+} from '../providers/socket.provider.js';
 import {
   saveToLocalStorage,
   uploadToAzureBlob,
-} from '../services/storage.service.js';
+} from '../providers/storage.provider.js';
 
 export const getOrCreatePrivateConversationWithUser = async (req, res) => {
   try {

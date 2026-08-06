@@ -2,8 +2,8 @@ import {
   addEmailAuthenticationSchema,
   logInSchema,
   signUpSchema,
+  messages,
 } from '@hermyx/shared';
-import { messages } from '@hermyx/shared';
 import {
   addEmailAuthentication,
   createUser,

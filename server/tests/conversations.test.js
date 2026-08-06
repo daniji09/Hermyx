@@ -11,8 +11,8 @@ import {
   joinVacancy,
   releaseParticipation,
   unjoinVacancy,
-} from '../src/models/mission_participation.model.js';
-import { MISSION_LIFE_CYCLE } from '@hermyx/shared/utils/missions.utils.js';
+} from '../src/models/mission-participation.model.js';
+import { MISSION_STATUS } from '@hermyx/shared';
 
 const saveToLocalStorageMock = vi.hoisted(() =>
   vi.fn(async () => '/uploads/conversation-photos/test-photo.png'),
@@ -80,7 +80,7 @@ const createMissionWithConversation = async (ownerId) => {
     totalPayment: 25,
     latitude: null,
     longitude: null,
-    status: MISSION_LIFE_CYCLE.OPENED.ID,
+    status: MISSION_STATUS.OPENED.ID,
     ownerId,
   });
 

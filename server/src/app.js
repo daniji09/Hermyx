@@ -25,14 +25,14 @@ app.use(express.json());
 app.use(express.static(staticFiles));
 
 // Application routers
-import usersRouter from './routes/users.router.js';
-import paymentRouter from './routes/payment.router.js';
-import missionsRouter from './routes/missions.router.js';
-import notificationRouter from './routes/notification.router.js';
-import reviewsRouter from './routes/reviews.router.js';
-import reportsRouter from './routes/reports.router.js';
+import usersRouter from './routes/user.route.js';
+import paymentRouter from './routes/payment.route.js';
+import missionsRouter from './routes/mission.route.js';
+import notificationRouter from './routes/notification.route.js';
+import reviewsRouter from './routes/review.route.js';
+import reportsRouter from './routes/report.route.js';
 import { verifyToken } from './middlewares/auth.middleware.js';
-import conversationsRouter from './routes/conversations.router.js';
+import conversationsRouter from './routes/conversation.route.js';
 
 // Application routes
 app.use('/api/stripe', verifyToken, paymentRouter);

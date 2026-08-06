@@ -67,12 +67,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { consts, messages as messagesShared } from '@hermyx/shared';
-import { Map } from '../components/custom/Map';
 import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils';
+  consts,
+  messages as messagesShared,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+} from '@hermyx/shared';
+import { Map } from '../components/custom/Map';
 import { reportMissionAction } from '../actions/ReportActions';
 import { initialStateUseStateAction } from './../consts/consts';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
@@ -246,17 +247,17 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <CardFooter>
                 <>
                   {isCreator ? (
-                    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID ||
+                    mission.status === MISSION_STATUS.CLOSED.ID ||
                     mission.waitingForPaymentVacancies.length > 0 ? (
                       <PayMissionButton mission={mission}></PayMissionButton>
-                    ) : mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID ? (
+                    ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID ? (
                       <MissionOwnerStatusMessage status={mission.status} />
                     ) : (
                       <p className='text-muted-foreground bg-muted/20'>
                         {messages.MISSION.MISSION_CLOSED}
                       </p>
                     )
-                  ) : mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
+                  ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID &&
                     currentParticipation ? (
                     <SubmitParticipationButton
                       missionId={mission.mid}
@@ -272,13 +273,13 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     </p>
                   )}
                   {isCreator &&
-                    (mission.status === MISSION_LIFE_CYCLE.OPENED.ID ||
-                      mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) && (
+                    (mission.status === MISSION_STATUS.OPENED.ID ||
+                      mission.status === MISSION_STATUS.REOPENED.ID) && (
                       <CloseMissionButton
                         mission={mission}
                       ></CloseMissionButton>
                     )}
-                  {isCreator && MISSION_LIFE_CYCLE[mission.status].CAN_EDIT && (
+                  {isCreator && MISSION_STATUS[mission.status].CAN_EDIT && (
                     <Button asChild>
                       <Link to={`/missions/${mission.mid}/edit`}>
                         Edit mission
@@ -286,19 +287,17 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     </Button>
                   )}
                   {isCreator &&
-                    (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE ||
-                      MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) && (
+                    (MISSION_STATUS[mission.status].CAN_DELETE ||
+                      MISSION_STATUS[mission.status].CAN_CANCEL) && (
                       <CancelMissionButton mission={mission} />
                     )}
                   {isCreator &&
-                    MISSION_LIFE_CYCLE[
-                      mission.status
-                    ].VALID_NEXT_STATES.includes(
-                      MISSION_LIFE_CYCLE.REOPENED.ID,
+                    MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+                      MISSION_STATUS.REOPENED.ID,
                     ) && <ReopenMissionButton mission={mission} />}
                   {isCreator &&
                     mission.canFinish &&
-                    mission.status !== MISSION_LIFE_CYCLE.FINISHED.ID && (
+                    mission.status !== MISSION_STATUS.FINISHED.ID && (
                       <FinishMissionButton mission={mission} />
                     )}
                   {mission.conversation_id && (
@@ -313,7 +312,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     </Button>
                   )}
                   {!isCreator &&
-                    mission.status !== MISSION_LIFE_CYCLE.REPORTED.ID && (
+                    mission.status !== MISSION_STATUS.REPORTED.ID && (
                       <ReportMissionButton mission={mission} />
                     )}
                 </>
@@ -338,9 +337,9 @@ const canReviewParticipant = (participant) => {
   return (
     !!participant.adventurer_id &&
     [
-      VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-      VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
-      VACANCY_LIFE_CYCLE.RELEASED.ID,
+      MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
+      MISSION_PARTICIPATION_STATUS.RELEASED.ID,
     ].includes(participant.status)
   );
 };
@@ -553,7 +552,7 @@ const ViewVacancyDialog = ({
 
           {!isCreator &&
             isAssignedToUser &&
-            mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID && (
+            mission.status !== MISSION_STATUS.IN_PROGRESS.ID && (
               <UnjoinMissionButton
                 missionId={mission.mid}
                 vacancyId={vacancy.vacancy_id}
@@ -623,10 +622,9 @@ const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
 
   return (
     <div className='flex flex-wrap items-center gap-2 pt-1'>
-      {isCreator &&
-        MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS && (
-          <AddAdventurerButton onClick={onAddAdventurer} />
-        )}
+      {isCreator && MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS && (
+        <AddAdventurerButton onClick={onAddAdventurer} />
+      )}
       {(mission.participants || []).map((participant) => (
         <ParticipantRow
           key={participant.vacancy_id}
@@ -1375,7 +1373,7 @@ const CloseMissionButton = ({ mission }) => {
   // Interceptor
   const handleAttempt = () => {
     // This action needs confirmation
-    if (mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) {
+    if (mission.status === MISSION_STATUS.REOPENED.ID) {
       showAlert({
         title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
         description:
@@ -1453,10 +1451,10 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 
   const isSubmitted =
     participationStatus &&
-    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID;
+    participationStatus !== MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID;
   const buttonLabel =
     participationStatus &&
-    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID
+    participationStatus !== MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID
       ? getParticipationStatusLabel(participationStatus)
       : 'Submit my part';
 
@@ -1473,7 +1471,7 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 };
 
 const MissionOwnerStatusMessage = ({ status }) => {
-  if (status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
+  if (status === MISSION_STATUS.IN_PROGRESS.ID) {
     return (
       <p className='text-muted-foreground bg-muted/20'>
         Waiting for adventurers to submit their participation.
@@ -1500,13 +1498,13 @@ const PayMissionButton = ({ mission }) => {
   const { showAlert } = useAlert();
   const navigate = useNavigate();
   const text =
-    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID
+    mission.status === MISSION_STATUS.CLOSED.ID
       ? 'Start mission'
       : 'Pay mission';
 
   // Interceptor
   const handleAttempt = () => {
-    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID
+    mission.status === MISSION_STATUS.CLOSED.ID
       ? // This action needs confirmation
         showAlert({
           title: messages.MISSION.START_MISSION_ALERT.TITLE,
@@ -1551,7 +1549,7 @@ const CancelMissionButton = ({ mission }) => {
     // This action needs confirmation
     showAlert({
       title: messages.MISSION.CANCEL_MISSION_ALERT.TITLE,
-      description: MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+      description: MISSION_STATUS[mission.status].CAN_DELETE
         ? messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_DELETE
         : messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_CANCEL,
       variant: 'warning',

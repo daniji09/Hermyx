@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { corsOptions } from '../app.js';
-import { getByFirebaseUid } from '../models/app_user.model.js';
-import { verifyIdToken } from './auth.service.js';
+import { getByFirebaseUid } from '../models/user.model.js';
+import { verifyIdToken } from './auth.provider.js';
 import { isConversationParticipant } from '../models/conversation.model.js';
 
 let io;

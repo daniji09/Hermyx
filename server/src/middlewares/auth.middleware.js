@@ -1,8 +1,7 @@
-import { messages } from '@hermyx/shared';
-import { verifyIdToken } from '../services/auth.service.js';
-import { getByFirebaseUid } from '../models/app_user.model.js';
+import { messages, USER_ROLE, USER_STATUS } from '@hermyx/shared';
+import { verifyIdToken } from '../providers/auth.provider.js';
+import { getByFirebaseUid } from '../models/user.model.js';
 import { CRON_SECRET_TOKEN } from '../config/config.js';
-import { USER_ROLE, USER_STATUS } from '@hermyx/shared/utils/users.utils.js';
 
 export const verifyToken = async (req, res, next) => {
   try {

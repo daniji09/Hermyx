@@ -1,5 +1,20 @@
 // External modules
-import { messages, consts } from '@hermyx/shared';
+import {
+  messages,
+  consts,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_TYPE,
+  HERMYX_FEE,
+  HERMYX_SYSTEM_ID,
+  TRANSACTION_TYPE,
+  MISSION_PARTICIPATION_PAYMENT_STATUS,
+  USER_STATUS,
+  REPORT_DECISION,
+  REPORT_STATUS,
+} from '@hermyx/shared';
 import {
   getByEmail,
   getByUsername,
@@ -18,7 +33,7 @@ import {
   ban,
   unban,
   updateAvatar,
-} from '../models/app_user.model.js';
+} from '../models/user.model.js';
 import {
   getPublicProfileCreatedMissions,
   getPublicProfileJoinedMissions,
@@ -37,55 +52,35 @@ import {
   getUserByEmail,
   revokeTokens,
   updateFirebaseAccount,
-} from '../services/auth.service.js';
-import { stringShortener } from '../utils/strings.utils.js';
+} from '../providers/auth.provider.js';
+import { stringShortener } from '../utils/string.util.js';
 import {
   createRefund,
   createTransfer,
   rejectAccount,
   retrieveConnectAccount,
-} from '../services/payment.service.js';
-import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils.js';
+} from '../providers/payment.provider.js';
 import {
   getOccupiedVacancies,
   markVacancyAsPaidOut,
   refundBannedVacancy,
   unjoinParticipant,
   updatePaymentStatus,
-} from '../models/mission_participation.model.js';
-import {
-  NOTIFICATION_ACTION,
-  NOTIFICATION_KIND,
-  NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils.js';
+} from '../models/mission-participation.model.js';
 import { createNotification } from '../models/notification.model.js';
-import {
-  HERMYX_FEE,
-  HERMYX_TRANSACTION_ID,
-  TRANSACTION_TYPE,
-  VACANCY_PAYMENT_STATUS,
-} from '@hermyx/shared/utils/payment.utils.js';
-import { emitToUser } from '../services/socket.service.js';
+import { emitToUser } from '../providers/socket.provider.js';
 import { closeReport, getReportById } from '../models/report.model.js';
 import {
   createMissionPayment,
   getMissionPaymentsByVacancy,
   refundFromPayment,
-} from '../models/mission_payment.model.js';
-import { USER_STATUS } from '@hermyx/shared/utils/users.utils.js';
-import {
-  REPORT_DECISION,
-  REPORT_STATUS,
-} from '@hermyx/shared/utils/reports.utils.js';
+} from '../models/mission-payment.model.js';
 import {
   deleteFromAzureBlob,
   deleteFromLocalStorage,
   saveToLocalStorage,
   uploadToAzureBlob,
-} from '../services/storage.service.js';
+} from '../providers/storage.provider.js';
 
 export const getUsers = async (req, res) => {
   try {
@@ -843,7 +838,7 @@ export const banUser = async (req, res) => {
         // If mission is not in progress and this user is an adventurer, it just deletes them from the mission
         if (
           mission.owner_id !== uid &&
-          MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+          MISSION_STATUS[mission.status].CAN_DELETE
         ) {
           // Unjoin user
           const unjoin = await unjoinParticipant(mission.mid, uid);
@@ -863,7 +858,7 @@ export const banUser = async (req, res) => {
             action: NOTIFICATION_ACTION.USER_BAN.ID,
             status: null,
             message: message,
-            senderId: HERMYX_TRANSACTION_ID,
+            senderId: HERMYX_SYSTEM_ID,
             receiverId: mission.owner_id,
             payload: {
               associated_mission_id: mission.mid,
@@ -875,7 +870,7 @@ export const banUser = async (req, res) => {
             missionId: mission.mid,
             vacancyId: null,
             missionTitle: mission.title,
-            senderId: HERMYX_TRANSACTION_ID,
+            senderId: HERMYX_SYSTEM_ID,
             senderUsername: req.user.username,
             receiverId: mission.owner_id,
             type: NOTIFICATION_TYPE.MISSION.ID,
@@ -885,8 +880,9 @@ export const banUser = async (req, res) => {
         // If mission is in progress and this user is an adventurer, it deletes them from the mission and refunds the payment to the applicant
         else if (
           mission.owner_id !== uid &&
-          MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL &&
-          VACANCY_LIFE_CYCLE[mission.participation_status].CAN_INTERACT
+          MISSION_STATUS[mission.status].CAN_CANCEL &&
+          MISSION_PARTICIPATION_STATUS[mission.participation_status]
+            .CAN_INTERACT
         ) {
           // Unjoin user
           const unjoin = await unjoinParticipant(mission.mid, uid);
@@ -901,7 +897,7 @@ export const banUser = async (req, res) => {
           // Refunds payment to the applicant
           await updatePaymentStatus(
             mission.vacancy_id,
-            VACANCY_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+            MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
           );
 
           // First, payments for this mission are get
@@ -942,7 +938,7 @@ export const banUser = async (req, res) => {
             await createMissionPayment({
               mid: mission.mid,
               vacancy_id: mission.vacancy_id,
-              sender_id: HERMYX_TRANSACTION_ID,
+              sender_id: HERMYX_SYSTEM_ID,
               receiver_id: mission.owner_id,
               stripe_transaction_id: refund.id,
               transaction_type: TRANSACTION_TYPE.BAN_COMPENSATION.ID,
@@ -975,7 +971,7 @@ export const banUser = async (req, res) => {
             action: NOTIFICATION_ACTION.USER_BAN.ID,
             status: null,
             message: message,
-            senderId: HERMYX_TRANSACTION_ID,
+            senderId: HERMYX_SYSTEM_ID,
             receiverId: mission.owner_id,
             payload: {
               associated_mission_id: mission.mid,
@@ -986,7 +982,7 @@ export const banUser = async (req, res) => {
             missionId: mission.mid,
             vacancyId: null,
             missionTitle: mission.title,
-            senderId: HERMYX_TRANSACTION_ID,
+            senderId: HERMYX_SYSTEM_ID,
             senderUsername: req.user.username,
             receiverId: mission.owner_id,
             type: NOTIFICATION_TYPE.MISSION.ID,
@@ -997,11 +993,11 @@ export const banUser = async (req, res) => {
         else if (mission.owner_id === uid) {
           // Gets occupied vacancies
           const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-          if (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE) {
+          if (MISSION_STATUS[mission.status].CAN_DELETE) {
             // Checks if mission can be deleted by states
             if (
-              !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-                MISSION_LIFE_CYCLE.DELETED.ID,
+              !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+                MISSION_STATUS.DELETED.ID,
               )
             )
               return res
@@ -1009,17 +1005,14 @@ export const banUser = async (req, res) => {
                 .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
             // Then mission status is updated
-            await updateMissionStatus(
-              mission.mid,
-              MISSION_LIFE_CYCLE.DELETED.ID,
-            );
+            await updateMissionStatus(mission.mid, MISSION_STATUS.DELETED.ID);
           }
           // If mission has to be cancelled, it will be
-          else if (MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) {
+          else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
             // Checks if mission can be cancelled by states
             if (
-              !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-                MISSION_LIFE_CYCLE.CANCELLING.ID,
+              !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+                MISSION_STATUS.CANCELLING.ID,
               )
             )
               return res
@@ -1029,12 +1022,12 @@ export const banUser = async (req, res) => {
             // Then mission status is updated
             await updateMissionStatus(
               mission.mid,
-              MISSION_LIFE_CYCLE.CANCELLING.ID,
+              MISSION_STATUS.CANCELLING.ID,
             );
 
             // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
             for (const vacancy of occupied_vacancies) {
-              if (vacancy.status !== VACANCY_LIFE_CYCLE.RELEASED.ID) {
+              if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID) {
                 const adventurer = await getById(vacancy.adventurer_id);
                 if (adventurer.stripe_connected_id) {
                   const transferData = {
@@ -1055,7 +1048,7 @@ export const banUser = async (req, res) => {
                   await createMissionPayment({
                     mid: mission.mid,
                     vacancy_id: vacancy.id,
-                    sender_id: HERMYX_TRANSACTION_ID,
+                    sender_id: HERMYX_SYSTEM_ID,
                     receiver_id: adventurer.uid,
                     stripe_transaction_id: transfer.id,
                     transaction_type: TRANSACTION_TYPE.BAN_COMPENSATION.ID,
@@ -1066,10 +1059,7 @@ export const banUser = async (req, res) => {
                 }
               }
             }
-            await updateMissionStatus(
-              mission.mid,
-              MISSION_LIFE_CYCLE.CANCELLED.ID,
-            );
+            await updateMissionStatus(mission.mid, MISSION_STATUS.CANCELLED.ID);
           }
           // Otherwise, mission can't be deleted or cancelled
           else
@@ -1081,8 +1071,8 @@ export const banUser = async (req, res) => {
 
           // Either way, all adventurers are informed
           for (const vacancy of occupied_vacancies) {
-            if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
-              const message = MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+            if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+              const message = MISSION_STATUS[mission.status].CAN_DELETE
                 ? `Mission ${mission.title} has been deleted because the applicant has been banned, so it won't be done, we are sorry.`
                 : `Mission ${mission.title} has been cancelled because the applicant has been banned, but don't worry, your reward is on your way!`;
               const notificationId = await createNotification({

@@ -21,12 +21,12 @@ import {
   rejectAdventurersWork,
   reportMission,
   reportUser,
-} from '../controllers/reports.controller.js';
+} from '../controllers/report.controller.js';
 import {
   validateBodySchema,
   validateParamsSchema,
   validateQuerySchema,
-} from '../middlewares/validations.middleware.js';
+} from '../middlewares/validation.middleware.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 const router = Router();

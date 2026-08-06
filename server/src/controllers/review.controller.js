@@ -1,5 +1,5 @@
 import { consts, messages } from '@hermyx/shared';
-import { getByUsername } from '../models/app_user.model.js';
+import { getByUsername } from '../models/user.model.js';
 import {
   createAdventurerReview,
   createOwnerReview,

@@ -5,9 +5,8 @@ import {
   addVacanciesSchema,
   editVacancySchema,
   editMissionBodySchema,
+  messages,
 } from '@hermyx/shared';
-
-import { messages } from '@hermyx/shared';
 import { createMission, editMission } from '../services/MissionsServices';
 
 //New mission action, executed when form is sent

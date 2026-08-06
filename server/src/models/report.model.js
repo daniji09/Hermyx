@@ -1,7 +1,4 @@
-import {
-  REPORT_STATUS,
-  REPORT_TYPE,
-} from '@hermyx/shared/utils/reports.utils.js';
+import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
 // Creates a report

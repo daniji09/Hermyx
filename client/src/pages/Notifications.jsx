@@ -19,8 +19,8 @@ import {
   NOTIFICATION_KIND,
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils';
-import { messages as messagesShared } from '@hermyx/shared';
+  messages as messagesShared,
+} from '@hermyx/shared';
 
 const getInvitationTitle = (notification) => {
   if (notification.action === 'mission_invite')

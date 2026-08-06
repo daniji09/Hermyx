@@ -4,10 +4,7 @@ import { PAGINATION_LIMIT } from '../consts/consts';
 import { timestampToDayMonthYear } from '../utils/date';
 import { messages } from './../messages/messages';
 import { Button } from '@/components/ui/button';
-import {
-  REPORT_STATUS,
-  REPORT_TYPE,
-} from '@hermyx/shared/utils/reports.utils.js';
+import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import {
   Card,
   CardAction,

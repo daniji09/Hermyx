@@ -14,12 +14,12 @@ import {
   getMyConversations,
   getMyUnreadMessageCount,
   markConversationAsRead,
-} from '../controllers/conversations.controller.js';
+} from '../controllers/conversation.controller.js';
 import {
   validateBodySchema,
   validateFileSchema,
   validateParamsSchema,
-} from '../middlewares/validations.middleware.js';
+} from '../middlewares/validation.middleware.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });

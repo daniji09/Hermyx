@@ -19,14 +19,14 @@ import {
   finishMission,
   banMission,
   kickAdventurerOut,
-} from '../controllers/missions.controller.js';
+} from '../controllers/mission.controller.js';
 
 import {
   validateBodySchema,
   validateQuerySchema,
   validateParamsSchema,
   validateFilesSchema,
-} from '../middlewares/validations.middleware.js';
+} from '../middlewares/validation.middleware.js';
 
 import {
   publishMissionSchema,
@@ -53,7 +53,7 @@ import {
   editMissionFilesSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
-import { inviteToMission } from './../controllers/missions.controller.js';
+import { inviteToMission } from '../controllers/mission.controller.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
 
 // Multer config

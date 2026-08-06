@@ -3,7 +3,7 @@ import request from 'supertest';
 import app from '../src/app.js';
 import pool from '../src/config/db.config.js';
 import { messages, consts } from '@hermyx/shared';
-import { createFirebaseUser } from '../src/services/auth.service.js';
+import { createFirebaseUser } from '../src/providers/auth.provider.js';
 
 // Test fake data
 const test_user = vi.hoisted(() => {

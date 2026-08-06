@@ -14,11 +14,11 @@ import {
   refundMissionPayment,
   getDashboardLink,
 } from '../controllers/payment.controller.js';
-import { checkStripeCustomer } from '../services/payment.service.js';
+import { checkStripeCustomer } from '../providers/payment.provider.js';
 import {
   validateBodySchema,
   validateParamsSchema,
-} from '../middlewares/validations.middleware.js';
+} from '../middlewares/validation.middleware.js';
 import {
   deleteCardParamSchema,
   payNewBodySchema,

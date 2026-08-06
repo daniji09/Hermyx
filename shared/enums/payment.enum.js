@@ -4,7 +4,7 @@ export const MISSION_PAYMENT_STATUS = {
   REFUNDED: { ID: 'REFUNDED', LABEL: 'Refunded' },
 };
 
-export const VACANCY_PAYMENT_STATUS = {
+export const MISSION_PARTICIPATION_PAYMENT_STATUS = {
   UNPAID: { ID: 'UNPAID', LABEL: 'Unpaid' },
   PAID: { ID: 'PAID', LABEL: 'Paid' },
   PARTIALLY_PAID: { ID: 'PARTIALLY_PAID', LABEL: 'Partially paid' },
@@ -39,5 +39,5 @@ export const TRANSACTION_TYPE = {
   PAYOUT: { ID: 'PAYOUT', LABEL: 'Payout' },
 };
 
-export const HERMYX_TRANSACTION_ID = 1;
+export const HERMYX_SYSTEM_ID = 1;
 export const HERMYX_FEE = 1.1;

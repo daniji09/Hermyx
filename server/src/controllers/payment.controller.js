@@ -16,12 +16,12 @@ import {
   createRefund,
   createLoginLink,
   retrieveConnectAccount,
-} from '../services/payment.service.js';
+} from '../providers/payment.provider.js';
 
 import {
   getById,
   updateStripeConnected as updateStripeConnectId,
-} from '../models/app_user.model.js';
+} from '../models/user.model.js';
 
 import {
   getById as _getById,
@@ -44,30 +44,26 @@ import {
   payVacancy,
   startParticipants,
   updateTransferInfo,
-} from '../models/mission_participation.model.js';
+} from '../models/mission-participation.model.js';
 import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils.js';
-import { messages } from '@hermyx/shared';
-import { createNotification } from '../models/notification.model.js';
-import {
+  messages,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
   NOTIFICATION_ACTION,
   NOTIFICATION_KIND,
   NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils.js';
-import { emitToUser } from '../services/socket.service.js';
+  HERMYX_FEE,
+  HERMYX_SYSTEM_ID,
+  TRANSACTION_TYPE,
+  MISSION_PARTICIPATION_PAYMENT_STATUS,
+} from '@hermyx/shared';
+import { createNotification } from '../models/notification.model.js';
+import { emitToUser } from '../providers/socket.provider.js';
 import {
   createMissionPayment,
   getMissionPaymentsByStripeTransactionId,
-} from '../models/mission_payment.model.js';
+} from '../models/mission-payment.model.js';
 import { FRONTEND_URL } from '../config/config.js';
-import {
-  HERMYX_FEE,
-  HERMYX_TRANSACTION_ID,
-  TRANSACTION_TYPE,
-  VACANCY_PAYMENT_STATUS,
-} from '@hermyx/shared/utils/payment.utils.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
 
@@ -283,11 +279,7 @@ export async function payDefault(req, res) {
       `pay_default_${missionId}_${Date.now()}`,
     );
 
-    await updatePaymentInfo(
-      missionId,
-      pi.id,
-      MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
-    );
+    await updatePaymentInfo(missionId, pi.id, MISSION_STATUS.IN_PROGRESS.ID);
 
     res.json({
       clientSecret: pi.client_secret,
@@ -338,11 +330,12 @@ export async function payNew(req, res) {
     for (const vacancy of waitingForPaymentVacancies) {
       let transaction_type;
       // Each type of payment has different information or actions
-      if (mission.status === MISSION_LIFE_CYCLE.CLOSED.ID) {
+      if (mission.status === MISSION_STATUS.CLOSED.ID) {
         // If mission is in closed state, is funding payment
         transaction_type = TRANSACTION_TYPE.INITIAL_FUNDING.ID;
       } else if (
-        vacancy.payment_status === VACANCY_PAYMENT_STATUS.PARTIALLY_PAID.ID
+        vacancy.payment_status ===
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID
       ) {
         // If vacancy is partially pay, is a reward negotiation
         transaction_type = TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID;
@@ -356,7 +349,7 @@ export async function payNew(req, res) {
         mid,
         vacancy_id: vacancy.id,
         sender_id: req.user.uid,
-        receiver_id: HERMYX_TRANSACTION_ID,
+        receiver_id: HERMYX_SYSTEM_ID,
         stripe_transaction_id: pi.id,
         transaction_type: transaction_type,
         amount_paid:
@@ -403,9 +396,9 @@ export async function confirmPayment(req, res) {
 
     // Checks if mission can be in progress by states
     if (
-      mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
-      !MISSION_LIFE_CYCLE[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_LIFE_CYCLE.IN_PROGRESS.ID,
+      mission.status !== MISSION_STATUS.IN_PROGRESS.ID &&
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.IN_PROGRESS.ID,
       )
     )
       return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
@@ -421,7 +414,7 @@ export async function confirmPayment(req, res) {
     );
 
     // Mission and participants life cycle is updated
-    await updateMissionStatus(missionId, MISSION_LIFE_CYCLE.IN_PROGRESS.ID);
+    await updateMissionStatus(missionId, MISSION_STATUS.IN_PROGRESS.ID);
     await startParticipants(missionId);
 
     // Gets all operations made in that payment
@@ -439,7 +432,7 @@ export async function confirmPayment(req, res) {
         message = `Your new monetary reward for ${mission.title} has been funded. Now you can submit your part!`;
       else
         message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
-      if (VACANCY_LIFE_CYCLE[vacancy.status].CAN_INTERACT) {
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const notificationId = await createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,

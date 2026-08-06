@@ -18,7 +18,11 @@ import { CardForm } from '../components/custom/form/CardForm';
 import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
-import { consts } from '@hermyx/shared';
+import {
+  consts,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+} from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
 import {
@@ -43,10 +47,6 @@ import {
 } from '@/components/ui/dialog';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
-import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils';
 import { useAlert } from '../contexts/AlertContext';
 import { disputeAdventurerAction } from '../actions/ReportActions';
 import { useDropzone } from 'react-dropzone';
@@ -306,9 +306,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         <div className='px-8'>
           <MissionVacanciesCreator
             initialVacancies={mission?.participants || []}
-            canDelete={
-              MISSION_LIFE_CYCLE[mission.status].CAN_DELETE_ADVENTURERS
-            }
+            canDelete={MISSION_STATUS[mission.status].CAN_DELETE_ADVENTURERS}
             mid={mission.mid}
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
@@ -371,7 +369,7 @@ const CreationVacancyCard = ({
 }) => {
   const isAssigned = !!vacancy.adventurer_id;
   const handleKeyDown = (e) => {
-    if (!VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT) return;
+    if (!MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       onClick(vacancy.id);
@@ -382,13 +380,14 @@ const CreationVacancyCard = ({
       role='button'
       tabIndex={0}
       className={`relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all group ${
-        VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT
+        MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT
           ? 'hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
           : 'opacity-70 cursor-default'
       }`}
       onKeyDown={handleKeyDown}
       onClick={() =>
-        VACANCY_LIFE_CYCLE[vacancy.status].CAN_EDIT && onClick(vacancy.id)
+        MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT &&
+        onClick(vacancy.id)
       }
     >
       {canDelete ? (
@@ -521,7 +520,7 @@ const CreateVacanciesDialog = ({
         reward: state.data.vacanciesReward,
         title: state.data.vacanciesTitle,
         description: state.data.vacanciesDescription,
-        status: VACANCY_LIFE_CYCLE.EMPTY.ID,
+        status: MISSION_PARTICIPATION_STATUS.EMPTY.ID,
       });
       processedState.current = state;
     }
@@ -934,7 +933,10 @@ export const MissionVacanciesCreator = ({
   const handleClickVacancy = useCallback(
     (id) => {
       const targetVacancy = vacancies.find((v) => v.id === id);
-      if (targetVacancy && VACANCY_LIFE_CYCLE[targetVacancy.status].CAN_EDIT) {
+      if (
+        targetVacancy &&
+        MISSION_PARTICIPATION_STATUS[targetVacancy.status].CAN_EDIT
+      ) {
         setEditingVacancyId(id);
       } else {
         showAlert({ title: messages.EDIT_MISSION.EDIT_FINISHED_VACANCIES });
