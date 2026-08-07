@@ -2,16 +2,13 @@
 import { Router } from 'express';
 const router = Router();
 import {
-  getUsers,
   searchUsersByUsername,
-  signUp,
   getUsersByFirebaseUid,
   getUserMissions,
   getUserPublicProfile,
   getUserPublicProfileMissions,
   getMyProfile,
   updateMyProfile,
-  syncGoogle,
   deleteByUid,
   updateUserEmail,
   deleteUser,
@@ -25,15 +22,12 @@ import {
   validateQuerySchema,
 } from '../middlewares/validation.middleware.js';
 import {
-  getUsersQuerySchema,
   searchUsersByUsernameQuerySchema,
-  signUpSchema,
   updateMyProfileSchema,
   getUsersByFirebaseUidParamSchema,
   getUserByUsernameParamSchema,
   getMissionsFromUserParamSchema,
   getMissionsFromUserQuerySchema,
-  syncGoogleSchema,
   getPublicProfileMissionsQuerySchema,
   deleteUserByUid,
   updateUserEmailSchema,
@@ -50,8 +44,6 @@ import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
 /// GET
-// Get users
-router.get('/', validateQuerySchema(getUsersQuerySchema), getUsers);
 
 // Search users by partial username
 router.get(
@@ -76,7 +68,7 @@ router.patch(
 router.patch(
   '/me/avatar',
   verifyToken,
-  upload.single('avatar'), // Multer procesa el archivo
+  upload.single('avatar'), // Multer processes the file
   updateMyAvatar,
 );
 
@@ -115,11 +107,6 @@ router.get(
 );
 
 /// POST
-// Sign up a new user
-router.post('/', validateBodySchema(signUpSchema), signUp);
-
-// Sign in user with Google, handling whether is a signup or a login
-router.post('/sync-google', validateBodySchema(syncGoogleSchema), syncGoogle);
 
 // Bans user
 router.post(

@@ -1,60 +1,29 @@
 import { auth, provider } from '../config/firebase';
 import {
-  signInWithEmailAndPassword,
+  signInWithCustomToken as _signInWithCustomToken,
   signInWithPopup,
   updatePassword,
   linkWithPopup,
   unlink,
 } from 'firebase/auth';
 import { consts, messages } from '@hermyx/shared';
+import api from '../config/api';
 
-// Signs in a user in Firebase
-export const firebaseSignIn = async (email, password) => {
-  try {
-    // Log In is done on client with Firebase
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password,
-    );
+// Logs in a user in Hermyx and return Firebase custom token
+export const login = async (user) => {
+  // API search
+  const { data } = await api.post('/auth/login', user);
 
-    // If Firebase user is not received, it returns the error
-    if (!userCredential)
-      throw {
-        errors: {
-          general: [messages.COULD_NOT_LOG_IN],
-        },
-      };
-    return userCredential.user;
-  } catch (error) {
-    // Firebase errors and exceptions are treated by a map
-    const errorBuilder = consts.FIREBASE_ERRORS[error.code];
-    if (errorBuilder) {
-      const mappedError = errorBuilder({ email });
-      if (mappedError.field === 'username' || mappedError.field === 'email')
-        mappedError.field = 'usernameEmail';
-      throw {
-        errors: {
-          [mappedError.field]: [mappedError.message],
-        },
-      };
-    }
-
-    throw {
-      errors: {
-        general: [messages.COULD_NOT_LOG_IN],
-      },
-    };
-  }
+  return data;
 };
 
-// Signs in a user using Google authentication
-export const signInWithGoogle = async () => {
+// Signs in user in Firebase with custom token
+export const signInWithCustomToken = async (token) => {
   try {
-    return await signInWithPopup(auth, provider);
+    return await _signInWithCustomToken(auth, token);
   } catch (error) {
     // Firebase errors and exceptions are treated by a map
-    const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
     if (errorBuilder) {
       const mappedError = errorBuilder();
       throw {
@@ -66,7 +35,31 @@ export const signInWithGoogle = async () => {
 
     throw {
       errors: {
-        general: [messages.COULD_NOT_LOG_IN],
+        general: [messages.AUTH.LOGIN.COULD_NOT_LOG_IN],
+      },
+    };
+  }
+};
+
+// Signs in a user using Google authentication
+export const signInWithGoogle = async () => {
+  try {
+    return await signInWithPopup(auth, provider);
+  } catch (error) {
+    // Firebase errors and exceptions are treated by a map
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+    if (errorBuilder) {
+      const mappedError = errorBuilder();
+      throw {
+        errors: {
+          [mappedError.field]: [mappedError.message],
+        },
+      };
+    }
+
+    throw {
+      errors: {
+        general: [messages.AUTH.LOGIN.COULD_NOT_LOG_IN],
       },
     };
   }
@@ -79,7 +72,7 @@ export const updateUserPassword = async (password) => {
     return await updatePassword(user, password);
   } catch (error) {
     // Firebase errors and exceptions are treated by a map
-    const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
     if (errorBuilder) {
       const mappedError = errorBuilder();
       throw {
@@ -107,7 +100,7 @@ export const linkGoogleAccount = async () => {
       throw { isPopupCancel: true };
     }
     // Firebase errors and exceptions are treated by a map
-    const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
     if (errorBuilder) {
       const mappedError = errorBuilder({ email: error.customData?.email });
       throw {
@@ -145,7 +138,7 @@ export const unlinkGoogleAccount = async () => {
     return await unlink(user, provider.providerId);
   } catch (error) {
     // Firebase errors and exceptions are treated by a map
-    const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
     if (errorBuilder) {
       const mappedError = errorBuilder();
       throw {

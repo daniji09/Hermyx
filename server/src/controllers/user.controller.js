@@ -17,7 +17,7 @@ import {
 } from '@hermyx/shared';
 import {
   getByEmail,
-  getByUsername,
+  findByUsername,
   searchByUsername,
   create,
   getByFirebaseUid,
@@ -82,7 +82,7 @@ import {
   uploadToAzureBlob,
 } from '../providers/storage.provider.js';
 
-export const getUsers = async (req, res) => {
+export const getUser = async (req, res) => {
   try {
     // Gets attributes
     const { email, username } = req.query;
@@ -100,7 +100,7 @@ export const getUsers = async (req, res) => {
       return res.status(200).json({ user });
     } else if (username) {
       // It searches user by username
-      const user = await getByUsername(username);
+      const user = await findByUsername(username);
 
       // Returns success or error
       if (!user)
@@ -208,7 +208,7 @@ export const getUserPublicProfile = async (req, res) => {
   try {
     const username = req.params.username.toLowerCase().trim();
 
-    const user = await getByUsername(username);
+    const user = await findByUsername(username);
 
     if (!user) {
       return res.status(404).json({
@@ -244,7 +244,7 @@ export const getUserPublicProfileMissions = async (req, res) => {
     const { type } = req.query;
     const pagination = req.pagination;
 
-    const user = await getByUsername(username);
+    const user = await findByUsername(username);
 
     if (!user) {
       return res.status(404).json({
@@ -393,7 +393,7 @@ export const signUp = async (req, res) => {
       });
 
     // Checks if the username is already in use
-    const userByUsername = await getByUsername(username);
+    const userByUsername = await findByUsername(username);
 
     // If it exists, then its a bad request error
     if (userByUsername)
@@ -410,7 +410,7 @@ export const signUp = async (req, res) => {
     } catch (error) {
       // User not found is expected if the email is not in use, so any other error is returned
       if (error.code !== 'auth/user-not-found') {
-        const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+        const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
         if (errorBuilder) {
           const mappedError = errorBuilder({ email });
           return res.status(mappedError.status).json({
@@ -432,7 +432,7 @@ export const signUp = async (req, res) => {
       firebaseUser = await createFirebaseUser({ email, username, password });
     } catch (error) {
       // Firebase errors and exceptions are treated
-      const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
       if (errorBuilder) {
         const mappedError = errorBuilder({ email });
         return res.status(mappedError.status).json({
@@ -701,7 +701,7 @@ export const updateUserEmail = async (req, res) => {
     } catch (error) {
       // User not found is expected if the email is not in use, so any other error is returned
       if (error.code !== 'auth/user-not-found') {
-        const errorBuilder = consts.FIREBASE_ERRORS[error.code];
+        const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
         if (errorBuilder) {
           const mappedError = errorBuilder({ email });
           return res.status(mappedError.status).json({
@@ -797,7 +797,7 @@ function generateUniqueUsername(username) {
     );
 
     // Checks if username is unique
-    isUnique = getByUsername(uniqueUsername);
+    isUnique = findByUsername(uniqueUsername);
   }
 
   return uniqueUsername;

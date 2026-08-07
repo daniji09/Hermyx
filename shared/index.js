@@ -6,6 +6,7 @@ export * from './enums/payment.enum.js';
 export * from './enums/report.enum.js';
 export * from './enums/user.enum.js';
 export * from './regex/regex.js';
+export * from './validations/auth.validation.js';
 export * from './validations/user.validation.js';
 export * from './validations/mission.validation.js';
 export * from './validations/notification.validation.js';

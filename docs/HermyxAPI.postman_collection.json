@@ -1,0 +1,1166 @@
+{
+  "info": {
+    "_postman_id": "d1346408-1ea9-461d-a1c0-55720e8bd408",
+    "name": "HermyxAPI",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "57215860",
+    "_collection_link": "https://go.postman.co/collection/57215860-d1346408-1ea9-461d-a1c0-55720e8bd408?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "item": [
+            {
+              "name": "[200] - Email",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {\r",
+                      "    pm.response.to.have.status(200);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Response has a valid custom token\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('token');\r",
+                      "    pm.expect(jsonData.token).to.be.a('string');\r",
+                      "    pm.expect(jsonData.token.length).to.be.above(10);\r",
+                      "});\r",
+                      "\r",
+                      "// If login is successful, token is saved\r",
+                      "if (pm.response.code === 200) {\r",
+                      "    pm.environment.set(\"token\", pm.response.json().token);\r",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"email\": \"daniji09@ucm.es\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[200] - Email",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"email\": \"daniji09@ucm.es\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "811"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"32b-SUWI4VZGfOp61wjCLtp2yx9zEaM\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:49 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2lkZW50aXR5dG9vbGtpdC5nb29nbGVhcGlzLmNvbS9nb29nbGUuaWRlbnRpdHkuaWRlbnRpdHl0b29sa2l0LnYxLklkZW50aXR5VG9vbGtpdCIsImlhdCI6MTc4NjEyMjQ2OSwiZXhwIjoxNzg2MTI2MDY5LCJpc3MiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BoZXJteXgtZmlyZWJhc2UuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BoZXJteXgtZmlyZWJhc2UuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJ1aWQiOiJRbXZNZUVkYWxCV1pBeUlMWk5SUjB2RkV5QTczIn0.htUeS_MOY22QIYGgKoaicoQn1vhSzAoVap-Fxg1-M6C-LHJx_8JqqGh1BZUe8l4NH-PjMzrQeYXCj_1NdPIpqt5Ube6pNDq6Or0OPWAlc2kv9eidlgHUrRW526uFTDF1WPcaJV6vPaidPFMI76VYO5GIT6emWrio0X2TORcu9hBHrmSpnyYzbqzK7XQYSKhQa0cX6SoggODEWt-oGr6fTd7h6jbaOVX2eeUZWFyU-PDdGh366Sg2msUWftEjJa_66ky0mSYGfomu0opcJelZ0AzYCNkeCdyduZbApEdmyKWj3D1h1_HUAGLfFFa-U_XxXitJDTVehwa8XsNmrJz9nQ\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "[200] - Username",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 200\", function () {\r",
+                      "    pm.response.to.have.status(200);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Response has a valid custom token\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('token');\r",
+                      "    pm.expect(jsonData.token).to.be.a('string');\r",
+                      "    pm.expect(jsonData.token.length).to.be.above(10);\r",
+                      "});\r",
+                      "\r",
+                      "// If login is successful, token is saved\r",
+                      "if (pm.response.code === 200) {\r",
+                      "    pm.environment.set(\"token\", pm.response.json().token);\r",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"username\": \"daniji09\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[200] - Username",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"username\": \"daniji09\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "OK",
+                  "code": 200,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "811"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"32b-vMfTZVfQe9V7KUS0b1E9OPkJLps\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:06:56 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"token\": \"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJodHRwczovL2lkZW50aXR5dG9vbGtpdC5nb29nbGVhcGlzLmNvbS9nb29nbGUuaWRlbnRpdHkuaWRlbnRpdHl0b29sa2l0LnYxLklkZW50aXR5VG9vbGtpdCIsImlhdCI6MTc4NjEyMjQxNiwiZXhwIjoxNzg2MTI2MDE2LCJpc3MiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BoZXJteXgtZmlyZWJhc2UuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BoZXJteXgtZmlyZWJhc2UuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJ1aWQiOiJRbXZNZUVkYWxCV1pBeUlMWk5SUjB2RkV5QTczIn0.QA_pHLClEnYc77ggCIPoAWqH3Sdb8AW9bTxALzrq3odv1-hVDkgByic1XY0cj49w8rsJlgscmySXdFif9Xw3Q_vvbCNSqL30zNAEmtRqOjVvrRpm6-jlStUtC7QYzX_mjpMzWFeuPWoy5reCu_P7jpMbYQxFs85uYEExHnf6RxhTaW3ShidUBtundwRf_vqp_YqlWJXzhqBRnjVOCxysNL41ABFK_aMlUr7dfA2LMvIc8DcfVrQYRVy5SCnPyqDnCzLMeCvdL_F68Xw5Ta9Liu8EZ8Z1R1AThwzmaozJCrbcUzrrFV_A2CLQFJ8gEd5isTmjfZNTV7rjJUBbqMq_Ag\"\n}"
+                }
+              ]
+            },
+            {
+              "name": "[400] - Invalid email",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 400 (Bad Request)\", function () {\r",
+                      "    pm.response.to.have.status(400);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Validation error response structure is correct\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('errors');\r",
+                      "    const errorKeys = Object.keys(jsonData.errors);\r",
+                      "    pm.expect(errorKeys.length).to.be.above(0);\r",
+                      "    pm.expect(errorKeys[0]).to.equal('email');\r",
+                      "    pm.expect(jsonData.errors.email).to.be.an('array');\r",
+                      "    pm.expect(jsonData.errors.email[0]).to.equal('Please, enter a valid email.');\r",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"email\": \"daniji09@ucm\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[400] - Invalid email",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"email\": \"daniji09@ucm\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "53"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"35-KaLZUhvWggvT26dumO93LW1g1w8\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:02 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"errors\": {\n        \"email\": [\n            \"Please, enter a valid email.\"\n        ]\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "[400] - Invalid username",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 400 (Bad Request)\", function () {\r",
+                      "    pm.response.to.have.status(400);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Validation error response structure is correct\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('errors');\r",
+                      "    const errorKeys = Object.keys(jsonData.errors);\r",
+                      "    pm.expect(errorKeys.length).to.be.above(0);\r",
+                      "    pm.expect(errorKeys[0]).to.equal('username');\r",
+                      "    pm.expect(jsonData.errors.username).to.be.an('array');\r",
+                      "    pm.expect(jsonData.errors.username[0]).to.equal('Username must start with a letter or number, and may contain [._-].');\r",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"username\": \"_daniji09!!\",\r\n    \"password\": \"Abcd1234_!!\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[400] - Invalid username",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"username\": \"_daniji09!!\",\r\n    \"password\": \"Abcd1234_!!\"\r\n}"
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "95"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"5f-Ee2kyB36vtym1xc0rTy449mNqbo\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:14 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"errors\": {\n        \"username\": [\n            \"Username must start with a letter or number, and may contain [._-].\"\n        ]\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "[400] - Username too long",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 400 (Bad Request)\", function () {\r",
+                      "    pm.response.to.have.status(400);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Validation error response structure is correct\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('errors');\r",
+                      "    const errorKeys = Object.keys(jsonData.errors);\r",
+                      "    pm.expect(errorKeys.length).to.be.above(0);\r",
+                      "    pm.expect(errorKeys[0]).to.equal('username');\r",
+                      "    pm.expect(jsonData.errors.username).to.be.an('array');\r",
+                      "    pm.expect(jsonData.errors.username[0]).to.equal('Username must be shorter than 20 characters.');\r",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"username\": \"daniji09daniji09daniji09daniji09daniji09\",\r\n    \"password\": \"Abcd1234_!!\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[400] - Username too long",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"username\": \"daniji09daniji09daniji09daniji09daniji09\",\r\n    \"password\": \"Abcd1234_!!\"\r\n}"
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "72"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"48-8WmViZF/rgzkyTNsAeo1xU038DE\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:20 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"errors\": {\n        \"username\": [\n            \"Username must be shorter than 20 characters.\"\n        ]\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "[400] - No username or email",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 400 (Bad Request)\", function () {\r",
+                      "    pm.response.to.have.status(400);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Validation error response structure is correct\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('errors');\r",
+                      "    const errorKeys = Object.keys(jsonData.errors);\r",
+                      "    pm.expect(errorKeys.length).to.be.above(0);\r",
+                      "    pm.expect(errorKeys[0]).to.equal('usernameEmail');\r",
+                      "    pm.expect(jsonData.errors.usernameEmail).to.be.an('array');\r",
+                      "    pm.expect(jsonData.errors.usernameEmail[0]).to.equal('You must provide an e-mail or a username.');\r",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[400] - No username or email",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "Bad Request",
+                  "code": 400,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "74"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"4a-PLJPmaKL6a65a9W2aBQf1PrrYuo\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:27 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"errors\": {\n        \"usernameEmail\": [\n            \"You must provide an e-mail or a username.\"\n        ]\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "[401] - Username inexistant",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 401 (Unauthorized)\", function () {\r",
+                      "    pm.response.to.have.status(401);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Validation error response structure is correct\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('errors');\r",
+                      "    const errorKeys = Object.keys(jsonData.errors);\r",
+                      "    pm.expect(errorKeys.length).to.be.above(0);\r",
+                      "    pm.expect(errorKeys[0]).to.equal('general');\r",
+                      "    pm.expect(jsonData.errors.general).to.be.an('array');\r",
+                      "    pm.expect(jsonData.errors.general[0]).to.equal('Invalid credentials.');\r",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"username\": \"inexistantUsername\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[401] - Username inexistant",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"username\": \"inexistantUsername\",\r\n    \"password\": \"Abcd1234_\"\r\n}",
+                      "options": {
+                        "raw": {
+                          "language": "json"
+                        }
+                      }
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "47"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"2f-+QaSAtZTDUreWrVYLWs9CnuxsVs\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:32 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"errors\": {\n        \"general\": [\n            \"Invalid credentials.\"\n        ]\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "[401] - Email inexistant",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 401 (Unauthorized)\", function () {\r",
+                      "    pm.response.to.have.status(401);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Validation error response structure is correct\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('errors');\r",
+                      "    const errorKeys = Object.keys(jsonData.errors);\r",
+                      "    pm.expect(errorKeys.length).to.be.above(0);\r",
+                      "    pm.expect(errorKeys[0]).to.equal('general');\r",
+                      "    pm.expect(jsonData.errors.general).to.be.an('array');\r",
+                      "    pm.expect(jsonData.errors.general[0]).to.equal('Invalid credentials.');\r",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"email\": \"inexistant@email.es\",\r\n    \"password\": \"Abcd1234_\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[401] - Email inexistant",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"email\": \"inexistant@email.es\",\r\n    \"password\": \"Abcd1234_\"\r\n}"
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "47"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"2f-+QaSAtZTDUreWrVYLWs9CnuxsVs\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:38 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"errors\": {\n        \"general\": [\n            \"Invalid credentials.\"\n        ]\n    }\n}"
+                }
+              ]
+            },
+            {
+              "name": "[401] -  Invalid password",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Status code is 401 (Unauthorized)\", function () {\r",
+                      "    pm.response.to.have.status(401);\r",
+                      "});\r",
+                      "\r",
+                      "pm.test(\"Validation error response structure is correct\", function () {\r",
+                      "    let jsonData = pm.response.json();\r",
+                      "    pm.expect(jsonData).to.have.property('errors');\r",
+                      "    const errorKeys = Object.keys(jsonData.errors);\r",
+                      "    pm.expect(errorKeys.length).to.be.above(0);\r",
+                      "    pm.expect(errorKeys[0]).to.equal('general');\r",
+                      "    pm.expect(jsonData.errors.general).to.be.an('array');\r",
+                      "    pm.expect(jsonData.errors.general[0]).to.equal('Invalid credentials.');\r",
+                      "});"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"username\": \"daniji09\",\r\n    \"password\": \"Abcd1234_!!\"\r\n}"
+                },
+                "url": {
+                  "raw": "{{BACKEND_URL}}/auth/login",
+                  "host": [
+                    "{{BACKEND_URL}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                }
+              },
+              "response": [
+                {
+                  "name": "[401] -  Invalid password",
+                  "originalRequest": {
+                    "method": "POST",
+                    "header": [
+                      {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                      }
+                    ],
+                    "body": {
+                      "mode": "raw",
+                      "raw": "{\r\n    \"username\": \"daniji09\",\r\n    \"password\": \"Abcd1234_!!\"\r\n}"
+                    },
+                    "url": {
+                      "raw": "{{BACKEND_URL}}/auth/login",
+                      "host": [
+                        "{{BACKEND_URL}}"
+                      ],
+                      "path": [
+                        "auth",
+                        "login"
+                      ]
+                    }
+                  },
+                  "status": "Unauthorized",
+                  "code": 401,
+                  "_postman_previewlanguage": null,
+                  "header": [
+                    {
+                      "key": "X-Powered-By",
+                      "value": "Express"
+                    },
+                    {
+                      "key": "Vary",
+                      "value": "Origin"
+                    },
+                    {
+                      "key": "Content-Type",
+                      "value": "application/json; charset=utf-8"
+                    },
+                    {
+                      "key": "Content-Length",
+                      "value": "47"
+                    },
+                    {
+                      "key": "ETag",
+                      "value": "W/\"2f-+QaSAtZTDUreWrVYLWs9CnuxsVs\""
+                    },
+                    {
+                      "key": "Date",
+                      "value": "Fri, 07 Aug 2026 17:07:44 GMT"
+                    },
+                    {
+                      "key": "Connection",
+                      "value": "keep-alive"
+                    },
+                    {
+                      "key": "Keep-Alive",
+                      "value": "timeout=5"
+                    }
+                  ],
+                  "cookie": [],
+                  "body": "{\n    \"errors\": {\n        \"general\": [\n            \"Invalid credentials.\"\n        ]\n    }\n}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

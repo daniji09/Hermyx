@@ -1,10 +1,32 @@
 import { consts } from '../consts/consts.js';
 
 export const messages = {
+  /// General messages
+  GENERAL: {
+    FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
+    FIELD_REQUIRED: (field) => `${field} is required.`,
+    FIREBASE_AUTH_ERROR: `Firebase Auth error.`,
+  },
+
+  /// Auth messages
+  AUTH: {
+    LOGIN: {
+      NO_EMAIL_OR_USERNAME: `You must provide an e-mail or a username.`,
+      INVALID_CREDENTIALS: `Invalid credentials.`,
+      COULD_NOT_LOG_IN: `Could not log in.`,
+    },
+  },
+
+  /// User messages
+  USER: {
+    USERNAME: {
+      INVALID_CHARACTERS: `Username must start with a letter or number, and may contain [._-].`,
+    },
+  },
+
   ///// Common messages
   //// Error
   CONNECTION_ERROR: 'Connection error, please check your network.',
-  FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
   FIELD_NUMBER: (field) => `${field} must be a number.`,
   FIELD_POSITIVE: (field) => `${field} must be positive.`,
   FIELD_INTEGER: (field) => `${field} must be an integer.`,
@@ -30,11 +52,9 @@ export const messages = {
   PASSWORD_NUMBER: 'Password must include at least one number.',
   PASSWORD_SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
   CONFIRM_PASSWORD: 'Please, confirm password.',
-  EMAIL_USERNAME_NOT_PROVIDED: 'Username or email must be provided.',
+
   FIREBASE_UID_REQUIRED: 'Firebase UID is required.',
   PASSWORDS_NOT_MATCH: 'Passwords do not match.',
-  USERNAME_INVALID_CHARACTERS:
-    'Username must start with a letter or number, and may contain [._-].',
 
   // Server errors
   EMAIL_ALREADY_EXISTS: (email) => `User with email ${email} already exists.`,
@@ -46,9 +66,7 @@ export const messages = {
 
   //// Log In
   // Server errors
-  INVALID_CREDENTIALS: 'Invalid credentials.',
   PASSWORD_WRONG: 'Wrong password.',
-  COULD_NOT_LOG_IN: 'Could not log in.',
 
   //// Get users
   FIREBASE_UID_NOT_FOUND: (firebaseUid) =>

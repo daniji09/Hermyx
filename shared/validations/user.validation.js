@@ -3,26 +3,30 @@ import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
 
-// Backend endpoint getUsers
-export const getUsersQuerySchema = z
-  .object({
-    username: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .max(
-        consts.USERNAME_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-      )
-      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS)
-      .optional(),
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
-  })
-  .refine((val) => val.email || val.username || val.firebaseUid, {
-    message: messages.EMAIL_USERNAME_NOT_PROVIDED,
-    path: ['email'],
-  });
+/// Base validations, raw logic
+// Username
+export const usernameBase = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Username'))
+  .max(
+    consts.USER.USERNAME.MAX_LENGTH,
+    messages.FIELD_TOO_LONG('Username', consts.USER.USERNAME.MAX_LENGTH),
+  )
+  .regex(regex.USER.USERNAME, messages.USER.USERNAME.INVALID_CHARACTERS);
 
+// Email
+export const emailBase = z
+  .email(messages.GENERAL.FIELD_NOT_VALID('email'))
+  .trim();
+
+// Password
+export const passwordBase = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Password'));
+
+/// -----------------------
 export const searchUsersByUsernameQuerySchema = z.object({
   username: z
     .string()
@@ -47,7 +51,10 @@ export const signUpSchema = z
         messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
       )
       .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim().toLowerCase(),
+    email: z
+      .email(messages.GENERAL.FIELD_NOT_VALID('email'))
+      .trim()
+      .toLowerCase(),
     password: z
       .string()
       .trim()
@@ -69,27 +76,6 @@ export const signUpSchema = z
   .refine((val) => val.password === val.confirmPassword, {
     message: messages.PASSWORDS_NOT_MATCH,
     path: ['confirmPassword'],
-  });
-
-// Server and client log in shared validation
-export const logInSchema = z
-  .object({
-    username: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .max(
-        consts.USERNAME_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-      )
-      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS)
-      .optional(),
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
-    password: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  })
-  .refine((val) => val.email || val.username, {
-    message: messages.EMAIL_USERNAME_NOT_PROVIDED,
-    path: ['usernameEmail'],
   });
 
 export const getUsersByFirebaseUidParamSchema = z.object({
@@ -187,7 +173,7 @@ export const updateMyProfileSchema = z.object({
 // Sync with Google backend validation
 export const syncGoogleSchema = z.object({
   username: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+  email: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
   firebaseUid: z.string().trim().min(1, messages.FIELD_REQUIRED),
   isNewUser: z.boolean(),
 });
@@ -195,7 +181,7 @@ export const syncGoogleSchema = z.object({
 // Updates user email
 export const updateUserEmailSchema = z
   .object({
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    email: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
     password: z
       .string()
       .trim()
@@ -235,8 +221,8 @@ export const deleteUserByUid = z.object({
 // Update email validation
 export const updateEmailValidation = z
   .object({
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
-    confirmEmail: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    email: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
+    confirmEmail: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
   })
   .refine((val) => val.email === val.confirmEmail, {
     message: messages.EMAILS_NOT_MATCH,
@@ -272,7 +258,7 @@ export const updatePasswordValidation = z
 // Server and client add email authentication shared validation
 export const addEmailAuthenticationSchema = z
   .object({
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    email: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
     password: z
       .string()
       .trim()

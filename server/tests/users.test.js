@@ -194,7 +194,7 @@ describe('POST /api/users - Sign Up', () => {
       expect.stringContaining('json'),
     );
     expect(response.body.errors.email[0]).toBe(
-      messages.FIELD_NOT_VALID('email'),
+      messages.GENERAL.FIELD_NOT_VALID('email'),
     );
 
     // Checks db
@@ -219,7 +219,7 @@ describe('POST /api/users - Sign Up', () => {
       expect.stringContaining('json'),
     );
     expect(response.body.errors.email[0]).toBe(
-      messages.FIELD_NOT_VALID('email'),
+      messages.GENERAL.FIELD_NOT_VALID('email'),
     );
 
     // Checks db
@@ -615,7 +615,7 @@ describe('POST /api/users - Sign Up', () => {
       expect.stringContaining('json'),
     );
     expect(response.body.errors.email[0]).toBe(
-      messages.FIELD_NOT_VALID('email'),
+      messages.GENERAL.FIELD_NOT_VALID('email'),
     );
 
     // Checks db
@@ -648,7 +648,7 @@ describe('POST /api/users - Sign Up', () => {
       expect.stringContaining('json'),
     );
     expect(response.body.errors.password[0]).toBe(
-      messages.FIELD_NOT_VALID('password'),
+      messages.GENERAL.FIELD_NOT_VALID('password'),
     );
 
     // Checks db
@@ -774,7 +774,7 @@ describe('POST /api/users - Sign Up', () => {
       expect.stringContaining('json'),
     );
     expect(response.body.errors.password[0]).toBe(
-      messages.FIELD_NOT_VALID('password'),
+      messages.GENERAL.FIELD_NOT_VALID('password'),
     );
 
     // Checks db
@@ -889,7 +889,7 @@ describe('POST /api/users/syncGoogle - Synchronization with Google', () => {
       expect.stringContaining('json'),
     );
     expect(response.body.errors.email[0]).toBe(
-      messages.FIELD_NOT_VALID('email'),
+      messages.GENERAL.FIELD_NOT_VALID('email'),
     );
 
     // Checks db

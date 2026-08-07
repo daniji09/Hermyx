@@ -1,6 +1,16 @@
 import { USER_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
+/// SELECT
+// Get user by username
+export const findByUsername = async (username) => {
+  const query = 'SELECT * FROM app_user WHERE username = $1';
+  const result = await pool.query(query, [username]);
+  return result.rows[0];
+};
+
+//////// -------------
+
 //Get the user by their ID
 export const getById = async (uid) => {
   const query = 'SELECT * FROM app_user WHERE uid = $1';
@@ -24,13 +34,6 @@ export const updateStripeConnected = async (uid, stripeConnectedId) => {
 export const getByEmail = async (email) => {
   const query = 'SELECT * FROM app_user WHERE email = $1';
   const result = await pool.query(query, [email]);
-  return result.rows[0];
-};
-
-// Get user by username
-export const getByUsername = async (username) => {
-  const query = 'SELECT * FROM app_user WHERE username = $1';
-  const result = await pool.query(query, [username]);
   return result.rows[0];
 };
 
