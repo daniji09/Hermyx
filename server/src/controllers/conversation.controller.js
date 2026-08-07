@@ -3,18 +3,22 @@ import { messages } from '@hermyx/shared';
 import { getById } from '../models/user.model.js';
 
 import {
-  createMessage,
   getConversationById,
-  getMessagesByConversationId,
-  getConversationParticipants,
   getOrCreatePrivateConversation,
-  isConversationParticipant,
   getConversationsByUserId,
-  getActiveConversationParticipantIds,
-  getUnreadMessageCountByUserId,
-  markConversationAsReadByUserId,
-  canSendMessageToConversation,
 } from '../models/conversation.model.js';
+import {
+  canSendMessageToConversation,
+  getActiveConversationParticipantIds,
+  getConversationParticipants,
+  isConversationParticipant,
+  markConversationAsReadByUserId,
+} from '../models/conversation-participant.model.js';
+import {
+  createMessage,
+  getMessagesByConversationId,
+  getUnreadMessageCountByUserId,
+} from '../models/conversation-message.model.js';
 
 import {
   emitToConversation,

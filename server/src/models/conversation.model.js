@@ -1,4 +1,8 @@
 import pool from '../config/db.config.js';
+import {
+  addConversationParticipant,
+  addPrivateConversationParticipants,
+} from './conversation-participant.model.js';
 
 export const findPrivateConversation = async (userAId, userBId) => {
   const query = `
@@ -36,12 +40,12 @@ export const createPrivateConversation = async (userAId, userBId) => {
     const conversationResult = await client.query(conversationQuery);
     const conversation = conversationResult.rows[0];
 
-    const participantQuery = `
-      INSERT INTO conversation_participant (conversation_id, user_id)
-      VALUES ($1, $2), ($1, $3)
-    `;
-
-    await client.query(participantQuery, [conversation.cid, userAId, userBId]);
+    await addPrivateConversationParticipants(
+      conversation.cid,
+      userAId,
+      userBId,
+      client,
+    );
 
     await client.query('COMMIT');
 
@@ -81,79 +85,9 @@ export const createMissionConversation = async (
   ]);
   const conversation = conversationResult.rows[0];
 
-  await database.query(
-    `
-      INSERT INTO conversation_participant (conversation_id, user_id)
-      VALUES ($1, $2)
-      ON CONFLICT (conversation_id, user_id) DO NOTHING
-    `,
-    [conversation.cid, ownerId],
-  );
+  await addConversationParticipant(conversation.cid, ownerId, database);
 
   return conversation;
-};
-
-export const addMissionConversationParticipant = async (
-  missionId,
-  userId,
-  database = pool,
-) => {
-  const query = `
-    INSERT INTO conversation_participant (conversation_id, user_id)
-    SELECT cid, $2
-    FROM conversation
-    WHERE mission_id = $1
-      AND type = 'mission'
-    ON CONFLICT (conversation_id, user_id) DO NOTHING
-    RETURNING *
-  `;
-
-  const result = await database.query(query, [missionId, userId]);
-  return result.rows[0] || null;
-};
-
-export const leaveMissionConversation = async (
-  missionId,
-  userId,
-  database = pool,
-) => {
-  const query = `
-    UPDATE conversation_participant cp
-    SET
-      left_at = CURRENT_TIMESTAMP,
-      can_send = FALSE
-    FROM conversation c
-    WHERE cp.conversation_id = c.cid
-      AND c.mission_id = $1
-      AND c.type = 'mission'
-      AND cp.user_id = $2
-      AND cp.left_at IS NULL
-    RETURNING cp.*
-  `;
-
-  const result = await database.query(query, [missionId, userId]);
-  return result.rows[0] || null;
-};
-
-export const makeMissionConversationParticipantReadOnly = async (
-  missionId,
-  userId,
-  database = pool,
-) => {
-  const query = `
-    UPDATE conversation_participant cp
-    SET can_send = FALSE
-    FROM conversation c
-    WHERE cp.conversation_id = c.cid
-      AND c.mission_id = $1
-      AND c.type = 'mission'
-      AND cp.user_id = $2
-      AND cp.left_at IS NULL
-    RETURNING cp.*
-  `;
-
-  const result = await database.query(query, [missionId, userId]);
-  return result.rows[0] || null;
 };
 
 export const closeMissionConversation = async (missionId, database = pool) => {
@@ -181,169 +115,6 @@ export const getConversationById = async (conversationId) => {
   `;
   const result = await pool.query(query, [conversationId]);
   return result.rows[0];
-};
-
-export const getConversationParticipants = async (conversationId) => {
-  const query = `
-    SELECT
-      u.uid,
-      u.username,
-      u.avatar,
-      cp.joined_at,
-      cp.left_at,
-      cp.can_send
-    FROM conversation_participant cp
-    JOIN app_user u ON u.uid = cp.user_id
-    WHERE cp.conversation_id = $1
-      AND cp.left_at IS NULL
-    ORDER BY cp.joined_at ASC
-  `;
-
-  const result = await pool.query(query, [conversationId]);
-  return result.rows;
-};
-
-export const createMessage = async ({
-  conversationId,
-  senderId,
-  content,
-  attachmentUrl = null,
-  attachmentType = null,
-}) => {
-  const query = `
-    WITH inserted_message AS (
-      INSERT INTO message (
-        conversation_id,
-        sender_id,
-        content,
-        attachment_url,
-        attachment_type
-      )
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    )
-    SELECT
-      m.mid,
-      m.conversation_id,
-      m.sender_id,
-      m.content,
-      m.attachment_url,
-      m.attachment_type,
-      m.created_at,
-      u.username AS sender_username,
-      u.avatar AS sender_avatar
-    FROM inserted_message m
-    JOIN app_user u ON u.uid = m.sender_id
-  `;
-
-  const result = await pool.query(query, [
-    conversationId,
-    senderId,
-    content,
-    attachmentUrl,
-    attachmentType,
-  ]);
-  return result.rows[0];
-};
-
-export const getMessagesByConversationId = async (conversationId) => {
-  const query = `
-    SELECT
-      m.mid,
-      m.conversation_id,
-      m.sender_id,
-      m.content,
-      m.attachment_url,
-      m.attachment_type,
-      m.created_at,
-      u.username AS sender_username,
-      u.avatar AS sender_avatar
-    FROM message m
-    JOIN app_user u ON u.uid = m.sender_id
-    WHERE m.conversation_id = $1
-    ORDER BY m.created_at ASC
-  `;
-
-  const result = await pool.query(query, [conversationId]);
-  return result.rows;
-};
-
-export const isConversationParticipant = async (conversationId, userId) => {
-  const query = `
-    SELECT 1
-    FROM conversation_participant
-    WHERE conversation_id = $1
-      AND user_id = $2
-      AND left_at IS NULL
-    LIMIT 1
-  `;
-
-  const result = await pool.query(query, [conversationId, userId]);
-  return result.rowCount > 0;
-};
-
-export const canSendMessageToConversation = async (conversationId, userId) => {
-  const query = `
-    SELECT 1
-    FROM conversation_participant cp
-    JOIN conversation c ON c.cid = cp.conversation_id
-    WHERE cp.conversation_id = $1
-      AND cp.user_id = $2
-      AND cp.left_at IS NULL
-      AND cp.can_send = TRUE
-      AND c.closed_at IS NULL
-    LIMIT 1
-  `;
-
-  const result = await pool.query(query, [conversationId, userId]);
-  return result.rowCount > 0;
-};
-
-export const getActiveConversationParticipantIds = async (conversationId) => {
-  const query = `
-    SELECT user_id
-    FROM conversation_participant
-    WHERE conversation_id = $1
-      AND left_at IS NULL
-  `;
-
-  const result = await pool.query(query, [conversationId]);
-  return result.rows.map((participant) => participant.user_id);
-};
-
-export const getUnreadMessageCountByUserId = async (userId) => {
-  const query = `
-    SELECT COUNT(*)::int AS unread_count
-    FROM conversation_participant cp
-    JOIN conversation c
-      ON c.cid = cp.conversation_id
-    JOIN message m
-      ON m.conversation_id = cp.conversation_id
-    WHERE cp.user_id = $1
-      AND cp.left_at IS NULL
-      AND m.sender_id <> $1
-      AND m.created_at > cp.last_read_at
-  `;
-
-  const result = await pool.query(query, [userId]);
-  return result.rows[0].unread_count;
-};
-
-export const markConversationAsReadByUserId = async (
-  conversationId,
-  userId,
-) => {
-  const query = `
-    UPDATE conversation_participant
-    SET last_read_at = CURRENT_TIMESTAMP
-    WHERE conversation_id = $1
-      AND user_id = $2
-      AND left_at IS NULL
-    RETURNING conversation_id
-  `;
-
-  const result = await pool.query(query, [conversationId, userId]);
-  return result.rowCount > 0;
 };
 
 export const getConversationsByUserId = async (userId) => {
@@ -392,7 +163,7 @@ export const getConversationsByUserId = async (userId) => {
     ) participant_summary ON true
     LEFT JOIN LATERAL (
       SELECT m.*
-      FROM message m
+      FROM conversation_message m
       WHERE m.conversation_id = c.cid
       ORDER BY m.created_at DESC
       LIMIT 1
