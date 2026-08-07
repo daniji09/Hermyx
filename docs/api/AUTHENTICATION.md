@@ -1,14 +1,12 @@
-# API Documentation
+# API - Authentication documentation
 
-## Authentication
+Manages users authentication into the platform
 
-**Description:** manages users authentication into the platform
+## - Login: `POST /api/auth/login`
 
-### - Login: `POST /api/auth/login`
+Log in user in Hermyx and returns Firebase token to complete the process.
 
-**Description:** log in user in Hermyx and returns Firebase token to complete the process.
-
-**Requires authentications:** No
+**Requires authentication:** No
 
 **Body (JSON):**
 | Field | Type | Required | Description |
@@ -28,7 +26,7 @@ _> Note: At least one of `username` or `email` must be sent._
   }
   ```
 
-- `400 Bad Request`: fields error.
+- `400 Bad Request`: fields validation error / missing fields.
   ```json
   {
     "errors": {
