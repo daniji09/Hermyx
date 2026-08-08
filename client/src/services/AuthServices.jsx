@@ -9,6 +9,14 @@ import {
 import { consts, messages } from '@hermyx/shared';
 import api from '../config/api';
 
+// Creates new user
+export const createUser = async (user) => {
+  // API search
+  const { data } = await api.post('/auth/signup', user);
+
+  return data;
+};
+
 // Logs in a user in Hermyx and return Firebase custom token
 export const login = async (user) => {
   // API search
@@ -39,6 +47,21 @@ export const signInWithCustomToken = async (token) => {
       },
     };
   }
+};
+
+// Handles google sync
+export const syncUserWithGoogleAccount = async (
+  email,
+  username,
+  firebaseUid,
+) => {
+  const { data } = await api.post('/auth/sync-google', {
+    email,
+    username,
+    firebaseUid,
+  });
+
+  return data;
 };
 
 // Signs in a user using Google authentication

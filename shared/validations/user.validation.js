@@ -27,6 +27,12 @@ export const passwordBase = z
   .trim()
   .min(1, messages.GENERAL.FIELD_REQUIRED('Password'));
 
+// FirebaseUid
+export const firebaseUidBase = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Firebase UID'));
+
 /// -----------------------
 export const searchUsersByUsernameQuerySchema = z.object({
   username: z
@@ -130,14 +136,6 @@ export const updateMyProfileSchema = z.object({
     .optional(),
   latitude: z.coerce.number().optional(),
   longitude: z.coerce.number().optional(),
-});
-
-// Sync with Google backend validation
-export const syncGoogleSchema = z.object({
-  username: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  email: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
-  firebaseUid: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  isNewUser: z.boolean(),
 });
 
 // Updates user email

@@ -4,8 +4,12 @@ import {
   signUpSchema,
   messages,
 } from '@hermyx/shared';
-import { addEmailAuthentication, createUser } from '../services/UsersServices';
-import { login, signInWithCustomToken } from '../services/AuthServices';
+import { addEmailAuthentication } from '../services/UsersServices';
+import {
+  createUser,
+  login,
+  signInWithCustomToken,
+} from '../services/AuthServices';
 
 // Sign up action, executed when form is sent
 export const signUpAction = async (previousState, formData) => {

@@ -1,6 +1,11 @@
 import z from 'zod';
 import { messages } from '../messages/messages.js';
-import { emailBase, passwordBase, usernameBase } from './user.validation.js';
+import {
+  emailBase,
+  firebaseUidBase,
+  passwordBase,
+  usernameBase,
+} from './user.validation.js';
 import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
 
@@ -44,3 +49,13 @@ export const logInSchema = z
     message: messages.AUTH.LOGIN.NO_EMAIL_OR_USERNAME,
     path: ['usernameEmail'],
   });
+
+// Sync with Google: server
+export const syncGoogleSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, messages.GENERAL.FIELD_REQUIRED('Username')),
+  email: emailBase,
+  firebaseUid: firebaseUidBase,
+});

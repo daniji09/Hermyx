@@ -1,51 +1,38 @@
-import { messages } from '@hermyx/shared';
-import { getUserByUsername } from '../services/user.service.js';
-import {
-  createCustomToken,
-  firebaseSignIn,
-} from '../providers/auth.provider.js';
-import { signup as _signup } from '../services/auth.service.js';
-import { AppError } from '../utils/error.util.js';
+import * as authService from '../services/auth.service.js';
 
+/// Controller functions
+// Signup
 export const signup = async (req, res, next) => {
   try {
     const { email, username, password } = req.body;
-
-    // Sign up
-    const user = await _signup(email, username, password);
-
+    const user = await authService.signup(email, username, password);
     return res.status(201).json({ user });
   } catch (error) {
     next(error);
   }
 };
 
+// Login
 export const login = async (req, res, next) => {
   try {
     const { email, username, password } = req.body;
+    const token = await authService.login(email, username, password);
+    return res.status(200).json({ token });
+  } catch (error) {
+    next(error);
+  }
+};
 
-    let user;
-    // If username is provided, user is find to get the email
-    if (username) {
-      user = await getUserByUsername(username);
-      if (!user)
-        throw new AppError(
-          messages.AUTH.LOGIN.INVALID_CREDENTIALS,
-          401,
-          'general',
-        );
-    }
-
-    // Signs in user via Firebase
-    const firebaseData = await firebaseSignIn(
-      email ? email : user.email,
-      password,
+// Sync with Google
+export const syncGoogle = async (req, res, next) => {
+  try {
+    const { email, username, firebaseUid } = req.body;
+    const { user, isLogin } = await authService.syncGoogle(
+      email,
+      username,
+      firebaseUid,
     );
-
-    // Creates custom token so frontend knows it has been successful
-    const customToken = await createCustomToken(firebaseData.localId);
-
-    return res.status(200).json({ token: customToken });
+    return res.status(isLogin ? 200 : 201).json({ user });
   } catch (error) {
     next(error);
   }
