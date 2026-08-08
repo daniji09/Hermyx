@@ -18,7 +18,8 @@ export const usernameBase = z
 // Email
 export const emailBase = z
   .email(messages.GENERAL.FIELD_NOT_VALID('email'))
-  .trim();
+  .trim()
+  .toLowerCase();
 
 // Password
 export const passwordBase = z
@@ -38,45 +39,6 @@ export const searchUsersByUsernameQuerySchema = z.object({
     )
     .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
 });
-
-// Server and client sign up shared validation
-export const signUpSchema = z
-  .object({
-    username: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .max(
-        consts.USERNAME_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-      )
-      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-    email: z
-      .email(messages.GENERAL.FIELD_NOT_VALID('email'))
-      .trim()
-      .toLowerCase(),
-    password: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .min(
-        consts.PASSWORD_MIN_LENGTH,
-        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
-      )
-      .max(
-        consts.PASSWORD_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
-      ) // Firebase requirement
-      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
-      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
-      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
-      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL),
-    confirmPassword: z.string().trim().min(1, messages.CONFIRM_PASSWORD),
-  })
-  .refine((val) => val.password === val.confirmPassword, {
-    message: messages.PASSWORDS_NOT_MATCH,
-    path: ['confirmPassword'],
-  });
 
 export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),

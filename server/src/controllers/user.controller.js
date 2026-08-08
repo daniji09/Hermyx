@@ -16,7 +16,7 @@ import {
   REPORT_STATUS,
 } from '@hermyx/shared';
 import {
-  getByEmail,
+  findByEmail,
   findByUsername,
   searchByUsername,
   create,
@@ -45,7 +45,6 @@ import {
   updateMissionStatus,
 } from '../models/mission.model.js';
 import {
-  createFirebaseUser,
   deleteFirebaseUser,
   disableUser,
   enableUser,
@@ -89,7 +88,7 @@ export const getUser = async (req, res) => {
 
     if (email) {
       // It searches user by email
-      const user = await getByEmail(email);
+      const user = await findByEmail(email);
 
       // Returns success or error
       if (!user)
@@ -376,102 +375,6 @@ const getConnectStatus = async (user) => {
   }
 };
 
-export const signUp = async (req, res) => {
-  try {
-    // Gets new account attributes
-    const email = req.body.email;
-    const username = req.body.username;
-    const { password } = req.body;
-
-    // Checks if the email is already in use
-    const userByEmail = await getByEmail(email);
-
-    // If it exists, then its a bad request error
-    if (userByEmail)
-      return res.status(400).json({
-        errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
-      });
-
-    // Checks if the username is already in use
-    const userByUsername = await findByUsername(username);
-
-    // If it exists, then its a bad request error
-    if (userByUsername)
-      return res.status(400).json({
-        errors: { username: [messages.USERNAME_ALREADY_EXISTS(username)] },
-      });
-
-    // Lastly, it makes a deep check on Firebase searching for the e-mail
-    try {
-      await await getUserByEmail(email);
-      return res.status(400).json({
-        errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
-      });
-    } catch (error) {
-      // User not found is expected if the email is not in use, so any other error is returned
-      if (error.code !== 'auth/user-not-found') {
-        const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
-        if (errorBuilder) {
-          const mappedError = errorBuilder({ email });
-          return res.status(mappedError.status).json({
-            errors: { [mappedError.field]: [mappedError.message] },
-          });
-        }
-
-        if (error.errors) return res.status(500).json(error.errors);
-
-        return res.status(500).json({
-          errors: { general: [messages.UNEXPECTED_ERROR] },
-        });
-      }
-    }
-
-    let firebaseUser;
-    try {
-      // User is created on Firebase
-      firebaseUser = await createFirebaseUser({ email, username, password });
-    } catch (error) {
-      // Firebase errors and exceptions are treated
-      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
-      if (errorBuilder) {
-        const mappedError = errorBuilder({ email });
-        return res.status(mappedError.status).json({
-          errors: { [mappedError.field]: [mappedError.message] },
-        });
-      }
-
-      if (error.errors) return res.status(500).json(error.errors);
-
-      return res.status(500).json({
-        errors: { general: [messages.UNEXPECTED_ERROR] },
-      });
-    }
-    try {
-      // Creates user in Hermyx DB
-      const user = await create(email, username, firebaseUser.uid);
-
-      // Returns success or error
-      if (user) return res.status(201).json({ user });
-      else {
-        // If there is an error, Firebase user must be deleted
-        await deleteFirebaseUser(firebaseUser.uid);
-        return res.status(400).json({
-          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
-        });
-      }
-    } catch (e) {
-      // If there is an error, Firebase user must be deleted
-      await deleteFirebaseUser(firebaseUser.uid);
-      throw e;
-    }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
 export const updateMyProfile = async (req, res) => {
   try {
     const user = req.user;
@@ -573,7 +476,7 @@ export const syncGoogle = async (req, res) => {
     const { email, username, firebaseUid, isNewUser } = req.body;
 
     // Checks if user already exist to check if Firebase action was the correct one (determined via isNewUser)
-    const checkedUser = await getByEmail(email);
+    const checkedUser = await findByEmail(email);
 
     if (checkedUser) {
       // Its a login
@@ -679,7 +582,7 @@ export const updateUserEmail = async (req, res) => {
     const { email, password } = req.body;
 
     // First of all, new email is checked to be unique
-    const userByEmail = await getByEmail(email);
+    const userByEmail = await findByEmail(email);
 
     // If it exists, then its a bad request error (unless is a new authentication with the same email)
     if (

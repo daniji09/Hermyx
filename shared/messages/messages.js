@@ -6,6 +6,7 @@ export const messages = {
     FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
     FIELD_REQUIRED: (field) => `${field} is required.`,
     FIREBASE_AUTH_ERROR: `Firebase Auth error.`,
+    UNEXPECTED_ERROR: `Unexpected error.`,
   },
 
   /// Auth messages
@@ -15,12 +16,27 @@ export const messages = {
       INVALID_CREDENTIALS: `Invalid credentials.`,
       COULD_NOT_LOG_IN: `Could not log in.`,
     },
+    SIGNUP: {
+      CONFIRM_PASSWORD: 'Please, confirm password.',
+      PASSWORDS_NOT_MATCH: 'Passwords do not match.',
+      EMAIL_ALREADY_EXISTS: (email) =>
+        `User with email ${email} already exists.`,
+      USERNAME_ALREADY_EXISTS: (username) =>
+        `Username ${username} already in use.`,
+      COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
+    },
   },
 
   /// User messages
   USER: {
     USERNAME: {
       INVALID_CHARACTERS: `Username must start with a letter or number, and may contain [._-].`,
+    },
+    PASSWORD: {
+      UPPERCASE: 'Password must include at least one uppercase letter.',
+      LOWERCASE: 'Password must include at least one lowercase letter.',
+      NUMBER: 'Password must include at least one number.',
+      SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
     },
   },
 
@@ -42,26 +58,19 @@ export const messages = {
   FORBIDDEN_BAN_USER: 'This user is banned from Hermyx.',
   OPERATION_ERROR: 'Operation ended abruptly.',
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
-  UNEXPECTED_ERROR: 'Unexpected error.',
 
   ///// User messages
   //// Sign up
   // Validation errors
-  PASSWORD_UPPERCASE: 'Password must include at least one uppercase letter.',
-  PASSWORD_LOWERCASE: 'Password must include at least one lowercase letter.',
-  PASSWORD_NUMBER: 'Password must include at least one number.',
-  PASSWORD_SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
-  CONFIRM_PASSWORD: 'Please, confirm password.',
 
   FIREBASE_UID_REQUIRED: 'Firebase UID is required.',
-  PASSWORDS_NOT_MATCH: 'Passwords do not match.',
 
   // Server errors
-  EMAIL_ALREADY_EXISTS: (email) => `User with email ${email} already exists.`,
+
   EMAIL_NOT_FOUND: (email) => `User with email ${email} not found.`,
-  USERNAME_ALREADY_EXISTS: (username) => `Username ${username} already in use.`,
+
   USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
-  COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
+
   USER_NOT_FOUND: `User not found.`,
 
   //// Log In

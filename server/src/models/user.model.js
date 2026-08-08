@@ -1,11 +1,27 @@
 import { USER_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
-/// SELECT
+/// CREATES
+// Creates new user
+export const create = async (email, username, firebaseUid) => {
+  const query =
+    'INSERT INTO app_user(email, username, firebase_uid) VALUES($1, $2, $3) RETURNING *';
+  const result = await pool.query(query, [email, username, firebaseUid]);
+  return result.rows[0];
+};
+
+/// FINDS
 // Get user by username
 export const findByUsername = async (username) => {
   const query = 'SELECT * FROM app_user WHERE username = $1';
   const result = await pool.query(query, [username]);
+  return result.rows[0];
+};
+
+// Get user by email
+export const findByEmail = async (email) => {
+  const query = 'SELECT * FROM app_user WHERE email = $1';
+  const result = await pool.query(query, [email]);
   return result.rows[0];
 };
 
@@ -30,13 +46,6 @@ export const updateStripeConnected = async (uid, stripeConnectedId) => {
   await pool.query(query, [stripeConnectedId, uid]);
 };
 
-//Get the user by their email
-export const getByEmail = async (email) => {
-  const query = 'SELECT * FROM app_user WHERE email = $1';
-  const result = await pool.query(query, [email]);
-  return result.rows[0];
-};
-
 export const searchByUsername = async (username, excludedUid) => {
   const query = `
     SELECT uid, username, email, avatar, name, surnames
@@ -48,14 +57,6 @@ export const searchByUsername = async (username, excludedUid) => {
   `;
   const result = await pool.query(query, [username, excludedUid]);
   return result.rows;
-};
-
-// Creates new user
-export const create = async (email, username, firebaseUid) => {
-  const query =
-    'INSERT INTO app_user(email, username, firebase_uid) VALUES($1, $2, $3) RETURNING *';
-  const result = await pool.query(query, [email, username, firebaseUid]);
-  return result.rows[0];
 };
 
 // Get user by Firebase ID

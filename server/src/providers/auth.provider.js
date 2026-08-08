@@ -15,7 +15,7 @@ export const createFirebaseUser = async (user) => {
   // If Firebase user is not received, it returns the error
   if (!firebaseUser)
     throw {
-      errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
+      errors: { general: [messages.AUTH.SIGNUP.COULD_NOT_CREATE_NEW_ACCOUNT] },
     };
 
   return firebaseUser;

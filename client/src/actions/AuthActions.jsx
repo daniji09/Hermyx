@@ -30,7 +30,7 @@ export const signUpAction = async (previousState, formData) => {
     if (!success)
       throw {
         errors: {
-          general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT],
+          general: [messages.AUTH.SIGNUP.COULD_NOT_CREATE_NEW_ACCOUNT],
         },
       };
 

@@ -115,12 +115,14 @@ export const consts = {
     USERNAME: {
       MAX_LENGTH: 20,
     },
+    PASSWORD: {
+      MIN_LENGTH: 8,
+      MAX_LENGTH: 4096,
+    },
   },
 
   // Sign up
   ORIGINAL_USERNAME_MAX_LENGTH: 10,
-  PASSWORD_MIN_LENGTH: 8,
-  PASSWORD_MAX_LENGTH: 4096,
 
   // Account update consts
   NAME_MAX_LENGTH: 50,

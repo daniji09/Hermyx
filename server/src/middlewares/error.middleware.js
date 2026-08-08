@@ -1,9 +1,10 @@
 import { consts, messages } from '@hermyx/shared';
+import { AppError } from '../utils/error.util.js';
 
 // eslint-disable-next-line no-unused-vars
 export const errorHandler = (error, req, res, next) => {
   // Validation errors controlled by service
-  if (error.status && error.field) {
+  if (error instanceof AppError) {
     return res.status(error.status).json({
       errors: { [error.field]: [error.message] },
     });
@@ -26,6 +27,6 @@ export const errorHandler = (error, req, res, next) => {
   // Generic unexpected error
   console.error('Unhandled API Error:', error);
   return res.status(500).json({
-    errors: { general: [messages.UNEXPECTED_ERROR] },
+    errors: { general: [messages.GENERAL.UNEXPECTED_ERROR] },
   });
 };

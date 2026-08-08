@@ -4,26 +4,36 @@ import {
   createCustomToken,
   firebaseSignIn,
 } from '../providers/auth.provider.js';
+import { signup as _signup } from '../services/auth.service.js';
+import { AppError } from '../utils/error.util.js';
+
+export const signup = async (req, res, next) => {
+  try {
+    const { email, username, password } = req.body;
+
+    // Sign up
+    const user = await _signup(email, username, password);
+
+    return res.status(201).json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const login = async (req, res, next) => {
   try {
     const { email, username, password } = req.body;
-
-    // Login must be include email or username
-    if (!email && !username) {
-      return res.status(400).json({
-        errors: { usernameEmail: [messages.AUTH.LOGIN.NO_EMAIL_OR_USERNAME] },
-      });
-    }
 
     let user;
     // If username is provided, user is find to get the email
     if (username) {
       user = await getUserByUsername(username);
       if (!user)
-        return res.status(401).json({
-          errors: { general: [messages.AUTH.LOGIN.INVALID_CREDENTIALS] },
-        });
+        throw new AppError(
+          messages.AUTH.LOGIN.INVALID_CREDENTIALS,
+          401,
+          'general',
+        );
     }
 
     // Signs in user via Firebase
