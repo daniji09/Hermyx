@@ -7,7 +7,7 @@ import {
   addMissionConversationParticipant,
   leaveMissionConversation,
   makeMissionConversationParticipantReadOnly,
-} from './conversation.model.js';
+} from './conversation-participant.model.js';
 
 export const updateTransferInfo = async (mid, uid, transferId, amount) => {
   const query = `

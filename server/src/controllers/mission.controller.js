@@ -33,7 +33,7 @@ import {
   openMission,
 } from '../models/mission.model.js';
 import { getById as getUserById } from '../models/user.model.js';
-import { getConversationParticipants } from '../models/conversation.model.js';
+import { getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
   getById as getMissionParticipationById,
   submitParticipation as submitMissionParticipationRecord,

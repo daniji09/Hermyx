@@ -35,7 +35,7 @@ vi.mock('../src/middlewares/auth.middleware.js', () => {
   };
 });
 
-vi.mock('../src/services/storage.service.js', () => {
+vi.mock('../src/providers/storage.provider.js', () => {
   return {
     saveToLocalStorage: saveToLocalStorageMock,
     uploadToAzureBlob: vi.fn(async () => 'https://storage.test/photo.png'),
