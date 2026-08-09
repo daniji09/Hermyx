@@ -1,10 +1,10 @@
 import z from 'zod';
 import { messages } from '../messages/messages.js';
 import {
-  emailBase,
-  firebaseUidBase,
-  passwordBase,
-  usernameBase,
+  emailBaseSchema,
+  firebaseUidBaseSchema,
+  passwordBaseSchema,
+  usernameBaseSchema,
 } from './user.validation.js';
 import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
@@ -13,9 +13,9 @@ import { regex } from '../regex/regex.js';
 // Signup: server and client
 export const signUpSchema = z
   .object({
-    username: usernameBase,
-    email: emailBase,
-    password: passwordBase
+    username: usernameBaseSchema,
+    email: emailBaseSchema,
+    password: passwordBaseSchema
       .min(
         consts.USER.PASSWORD.MIN_LENGTH,
         messages.FIELD_TOO_SHORT('Password', consts.USER.PASSWORD.MIN_LENGTH),
@@ -41,9 +41,9 @@ export const signUpSchema = z
 // Login: server and client
 export const logInSchema = z
   .object({
-    username: usernameBase.or(z.literal('')).optional(),
-    email: emailBase.or(z.literal('')).optional(),
-    password: passwordBase,
+    username: usernameBaseSchema.or(z.literal('')).optional(),
+    email: emailBaseSchema.or(z.literal('')).optional(),
+    password: passwordBaseSchema,
   })
   .refine((val) => val.email || val.username, {
     message: messages.AUTH.LOGIN.NO_EMAIL_OR_USERNAME,
@@ -56,6 +56,6 @@ export const syncGoogleSchema = z.object({
     .string()
     .trim()
     .min(1, messages.GENERAL.FIELD_REQUIRED('Username')),
-  email: emailBase,
-  firebaseUid: firebaseUidBase,
+  email: emailBaseSchema,
+  firebaseUid: firebaseUidBaseSchema,
 });

@@ -11,12 +11,15 @@ export const getUserByUsername = async (username) => {
 };
 
 // Searches users by partial username
-export const searchUsersByUsername = async (username) => {
-  const { data } = await api.get('/users/search', {
-    params: { username },
-  });
-
-  return data.users;
+export const searchUsersByUsername = async (options) => {
+  const { page, limit } = options;
+  if (page && limit) {
+    const { data } = await api.get('/users/search', {
+      params: { page, limit, ...options.params },
+    });
+    console.log(data);
+    return data;
+  }
 };
 
 // Finds user via FirebaseUid

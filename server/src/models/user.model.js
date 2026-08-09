@@ -25,6 +25,48 @@ export const findByEmail = async (email) => {
   return result.rows[0];
 };
 
+export const searchByUsername = async ({
+  username = undefined,
+  excludedUid = undefined,
+  pagination,
+}) => {
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
+  let query = `SELECT uid, username, email, avatar, name, surnames, COUNT(*) OVER() AS total_count
+    FROM app_user 
+    WHERE uid <> $1`;
+  const values = [excludedUid];
+
+  if (username) {
+    values.push(username);
+    query += ` AND unaccent(username) ILIKE unaccent('%' || $${values.length} || '%')`;
+  }
+  query += ` ORDER BY name DESC`;
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  // Postgres returns total_count in each row so we take the first one and clear it
+  const totalCount = parseInt(result.rows[0].total_count);
+
+  // Total_count column is cleared so the user objective is not cluttered
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...userData } = row;
+    return userData;
+  });
+
+  return { rows, totalCount };
+};
+
 //////// -------------
 
 //Get the user by their ID
@@ -44,19 +86,6 @@ export const updateStripeCustomer = async (uid, stripeCustomerId) => {
 export const updateStripeConnected = async (uid, stripeConnectedId) => {
   const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
   await pool.query(query, [stripeConnectedId, uid]);
-};
-
-export const searchByUsername = async (username, excludedUid) => {
-  const query = `
-    SELECT uid, username, email, avatar, name, surnames
-    FROM app_user
-    WHERE unaccent(username) ILIKE unaccent('%' || $1 || '%')
-      AND uid <> $2
-    ORDER BY username ASC
-    LIMIT 10
-  `;
-  const result = await pool.query(query, [username, excludedUid]);
-  return result.rows;
 };
 
 // Get user by Firebase ID

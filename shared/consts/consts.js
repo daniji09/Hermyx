@@ -4,6 +4,7 @@ export const consts = {
   PAGINATION: {
     DEFAULT_PAGE: 1,
     DEFAULT_LIMIT: 10,
+    MAX_LIMIT: 100,
   },
 
   /// Auth consts
@@ -13,27 +14,27 @@ export const consts = {
       //Auth/account-exists-with-different-credential?
       'auth/cancelled-popup-request': () => ({
         field: 'general',
-        message: messages.OPERATION_ERROR,
+        message: messages.GENERAL.OPERATION_ERROR,
         status: 499,
       }),
       'auth/credential-already-in-use': () => ({
         field: 'general',
-        message: messages.CREDENTIAL_ALREADY_IN_USE,
+        message: messages.AUTH.FIREBASE_ERRORS.CREDENTIAL_ALREADY_IN_USE,
         status: 400,
       }),
       'auth/email-already-exists': ({ email }) => ({
         field: 'email',
-        message: messages.EMAIL_ALREADY_EXISTS(email),
+        message: messages.AUTH.SIGNUP.EMAIL_ALREADY_EXISTS(email),
         status: 400,
       }),
       'auth/email-already-in-use': ({ email }) => ({
         field: 'email',
-        message: messages.EMAIL_ALREADY_EXISTS(email),
+        message: messages.AUTH.SIGNUP.EMAIL_ALREADY_EXISTS(email),
         status: 400,
       }),
       'auth/id-token-revoked': () => ({
         field: 'general',
-        message: messages.FORBIDDEN_BAN_USER,
+        message: messages.GENERAL.FORBIDDEN_BAN_USER,
         status: 403,
       }),
       'auth/invalid-credential': () => ({
@@ -58,42 +59,47 @@ export const consts = {
       }),
       'auth/missing-email': () => ({
         field: 'email',
-        message: messages.FIELD_REQUIRED,
+        message: messages.GENERAL.FIELD_REQUIRED('Email'),
         status: 400,
       }),
       'auth/missing-password': () => ({
         field: 'password',
-        message: messages.FIELD_REQUIRED,
+        message: messages.GENERAL.FIELD_REQUIRED('Password'),
         status: 400,
       }),
       'auth/network-request-failed': () => ({
         field: 'general',
-        message: messages.CONNECTION_ERROR,
+        message: messages.GENERAL.CONNECTION_ERROR,
         status: 502,
       }),
       'auth/no-such-provider': () => ({
         field: 'general',
-        message: messages.NO_SUCH_PROVIDER,
+        message: messages.AUTH.FIREBASE_ERRORS.NO_SUCH_PROVIDER,
         status: 400,
       }),
       'auth/operation-not-allowed': () => ({
         field: 'general',
-        message: messages.OPERATION_ERROR,
+        message: messages.GENERAL.OPERATION_ERROR,
         status: 403,
       }),
       'auth/popup-blocked': () => ({
         field: 'general',
-        message: messages.OPERATION_ERROR,
+        message: messages.GENERAL.OPERATION_ERROR,
         status: 401,
       }),
       'auth/popup-closed-by-user': () => ({
         field: 'general',
-        message: messages.OPERATION_ERROR,
+        message: messages.GENERAL.OPERATION_ERROR,
         status: 499,
+      }),
+      'auth/too-many-attempts-try-later': () => ({
+        field: 'general',
+        message: messages.GENERAL.TOO_MANY_ATTEMPTS,
+        status: 429,
       }),
       'auth/user-disabled': () => ({
         field: 'general',
-        message: messages.FORBIDDEN_BAN_USER,
+        message: messages.GENERAL.FORBIDDEN_BAN_USER,
         status: 403,
       }),
       'auth/weak-password': () => ({
@@ -103,7 +109,7 @@ export const consts = {
       }),
       'auth/wrong-password': () => ({
         field: 'password',
-        message: messages.PASSWORD_WRONG,
+        message: messages.AUTH.LOGIN.INVALID_CREDENTIALS,
         status: 400,
       }),
     },

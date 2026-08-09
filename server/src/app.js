@@ -42,7 +42,7 @@ app.use(express.static(staticFiles));
 
 // Application routes
 app.use('/api/auth', authRouter);
-app.use('/api/users', usersRouter);
+app.use('/api/users', verifyToken, usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
 app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/notifications', verifyToken, notificationRouter);

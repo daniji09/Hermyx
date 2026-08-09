@@ -3,14 +3,29 @@ import { consts } from '../consts/consts.js';
 export const messages = {
   /// General messages
   GENERAL: {
+    CONNECTION_ERROR: `Connection error, please check your network.`,
+    FIELD_INTEGER: (field) => `${field} must be an integer.`,
     FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
+    FIELD_NUMBER: (field) => `${field} must be a number.`,
+    FIELD_POSITIVE: (field) => `${field} must be positive.`,
     FIELD_REQUIRED: (field) => `${field} is required.`,
+    FIELD_TOO_BIG: (field, max) => `${field} can't be greater than ${max}.`,
     FIREBASE_AUTH_ERROR: `Firebase Auth error.`,
+    FORBIDDEN_BAN_USER: `This user is banned from Hermyx.`,
+    INCOMPLETE_PAGINATION: `Pagination is incomplete. Please send both 'page' and 'limit'.`,
+    INCOMPLETE_PETITION: (field1, field2) =>
+      `Incomplete petition. Please send ${field1} and ${field2} together.`,
+    OPERATION_ERROR: `Operation ended abruptly.`,
+    TOO_MANY_ATTEMPTS: `Too many attempts. Please, try later.`,
     UNEXPECTED_ERROR: `Unexpected error.`,
   },
 
   /// Auth messages
   AUTH: {
+    FIREBASE_ERRORS: {
+      CREDENTIAL_ALREADY_IN_USE: `This Google account is already linked to another Hermyx account`,
+      NO_SUCH_PROVIDER: `The user isn't linked to the provider or the provider doesn't exist.`,
+    },
     LOGIN: {
       NO_EMAIL_OR_USERNAME: `You must provide an e-mail or a username.`,
       INVALID_CREDENTIALS: `Invalid credentials.`,
@@ -38,11 +53,13 @@ export const messages = {
       NUMBER: 'Password must include at least one number.',
       SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
     },
+    GENERAL: {
+      USERS_NOT_FOUND: `Users not found.`,
+    },
   },
 
   ///// Common messages
   //// Error
-  CONNECTION_ERROR: 'Connection error, please check your network.',
   FIELD_NUMBER: (field) => `${field} must be a number.`,
   FIELD_POSITIVE: (field) => `${field} must be positive.`,
   FIELD_INTEGER: (field) => `${field} must be an integer.`,
@@ -55,8 +72,7 @@ export const messages = {
   FIELD_REQUIRED: 'This field is required.',
   FORBIDDEN: 'Action is not authorized.',
   SYSTEM_FORBIDDEN: 'Action is only authorize for the system.',
-  FORBIDDEN_BAN_USER: 'This user is banned from Hermyx.',
-  OPERATION_ERROR: 'Operation ended abruptly.',
+
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
 
   ///// User messages
@@ -72,10 +88,6 @@ export const messages = {
   USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
 
   USER_NOT_FOUND: `User not found.`,
-
-  //// Log In
-  // Server errors
-  PASSWORD_WRONG: 'Wrong password.',
 
   //// Get users
   FIREBASE_UID_NOT_FOUND: (firebaseUid) =>
@@ -204,10 +216,9 @@ export const messages = {
   COULD_NOT_UPDATE_PASSWORD: 'Could not create update password.',
   COULD_NOT_LINK_GOOGLE_ACCOUNT: `Could not link Google account.`,
   COULD_NOT_UNLINK_GOOGLE_ACCOUNT: `Could not unlink Google account.`,
-  NO_SUCH_PROVIDER: `The user isn't linked to the provider or the provider doesn't exist.`,
+
   COULD_NOT_ADD_EMAIL_AUTHENTICATION: `Could not add new e-mail authentication.`,
-  CREDENTIAL_ALREADY_IN_USE:
-    'This Google account is already linked to another Hermyx account',
+
   CHANGING_EMAIL_TO_CURRENT:
     'The new email cannot be the same as your current one.',
   NO_IMAGE_PROVIDED: 'No image provided',

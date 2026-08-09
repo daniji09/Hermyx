@@ -2,10 +2,12 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
+import { limitBaseSchema, pageBaseSchema } from './pagination.validation.js';
+import { requireBothOrNeither } from './helper.validation.js';
 
 /// Base validations, raw logic
 // Username
-export const usernameBase = z
+export const usernameBaseSchema = z
   .string()
   .trim()
   .min(1, messages.GENERAL.FIELD_REQUIRED('Username'))
@@ -16,36 +18,39 @@ export const usernameBase = z
   .regex(regex.USER.USERNAME, messages.USER.USERNAME.INVALID_CHARACTERS);
 
 // Email
-export const emailBase = z
+export const emailBaseSchema = z
   .email(messages.GENERAL.FIELD_NOT_VALID('email'))
   .trim()
   .toLowerCase();
 
 // Password
-export const passwordBase = z
+export const passwordBaseSchema = z
   .string()
   .trim()
   .min(1, messages.GENERAL.FIELD_REQUIRED('Password'));
 
 // FirebaseUid
-export const firebaseUidBase = z
+export const firebaseUidBaseSchema = z
   .string()
   .trim()
   .min(1, messages.GENERAL.FIELD_REQUIRED('Firebase UID'));
 
-/// -----------------------
-export const searchUsersByUsernameQuerySchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.USERNAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    )
-    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
+/// Endpoint complex validation
+// Search user by username
+export const searchUsersByUsernameQueryBaseSchema = z.object({
+  username: usernameBaseSchema.toLowerCase(),
+  page: pageBaseSchema,
+  limit: limitBaseSchema,
 });
 
+export const searchUsersByUsernameQuerySchema = requireBothOrNeither(
+  searchUsersByUsernameQueryBaseSchema,
+  'page',
+  'limit',
+  messages.GENERAL.INCOMPLETE_PAGINATION,
+);
+
+/// -----------------------
 export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
 });

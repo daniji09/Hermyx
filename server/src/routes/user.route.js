@@ -1,21 +1,7 @@
 // External modules
 import { Router } from 'express';
 const router = Router();
-import {
-  searchUsersByUsername,
-  getUsersByFirebaseUid,
-  getUserMissions,
-  getUserPublicProfile,
-  getUserPublicProfileMissions,
-  getMyProfile,
-  updateMyProfile,
-  deleteByUid,
-  updateUserEmail,
-  deleteUser,
-  updateUserConfiguration,
-  banUser,
-  updateMyAvatar,
-} from '../controllers/user.controller.js';
+
 import {
   validateBodySchema,
   validateParamsSchema,
@@ -35,6 +21,7 @@ import {
   banUserParamsSchema,
   banUserBodySchema,
 } from '@hermyx/shared';
+import * as userController from '../controllers/user.controller.js';
 
 import { verifyAdmin, verifyToken } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
@@ -44,24 +31,25 @@ import multer from 'multer';
 const upload = multer({ storage: multer.memoryStorage() });
 
 /// GET
-
 // Search users by partial username
 router.get(
   '/search',
-  verifyToken,
   validateQuerySchema(searchUsersByUsernameQuerySchema),
-  searchUsersByUsername,
+  pagination(),
+  userController.searchUsersByUsername,
 );
 
+// ----------
+
 //Get my profile
-router.get('/me/profile', verifyToken, getMyProfile);
+router.get('/me/profile', verifyToken, userController.getMyProfile);
 
 // Updates profile
 router.patch(
   '/me/profile',
   verifyToken,
   validateBodySchema(updateMyProfileSchema),
-  updateMyProfile,
+  userController.updateMyProfile,
 );
 
 // Updates avatar
@@ -69,14 +57,14 @@ router.patch(
   '/me/avatar',
   verifyToken,
   upload.single('avatar'), // Multer processes the file
-  updateMyAvatar,
+  userController.updateMyAvatar,
 );
 
 //Get user by username
 router.get(
   '/:username/profile',
   validateParamsSchema(getUserByUsernameParamSchema),
-  getUserPublicProfile,
+  userController.getUserPublicProfile,
 );
 
 // Get public profile missions by username
@@ -85,7 +73,7 @@ router.get(
   validateParamsSchema(getUserByUsernameParamSchema),
   validateQuerySchema(getPublicProfileMissionsQuerySchema),
   pagination(),
-  getUserPublicProfileMissions,
+  userController.getUserPublicProfileMissions,
 );
 
 // Get users by firebaseUid
@@ -93,7 +81,7 @@ router.get(
   '/firebase/:firebaseUid',
   verifyToken,
   validateParamsSchema(getUsersByFirebaseUidParamSchema),
-  getUsersByFirebaseUid,
+  userController.getUsersByFirebaseUid,
 );
 
 // Get missions from user
@@ -103,7 +91,7 @@ router.get(
   validateParamsSchema(getMissionsFromUserParamSchema),
   validateQuerySchema(getMissionsFromUserQuerySchema),
   pagination(),
-  getUserMissions,
+  userController.getUserMissions,
 );
 
 /// POST
@@ -115,7 +103,7 @@ router.post(
   verifyAdmin,
   validateParamsSchema(banUserParamsSchema),
   validateBodySchema(banUserBodySchema),
-  banUser,
+  userController.banUser,
 );
 
 /// PUT
@@ -123,24 +111,24 @@ router.put(
   '/me/email',
   verifyToken,
   validateBodySchema(updateUserEmailSchema),
-  updateUserEmail,
+  userController.updateUserEmail,
 );
 
 router.put(
   '/me/configuration',
   verifyToken,
   validateBodySchema(userConfigurationBackendValidation),
-  updateUserConfiguration,
+  userController.updateUserConfiguration,
 );
 
 /// DELETE
-router.delete('/me', verifyToken, deleteUser);
+router.delete('/me', verifyToken, userController.deleteUser);
 
 router.delete(
   '/:uid',
   verifyToken,
   validateParamsSchema(deleteUserByUid),
-  deleteByUid,
+  userController.deleteByUid,
 );
 
 export default router;

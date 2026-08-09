@@ -18,7 +18,6 @@ import {
 import {
   findByEmail,
   findByUsername,
-  searchByUsername,
   getByFirebaseUid,
   getByUsernameExcludingUid,
   updateMyProfile as updateMyProfileInDb,
@@ -78,7 +77,26 @@ import {
   saveToLocalStorage,
   uploadToAzureBlob,
 } from '../providers/storage.provider.js';
+import * as userService from '../services/user.service.js';
 
+// Controller functions
+export const searchUsersByUsername = async (req, res, next) => {
+  try {
+    const username = req.query.username;
+    const pagination = req.pagination;
+    const { users, pagination: paginationData } =
+      await userService.searchUserByUsername(
+        username,
+        req.user.uid,
+        pagination,
+      );
+    return res.status(200).json({ users, pagination: paginationData });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ------------
 export const getUser = async (req, res) => {
   try {
     // Gets attributes
@@ -107,20 +125,6 @@ export const getUser = async (req, res) => {
 
       return res.status(200).json({ user });
     }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const searchUsersByUsername = async (req, res) => {
-  try {
-    const username = req.query.username.toLowerCase().trim();
-    const users = await searchByUsername(username, req.user.uid);
-
-    return res.status(200).json({ users });
   } catch (e) {
     console.error(e);
     return res
