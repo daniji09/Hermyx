@@ -18,7 +18,6 @@ import {
 import {
   findByEmail,
   findByUsername,
-  getByFirebaseUid,
   getByUsernameExcludingUid,
   updateMyProfile as updateMyProfileInDb,
   deleteByUid as _deleteByUid,
@@ -96,6 +95,17 @@ export const searchUsersByUsername = async (req, res, next) => {
   }
 };
 
+// Gets current user information
+export const getMe = async (req, res, next) => {
+  try {
+    // Authentication middleware already searched user by their firebaseUid,
+    // So current user information is already saved on req.user
+    return res.status(200).json(req.user);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ------------
 export const getUser = async (req, res) => {
   try {
@@ -121,31 +131,6 @@ export const getUser = async (req, res) => {
       if (!user)
         return res.status(404).json({
           errors: { usernameEmail: [messages.USERNAME_NOT_FOUND(username)] },
-        });
-
-      return res.status(200).json({ user });
-    }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getUsersByFirebaseUid = async (req, res) => {
-  try {
-    // Gets attributes
-    const { firebaseUid } = req.params;
-
-    if (firebaseUid) {
-      // It searches user by email
-      const user = await getByFirebaseUid(firebaseUid);
-
-      // Returns success or error
-      if (!user)
-        return res.status(404).json({
-          errors: { general: [messages.FIREBASE_UID_NOT_FOUND(firebaseUid)] },
         });
 
       return res.status(200).json({ user });

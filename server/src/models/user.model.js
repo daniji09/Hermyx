@@ -25,6 +25,13 @@ export const findByEmail = async (email) => {
   return result.rows[0];
 };
 
+// Get user by Firebase UID
+export const findByFirebaseUid = async (firebaseUid) => {
+  const query = 'SELECT * FROM app_user WHERE firebase_uid = $1';
+  const result = await pool.query(query, [firebaseUid]);
+  return result.rows[0];
+};
+
 export const searchByUsername = async ({
   username = undefined,
   excludedUid = undefined,
@@ -86,13 +93,6 @@ export const updateStripeCustomer = async (uid, stripeCustomerId) => {
 export const updateStripeConnected = async (uid, stripeConnectedId) => {
   const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
   await pool.query(query, [stripeConnectedId, uid]);
-};
-
-// Get user by Firebase ID
-export const getByFirebaseUid = async (firebaseUid) => {
-  const query = 'SELECT * FROM app_user WHERE firebase_uid = $1';
-  const result = await pool.query(query, [firebaseUid]);
-  return result.rows[0];
 };
 
 export const getByUsernameExcludingUid = async (username, uid) => {

@@ -1,7 +1,7 @@
 import { createContext, useEffect, useRef, useState } from 'react';
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
-import { getUserByFirebaseUid } from '../services/UsersServices';
+import { getMe } from '../services/UsersServices';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { createSocketConnection } from '../services/SocketService';
@@ -39,8 +39,7 @@ export const AuthProvider = ({ children }) => {
           const tokenResult = await firebaseUser.getIdTokenResult();
           const userIsAdmin = !!tokenResult.claims.admin;
           setIsAdmin(userIsAdmin);
-          hermyxUser = await getUserByFirebaseUid(firebaseUser.uid);
-
+          hermyxUser = await getMe();
           setCurrentUser({
             firebaseUid: firebaseUser.uid,
             email: firebaseUser.email,

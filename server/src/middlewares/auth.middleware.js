@@ -1,6 +1,6 @@
 import { messages, USER_ROLE, USER_STATUS } from '@hermyx/shared';
 import { verifyIdToken } from '../providers/auth.provider.js';
-import { getByFirebaseUid } from '../models/user.model.js';
+import * as userService from '../services/user.service.js';
 import { CRON_SECRET_TOKEN } from '../config/config.js';
 
 export const verifyToken = async (req, res, next) => {
@@ -22,7 +22,7 @@ export const verifyToken = async (req, res, next) => {
     const decodedToken = await verifyIdToken(token, true);
 
     // User and token are saved
-    req.user = await getByFirebaseUid(decodedToken.uid);
+    req.user = await userService.getUserByFirebaseUid(decodedToken.uid);
     req.firebaseToken = decodedToken;
 
     if (!req.user) {
@@ -34,7 +34,7 @@ export const verifyToken = async (req, res, next) => {
     if (req.user.status === USER_STATUS.BANNED.ID) {
       return res
         .status(403)
-        .json({ errors: { general: [messages.FORBIDDEN_BAN_USER] } });
+        .json({ errors: { general: [messages.GENERAL.FORBIDDEN_BAN_USER] } });
     }
 
     next();

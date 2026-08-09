@@ -10,7 +10,6 @@ import {
 import {
   searchUsersByUsernameQuerySchema,
   updateMyProfileSchema,
-  getUsersByFirebaseUidParamSchema,
   getUserByUsernameParamSchema,
   getMissionsFromUserParamSchema,
   getMissionsFromUserQuerySchema,
@@ -38,6 +37,9 @@ router.get(
   pagination(),
   userController.searchUsersByUsername,
 );
+
+// Get current user information
+router.get('/me', userController.getMe);
 
 // ----------
 
@@ -74,14 +76,6 @@ router.get(
   validateQuerySchema(getPublicProfileMissionsQuerySchema),
   pagination(),
   userController.getUserPublicProfileMissions,
-);
-
-// Get users by firebaseUid
-router.get(
-  '/firebase/:firebaseUid',
-  verifyToken,
-  validateParamsSchema(getUsersByFirebaseUidParamSchema),
-  userController.getUsersByFirebaseUid,
 );
 
 // Get missions from user

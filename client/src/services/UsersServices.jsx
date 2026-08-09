@@ -22,11 +22,11 @@ export const searchUsersByUsername = async (options) => {
   }
 };
 
-// Finds user via FirebaseUid
-export const getUserByFirebaseUid = async (firebaseUid) => {
+// Finds current user information
+export const getMe = async () => {
   // API search
-  const { data } = await api.get(`/users/firebase/${firebaseUid}`);
-  return data.user;
+  const { data } = await api.get(`/users/me`);
+  return data;
 };
 
 //Get public profile by username

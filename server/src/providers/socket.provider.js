@@ -1,6 +1,6 @@
 import { Server } from 'socket.io';
 import { corsOptions } from '../app.js';
-import { getByFirebaseUid } from '../models/user.model.js';
+import { findByFirebaseUid } from '../models/user.model.js';
 import { verifyIdToken } from './auth.provider.js';
 import { isConversationParticipant } from '../models/conversation-participant.model.js';
 
@@ -30,7 +30,7 @@ export const initializeSocketServer = (httpServer) => {
       }
 
       const decodedToken = await verifyIdToken(token);
-      const user = await getByFirebaseUid(decodedToken.uid);
+      const user = await findByFirebaseUid(decodedToken.uid);
 
       if (!user) {
         return next(new Error('Unauthorized'));

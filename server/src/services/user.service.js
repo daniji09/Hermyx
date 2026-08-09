@@ -32,6 +32,15 @@ export const getUserByEmail = async (email) => {
   return user;
 };
 
+// Gets user by firebaseUid
+export const getUserByFirebaseUid = async (firebaseUid) => {
+  checkFirebaseUid(firebaseUid);
+
+  // Gets user by firebaseUid
+  const user = await userModel.findByFirebaseUid(firebaseUid);
+  return user;
+};
+
 /// Endpoint complex functions
 export const searchUserByUsername = async (
   username,
