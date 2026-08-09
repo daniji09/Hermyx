@@ -46,6 +46,7 @@ export const messages = {
   USER: {
     USERNAME: {
       INVALID_CHARACTERS: `Username must start with a letter or number, and may contain [._-].`,
+      USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
     },
     PASSWORD: {
       UPPERCASE: 'Password must include at least one uppercase letter.',
@@ -92,8 +93,6 @@ export const messages = {
   // Server errors
 
   EMAIL_NOT_FOUND: (email) => `User with email ${email} not found.`,
-
-  USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
 
   USER_NOT_FOUND: `User not found.`,
 

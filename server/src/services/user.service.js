@@ -42,6 +42,7 @@ export const getUserByFirebaseUid = async (firebaseUid) => {
 };
 
 /// Endpoint complex functions
+// Search user by username with partial matches
 export const searchUserByUsername = async (
   username,
   currentUser,
@@ -76,6 +77,33 @@ export const searchUserByUsername = async (
   }
 
   throw new AppError(messages.USER.GENERAL.USERS_NOT_FOUND, 404, 'general');
+};
+
+// Get user public profile
+export const getUserPublicProfile = async (username) => {
+  checkUsername(username);
+  const user = await getUserByUsername(username);
+
+  if (!user)
+    throw new AppError(
+      messages.USER.USERNAME.USERNAME_NOT_FOUND(username),
+      404,
+    );
+
+  const publicProfile = {
+    uid: user.uid,
+    username: user.username,
+    name: user.name,
+    surnames: user.surnames,
+    description: user.description,
+    location: user.location,
+    avatar: user.avatar,
+  };
+
+  return {
+    user: publicProfile,
+    missionsVisible: user.configuration?.show_missions_to_others !== false,
+  };
 };
 
 /// Data checks

@@ -120,6 +120,18 @@ export const getUserMissions = async (req, res, next) => {
   }
 };
 
+// Get user public profile
+export const getUserPublicProfile = async (req, res, next) => {
+  try {
+    const username = req.params.username;
+    const { user, missionsVisible } =
+      await userService.getUserPublicProfile(username);
+    return res.status(200).json({ user, missionsVisible });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ------------
 export const getUser = async (req, res) => {
   try {
@@ -154,40 +166,6 @@ export const getUser = async (req, res) => {
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getUserPublicProfile = async (req, res) => {
-  try {
-    const username = req.params.username.toLowerCase().trim();
-
-    const user = await findByUsername(username);
-
-    if (!user) {
-      return res.status(404).json({
-        errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
-      });
-    }
-
-    const publicProfile = {
-      uid: user.uid,
-      username: user.username,
-      name: user.name,
-      surnames: user.surnames,
-      description: user.description,
-      location: user.location,
-      avatar: user.avatar,
-    };
-
-    return res.status(200).json({
-      user: publicProfile,
-      missionsVisible: user.configuration?.show_missions_to_others !== false,
-    });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      errors: { general: [messages.UNEXPECTED_ERROR] },
-    });
   }
 };
 

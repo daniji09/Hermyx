@@ -26,8 +26,8 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- Tables creation
 CREATE TABLE APP_USER (
 	uid SERIAL PRIMARY KEY,
-	username VARCHAR(20) NOT NULL UNIQUE,
-	email VARCHAR(100) UNIQUE,
+	username VARCHAR(20) NOT NULL, -- Uniqueness has to considered lower and uppercase, so a index is created
+	email VARCHAR(100), -- Uniqueness has to considered lower and uppercase, so a index is created
 	firebase_uid VARCHAR(255) NOT NULL UNIQUE,
 	role VARCHAR(10) NOT NULL DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN', 'SYSTEM')),
 	status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN('ACTIVE', 'DELETED', 'BANNED')),
@@ -41,6 +41,8 @@ CREATE TABLE APP_USER (
 	stripe_customer_id VARCHAR(255),
   	stripe_connected_id VARCHAR(255)
 );
+CREATE UNIQUE INDEX unique_username_lower ON app_user (LOWER(username));
+CREATE UNIQUE INDEX unique_email_lower ON app_user (LOWER(email));
 
 CREATE TABLE PAYMENT_METHOD (
 	payment_method VARCHAR(100) NOT NULL,

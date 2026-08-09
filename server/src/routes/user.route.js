@@ -10,7 +10,7 @@ import {
 import {
   searchUsersByUsernameQuerySchema,
   updateMyProfileSchema,
-  getUserByUsernameParamSchema,
+  getUserPublicProfileParamSchema,
   getUserMissionsParamSchema,
   getUserMissionsQuerySchema,
   getPublicProfileMissionsQuerySchema,
@@ -50,6 +50,22 @@ router.get(
   userController.getUserMissions,
 );
 
+// Get user public profile by username
+router.get(
+  '/:username/profile',
+  validateParamsSchema(getUserPublicProfileParamSchema),
+  userController.getUserPublicProfile,
+);
+
+// Get user public profile missions by username
+router.get(
+  '/:username/profile/missions',
+  validateParamsSchema(getUserPublicProfileParamSchema),
+  validateQuerySchema(getPublicProfileMissionsQuerySchema),
+  pagination(),
+  userController.getUserPublicProfileMissions,
+);
+
 // ----------
 
 //Get my profile
@@ -69,22 +85,6 @@ router.patch(
   verifyToken,
   upload.single('avatar'), // Multer processes the file
   userController.updateMyAvatar,
-);
-
-//Get user by username
-router.get(
-  '/:username/profile',
-  validateParamsSchema(getUserByUsernameParamSchema),
-  userController.getUserPublicProfile,
-);
-
-// Get public profile missions by username
-router.get(
-  '/:username/profile/missions',
-  validateParamsSchema(getUserByUsernameParamSchema),
-  validateQuerySchema(getPublicProfileMissionsQuerySchema),
-  pagination(),
-  userController.getUserPublicProfileMissions,
 );
 
 /// POST

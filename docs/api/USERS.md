@@ -76,20 +76,20 @@ Searches current user information.
 
 ## - Get missions from user: `GET /api/users/:uid/missions`
 
-Searches missions from the user specified, either joined or created.
+Searches missions from the user specified, either joined or published.
 
 **Requires authentication:** Yes
 
 **Path parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `uid` | integer | Yes | Uid from user. |
+| `uid` | integer | Yes | Uid of user. |
 <br>
 
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `type` | string | Yes | Type of mission to search: joined or created. |
+| `type` | string | Yes | Type of mission to search: joined or published. |
 | `page` | integer | No* | Page number for pagination. |
 | `limit` | integer | No* | Maximum number of results per page. |
 _> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination.._
@@ -123,7 +123,61 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
   <br>
 
-**Workflow:** user missions are searched by their uid, being the joined or created ones which is decided by the type query para. Pagination is used by default, although it is optional.
+**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query para. Pagination is used by default, although it is optional.
+<br>
+<br>
+<br>
+
+## - Get user's public profile: `GET /api/users/:username/profile`
+
+Gets user information to show it on their public profile.
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `username` | string | Yes | Username. |
+<br>
+
+**Responses:**
+
+- `200 OK`: search done successfully, finding user with `username` provided. Missions visible provides user's configuration allowing to show their missions to others or not.
+
+  ```json
+  {
+    "user": {
+      "uid": "<user_uid>",
+      "username": "<user_username>",
+      "... user public information"
+    },
+    "missionsVisible": "<true/false>"
+  }
+  ```
+
+- `400 Bad Request`: param or query fields validation error, missing param or query fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: search fails, not finding the user because that username does not exist.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Username x not found."]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** an exact match is performed on the username passed as a parameter to display its public information, as well as any settings chosen by that user, which can affect the information shown, such as whether or not to reveal their missions to others. It's worth noting that, thanks to this endpoint, the way usernames were restricted was changed. Previously, users were allowed to have the same username as another user if the capitalization didn't match (for example, "username" and "Username" were different and could coexist), which prevented this endpoint from functioning correctly in a browser, but, more importantly, because it made phishing easier.
 <br>
 <br>
 <br>

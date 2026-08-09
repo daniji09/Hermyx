@@ -44,7 +44,7 @@ export const firebaseUidBaseSchema = z
 /// Endpoint complex validation
 // Search user by username
 export const searchUsersByUsernameQueryBaseSchema = z.object({
-  username: usernameBaseSchema.toLowerCase(),
+  username: usernameBaseSchema,
   page: pageBaseSchema,
   limit: limitBaseSchema,
 });
@@ -74,21 +74,14 @@ export const getUserMissionsQuerySchema = requireBothOrNeither(
   messages.GENERAL.INCOMPLETE_PAGINATION,
 );
 
+// Get user public profile
+export const getUserPublicProfileParamSchema = z.object({
+  username: usernameBaseSchema,
+});
+
 /// -----------------------
 export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
-});
-
-export const getUserByUsernameParamSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.USERNAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    )
-    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
 });
 
 export const getPublicProfileMissionsQuerySchema = z.object({
