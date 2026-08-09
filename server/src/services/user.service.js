@@ -247,6 +247,38 @@ export const getUserPublicMissions = async (username, type, pagination) => {
   );
 };
 
+// Updates current user's profile
+export const updateMyProfile = async (currentUser, newInformation) => {
+  const username = newInformation.username;
+
+  const existingUsername = await userModel.findByUsernameExcludingUid(
+    username,
+    currentUser.uid,
+  );
+  if (existingUsername)
+    throw new AppError(
+      messages.AUTH.SIGNUP.USERNAME_ALREADY_EXISTS(username),
+      400,
+      'username',
+    );
+
+  const updatedUser = await userModel.update(currentUser.uid, {
+    username,
+    name: newInformation.name,
+    surnames: newInformation.surnames,
+    description: newInformation.description,
+    latitude: newInformation.latitude,
+    longitude: newInformation.longitude,
+  });
+
+  return {
+    username: updatedUser.username,
+    name: updatedUser.name,
+    surnames: updatedUser.surnames,
+    description: updatedUser.description,
+  };
+};
+
 /// Data checks
 const checkUid = (uid) => {
   if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));

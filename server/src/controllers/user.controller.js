@@ -18,8 +18,6 @@ import {
 import {
   findByEmail,
   findByUsername,
-  getByUsernameExcludingUid,
-  updateMyProfile as updateMyProfileInDb,
   deleteByUid as _deleteByUid,
   updateUserEmail as _updateUserEmail,
   anonymize as _anonymize,
@@ -152,6 +150,32 @@ export const getUserPublicProfileMissions = async (req, res, next) => {
   }
 };
 
+// Updates current user's profile
+export const updateMyProfile = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const newInformation = {
+      username: req.body.username,
+      name: req.body.name,
+      surnames: req.body.surnames,
+      description: req.body.description,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+    };
+    const updatedUser = await userService.updateMyProfile(user, newInformation);
+    return res.status(200).json({
+      profile: {
+        username: updatedUser.username,
+        name: updatedUser.name,
+        surnames: updatedUser.surnames,
+        description: updatedUser.description,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ------------
 export const getUser = async (req, res) => {
   try {
@@ -181,53 +205,6 @@ export const getUser = async (req, res) => {
 
       return res.status(200).json({ user });
     }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const updateMyProfile = async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user) {
-      return res
-        .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
-    }
-
-    const username = req.body.username.toLowerCase().trim();
-
-    const existingUsername = await getByUsernameExcludingUid(
-      username,
-      user.uid,
-    );
-    if (existingUsername) {
-      return res.status(400).json({
-        errors: { username: [messages.USERNAME_ALREADY_EXISTS(username)] },
-      });
-    }
-
-    const updatedUser = await updateMyProfileInDb(user.uid, {
-      username,
-      name: req.body.name,
-      surnames: req.body.surnames,
-      description: req.body.description,
-      latitude: req.body.latitude,
-      longitude: req.body.longitude,
-    });
-
-    return res.status(200).json({
-      message: messages.PROFILE_UPDATED_SUCCESSFULLY,
-      profile: {
-        username: updatedUser.username,
-        name: updatedUser.name,
-        surnames: updatedUser.surnames,
-        description: updatedUser.description,
-      },
-    });
   } catch (e) {
     console.error(e);
     return res

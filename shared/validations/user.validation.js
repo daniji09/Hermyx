@@ -42,6 +42,45 @@ export const firebaseUidBaseSchema = z
   .trim()
   .min(1, messages.GENERAL.FIELD_REQUIRED('Firebase UID'));
 
+// Name
+export const nameBaseSchema = z
+  .string()
+  .trim()
+  .max(
+    consts.USER.NAME.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG('Name', consts.USER.NAME.MAX_LENGTH),
+  );
+
+// Surnames
+export const surnamesBaseSchema = z
+  .string()
+  .trim()
+  .max(
+    consts.USER.SURNAMES.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Surnames',
+      consts.USER.SURNAMES.MAX_LENGTH,
+    ),
+  );
+
+// Description
+export const descriptionBaseSchema = z
+  .string()
+  .trim()
+  .max(
+    consts.USER.DESCRIPTION.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Description',
+      consts.USER.DESCRIPTION.MAX_LENGTH,
+    ),
+  );
+
+// Latitude
+export const latitudeBaseSchema = z.coerce.number();
+
+// Longitude
+export const longitudeBaseSchema = z.coerce.number();
+
 /// Endpoint complex validation
 // Search user by username
 export const searchUsersByUsernameQueryBaseSchema = z.object({
@@ -94,48 +133,19 @@ export const getUserPublicProfileMissionsQuerySchema = requireBothOrNeither(
   messages.GENERAL.INCOMPLETE_PAGINATION,
 );
 
+// Update current users profile
+export const updateMyProfileSchema = z.object({
+  username: usernameBaseSchema,
+  name: nameBaseSchema.optional(),
+  surnames: surnamesBaseSchema.optional(),
+  description: descriptionBaseSchema.optional(),
+  latitude: latitudeBaseSchema.optional(),
+  longitude: longitudeBaseSchema.optional(),
+});
+
 /// -----------------------
 export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
-});
-
-// Server and client profile update shared validation
-export const updateMyProfileSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.USERNAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    )
-    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-  name: z
-    .string()
-    .trim()
-    .max(
-      consts.NAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Name', consts.NAME_MAX_LENGTH),
-    )
-    .optional(),
-  surnames: z
-    .string()
-    .trim()
-    .max(
-      consts.SURNAMES_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Surnames', consts.SURNAMES_MAX_LENGTH),
-    )
-    .optional(),
-  description: z
-    .string()
-    .trim()
-    .max(
-      consts.DESCRIPTION_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Description', consts.DESCRIPTION_MAX_LENGTH),
-    )
-    .optional(),
-  latitude: z.coerce.number().optional(),
-  longitude: z.coerce.number().optional(),
 });
 
 // Updates user email

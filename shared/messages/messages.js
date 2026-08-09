@@ -10,6 +10,8 @@ export const messages = {
     FIELD_POSITIVE: (field) => `${field} must be positive.`,
     FIELD_REQUIRED: (field) => `${field} is required.`,
     FIELD_TOO_BIG: (field, max) => `${field} can't be greater than ${max}.`,
+    FIELD_TOO_LONG: (field, max) =>
+      `${field} must be shorter than ${max} characters.`,
     FIREBASE_AUTH_ERROR: `Firebase Auth error.`,
     FORBIDDEN_BAN_USER: `This user is banned from Hermyx.`,
     INCOMPLETE_PAGINATION: `Pagination is incomplete. Please send both 'page' and 'limit'.`,

@@ -69,15 +69,15 @@ router.get(
   userController.getUserPublicProfileMissions,
 );
 
-// ----------
-
+/// PATCH
 // Updates profile
 router.patch(
   '/me/profile',
-  verifyToken,
   validateBodySchema(updateMyProfileSchema),
   userController.updateMyProfile,
 );
+
+// ----------
 
 // Updates avatar
 router.patch(

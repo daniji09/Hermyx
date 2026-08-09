@@ -174,7 +174,7 @@ Gets user information to show it on their public profile.
     "user": {
       "uid": "<user_uid>",
       "username": "<user_username>",
-      "... user public information"
+      "... user's public information"
     },
     "missionsVisible": "<true/false>"
   }
@@ -257,6 +257,52 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   <br>
 
 **Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query para. Pagination is used by default, although it is optional. This endpoints exists due to the different information needed from the missions, compared to the endpoint that retrieves the missions of a user by their username (used for the current user).
+<br>
+<br>
+<br>
+
+## - Update user: `PATCH /api/users/me/profile`
+
+Updates user public information that is shown in profile.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `username` | string | Yes | Username. |
+| `name` | string | No | Users's name |
+| `surnames` | string | No | User's surnames. |
+| `description` | string | No | User's description |
+| `latitude` | integer | No | User's latitude location. |
+| `longitude` | integer | No | User's longitude location. |
+<br>
+
+**Responses:**
+
+- `200 OK`: user public information has been correctly updated.
+
+  ```json
+  {
+    "uid": "<user_uid>",
+    "username": "<username>",
+    "... user's public information"
+  }
+  ```
+
+- `400 Bad Request`: query fields validation error, missing query fields or logic error: username introduced already exists.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** frontend sends the form data entered by the user, and the backend simply updates it, verifying that the newly entered user is not already an existing one. It's worth noting that, despite being a classic database transaction workflow, it's not used in this case. If the same user updates their profile simultaneously from two different devices, the newer version overwriting the older one is a more expected outcome than printing an error, and doing so would also increase complexity and time unnecessarily. On another note, it is not needed to check whether latitude and longitude are sent together, because `postgis` extension already checks that automatically.
 <br>
 <br>
 <br>

@@ -19,6 +19,13 @@ export const findByUsername = async (username) => {
   return result.rows[0];
 };
 
+// Gets user by username excluding current user
+export const findByUsernameExcludingUid = async (username, uid) => {
+  const query = 'SELECT * FROM app_user WHERE username = $1 AND uid <> $2';
+  const result = await pool.query(query, [username, uid]);
+  return result.rows[0];
+};
+
 // Get user by email
 export const findByEmail = async (email) => {
   const query = 'SELECT * FROM app_user WHERE email = $1';
@@ -44,6 +51,7 @@ export const findLocationByUid = async (uid) => {
   return result.rows[0];
 };
 
+// Searches usernames by partial match
 export const searchByUsername = async ({
   username = undefined,
   excludedUid = undefined,
@@ -63,34 +71,9 @@ export const searchByUsername = async ({
   return await executePaginatedQuery(query, values, pagination);
 };
 
-//////// -------------
-
-//Get the user by their ID
-export const getById = async (uid) => {
-  const query = 'SELECT * FROM app_user WHERE uid = $1';
-  const result = await pool.query(query, [uid]);
-  return result.rows[0];
-};
-
-//Save the Stripe Customer ID in the user table.
-export const updateStripeCustomer = async (uid, stripeCustomerId) => {
-  const query = 'UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2';
-  await pool.query(query, [stripeCustomerId, uid]);
-};
-
-//Saves the Stripe Connect Account ID in the user table.
-export const updateStripeConnected = async (uid, stripeConnectedId) => {
-  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
-  await pool.query(query, [stripeConnectedId, uid]);
-};
-
-export const getByUsernameExcludingUid = async (username, uid) => {
-  const query = 'SELECT * FROM app_user WHERE username = $1 AND uid <> $2';
-  const result = await pool.query(query, [username, uid]);
-  return result.rows[0];
-};
-
-export const updateMyProfile = async (
+/// UPDATES
+// Updates user
+export const update = async (
   uid,
   { username, name, surnames, description, latitude, longitude },
 ) => {
@@ -137,6 +120,27 @@ export const updateMyProfile = async (
     ]);
     return result.rows[0];
   }
+};
+
+//////// -------------
+
+//Get the user by their ID
+export const getById = async (uid) => {
+  const query = 'SELECT * FROM app_user WHERE uid = $1';
+  const result = await pool.query(query, [uid]);
+  return result.rows[0];
+};
+
+//Save the Stripe Customer ID in the user table.
+export const updateStripeCustomer = async (uid, stripeCustomerId) => {
+  const query = 'UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2';
+  await pool.query(query, [stripeCustomerId, uid]);
+};
+
+//Saves the Stripe Connect Account ID in the user table.
+export const updateStripeConnected = async (uid, stripeConnectedId) => {
+  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
+  await pool.query(query, [stripeConnectedId, uid]);
 };
 
 export const updateUserEmail = async (uid, email) => {

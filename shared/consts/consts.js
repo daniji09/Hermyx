@@ -126,6 +126,15 @@ export const consts = {
       MIN_LENGTH: 8,
       MAX_LENGTH: 4096,
     },
+    NAME: {
+      MAX_LENGTH: 50,
+    },
+    SURNAMES: {
+      MAX_LENGTH: 100,
+    },
+    DESCRIPTION: {
+      MAX_LENGTH: 500,
+    },
   },
 
   // Account update consts
