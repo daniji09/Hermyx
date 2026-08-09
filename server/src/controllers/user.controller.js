@@ -106,7 +106,7 @@ export const getMyProfile = async (req, res, next) => {
   try {
     const user = req.user;
     const profile = await userService.getMyProfile(user);
-    return res.status(200).json({ user: profile });
+    return res.status(200).json(profile);
   } catch (error) {
     next(error);
   }

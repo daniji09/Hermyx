@@ -74,6 +74,31 @@ Searches current user information.
 <br>
 <br>
 
+## - Gets current user information: `GET /api/users/me/profile`
+
+Searches current user profile.
+
+**Requires authentication:** Yes
+
+**Responses:**
+
+- `200 OK`: search done successfully and current user information retrieved.
+
+  ```json
+  {
+    "uid": "<user_uid>",
+    "username": "<user_username>",
+    "... user profile information"
+  }
+  ```
+
+  <br>
+
+**Workflow:** it works practically the same way as `/api/users/me`, but it needs to extract two pieces of data differently than that endpoint: the location, done thanks to the `postgis` extension of PostgreSQL, and the bank account to receive money, thanks to the function that Stripe provides to check this data.
+<br>
+<br>
+<br>
+
 ## - Get missions from user: `GET /api/users/:uid/missions`
 
 Searches missions from the user specified, either joined or published.
