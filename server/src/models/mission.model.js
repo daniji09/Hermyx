@@ -4,47 +4,25 @@ import {
   closeMissionConversation,
   createMissionConversation,
 } from './conversation.model.js';
+import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// FINDS
-// Get missions created by user
-export const findCreatedByUid = async (uid, pagination = null) => {
+// Get missions published by user
+export const findPublishedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
+  const query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
     m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
     FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != 'draft' AND m.status != $2 AND m.owner_id = $1 
     ORDER BY m.publication_date DESC`;
   const values = [uid, MISSION_STATUS.DELETED.ID];
 
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  // Postgres returns total_count in each row so we take the first one and clear it
-  const totalCount = parseInt(result.rows[0].total_count);
-
-  // Total_count column is cleared so the mission objective is not cluttered
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
+  return await executePaginatedQuery(query, values, pagination);
 };
 
 // Get missions joined by user
 export const findJoinedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
+  const query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
     m.occupied_vacancies, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
     FROM mission_participation AS ma
     JOIN mission AS m ON (m.mid = ma.mid)
@@ -53,30 +31,79 @@ export const findJoinedByUid = async (uid, pagination = null) => {
     ORDER BY m.publication_date DESC`;
   const values = [uid, MISSION_STATUS.DELETED.ID];
 
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
+  return await executePaginatedQuery(query, values, pagination);
+};
 
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
+// Gets created missions displayed in another user's public profile.
+export const findPublicPublishedByUid = async (userId, pagination = null) => {
+  const query = `
+    SELECT
+      m.mid,
+      m.title,
+      owner_user.username,
+      m.description,
+      m.total_vacancies,
+      m.occupied_vacancies,
+      m.total_payment,
+      CASE
+        WHEN m.status = 'funded' THEN 'looking_for_adventurers'
+        WHEN m.status IN (
+          'in_progress',
+          'accepted',
+          'finished',
+          'releasing',
+          'in_dispute'
+        ) THEN 'in_progress'
+        WHEN m.status IN (
+          'released',
+          'partially_released'
+        ) THEN 'closed'
+      END AS public_status,
+      CASE
+        WHEN m.completion_date IS NULL THEN NULL
+        ELSE m.completion_date - m.publication_date
+      END AS completion_time,
+      m.publication_date,
+      m.completion_date,
+      COUNT(*) OVER() AS total_count
+    FROM mission m
+    JOIN app_user owner_user ON owner_user.uid = m.owner_id
+    WHERE m.owner_id = $1
+      AND m.status != $2
+    ORDER BY m.publication_date DESC
+  `;
+  const values = [userId, MISSION_STATUS.DELETED.ID];
 
-  const result = await pool.query(query, values);
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
+  return await executePaginatedQuery(query, values, pagination);
+};
 
-  // Postgres returns total_count in each row so we take the first one and clear it
-  const totalCount = parseInt(result.rows[0].total_count);
+// Gets joined missions displayed in another user's public profile.
+export const findPublicJoinedByUid = async (userId, pagination = null) => {
+  const query = `
+    SELECT
+      m.mid,
+      m.title,
+      owner_user.username,
+      m.description,
+      m.total_vacancies,
+      m.occupied_vacancies,
+      m.total_payment,
+      CASE
+        WHEN m.completion_date IS NULL THEN NULL
+        ELSE m.completion_date - m.publication_date
+      END AS completion_time,
+      m.publication_date,
+      m.completion_date,
+      COUNT(*) OVER() AS total_count
+    FROM mission_participation mp
+    JOIN mission m ON m.mid = mp.mid
+    JOIN app_user owner_user ON owner_user.uid = m.owner_id
+    WHERE mp.adventurer_id = $1 AND m.status != $2
+    ORDER BY m.completion_date DESC NULLS LAST, m.publication_date DESC
+  `;
+  const values = [userId, MISSION_STATUS.DELETED.ID];
 
-  // Total_count column is cleared so the mission objective is not cluttered
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
+  return await executePaginatedQuery(query, values, pagination);
 };
 
 /// ......
@@ -675,126 +702,6 @@ export const getByUidAndTitle = async (uid, title, mid = undefined) => {
   }
 
   return result.rows[0];
-};
-
-// Gets created missions displayed in another user's public profile.
-export const getPublicProfileCreatedMissions = async (
-  userId,
-  pagination = null,
-) => {
-  let query = `
-    SELECT
-      m.mid,
-      m.title,
-      owner_user.username,
-      m.description,
-      m.total_vacancies,
-      m.occupied_vacancies,
-      m.total_payment,
-      CASE
-        WHEN m.status = 'funded' THEN 'looking_for_adventurers'
-        WHEN m.status IN (
-          'in_progress',
-          'accepted',
-          'finished',
-          'releasing',
-          'in_dispute'
-        ) THEN 'in_progress'
-        WHEN m.status IN (
-          'released',
-          'partially_released'
-        ) THEN 'closed'
-      END AS public_status,
-      CASE
-        WHEN m.completion_date IS NULL THEN NULL
-        ELSE m.completion_date - m.publication_date
-      END AS completion_time,
-      m.publication_date,
-      m.completion_date,
-      COUNT(*) OVER() AS total_count
-    FROM mission m
-    JOIN app_user owner_user ON owner_user.uid = m.owner_id
-    WHERE m.owner_id = $1
-      AND m.status != $2
-    ORDER BY m.publication_date DESC
-  `;
-  const values = [userId, MISSION_STATUS.DELETED.ID];
-
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  const totalCount = parseInt(result.rows[0].total_count);
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
-};
-
-// Gets joined missions displayed in another user's public profile.
-export const getPublicProfileJoinedMissions = async (
-  userId,
-  pagination = null,
-) => {
-  let query = `
-    SELECT
-      m.mid,
-      m.title,
-      owner_user.username,
-      m.description,
-      m.total_vacancies,
-      m.occupied_vacancies,
-      m.total_payment,
-      CASE
-        WHEN m.completion_date IS NULL THEN NULL
-        ELSE m.completion_date - m.publication_date
-      END AS completion_time,
-      m.publication_date,
-      m.completion_date,
-      COUNT(*) OVER() AS total_count
-    FROM mission_participation mp
-    JOIN mission m ON m.mid = mp.mid
-    JOIN app_user owner_user ON owner_user.uid = m.owner_id
-    WHERE mp.adventurer_id = $1 AND status != $2
-    ORDER BY m.completion_date DESC NULLS LAST, m.publication_date DESC
-  `;
-  const values = [userId, MISSION_STATUS.DELETED.ID];
-
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  const totalCount = parseInt(result.rows[0].total_count);
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
 };
 
 // Gets user active missions, created or joined

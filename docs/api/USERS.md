@@ -92,7 +92,7 @@ Searches missions from the user specified, either joined or published.
 | `type` | string | Yes | Type of mission to search: joined or published. |
 | `page` | integer | No* | Page number for pagination. |
 | `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination.._
+_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
 <br>
 
 **Responses:**
@@ -155,7 +155,7 @@ Gets user information to show it on their public profile.
   }
   ```
 
-- `400 Bad Request`: param or query fields validation error, missing param or query fields.
+- `400 Bad Request`: param fields validation error, missing param fields.
 
   ```json
   {
@@ -178,6 +178,60 @@ Gets user information to show it on their public profile.
   <br>
 
 **Workflow:** an exact match is performed on the username passed as a parameter to display its public information, as well as any settings chosen by that user, which can affect the information shown, such as whether or not to reveal their missions to others. It's worth noting that, thanks to this endpoint, the way usernames were restricted was changed. Previously, users were allowed to have the same username as another user if the capitalization didn't match (for example, "username" and "Username" were different and could coexist), which prevented this endpoint from functioning correctly in a browser, but, more importantly, because it made phishing easier.
+<br>
+<br>
+<br>
+
+## - Get missions from public profile: `GET /api/users/:username/profile/missions`
+
+Searches missions from the user specified by username, either joined or published, which will show in their profile.
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `uid` | integer | Yes | Uid of user. |
+<br>
+
+**Query parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `type` | string | Yes | Type of mission to search: joined or published. |
+| `page` | integer | No* | Page number for pagination. |
+| `limit` | integer | No* | Maximum number of results per page. |
+_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+<br>
+
+**Responses:**
+
+- `200 OK`: search done successfully (could not retrieve any missions). Example with pagination.
+
+  ```json
+  {
+    "missions": ["<missions>"],
+    "pagination": {
+      "currentPage": "<currentPage>",
+      "totalPages": "<totalPages>",
+      "totalItems": "<totalItems>",
+      "hasMore": "<hasMore>"
+    }
+  }
+  ```
+
+- `400 Bad Request`: param or query fields validation error, missing param or query fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query para. Pagination is used by default, although it is optional. This endpoints exists due to the different information needed from the missions, compared to the endpoint that retrieves the missions of a user by their username (used for the current user).
 <br>
 <br>
 <br>

@@ -13,7 +13,7 @@ import {
   getUserPublicProfileParamSchema,
   getUserMissionsParamSchema,
   getUserMissionsQuerySchema,
-  getPublicProfileMissionsQuerySchema,
+  getUserPublicProfileMissionsQuerySchema,
   deleteUserByUid,
   updateUserEmailSchema,
   userConfigurationBackendValidation,
@@ -61,7 +61,7 @@ router.get(
 router.get(
   '/:username/profile/missions',
   validateParamsSchema(getUserPublicProfileParamSchema),
-  validateQuerySchema(getPublicProfileMissionsQuerySchema),
+  validateQuerySchema(getUserPublicProfileMissionsQuerySchema),
   pagination(),
   userController.getUserPublicProfileMissions,
 );

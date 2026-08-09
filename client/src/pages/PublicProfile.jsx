@@ -41,7 +41,7 @@ export const PublicProfile = () => {
   const { username } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useContext(AuthContext);
-  const [filter, setFilter] = useState('created');
+  const [filter, setFilter] = useState('published');
   const [messageError, setMessageError] = useState('');
   const isOwnProfile =
     username?.toLowerCase() === currentUser?.username?.toLowerCase();
@@ -214,17 +214,17 @@ export const PublicProfile = () => {
         </section>
       ) : (
         <Tabs
-          defaultValue='created'
+          defaultValue='published'
           value={filter}
           onValueChange={setFilter}
           className='w-full'
         >
           <TabsList className='mb-8 grid w-full max-w-100 grid-cols-2'>
-            <TabsTrigger value='created'>Created</TabsTrigger>
+            <TabsTrigger value='published'>Published</TabsTrigger>
             <TabsTrigger value='joined'>Joined</TabsTrigger>
           </TabsList>
 
-          <TabsContent value='created' className='mt-0'>
+          <TabsContent value='published' className='mt-0'>
             <MissionSearchContainer
               missions={missions}
               hasNextPage={hasNextPage}
@@ -232,7 +232,7 @@ export const PublicProfile = () => {
               fetchNextPage={fetchNextPage}
               isLoading={isMissionsLoading}
               isError={isMissionsError}
-              noMissionsMessage='This user has not created missions yet.'
+              noMissionsMessage='This user has not published missions yet.'
             />
           </TabsContent>
 

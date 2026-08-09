@@ -57,14 +57,12 @@ export const messages = {
     GENERAL: {
       USERS_NOT_FOUND: `Users not found.`,
     },
-    GET_USER_MISSIONS: {
-      INVALID_MISSION_TYPE: `Invalid type of mission.`,
-    },
   },
 
   /// Mission messages
   MISSION: {
     GENERAL: { MISSIONS_NOT_FOUND: `Missions not found.` },
+    TYPE: { INVALID_MISSION_TYPE: `Invalid type of mission.` },
   },
 
   ///// Common messages

@@ -32,8 +32,6 @@ import {
   updateAvatar,
 } from '../models/user.model.js';
 import {
-  getPublicProfileCreatedMissions,
-  getPublicProfileJoinedMissions,
   getUserActiveMissions,
   adventurerUnjoined,
   updateMissionPayment,
@@ -75,7 +73,6 @@ import {
   uploadToAzureBlob,
 } from '../providers/storage.provider.js';
 import * as userService from '../services/user.service.js';
-import * as missionService from '../services/mission.service.js';
 
 /// Controller functions
 // Search users by username partial match
@@ -113,7 +110,7 @@ export const getUserMissions = async (req, res, next) => {
     const { type } = req.query;
     const pagination = req.pagination;
     const { missions, pagination: paginationData } =
-      await missionService.getUserMissions(uid, type, pagination);
+      await userService.getUserMissions(uid, type, pagination);
     return res.status(200).json({ missions, pagination: paginationData });
   } catch (error) {
     next(error);
@@ -127,6 +124,20 @@ export const getUserPublicProfile = async (req, res, next) => {
     const { user, missionsVisible } =
       await userService.getUserPublicProfile(username);
     return res.status(200).json({ user, missionsVisible });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get user public profile missions
+export const getUserPublicProfileMissions = async (req, res, next) => {
+  try {
+    const username = req.params.username;
+    const { type } = req.query;
+    const pagination = req.pagination;
+    const { missions, pagination: paginationData } =
+      await userService.getUserPublicMissions(username, type, pagination);
+    return res.status(200).json({ missions, pagination: paginationData });
   } catch (error) {
     next(error);
   }
@@ -166,78 +177,6 @@ export const getUser = async (req, res) => {
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getUserPublicProfileMissions = async (req, res) => {
-  try {
-    const username = req.params.username.toLowerCase().trim();
-    const { type } = req.query;
-    const pagination = req.pagination;
-
-    const user = await findByUsername(username);
-
-    if (!user) {
-      return res.status(404).json({
-        errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
-      });
-    }
-
-    const missionsVisible =
-      user.configuration?.show_missions_to_others !== false;
-
-    if (!missionsVisible) {
-      return res.status(200).json({
-        missions: [],
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: 0,
-          totalItems: 0,
-          hasMore: false,
-        },
-      });
-    }
-
-    let missionsResult = { rows: [], totalCount: 0 };
-
-    if (type === 'created') {
-      missionsResult = await getPublicProfileCreatedMissions(
-        user.uid,
-        pagination,
-      );
-    } else if (type === 'joined') {
-      missionsResult = await getPublicProfileJoinedMissions(
-        user.uid,
-        pagination,
-      );
-    }
-
-    const missions = missionsResult.rows;
-    const totalItems = parseInt(missionsResult.totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else {
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
-    }
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      errors: { general: [messages.UNEXPECTED_ERROR] },
-    });
   }
 };
 

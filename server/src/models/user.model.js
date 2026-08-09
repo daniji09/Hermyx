@@ -1,5 +1,6 @@
 import { USER_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
+import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// CREATES
 // Creates new user
@@ -13,7 +14,7 @@ export const create = async (email, username, firebaseUid) => {
 /// FINDS
 // Get user by username
 export const findByUsername = async (username) => {
-  const query = 'SELECT * FROM app_user WHERE username = $1';
+  const query = 'SELECT * FROM app_user WHERE LOWER(username) = LOWER($1)';
   const result = await pool.query(query, [username]);
   return result.rows[0];
 };
@@ -48,30 +49,7 @@ export const searchByUsername = async ({
     query += ` AND unaccent(username) ILIKE unaccent('%' || $${values.length} || '%')`;
   }
   query += ` ORDER BY name DESC`;
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  // Postgres returns total_count in each row so we take the first one and clear it
-  const totalCount = parseInt(result.rows[0].total_count);
-
-  // Total_count column is cleared so the user objective is not cluttered
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...userData } = row;
-    return userData;
-  });
-
-  return { rows, totalCount };
+  return await executePaginatedQuery(query, values, pagination);
 };
 
 //////// -------------

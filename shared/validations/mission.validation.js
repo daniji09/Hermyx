@@ -2,6 +2,12 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
+/// Base validations, raw logic
+// Type (published or joined)
+export const typeBaseSchema = z.enum(['published', 'joined'], {
+  message: messages.MISSION.TYPE.INVALID_MISSION_TYPE,
+});
+
 const vacancySchema = z.object({
   id: z.union([
     z.string().min(1, messages.FIELD_REQUIRED),

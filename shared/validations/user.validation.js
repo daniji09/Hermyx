@@ -4,6 +4,7 @@ import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
 import { limitBaseSchema, pageBaseSchema } from './pagination.validation.js';
 import { requireBothOrNeither } from './helper.validation.js';
+import { typeBaseSchema } from './mission.validation.js';
 
 /// Base validations, raw logic
 // Uid
@@ -62,7 +63,7 @@ export const getUserMissionsParamSchema = z.object({
 });
 
 export const getUserMissionsBaseQuerySchema = z.object({
-  type: z.string().min(1, messages.GENERAL.FIELD_REQUIRED('Type')),
+  type: typeBaseSchema,
   page: pageBaseSchema,
   limit: limitBaseSchema,
 });
@@ -79,25 +80,23 @@ export const getUserPublicProfileParamSchema = z.object({
   username: usernameBaseSchema,
 });
 
+// Get user public profile missions
+export const getUserPublicProfileMissionsBaseQuerySchema = z.object({
+  type: typeBaseSchema,
+  page: pageBaseSchema,
+  limit: limitBaseSchema,
+});
+
+export const getUserPublicProfileMissionsQuerySchema = requireBothOrNeither(
+  getUserPublicProfileMissionsBaseQuerySchema,
+  'page',
+  'limit',
+  messages.GENERAL.INCOMPLETE_PAGINATION,
+);
+
 /// -----------------------
 export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
-});
-
-export const getPublicProfileMissionsQuerySchema = z.object({
-  type: z.enum(['created', 'joined'], {
-    message: messages.INVALID_MISSION_TYPE,
-  }),
-  page: z.coerce
-    .number(messages.FIELD_NUMBER('Page'))
-    .int(messages.FIELD_INTEGER('Page'))
-    .min(0, messages.FIELD_POSITIVE('Page'))
-    .optional(),
-  limit: z.coerce
-    .number(messages.FIELD_NUMBER('Limit'))
-    .int(messages.FIELD_INTEGER('Limit'))
-    .min(0, messages.FIELD_POSITIVE('Limit'))
-    .optional(),
 });
 
 // Server and client profile update shared validation
