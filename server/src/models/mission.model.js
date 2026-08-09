@@ -5,6 +5,82 @@ import {
   createMissionConversation,
 } from './conversation.model.js';
 
+/// FINDS
+// Get missions created by user
+export const findCreatedByUid = async (uid, pagination = null) => {
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
+    m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != 'draft' AND m.status != $2 AND m.owner_id = $1 
+    ORDER BY m.publication_date DESC`;
+  const values = [uid, MISSION_STATUS.DELETED.ID];
+
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  // Postgres returns total_count in each row so we take the first one and clear it
+  const totalCount = parseInt(result.rows[0].total_count);
+
+  // Total_count column is cleared so the mission objective is not cluttered
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
+};
+
+// Get missions joined by user
+export const findJoinedByUid = async (uid, pagination = null) => {
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
+    m.occupied_vacancies, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
+    FROM mission_participation AS ma
+    JOIN mission AS m ON (m.mid = ma.mid)
+    JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
+    WHERE adventurer_id = $1 AND m.status != $2
+    ORDER BY m.publication_date DESC`;
+  const values = [uid, MISSION_STATUS.DELETED.ID];
+
+  if (pagination) {
+    values.push(pagination.limit);
+    query += ` LIMIT $${values.length}`;
+
+    values.push(pagination.offset);
+    query += ` OFFSET $${values.length}`;
+  }
+
+  const result = await pool.query(query, values);
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0 };
+  }
+
+  // Postgres returns total_count in each row so we take the first one and clear it
+  const totalCount = parseInt(result.rows[0].total_count);
+
+  // Total_count column is cleared so the mission objective is not cluttered
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, ...missionData } = row;
+    return missionData;
+  });
+
+  return { rows, totalCount };
+};
+
+/// ......
+
 //Get mission by its ID
 export const getById = async (mid) => {
   const query = 'SELECT * FROM mission WHERE mid = $1';
@@ -570,77 +646,6 @@ export const adventurerUnjoined = async (mid) => {
     'UPDATE mission SET occupied_vacancies = occupied_vacancies - 1 WHERE mid = $1 RETURNING occupied_vacancies';
   const result = await pool.query(query, [mid]);
   return result.rowCount;
-};
-
-export const getMissionsByUid = async (uid, pagination = null) => {
-  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
-    m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != 'draft' AND m.status != $2 AND m.owner_id = $1 
-    ORDER BY m.publication_date DESC`;
-  const values = [uid, MISSION_STATUS.DELETED.ID];
-
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  // Postgres returns total_count in each row so we take the first one and clear it
-  const totalCount = parseInt(result.rows[0].total_count);
-
-  // Total_count column is cleared so the mission objective is not cluttered
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
-};
-
-export const getMissionsJoinedByUser = async (uid, pagination = null) => {
-  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
-    m.occupied_vacancies, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
-    FROM mission_participation AS ma
-    JOIN mission AS m ON (m.mid = ma.mid)
-    JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
-    WHERE adventurer_id = $1 AND m.status != $2
-    ORDER BY m.publication_date DESC`;
-  const values = [uid, MISSION_STATUS.DELETED.ID];
-
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  // Postgres returns total_count in each row so we take the first one and clear it
-  const totalCount = parseInt(result.rows[0].total_count);
-
-  // Total_count column is cleared so the mission objective is not cluttered
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
 };
 
 // Gets mission by uid and title

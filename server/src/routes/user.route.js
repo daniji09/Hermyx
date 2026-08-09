@@ -11,8 +11,8 @@ import {
   searchUsersByUsernameQuerySchema,
   updateMyProfileSchema,
   getUserByUsernameParamSchema,
-  getMissionsFromUserParamSchema,
-  getMissionsFromUserQuerySchema,
+  getUserMissionsParamSchema,
+  getUserMissionsQuerySchema,
   getPublicProfileMissionsQuerySchema,
   deleteUserByUid,
   updateUserEmailSchema,
@@ -40,6 +40,15 @@ router.get(
 
 // Get current user information
 router.get('/me', userController.getMe);
+
+// Get missions from user
+router.get(
+  '/:uid/missions',
+  validateParamsSchema(getUserMissionsParamSchema),
+  validateQuerySchema(getUserMissionsQuerySchema),
+  pagination(),
+  userController.getUserMissions,
+);
 
 // ----------
 
@@ -76,16 +85,6 @@ router.get(
   validateQuerySchema(getPublicProfileMissionsQuerySchema),
   pagination(),
   userController.getUserPublicProfileMissions,
-);
-
-// Get missions from user
-router.get(
-  '/:uid/missions',
-  verifyToken,
-  validateParamsSchema(getMissionsFromUserParamSchema),
-  validateQuerySchema(getMissionsFromUserQuerySchema),
-  pagination(),
-  userController.getUserMissions,
 );
 
 /// POST

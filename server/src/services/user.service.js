@@ -49,6 +49,7 @@ export const searchUserByUsername = async (
 ) => {
   checkUsername(username);
   checkCurrentUser(currentUser);
+  checkPagination(pagination);
 
   // Searches user by username
   const { rows: users, totalCount } = await userModel.searchByUsername({
@@ -78,6 +79,10 @@ export const searchUserByUsername = async (
 };
 
 /// Data checks
+const checkUid = (uid) => {
+  if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
+};
+
 const checkEmail = (email) => {
   if (!email) throw new Error(messages.GENERAL.FIELD_REQUIRED('Email'));
 };
@@ -94,4 +99,9 @@ const checkFirebaseUid = (firebaseUid) => {
 const checkCurrentUser = (currentUser) => {
   if (!currentUser)
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Current user'));
+};
+
+const checkPagination = (pagination) => {
+  if (!pagination)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Pagination'));
 };

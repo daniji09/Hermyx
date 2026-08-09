@@ -6,6 +6,12 @@ import { limitBaseSchema, pageBaseSchema } from './pagination.validation.js';
 import { requireBothOrNeither } from './helper.validation.js';
 
 /// Base validations, raw logic
+// Uid
+export const uidBaseSchema = z.coerce
+  .number(messages.FIELD_NUMBER('Uid'))
+  .int(messages.FIELD_INTEGER('Uid'))
+  .min(0, messages.FIELD_POSITIVE('Uid'));
+
 // Username
 export const usernameBaseSchema = z
   .string()
@@ -50,6 +56,24 @@ export const searchUsersByUsernameQuerySchema = requireBothOrNeither(
   messages.GENERAL.INCOMPLETE_PAGINATION,
 );
 
+// Get missions from user
+export const getUserMissionsParamSchema = z.object({
+  uid: uidBaseSchema,
+});
+
+export const getUserMissionsBaseQuerySchema = z.object({
+  type: z.string().min(1, messages.GENERAL.FIELD_REQUIRED('Type')),
+  page: pageBaseSchema,
+  limit: limitBaseSchema,
+});
+
+export const getUserMissionsQuerySchema = requireBothOrNeither(
+  getUserMissionsBaseQuerySchema,
+  'page',
+  'limit',
+  messages.GENERAL.INCOMPLETE_PAGINATION,
+);
+
 /// -----------------------
 export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
@@ -65,27 +89,6 @@ export const getUserByUsernameParamSchema = z.object({
       messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
     )
     .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-});
-
-export const getMissionsFromUserParamSchema = z.object({
-  uid: z.coerce
-    .number(messages.FIELD_NUMBER('uid'))
-    .int(messages.FIELD_INTEGER('uid'))
-    .min(0, messages.FIELD_POSITIVE('uid')),
-});
-
-export const getMissionsFromUserQuerySchema = z.object({
-  type: z.string().min(1, messages.FIELD_REQUIRED),
-  page: z.coerce
-    .number(messages.FIELD_NUMBER('Page'))
-    .int(messages.FIELD_INTEGER('Page'))
-    .min(0, messages.FIELD_POSITIVE('Page'))
-    .optional(),
-  limit: z.coerce
-    .number(messages.FIELD_NUMBER('Limit'))
-    .int(messages.FIELD_INTEGER('Limit'))
-    .min(0, messages.FIELD_POSITIVE('Limit'))
-    .optional(),
 });
 
 export const getPublicProfileMissionsQuerySchema = z.object({

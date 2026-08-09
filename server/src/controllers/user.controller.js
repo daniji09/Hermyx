@@ -34,8 +34,6 @@ import {
 import {
   getPublicProfileCreatedMissions,
   getPublicProfileJoinedMissions,
-  getMissionsByUid,
-  getMissionsJoinedByUser,
   getUserActiveMissions,
   adventurerUnjoined,
   updateMissionPayment,
@@ -77,8 +75,10 @@ import {
   uploadToAzureBlob,
 } from '../providers/storage.provider.js';
 import * as userService from '../services/user.service.js';
+import * as missionService from '../services/mission.service.js';
 
-// Controller functions
+/// Controller functions
+// Search users by username partial match
 export const searchUsersByUsername = async (req, res, next) => {
   try {
     const username = req.query.username;
@@ -101,6 +101,20 @@ export const getMe = async (req, res, next) => {
     // Authentication middleware already searched user by their firebaseUid,
     // So current user information is already saved on req.user
     return res.status(200).json(req.user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Gets the missions from the user, joined or published
+export const getUserMissions = async (req, res, next) => {
+  try {
+    const { uid } = req.params;
+    const { type } = req.query;
+    const pagination = req.pagination;
+    const { missions, pagination: paginationData } =
+      await missionService.getUserMissions(uid, type, pagination);
+    return res.status(200).json({ missions, pagination: paginationData });
   } catch (error) {
     next(error);
   }
@@ -135,53 +149,6 @@ export const getUser = async (req, res) => {
 
       return res.status(200).json({ user });
     }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getUserMissions = async (req, res) => {
-  const { uid } = req.params;
-  const { type } = req.query;
-  const pagination = req.pagination;
-
-  // It missions from user of a type
-  try {
-    let result = { rows: [], totalCount: 0 };
-
-    if (type === 'published') {
-      result = await getMissionsByUid(uid, pagination);
-    } else if (type === 'joined') {
-      result = await getMissionsJoinedByUser(uid, pagination);
-    } else {
-      return res
-        .status(400)
-        .json({ errors: { general: [messages.INVALID_MISSION_TYPE] } });
-    }
-    const missions = result.rows;
-    const totalItems = parseInt(result.totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      // Pagination object is built
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
   } catch (e) {
     console.error(e);
     return res

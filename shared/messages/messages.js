@@ -56,6 +56,14 @@ export const messages = {
     GENERAL: {
       USERS_NOT_FOUND: `Users not found.`,
     },
+    GET_USER_MISSIONS: {
+      INVALID_MISSION_TYPE: `Invalid type of mission.`,
+    },
+  },
+
+  /// Mission messages
+  MISSION: {
+    GENERAL: { MISSIONS_NOT_FOUND: `Missions not found.` },
   },
 
   ///// Common messages
@@ -92,9 +100,6 @@ export const messages = {
   //// Get users
   FIREBASE_UID_NOT_FOUND: (firebaseUid) =>
     `Username with Firebase Uid ${firebaseUid} not found.`,
-
-  //// Get user missions
-  INVALID_MISSION_TYPE: 'Invalid type of mission.',
 
   ///// Mission messages
   //// General
