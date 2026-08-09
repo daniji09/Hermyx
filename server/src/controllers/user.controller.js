@@ -25,7 +25,6 @@ import {
   anonymize as _anonymize,
   deanonymize,
   updateConfiguration,
-  getLocationByUid,
   getById,
   ban,
   unban,
@@ -49,7 +48,6 @@ import {
   createRefund,
   createTransfer,
   rejectAccount,
-  retrieveConnectAccount,
 } from '../providers/payment.provider.js';
 import {
   getOccupiedVacancies,
@@ -98,6 +96,17 @@ export const getMe = async (req, res, next) => {
     // Authentication middleware already searched user by their firebaseUid,
     // So current user information is already saved on req.user
     return res.status(200).json(req.user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Gets current user profile
+export const getMyProfile = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const profile = await userService.getMyProfile(user);
+    return res.status(200).json({ user: profile });
   } catch (error) {
     next(error);
   }
@@ -177,72 +186,6 @@ export const getUser = async (req, res) => {
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getMyProfile = async (req, res) => {
-  try {
-    const user = req.user;
-
-    if (!user) {
-      return res
-        .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
-    }
-
-    const location = await getLocationByUid(req.user.uid);
-
-    const bankAccount = await getConnectStatus(user);
-
-    const profile = {
-      username: user.username,
-      email: user.email,
-      name: user.name,
-      surnames: user.surnames,
-      description: user.description,
-      location: location,
-      avatar: user.avatar,
-      configuration: user.configuration,
-      stripe_connected_id: user.stripe_connected_id,
-      bank_account: bankAccount,
-    };
-
-    return res.status(200).json({
-      user: profile,
-    });
-  } catch (e) {
-    console.log(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-const getConnectStatus = async (user) => {
-  try {
-    // If there is no ID, is not configured
-    if (!user || !user.stripe_connected_id) return { isConfigured: false };
-
-    // Info is retrieved from Stripe
-    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
-
-    // Checks if details form are ok
-    if (!accountInfo.details_submitted) return { isConfigured: false };
-
-    // Bank account info is extracted
-    const bankAccounts = accountInfo.external_accounts?.data || [];
-    const defaultBank = bankAccounts.length > 0 ? bankAccounts[0] : null;
-
-    // Data is sent to front
-    return {
-      isConfigured: true,
-      payoutsEnabled: accountInfo.payouts_enabled,
-      bankName: defaultBank?.bank_name || 'Bank account',
-      last4: defaultBank?.last4 || '****',
-    };
-  } catch (error) {
-    console.error('Error fetching connect status:', error);
-    return {};
   }
 };
 

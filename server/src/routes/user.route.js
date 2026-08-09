@@ -41,6 +41,9 @@ router.get(
 // Get current user information
 router.get('/me', userController.getMe);
 
+// Get my profile
+router.get('/me/profile', userController.getMyProfile);
+
 // Get missions from user
 router.get(
   '/:uid/missions',
@@ -67,9 +70,6 @@ router.get(
 );
 
 // ----------
-
-//Get my profile
-router.get('/me/profile', verifyToken, userController.getMyProfile);
 
 // Updates profile
 router.patch(

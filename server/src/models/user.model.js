@@ -33,6 +33,17 @@ export const findByFirebaseUid = async (firebaseUid) => {
   return result.rows[0];
 };
 
+// Gets location by Uid
+export const findLocationByUid = async (uid) => {
+  const query = `SELECT 
+    ST_Y(location::geometry) as latitude, 
+    ST_X(location::geometry) as longitude
+    FROM app_user
+    WHERE uid = $1`;
+  const result = await pool.query(query, [uid]);
+  return result.rows[0];
+};
+
 export const searchByUsername = async ({
   username = undefined,
   excludedUid = undefined,
@@ -183,16 +194,6 @@ export const updateConfiguration = async (uid, configuration) => {
   const query = 'UPDATE app_user SET configuration = $2 WHERE uid = $1';
   const result = await pool.query(query, [uid, configuration]);
   return result.rowCount;
-};
-
-export const getLocationByUid = async (uid) => {
-  const query = `SELECT 
-    ST_Y(location::geometry) as latitude, 
-    ST_X(location::geometry) as longitude
-    FROM app_user
-    WHERE uid = $1`;
-  const result = await pool.query(query, [uid]);
-  return result.rows[0];
 };
 
 export const ban = async (uid) => {

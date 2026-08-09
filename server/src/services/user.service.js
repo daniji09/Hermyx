@@ -2,6 +2,7 @@ import { messages } from '@hermyx/shared';
 import { AppError } from '../utils/error.util.js';
 import * as missionService from './mission.service.js';
 import * as userModel from '../models/user.model.js';
+import { retrieveConnectAccount } from '../providers/payment.provider.js';
 
 /// Model access functions
 // Create user
@@ -89,6 +90,31 @@ export const searchUserByUsername = async (
   }
 
   throw new AppError(messages.USER.GENERAL.USERS_NOT_FOUND, 404, 'general');
+};
+
+// Gets current user profile
+export const getMyProfile = async (user) => {
+  // Gets user location
+  const location = await userModel.findLocationByUid(user.uid);
+
+  // Gets user bank account to receive payments as an adventurer
+  const bankAccount = await getConnectStatus(user);
+
+  // Builds object that will be sent to frontend
+  const profile = {
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    surnames: user.surnames,
+    description: user.description,
+    location: location,
+    avatar: user.avatar,
+    configuration: user.configuration,
+    stripe_connected_id: user.stripe_connected_id,
+    bank_account: bankAccount,
+  };
+
+  return { user: profile };
 };
 
 // Gets the missions from the user, joined or published
@@ -246,4 +272,33 @@ const checkCurrentUser = (currentUser) => {
 
 const checkType = (type) => {
   if (!type) throw new Error(messages.GENERAL.FIELD_REQUIRED('Type'));
+};
+
+/// Helper functions
+const getConnectStatus = async (user) => {
+  try {
+    // If there is no ID, is not configured
+    if (!user || !user.stripe_connected_id) return { isConfigured: false };
+
+    // Info is retrieved from Stripe
+    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
+
+    // Checks if details form are ok
+    if (!accountInfo.details_submitted) return { isConfigured: false };
+
+    // Bank account info is extracted
+    const bankAccounts = accountInfo.external_accounts?.data || [];
+    const defaultBank = bankAccounts.length > 0 ? bankAccounts[0] : null;
+
+    // Data is sent to front
+    return {
+      isConfigured: true,
+      payoutsEnabled: accountInfo.payouts_enabled,
+      bankName: defaultBank?.bank_name || 'Bank account',
+      last4: defaultBank?.last4 || '****',
+    };
+  } catch (error) {
+    console.error('Error fetching connect status:', error);
+    return {};
+  }
 };
