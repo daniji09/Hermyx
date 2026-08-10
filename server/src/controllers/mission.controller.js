@@ -19,7 +19,6 @@ import {
   createMission as _createMission,
   getAllMissionsInDraft as _getAllMissionsInDraft,
   getMissionById as _getMissionById,
-  getMissions as _getMissions,
   getById,
   getParticipantsForDisplay,
   updateMissionStatus,
@@ -79,7 +78,24 @@ import {
   getMissionPhotos,
   insertPhoto,
 } from '../models/mission-photo.model.js';
+import * as missionService from '../services/mission.service.js';
 
+/// Controller functions
+// Get all missions
+export const getMissions = async (req, res, next) => {
+  try {
+    const { title } = req.query;
+    const pagination = req.pagination;
+    const { missions, paginationData } = await missionService.getMissions(
+      title,
+      pagination,
+    );
+    return res.status(200).json({ missions, pagination: paginationData });
+  } catch (error) {
+    next(error);
+  }
+};
+// -------
 export const getMissionById = async (req, res) => {
   try {
     // Gets the id
@@ -123,43 +139,6 @@ export const getMissionById = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).end();
-  }
-};
-
-export const getMissions = async (req, res) => {
-  const { title } = req.query;
-  const pagination = req.pagination;
-
-  try {
-    // Gets all missions filtering what is needed
-    const { rows: missions, totalCount } = await _getMissions({
-      title,
-      pagination,
-    });
-
-    const totalItems = parseInt(totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      // Pagination object is built
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 

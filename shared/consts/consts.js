@@ -137,16 +137,12 @@ export const consts = {
     },
   },
 
-  // Account update consts
-  NAME_MAX_LENGTH: 50,
-  SURNAMES_MAX_LENGTH: 100,
-  LOCATION_MAX_LENGTH: 300,
-  DESCRIPTION_MAX_LENGTH: 500,
-
-  /// Missions consts
-  SEARCH_MISSION_TITLE_MAX_LENGTH: 100,
+  // Mission consts
   MISSION: {
-    TITLE_MAX_LENGTH: 100,
+    TITLE: {
+      MAX_LENGTH: 100,
+    },
+
     DESCRIPTION_MAX_LENGTH: 1000,
     PHOTOS: {
       MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
@@ -169,7 +165,16 @@ export const consts = {
     },
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
     REPORT_MESSAGE: { MAX: 1000 },
+    //....
+    TITLE_MAX_LENGTH: 100,
   },
+
+  // Account update consts
+  NAME_MAX_LENGTH: 50,
+  SURNAMES_MAX_LENGTH: 100,
+  LOCATION_MAX_LENGTH: 300,
+  DESCRIPTION_MAX_LENGTH: 500,
+
   NOTIFICATION: {
     MESSAGE_MAX_LENGTH: 500,
   },

@@ -2,25 +2,6 @@
 import { Router } from 'express';
 const router = Router();
 import {
-  createMission,
-  getMissions,
-  getAllMissionsInDraft,
-  getMissionById,
-  // UpdateMission,
-  joinMission,
-  submitMissionParticipation,
-  getMissionsOpened,
-  editMission,
-  unjoinMission,
-  cancelMission,
-  reopenMission,
-  close,
-  finishMission,
-  banMission,
-  kickAdventurerOut,
-} from '../controllers/mission.controller.js';
-
-import {
   validateBodySchema,
   validateQuerySchema,
   validateParamsSchema,
@@ -52,9 +33,9 @@ import {
   editMissionFilesSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
-import { inviteToMission } from '../controllers/mission.controller.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
 import { upload } from '../utils/file.utils.js';
+import * as missionController from '../controllers/mission.controller.js';
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
@@ -64,28 +45,31 @@ const dynamicValidation = (req, res, next) => {
 };
 
 /// GET
-
-//List all missions
+// Get all missions
 router.get(
   '/',
   validateQuerySchema(getMissionsQuerySchema),
-  await pagination(),
-  getMissions,
+  pagination(),
+  missionController.getMissions,
 );
 
 //List all draft missions
-router.get('/in-draft', getAllMissionsInDraft);
+router.get('/in-draft', missionController.getAllMissionsInDraft);
 
 // List all opened missions
 router.get(
   '/opened',
   validateQuerySchema(getMissionsQuerySchema),
   await pagination(),
-  getMissionsOpened,
+  missionController.getMissionsOpened,
 );
 
 //Get mission by id
-router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
+router.get(
+  '/:id',
+  validateParamsSchema(getMissionSchema),
+  missionController.getMissionById,
+);
 
 /// POST
 
@@ -95,14 +79,14 @@ router.post(
   upload.array('photos', 5),
   dynamicValidation,
   validateFilesSchema(publishMissionFilesSchema),
-  createMission,
+  missionController.createMission,
 );
 
 //Closes a mission
 router.post(
   '/:mid/close',
   validateParamsSchema(closeMissionParamSchema),
-  close,
+  missionController.close,
 );
 
 // Joins an adventurer into a mission
@@ -110,42 +94,42 @@ router.post(
   '/:mid/join',
   validateParamsSchema(joinMissionParamSchema),
   validateBodySchema(joinMissionBodySchema),
-  joinMission,
+  missionController.joinMission,
 );
 
 // Create a notification
 router.post(
   '/invite',
   validateBodySchema(inviteToMissionSchema),
-  inviteToMission,
+  missionController.inviteToMission,
 );
 
 // Submits current adventurer participation for owner review
 router.post(
   '/:mid/submit',
   validateParamsSchema(submitMissionParticipationSchema),
-  submitMissionParticipation,
+  missionController.submitMissionParticipation,
 );
 
 // Cancels a mission
 router.post(
   '/:mid/cancel',
   validateParamsSchema(cancelMissionParamSchema),
-  cancelMission,
+  missionController.cancelMission,
 );
 
 // Reopens a mission
 router.post(
   '/:mid/reopen',
   validateParamsSchema(reopenMissionParamSchema),
-  reopenMission,
+  missionController.reopenMission,
 );
 
 // Reopens a mission
 router.post(
   '/:mid/finish',
   validateParamsSchema(finishMissionParamSchema),
-  finishMission,
+  missionController.finishMission,
 );
 
 // Bans mission
@@ -154,7 +138,7 @@ router.post(
   verifyAdmin,
   validateParamsSchema(banMissionParamsSchema),
   validateBodySchema(banMissionBodySchema),
-  banMission,
+  missionController.banMission,
 );
 
 // Kicks an adventurer out
@@ -163,7 +147,7 @@ router.post(
   verifyAdmin,
   validateParamsSchema(kickAdventurerOutParamsSchema),
   validateBodySchema(kickAdventurerOutBodySchema),
-  kickAdventurerOut,
+  missionController.kickAdventurerOut,
 );
 
 //Edit mission
@@ -173,7 +157,7 @@ router.post(
   validateParamsSchema(editMissionParamSchema),
   validateBodySchema(editMissionBodySchema),
   validateFilesSchema(editMissionFilesSchema),
-  editMission,
+  missionController.editMission,
 );
 
 /// PUT
@@ -186,7 +170,7 @@ router.delete(
   '/:mid/unjoin',
   validateParamsSchema(unjoinMissionParamSchema),
   validateBodySchema(unjoinMissionBodySchema),
-  unjoinMission,
+  missionController.unjoinMission,
 );
 
 export default router;

@@ -72,6 +72,9 @@ export const messages = {
   MISSION: {
     GENERAL: { MISSIONS_NOT_FOUND: `Missions not found.` },
     TYPE: { INVALID_MISSION_TYPE: `Invalid type of mission.` },
+    GET_ALL: {
+      MIN_PAYMENT_GREATER_MAX_PAYMENT: `Min payment cannot be greater than max payment.`,
+    },
   },
 
   ///// Common messages

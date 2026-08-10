@@ -7,12 +7,29 @@ import {
 import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// FINDS
+// Gets all missions
+export const findAll = async ({ title = undefined, pagination }) => {
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
+    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE 1=1`;
+  const values = [];
+
+  if (title) {
+    values.push(title);
+    query += ` AND unaccent(title) ILIKE unaccent('%' || $${values.length} || '%')`;
+  }
+  query += ` ORDER BY m.publication_date DESC`;
+
+  return await executePaginatedQuery(query, values, pagination);
+};
+
 // Get missions published by user
 export const findPublishedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   const query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
     m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != 'draft' AND m.status != $2 AND m.owner_id = $1 
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != $2 AND m.owner_id = $1 
     ORDER BY m.publication_date DESC`;
   const values = [uid, MISSION_STATUS.DELETED.ID];
 
@@ -383,45 +400,6 @@ export const updateMissionPayment = async (mid, payment) => {
     'UPDATE mission SET total_payment = $2 WHERE mid = $1 RETURNING *';
   const result = await pool.query(query, [mid, payment]);
   return result.rows[0];
-};
-
-// TODO: Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
-export const getMissions = async ({ title = undefined, pagination }) => {
-  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
-    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE status != 'draft'`;
-  const values = [];
-
-  if (title) {
-    values.push(title);
-    query += ` AND unaccent(title) ILIKE unaccent('%' || $${values.length} || '%')`;
-  }
-  query += ` ORDER BY m.publication_date DESC`;
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  // Postgres returns total_count in each row so we take the first one and clear it
-  const totalCount = parseInt(result.rows[0].total_count);
-
-  // Total_count column is cleared so the mission objective is not cluttered
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
 };
 
 // TODO Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?

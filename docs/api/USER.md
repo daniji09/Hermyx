@@ -20,7 +20,7 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
 **Responses:**
 
-- `200 OK`: search done successfully (could not retrieve any users). Example with pagination.
+- `200 OK`: search done successfully (could retrieve no users). Example with pagination.
 
   ```json
   {

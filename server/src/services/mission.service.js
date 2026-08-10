@@ -40,16 +40,45 @@ export const getMissionsPublicJoinedByUid = async (uid, pagination) => {
 };
 
 /// Endpoint complex functions
+// Get all missions
+export const getMissions = async (title, pagination) => {
+  // Gets all missions filtering what is needed
+  const { rows: missions, totalCount } = await missionModel.findAll({
+    title,
+    pagination,
+  });
+
+  const totalItems = parseInt(totalCount);
+
+  if (missions && pagination) {
+    const totalPages = Math.ceil(totalItems / pagination.limit);
+    const hasMore = pagination.page < totalPages;
+
+    // Pagination object is built
+    return {
+      missions,
+      paginationData: {
+        currentPage: pagination.page,
+        totalPages: totalPages,
+        totalItems: totalItems,
+        hasMore: hasMore,
+      },
+    };
+  } else if (missions && !pagination) {
+    return { missions };
+  } else
+    throw new AppError(
+      messages.MISSION.GENERAL.MISSIONS_NOT_FOUND,
+      404,
+      'general',
+    );
+};
 
 /// Data checks
+const checkTitle = (title) => {
+  if (!title) throw new Error(messages.GENERAL.FIELD_REQUIRED('Title'));
+};
+
 const checkUid = (uid) => {
   if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
-};
-
-const checkUsername = (username) => {
-  if (!username) throw new Error(messages.GENERAL.FIELD_REQUIRED('Username'));
-};
-
-const checkType = (type) => {
-  if (!type) throw new Error(messages.GENERAL.FIELD_REQUIRED('Type'));
 };
