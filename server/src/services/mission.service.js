@@ -1,12 +1,16 @@
 import {
+  consts,
   messages,
   MISSION_PARTICIPATION_STATUS,
   MISSION_STATUS,
 } from '@hermyx/shared';
 import { AppError } from '../utils/error.util.js';
+import * as conversationService from '../services/conversation.service.js';
+import * as storageProvider from '../providers/storage.provider.js';
 import * as missionModel from '../models/mission.model.js';
 import * as missionParticipationModel from '../models/mission-participation.model.js';
 import * as missionPhotoModel from '../models/mission-photo.model.js';
+import pool from '../config/db.config.js';
 
 /// Model access functions
 // Missions published by uid
@@ -129,6 +133,9 @@ export const getOpenedMissions = async (
 
 // Get mission by mid
 export const getMissionByMid = async (mid, uid) => {
+  checkUid(uid);
+  checkMid(mid);
+
   // Searches mission by id
   const [mission, participants, waitingForPaymentVacancies, photos] =
     await Promise.all([
@@ -163,9 +170,144 @@ export const getMissionByMid = async (mid, uid) => {
   };
 };
 
+// Publish mission
+export const publishMission = async (
+  uid,
+  title,
+  description,
+  vacancies,
+  vacanciesData,
+  latitude,
+  longitude,
+  photos,
+) => {
+  checkUid(uid);
+  checkTitle(title);
+  checkDescription(description);
+  checkVacancies(vacancies);
+  checkVacanciesData(vacanciesData);
+  // Checks if photo number is correct
+  if (photos.length > consts.MISSION.PHOTOS.MAX) {
+    throw new AppError(messages.GENERAL.TOO_MANY_FILES, 400, 'photos');
+  }
+
+  // Checks if user has a mission already with the same title
+  const { hasDuplicate } = await missionModel.findByUidAndTitle(uid, title);
+  if (hasDuplicate)
+    throw new AppError(messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE, 400);
+
+  // Saves photos
+  let uploadedPhotoUrls = [];
+  if (photos.length > 0) {
+    // Environment variable determines whether photos are uploaded locally or to Azure
+    const isProduction = process.env.NODE_ENV === 'production';
+    uploadedPhotoUrls = await Promise.all(
+      photos.map(async (file) => {
+        if (isProduction) {
+          return await storageProvider.uploadToAzureBlob(
+            file,
+            'mission-photos',
+          );
+        } else {
+          return await storageProvider.saveToLocalStorage(
+            file,
+            'uploads/mission-photos',
+          );
+        }
+      }),
+    );
+  }
+
+  // Mission data
+  const missionData = {
+    title: title || 'Mission not titled',
+    description: description || 'No description',
+    vacancies: vacancies || 0,
+    vacanciesData: vacanciesData || '',
+    totalPayment: 0,
+    latitude: latitude || null,
+    longitude: longitude || null,
+    status: MISSION_STATUS.OPENED.ID,
+    ownerId: uid,
+  };
+
+  // Database transaction is needed to insert all information successfully
+  const client = await pool.connect();
+  try {
+    // Transaction starts
+    await client.query('BEGIN');
+
+    // Creates the new mission
+    const newMission = await missionModel.create(missionData, client);
+
+    // Creates vacancies for mission
+    for (const vacancy of vacanciesData) {
+      await missionParticipationModel.create(newMission.mid, vacancy, client);
+    }
+
+    // Creates conversation
+    const conversation = await conversationService.createConversation(
+      newMission.mid,
+      client,
+    );
+
+    // Creates conversation participant
+    await conversationService.createConversationParticipant(
+      conversation.cid,
+      uid,
+      client,
+    );
+
+    // Creates photos
+    for (const photoURL of uploadedPhotoUrls)
+      await missionPhotoModel.create(newMission.mid, photoURL, client);
+
+    // Commits
+    await client.query('COMMIT');
+    return newMission;
+  } catch (error) {
+    // Transaction rollbacks
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    // Either way, connection is always released
+    client.release();
+  }
+};
+
 /// Data checks
+const checkMid = (mid) => {
+  if (!mid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Mid'));
+};
+
 const checkTitle = (title) => {
   if (!title) throw new Error(messages.GENERAL.FIELD_REQUIRED('Title'));
+};
+
+const checkDescription = (description) => {
+  if (!description)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Description'));
+};
+
+const checkVacancies = (vacancies) => {
+  if (!vacancies) throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancies'));
+};
+
+const checkVacanciesData = (vacanciesData) => {
+  if (!vacanciesData)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancies data'));
+};
+
+const checkLatitude = (latitude) => {
+  if (!latitude) throw new Error(messages.GENERAL.FIELD_REQUIRED('Latitude'));
+};
+
+const checkLongitude = (longitude) => {
+  if (!longitude) throw new Error(messages.GENERAL.FIELD_REQUIRED('Longitude'));
+};
+
+const checkPhotos = (photos) => {
+  if (!photos) throw new Error(messages.GENERAL.FIELD_REQUIRED('Photos'));
 };
 
 const checkUid = (uid) => {

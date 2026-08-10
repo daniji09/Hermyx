@@ -1,10 +1,47 @@
 import pool from '../config/db.config.js';
 import { MISSION_STATUS, MISSION_PARTICIPATION_STATUS } from '@hermyx/shared';
-import {
-  closeMissionConversation,
-  createMissionConversation,
-} from './conversation.model.js';
+import { closeMissionConversation } from './conversation.model.js';
 import { executePaginatedQuery } from '../utils/pagination.util.js';
+
+/// INSERTS
+// Crate new mission
+export const create = async (missionData, client = pool) => {
+  const {
+    title,
+    description,
+    vacancies,
+    status,
+    ownerId,
+    totalPayment,
+    latitude,
+    longitude,
+  } = missionData;
+
+  let query, params;
+  if (!latitude || !longitude) {
+    query = `INSERT INTO mission (publication_date, title, description, total_vacancies, 
+      occupied_vacancies, status, owner_id, location, total_payment) 
+    VALUES (NOW(), $1, $2, $3, 0, $4, $5, NULL, $6) RETURNING *`;
+    params = [title, description, vacancies, status, ownerId, totalPayment];
+  } else {
+    query = `INSERT INTO mission (publication_date, title, description, total_vacancies,
+     occupied_vacancies, status, owner_id, location, total_payment) 
+    VALUES (NOW(), $1, $2, $3, 0, $4, $5, ST_MakePoint($6, $7)::geography, $8) RETURNING *`;
+    params = [
+      title,
+      description,
+      vacancies,
+      status,
+      ownerId,
+      longitude,
+      latitude,
+      totalPayment,
+    ];
+  }
+
+  const result = await client.query(query, params);
+  return result.rows[0];
+};
 
 /// FINDS
 // Get mission by mid
@@ -45,6 +82,35 @@ export const findByMid = async (id, uid) => {
     ) AS has_pending_join_request
     FROM mission m WHERE mid = $1`;
   const result = await pool.query(query, [id, uid]);
+  return result.rows[0];
+};
+
+// Gets mission by uid and title
+export const findByUidAndTitle = async (uid, title, mid = undefined) => {
+  // If mid is not undefined, then the mission has to be different than that one
+  let query, result;
+  if (!mid) {
+    query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM mission 
+      WHERE owner_id = $1 
+        AND LOWER(TRIM(title)) = LOWER($2)
+    ) AS "hasDuplicate";
+  `;
+    result = await pool.query(query, [uid, title]);
+  } else {
+    query = `
+    SELECT EXISTS (
+      SELECT 1 
+      FROM mission 
+      WHERE owner_id = $1 
+        AND LOWER(TRIM(title)) = LOWER($2) AND mid <> $3
+    ) AS "hasDuplicate";
+  `;
+    result = await pool.query(query, [uid, title, mid]);
+  }
+
   return result.rows[0];
 };
 
@@ -344,98 +410,6 @@ export const finalizeRefund = async (mid, refundId) => {
   await pool.query(query, [refundId, mid]);
 };
 
-export const createMission = async (missionData) => {
-  const {
-    title,
-    description,
-    vacancies,
-    vacanciesData,
-    totalPayment,
-    status,
-    latitude,
-    longitude,
-    ownerId,
-  } = missionData;
-
-  // This operation has to steps, so a transaction is needed. So a connection is taken.
-  const client = await pool.connect();
-
-  try {
-    // Transaction begins
-    await client.query('BEGIN');
-
-    // First step, saving mission info
-    let result;
-    if (!latitude || !longitude) {
-      const query = `
-        INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, status, owner_id, location, total_payment)
-        VALUES (NOW(), $1, $2, $3, 0, $4, $5, NULL, $6)
-        RETURNING *
-      `;
-      result = await client.query(query, [
-        title,
-        description,
-        vacancies,
-        status,
-        ownerId,
-        totalPayment,
-      ]);
-    } else {
-      const query = `
-        INSERT INTO mission (publication_date, title, description, total_vacancies, occupied_vacancies, status, owner_id, location, total_payment)
-        VALUES (NOW(), $1, $2, $3, 0, $4, $5, ST_MakePoint($6, $7)::geography, $8)
-        RETURNING *
-      `;
-      result = await client.query(query, [
-        title,
-        description,
-        vacancies,
-        status,
-        ownerId,
-        longitude,
-        latitude,
-        totalPayment,
-      ]);
-    }
-
-    const newMission = result.rows[0];
-    const missionId = newMission.mid; // New mission info saved is taken
-
-    // Second step, save mission vacancies info
-    const participationQuery = `
-      INSERT INTO MISSION_PARTICIPATION (mid, monetary_reward, title, description, status, amount_paid)
-      VALUES ($1, $2, $3, $4, $5, $6)
-    `;
-
-    // Promises array, one per vacancy
-    const insertPromises = vacanciesData.map((vacancy) => {
-      return client.query(participationQuery, [
-        missionId,
-        vacancy.reward,
-        vacancy.title || null,
-        vacancy.description || null,
-        MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-        0,
-      ]);
-    });
-
-    // All promises are executed at the same time
-    await Promise.all(insertPromises);
-
-    await createMissionConversation(missionId, ownerId, client);
-
-    // Last step, confirm every operation was successful
-    await client.query('COMMIT');
-
-    return newMission;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
 export const finishMissionAndCloseConversation = async (mid) => {
   const client = await pool.connect();
 
@@ -595,35 +569,6 @@ export const adventurerUnjoined = async (mid) => {
     'UPDATE mission SET occupied_vacancies = occupied_vacancies - 1 WHERE mid = $1 RETURNING occupied_vacancies';
   const result = await pool.query(query, [mid]);
   return result.rowCount;
-};
-
-// Gets mission by uid and title
-export const getByUidAndTitle = async (uid, title, mid = undefined) => {
-  // If mid is not undefined, then the mission has to be different than that one
-  let query, result;
-  if (!mid) {
-    query = `
-    SELECT EXISTS (
-      SELECT 1 
-      FROM mission 
-      WHERE owner_id = $1 
-        AND LOWER(TRIM(title)) = LOWER($2)
-    ) AS "hasDuplicate";
-  `;
-    result = await pool.query(query, [uid, title]);
-  } else {
-    query = `
-    SELECT EXISTS (
-      SELECT 1 
-      FROM mission 
-      WHERE owner_id = $1 
-        AND LOWER(TRIM(title)) = LOWER($2) AND mid <> $3
-    ) AS "hasDuplicate";
-  `;
-    result = await pool.query(query, [uid, title, mid]);
-  }
-
-  return result.rows[0];
 };
 
 // Gets user active missions, created or joined

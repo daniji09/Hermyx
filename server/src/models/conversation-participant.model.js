@@ -1,10 +1,8 @@
 import pool from '../config/db.config.js';
 
-export const addConversationParticipant = async (
-  conversationId,
-  userId,
-  database = pool,
-) => {
+/// INSERTS
+// Create
+export const create = async (conversationId, userId, client = pool) => {
   const query = `
     INSERT INTO conversation_participant (conversation_id, user_id)
     VALUES ($1, $2)
@@ -12,9 +10,11 @@ export const addConversationParticipant = async (
     RETURNING *
   `;
 
-  const result = await database.query(query, [conversationId, userId]);
-  return result.rows[0] || null;
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rows[0];
 };
+
+// ------
 
 export const addPrivateConversationParticipants = async (
   conversationId,

@@ -142,8 +142,9 @@ export const consts = {
     TITLE: {
       MAX_LENGTH: 100,
     },
-
-    DESCRIPTION_MAX_LENGTH: 1000,
+    DESCRIPTION: {
+      MAX_LENGTH: 1000,
+    },
     PHOTOS: {
       MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
       ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
@@ -167,6 +168,7 @@ export const consts = {
     REPORT_MESSAGE: { MAX: 1000 },
     //....
     TITLE_MAX_LENGTH: 100,
+    DESCRIPTION_MAX_LENGTH: 1000,
   },
 
   // Account update consts

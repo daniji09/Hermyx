@@ -1,8 +1,21 @@
 import pool from '../config/db.config.js';
-import {
-  addConversationParticipant,
-  addPrivateConversationParticipants,
-} from './conversation-participant.model.js';
+import { addPrivateConversationParticipants } from './conversation-participant.model.js';
+
+/// INSERTS
+// Create conversation
+export const create = async (missionId, client = pool) => {
+  const query = `
+    INSERT INTO conversation (type, mission_id)
+    VALUES ('mission', $1)
+    ON CONFLICT (mission_id) DO UPDATE
+      SET mission_id = EXCLUDED.mission_id
+    RETURNING *
+  `;
+  const result = await client.query(query, [missionId]);
+  return result.rows[0];
+};
+
+// ----
 
 export const findPrivateConversation = async (userAId, userBId) => {
   const query = `
@@ -66,28 +79,6 @@ export const getOrCreatePrivateConversation = async (userAId, userBId) => {
   }
 
   return createPrivateConversation(userAId, userBId);
-};
-
-export const createMissionConversation = async (
-  missionId,
-  ownerId,
-  database = pool,
-) => {
-  const conversationQuery = `
-    INSERT INTO conversation (type, mission_id)
-    VALUES ('mission', $1)
-    ON CONFLICT (mission_id) DO UPDATE
-      SET mission_id = EXCLUDED.mission_id
-    RETURNING *
-  `;
-  const conversationResult = await database.query(conversationQuery, [
-    missionId,
-  ]);
-  const conversation = conversationResult.rows[0];
-
-  await addConversationParticipant(conversation.cid, ownerId, database);
-
-  return conversation;
 };
 
 export const closeMissionConversation = async (missionId, database = pool) => {

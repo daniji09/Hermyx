@@ -36,9 +36,129 @@ const titleBaseSchema = z
   .trim()
   .max(
     consts.MISSION.TITLE.MAX_LENGTH,
-    messages.GENERAL.FIELD_TOO_LONG('Title'),
+    messages.GENERAL.FIELD_TOO_LONG('Title', consts.MISSION.TITLE.MAX_LENGTH),
   )
   .min(1, messages.GENERAL.FIELD_REQUIRED('Title'));
+
+// Description
+const descriptionBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Description'))
+  .max(
+    consts.MISSION.DESCRIPTION.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Description',
+      consts.MISSION.DESCRIPTION.MAX_LENGTH,
+    ),
+  );
+
+// Photos
+const photosBaseSchema = z
+  .array(
+    z
+      .object({
+        size: z
+          .number()
+          .max(
+            consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+            messages.MISSION.PUBLISH.MISSION_PHOTO_TOO_BIG,
+          ),
+        mimetype: z.refine(
+          (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+          messages.MISSION.PUBLISH.MISSION_PHOTO_INVALID_TYPE,
+        ),
+      })
+      .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
+  )
+  .max(
+    consts.MISSION.PHOTOS.MAX,
+    messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+  )
+  .optional()
+  .default([]);
+
+// Vacancy
+const vacancySchema = z.object({
+  id: z.union([
+    z.string().min(1, messages.GENERAL.FIELD_REQUIRED('Vacancy id')),
+    z.number().min(1, messages.GENERAL.FIELD_REQUIRED('Vacancy id')),
+  ]),
+  reward: z.coerce
+    .number(messages.GENERAL.FIELD_NUMBER('Reward'))
+    .min(
+      consts.MISSION.REWARD.MIN,
+      messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+    )
+    .max(
+      consts.MISSION.REWARD.MAX,
+      messages.GENERAL.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+    ),
+  title: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      messages.GENERAL.FIELD_TOO_LONG(
+        'Title',
+        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      ),
+    )
+    .nullable()
+    .optional()
+    .or(z.literal('')),
+  description: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      messages.GENERAL.FIELD_TOO_LONG(
+        'Description',
+        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      ),
+    )
+    .nullable()
+    .optional()
+    .or(z.literal('')),
+  status: z
+    .string()
+    .trim()
+    .max(
+      consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
+      messages.GENERAL.FIELD_TOO_LONG(
+        'Status',
+        consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
+      ),
+    )
+    .nullable()
+    .optional()
+    .or(z.literal('')),
+});
+
+// Vacancies (num of vacancies)
+const vacancyNumBaseSchema = z.coerce
+  .number(messages.GENERAL.FIELD_NUMBER('Vacancies'))
+  .int(messages.GENERAL.FIELD_INTEGER('Vacancies'))
+  .min(
+    consts.MISSION.VACANCIES.MIN,
+    messages.GENERAL.FIELD_TOO_SMALL('Vacancies', consts.MISSION.VACANCIES.MIN),
+  )
+  .max(
+    consts.MISSION.VACANCIES.MAX,
+    messages.GENERAL.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
+  );
+
+// Latitude
+const latitudeBaseSchema = z.preprocess(
+  (val) => (val === '' || val === null ? undefined : val),
+  z.coerce.number().optional(),
+);
+
+// Longitude
+const longitudeBaseSchema = z.preprocess(
+  (val) => (val === '' || val === null ? undefined : val),
+  z.coerce.number().optional(),
+);
 
 // Type (published or joined)
 export const typeBaseSchema = z.enum(['published', 'joined'], {
@@ -79,119 +199,12 @@ export const getMissionSchema = z.object({
   mid: midBaseSchema,
 });
 
-// ------
-
-const vacancySchema = z.object({
-  id: z.union([
-    z.string().min(1, messages.FIELD_REQUIRED),
-    z.number().min(1, messages.FIELD_REQUIRED),
-  ]),
-  reward: z.coerce
-    .number(messages.FIELD_NUMBER('Reward'))
-    .min(
-      consts.MISSION.REWARD.MIN,
-      messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
-    )
-    .max(
-      consts.MISSION.REWARD.MAX,
-      messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
-    ),
-  title: z
-    .string()
-    .trim()
-
-    .max(
-      consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Title',
-        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
-      ),
-    )
-    .nullable()
-    .optional()
-    .or(z.literal('')),
-  description: z
-    .string()
-    .trim()
-    .max(
-      consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Description',
-        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
-      ),
-    )
-    .nullable()
-    .optional()
-    .or(z.literal('')),
-  status: z
-    .string()
-    .trim()
-    .max(
-      consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Status',
-        consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
-      ),
-    )
-    .nullable()
-    .optional()
-    .or(z.literal('')),
-});
-// Server and client publish mission shared validation
+// Publish mission
 export const publishMissionSchema = z.object({
-  title: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.MISSION.TITLE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Title', consts.MISSION.TITLE_MAX_LENGTH),
-    ),
-  description: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.MISSION.DESCRIPTION_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Description',
-        consts.MISSION.DESCRIPTION_MAX_LENGTH,
-      ),
-    ),
-  photos: z
-    .array(
-      z
-        .object({
-          size: z
-            .number()
-            .max(
-              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
-              messages.MISSION_PHOTO_TOO_BIG,
-            ),
-          mimetype: z.refine(
-            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
-            messages.MISSION_PHOTO_INVALID_TYPE,
-          ),
-        })
-        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
-    )
-    .max(
-      consts.MISSION.PHOTOS.MAX,
-      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
-    )
-    .optional()
-    .default([]),
-  vacancies: z.coerce
-    .number(messages.FIELD_NUMBER('Vacancies'))
-    .int(messages.FIELD_INTEGER('Vacancies'))
-    .min(
-      consts.MISSION.VACANCIES.MIN,
-      messages.FIELD_TOO_SMALL('Vacancies', consts.MISSION.VACANCIES.MIN),
-    )
-    .max(
-      consts.MISSION.VACANCIES.MAX,
-      messages.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
-    ),
+  title: titleBaseSchema,
+  description: descriptionBaseSchema,
+  photos: photosBaseSchema,
+  vacancies: vacancyNumBaseSchema,
   vacanciesData: z
     .string()
     .transform((str, ctx) => {
@@ -206,22 +219,15 @@ export const publishMissionSchema = z.object({
       }
     })
     .pipe(
-      z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
+      z
+        .array(vacancySchema)
+        .max(100, messages.GENERAL.FIELD_TOO_BIG('Vacancies', 100)),
     ),
-  isDraft: z
-    .union([z.boolean(), z.string()])
-    .transform((val) => val === 'true' || val === true)
-    .optional(),
-  latitude: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.coerce.number().optional(),
-  ),
-  longitude: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.coerce.number().optional(),
-  ),
+  latitude: latitudeBaseSchema,
+  longitude: longitudeBaseSchema,
 });
 
+// ------
 export const publishMissionFilesSchema = z.object({
   photos: z
     .array(

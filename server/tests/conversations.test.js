@@ -3,7 +3,7 @@ import request from 'supertest';
 import app from '../src/app.js';
 import pool from '../src/config/db.config.js';
 import {
-  createMission as createMissionRecord,
+  create as createMissionRecord,
   finishMissionAndCloseConversation,
   findByMid,
 } from '../src/models/mission.model.js';

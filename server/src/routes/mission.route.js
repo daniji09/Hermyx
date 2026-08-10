@@ -69,20 +69,19 @@ router.get(
   missionController.getMissionByMid,
 );
 
-//------------
-//List all draft missions
-router.get('/in-draft', missionController.getAllMissionsInDraft);
-
 /// POST
-
 //Create mission
 router.post(
   '/',
   upload.array('photos', 5),
   dynamicValidation,
   validateFilesSchema(publishMissionFilesSchema),
-  missionController.createMission,
+  missionController.publishMission,
 );
+
+//------------
+//List all draft missions
+router.get('/in-draft', missionController.getAllMissionsInDraft);
 
 //Closes a mission
 router.post(

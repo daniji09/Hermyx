@@ -209,7 +209,7 @@ Gets the mission specified by its identifier, mid.
   }
   ```
 
-- `400 Bad Request`: path parameters fields validation error, path parameters query fields.
+- `400 Bad Request`: path parameters fields validation error, missing path parameters fields.
 
   ```json
   {
@@ -230,6 +230,54 @@ Gets the mission specified by its identifier, mid.
     <br>
 
 **Workflow:** application mission is searched by its identifier, it retrieves all mission information, including its participants, its participants waiting for payment and its photos.
+<br>
+<br>
+<br>
+
+## - Publish mission: `POST /api/missions/`
+
+Publishes a new mission.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `title` | string | Yes | Mission title. |
+| `description` | string | Yes | Mission description. |
+| `photos` | array | No | Mission array of photos. |
+| `vacancies` | integer | Yes | Mission vacancy number. |
+| `vacanciesData` | array | Yes | Mission vacancies data. |
+| `latitude` | integer | No* | Mission latitude location. |
+| `longitude` | integer | No* | Mission longitude location. |
+_> Note: `latitude` and `longitude` are optional, but if one is provided, both must be sent together._
+<br>
+
+**Responses:**
+
+- `200 OK`: mission obtain successfully.
+
+  ```json
+  {
+    "mission": {
+      "mission_info": "<mission_info>"
+    }
+  }
+  ```
+
+- `400 Bad Request`: fields validation error, missing fields or logic error: user already has a mission named like that.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+    <br>
+
+**Workflow:** to publish a mission, it's needed to enter the title, description, and information about the available vacancies, which must include at least one vacancy and its title and monetary reward. Optionally, it's aso possible to add up to five images, which are handled by the `multer` library, and a location, which is handled by the `postgis` extension for PostgreSQL. Because creating a mission requires entering data into missions, mission participants, conversations, conversation participants, and mission photos, a database transaction is necessary.
 <br>
 <br>
 <br>

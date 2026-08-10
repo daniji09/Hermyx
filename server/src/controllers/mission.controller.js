@@ -16,13 +16,12 @@ import {
   REPORT_STATUS,
 } from '@hermyx/shared';
 import {
-  createMission as _createMission,
   getAllMissionsInDraft as _getAllMissionsInDraft,
   findByMid as _getMissionById,
   getById,
   updateMissionStatus,
   finishMissionAndCloseConversation,
-  getByUidAndTitle,
+  findByUidAndTitle,
   updateMission,
   adventurerUnjoined,
   emptyMission,
@@ -73,7 +72,7 @@ import {
 import {
   deletePhoto,
   findAllByMid,
-  insertPhoto,
+  create,
 } from '../models/mission-photo.model.js';
 import * as missionService from '../services/mission.service.js';
 import * as missionParticipationModel from '../models/mission-participation.model.js';
@@ -127,21 +126,8 @@ export const getMissionByMid = async (req, res, next) => {
   }
 };
 
-// -------
-
-export const getAllMissionsInDraft = async (req, res) => {
-  try {
-    const missions = await _getAllMissionsInDraft();
-    res.status(200).json({ data: missions });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-/*Check whether the user wants to save the creation or create a new mission. 
-Depending on that, the fields are checked or not, and the status is updated accordingly.*/
-export const createMission = async (req, res) => {
+// Publishes mission
+export const publishMission = async (req, res, next) => {
   try {
     const { uid } = req.user;
     const {
@@ -152,60 +138,33 @@ export const createMission = async (req, res) => {
       latitude,
       longitude,
     } = req.body;
-    const photos = req.files.photos;
-    const missionData = {
-      title: title || 'Mission not titled',
-      description: description || 'No description',
-      vacancies: vacancies || 0,
-      vacanciesData: vacanciesData || '',
-      totalPayment: 0,
-      latitude: latitude || null,
-      longitude: longitude || null,
-      status: MISSION_STATUS.OPENED.ID,
-      ownerId: uid,
-    };
+    console.log(req.body);
+    const photos = req.files.photos || [];
+    const mission = await missionService.publishMission(
+      uid,
+      title,
+      description,
+      vacancies,
+      vacanciesData || [],
+      latitude,
+      longitude,
+      photos,
+    );
+    return res.status(200).json({ mission });
+  } catch (error) {
+    next(error);
+  }
+};
 
-    // Checks if user has a mission already with the same title
-    const { hasDuplicate } = await getByUidAndTitle(uid, title);
-    if (hasDuplicate)
-      return res.status(400).json({
-        errors: { general: [messages.MISSION_SAME_TITLE] },
-      });
+// -------
 
-    // Creates the new mission
-    const newMission = await _createMission(missionData);
-
-    // Checks if photo number is correct
-    if (photos.length > consts.MISSION.PHOTOS.MAX) {
-      return res.status(400).json({
-        errors: { general: [messages.MISSION_SAME_TITLE] },
-      });
-    }
-
-    // Saves photos
-    let uploadedPhotoUrls = [];
-    if (photos.length > 0) {
-      // Environment variable determines whether photos are uploaded locally or to Azure
-      const isProduction = process.env.NODE_ENV === 'production';
-      uploadedPhotoUrls = await Promise.all(
-        photos.map(async (file) => {
-          if (isProduction) {
-            return await uploadToAzureBlob(file, 'mission-photos');
-          } else {
-            return await saveToLocalStorage(file, 'uploads/mission-photos');
-          }
-        }),
-      );
-    }
-
-    // Inserts photos
-    for (const photoURL of uploadedPhotoUrls)
-      await insertPhoto(newMission.mid, photoURL);
-
-    return res.status(201).json({ mission: newMission });
+export const getAllMissionsInDraft = async (req, res) => {
+  try {
+    const missions = await _getAllMissionsInDraft();
+    res.status(200).json({ data: missions });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 
@@ -244,7 +203,7 @@ export const editMission = async (req, res) => {
       });
 
     // Checks if user has a mission already with the same title and different id
-    const { hasDuplicate } = await getByUidAndTitle(
+    const { hasDuplicate } = await findByUidAndTitle(
       uid,
       mission.title,
       mission.mid,
@@ -304,7 +263,7 @@ export const editMission = async (req, res) => {
 
     // Then, inserting them on db
     for (const photoURL of uploadedPhotoUrls) {
-      await insertPhoto(mission.mid, photoURL);
+      await create(mission.mid, photoURL);
     }
 
     // Photos that are not in existingPhotos but exist in db, must be deleted physically and from db

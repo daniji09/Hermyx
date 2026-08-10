@@ -9,6 +9,23 @@ import {
   makeMissionConversationParticipantReadOnly,
 } from './conversation-participant.model.js';
 
+/// INSERTS
+// Create mission participation
+export const create = async (mid, vacancy, client = pool) => {
+  const query = `
+    INSERT INTO mission_participation (mid, monetary_reward, title, description, status, amount_paid)
+    VALUES ($1, $2, $3, $4, $5, $6)
+  `;
+  await client.query(query, [
+    mid,
+    vacancy.reward,
+    vacancy.title || null,
+    vacancy.description || null,
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    0,
+  ]);
+};
+
 /// FINDS
 // Get all participants from mission
 export const findAllByMid = async (mid) => {
