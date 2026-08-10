@@ -1,7 +1,8 @@
-import { messages } from '@hermyx/shared';
+import { consts, messages } from '@hermyx/shared';
 import { AppError } from '../utils/error.util.js';
 import * as missionService from './mission.service.js';
 import * as userModel from '../models/user.model.js';
+import * as authProvider from '../providers/auth.provider.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
 
@@ -57,6 +58,13 @@ export const getUserByEmail = async (email) => {
 
   // Gets user by email
   const user = await userModel.findByEmail(email);
+  return user;
+};
+
+export const getUserByEmailOrThrow = async (email) => {
+  const user = await getUserByEmail(email);
+  if (!user)
+    throw new AppError(messages.USER.EMAIL.EMAIL_NOT_FOUND(email), 404);
   return user;
 };
 
@@ -333,6 +341,77 @@ export const updateMyAvatar = async (uid, file) => {
   return newAvatarUrl;
 };
 
+// Updates current user's email
+export const updateMyEmail = async (user, email) => {
+  // User's current email
+  const currentEmail = user.email;
+
+  // First of all, new email is checked to be unique
+  const userByEmail = await getUserByEmail(email);
+
+  // If it exists, then its a bad request error (unless is a new authentication with the same email)
+  if (userByEmail) throw buildEmailAlreadyExistsError(email);
+
+  // Lastly, it makes a deep check on Firebase searching for the e-mail
+  try {
+    const fbUser = await authProvider.getUserByEmail(email);
+    if (fbUser.uid !== user.firebase_uid) {
+      throw buildEmailAlreadyExistsError(email);
+    }
+  } catch (error) {
+    if (error.status) throw error;
+    // User not found is expected if the email is not in use, so any other error is returned
+    if (error.code !== 'auth/user-not-found') {
+      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+      if (errorBuilder) {
+        const mappedError = errorBuilder({ email });
+        throw new AppError(
+          mappedError.message,
+          mappedError.status,
+          mappedError.field,
+        );
+      }
+
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+  let firebaseChange;
+  try {
+    // Prepares user email update
+    const firebaseUpdates = { email };
+    // So, email is changed on Firebase
+    firebaseChange = await authProvider.updateFirebaseAccount(
+      user.firebase_uid,
+      firebaseUpdates,
+    );
+
+    if (!firebaseChange)
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+
+    // Then is changed on Hermyx database
+    const hermyxChange = await userModel.updateEmail(user.uid, email);
+
+    if (hermyxChange)
+      return {
+        email: hermyxChange.email,
+      };
+    else {
+      // If email was changed on Firebase but not in Hermyx, it should rollback
+      await authProvider.updateFirebaseAccount(user.firebase_uid, {
+        email: currentEmail,
+      });
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  } catch (error) {
+    console.error(error);
+    // If email was changed on Firebase but not in Hermyx, it should rollback
+    if (firebaseChange)
+      await authProvider.updateFirebaseAccount(user.firebase_uid, {
+        email: currentEmail,
+      });
+  }
+};
+
 /// Data checks
 const checkUid = (uid) => {
   if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
@@ -358,6 +437,19 @@ const checkCurrentUser = (currentUser) => {
 
 const checkType = (type) => {
   if (!type) throw new Error(messages.GENERAL.FIELD_REQUIRED('Type'));
+};
+
+/// Error builders
+const buildEmailAlreadyExistsError = (email) => {
+  return new AppError(
+    messages.AUTH.SIGNUP.EMAIL_ALREADY_EXISTS(email),
+    400,
+    'email',
+  );
+};
+
+const buildUnexpectedError = (message) => {
+  return new AppError(message, 500, 'general');
 };
 
 /// Helper functions

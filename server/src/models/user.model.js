@@ -129,10 +129,18 @@ export const update = async (
   }
 };
 
+// Updates user' avatar
 export const updateAvatar = async (uid, avatar) => {
   const query = `UPDATE app_user SET avatar = $1 WHERE uid = $2`;
   const result = await pool.query(query, [avatar, uid]);
   return result.rowCount;
+};
+
+// Updates user's email
+export const updateEmail = async (uid, email) => {
+  const query = 'UPDATE app_user SET email = $1 WHERE uid = $2 RETURNING *';
+  const result = await pool.query(query, [email, uid]);
+  return result.rows[0];
 };
 
 //////// -------------
@@ -147,12 +155,6 @@ export const updateStripeCustomer = async (uid, stripeCustomerId) => {
 export const updateStripeConnected = async (uid, stripeConnectedId) => {
   const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
   await pool.query(query, [stripeConnectedId, uid]);
-};
-
-export const updateUserEmail = async (uid, email) => {
-  const query = 'UPDATE app_user SET email = $1 WHERE uid = $2 RETURNING *';
-  const result = await pool.query(query, [email, uid]);
-  return result.rows[0];
 };
 
 export const deleteByUid = async (uid) => {

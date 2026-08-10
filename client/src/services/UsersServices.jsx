@@ -69,7 +69,7 @@ export const updateMyAvatar = async (profile) => {
 // Updates users email on DB and Firebase
 export const updateUserEmail = async (email) => {
   // API search
-  const { data } = await api.put('/users/me/email', { email });
+  const { data } = await api.patch('/users/me/email', { email });
   return data;
 };
 
@@ -94,7 +94,7 @@ export const addEmailAuthentication = async ({
   confirmPassword,
 }) => {
   // API search
-  const { data } = await api.put('/users/me/email', {
+  const { data } = await api.patch('/users/me/email', {
     email,
     password,
     confirmPassword,

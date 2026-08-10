@@ -261,7 +261,7 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 <br>
 <br>
 
-## - Update user: `PATCH /api/users/me/profile`
+## - Update user's public information: `PATCH /api/users/me/profile`
 
 Updates user's public information that is shown in profile.
 
@@ -307,7 +307,7 @@ Updates user's public information that is shown in profile.
 <br>
 <br>
 
-## - Update user: `PATCH /api/users/me/avatar`
+## - Update user's avatar: `PATCH /api/users/me/avatar`
 
 Updates user's avatar.
 
@@ -343,6 +343,46 @@ _> Note: only one `avatar` file is treated._
   <br>
 
 **Workflow:** to process the image, Multer library is used, which allows to configure the number of files per endpoint, their size, and the expected format of each file. Regarding image storage, for development purposes, images are saved locally in the /public/uploads/avatars folder, while in production, Azure Blob is used (TODO:). It's worth noting that this is another backend which does not use any database transactions, as the industry standard prioritizes UX. This means that the image is first saved to storage, then to the database, and finally, the previous avatar image is deleted if it exists. Therefore, in the worst-case scenario, only a dirty image remains stored (TODO:).
+<br>
+<br>
+<br>
+
+## - Update user's email: `PATCH /api/users/me/email`
+
+Updates user's email.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `email` | string | Yes | New email. |
+_> Note: new `email` has to be unique._
+<br>
+
+**Responses:**
+
+- `200 OK`: user's avatar has been correctly updated.
+
+  ```json
+  {
+    "email": "<user_new_email>"
+  }
+  ```
+
+- `400 Bad Request`: fields validation error, missing fields or logic error: e-mail already in use.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** to change the email address, the change is first made in Firebase, and if successful, it is then propagated to the Hermyx database. Therefore, a compensating transaction is necessary, if the process fails when the change has been made in Firebase but not in Hermyx, the email address must be changed back to the original in Firebase. It's also worth noting that this endpoint previously included the logic for adding email authentication, as it was very similar, but ultimately, the decision was made to adopt a one-to-one endpoint-per-functionality approach.
 <br>
 <br>
 <br>

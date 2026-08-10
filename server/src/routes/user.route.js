@@ -15,7 +15,7 @@ import {
   getUserMissionsQuerySchema,
   getUserPublicProfileMissionsQuerySchema,
   deleteUserByUid,
-  updateUserEmailSchema,
+  updateMyEmailSchema,
   userConfigurationBackendValidation,
   banUserParamsSchema,
   banUserBodySchema,
@@ -81,6 +81,13 @@ router.patch(
   userController.updateMyAvatar,
 );
 
+// Updates email
+router.patch(
+  '/me/email',
+  validateBodySchema(updateMyEmailSchema),
+  userController.updateMyEmail,
+);
+
 // ----------
 
 /// POST
@@ -88,7 +95,6 @@ router.patch(
 // Bans user
 router.post(
   '/:uid/ban',
-  verifyToken,
   verifyAdmin,
   validateParamsSchema(banUserParamsSchema),
   validateBodySchema(banUserBodySchema),
@@ -96,12 +102,6 @@ router.post(
 );
 
 /// PUT
-router.put(
-  '/me/email',
-  verifyToken,
-  validateBodySchema(updateUserEmailSchema),
-  userController.updateUserEmail,
-);
 
 router.put(
   '/me/configuration',
