@@ -24,6 +24,96 @@ export const findAll = async ({ title = undefined, pagination }) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
+// Get all missions opened
+export const findAllOpened = async ({
+  title = undefined,
+  pagination,
+  excludeOwnerId = undefined,
+  minPayment = undefined,
+  maxPayment = undefined,
+  maxDistanceKm = undefined,
+  originUserId = undefined,
+}) => {
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
+  const values = [MISSION_STATUS.OPENED.ID, MISSION_STATUS.REOPENED.ID];
+  const shouldFilterByDistance =
+    maxDistanceKm !== undefined && originUserId !== undefined;
+  let requesterJoin = '';
+  let distanceSelect = '';
+
+  if (shouldFilterByDistance) {
+    values.push(originUserId);
+    requesterJoin = ` JOIN app_user AS requester ON requester.uid = $${values.length}`;
+    distanceSelect = `,
+    ROUND((ST_Distance(m.location, requester.location) / 1000)::numeric, 1) AS distance_km`;
+  }
+
+  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
+    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username${distanceSelect}, COUNT(*) OVER() AS total_count
+    FROM mission AS m
+    JOIN app_user AS a ON (m.owner_id = a.uid)
+    ${requesterJoin}
+    WHERE (m.status = $1 OR m.status = $2)`;
+
+  if (title) {
+    values.push(title);
+    query += ` AND unaccent(title) ILIKE unaccent('%' || $${values.length} || '%')`;
+    if (excludeOwnerId) {
+      values.push(excludeOwnerId);
+      query += ` AND m.owner_id != $${values.length}`;
+    }
+  }
+
+  if (minPayment !== undefined || maxPayment !== undefined) {
+    const vacancyPaymentConditions = [
+      'mp_payment.mid = m.mid',
+      'mp_payment.adventurer_id IS NULL',
+    ];
+
+    if (minPayment !== undefined) {
+      values.push(minPayment);
+      vacancyPaymentConditions.push(
+        `mp_payment.monetary_reward >= $${values.length}`,
+      );
+    }
+
+    if (maxPayment !== undefined) {
+      values.push(maxPayment);
+      vacancyPaymentConditions.push(
+        `mp_payment.monetary_reward <= $${values.length}`,
+      );
+    }
+
+    query += `
+      AND EXISTS (
+        SELECT 1
+        FROM mission_participation AS mp_payment
+        WHERE ${vacancyPaymentConditions.join(' AND ')}
+      )
+    `;
+  }
+
+  if (shouldFilterByDistance) {
+    values.push(maxDistanceKm);
+    query += `
+      AND m.location IS NOT NULL
+      AND requester.location IS NOT NULL
+      AND ST_DWithin(
+        m.location,
+        requester.location,
+        $${values.length}::double precision * 1000
+      )
+    `;
+  }
+
+  if (shouldFilterByDistance) {
+    query += ` ORDER BY ST_Distance(m.location, requester.location) ASC`;
+  } else {
+    query += ` ORDER BY m.publication_date DESC`;
+  }
+  return await executePaginatedQuery(query, values, pagination);
+};
+
 // Get missions published by user
 export const findPublishedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
@@ -400,123 +490,6 @@ export const updateMissionPayment = async (mid, payment) => {
     'UPDATE mission SET total_payment = $2 WHERE mid = $1 RETURNING *';
   const result = await pool.query(query, [mid, payment]);
   return result.rows[0];
-};
-
-// TODO Cuando haya más﹕ filtros de búsqueda hay que ver cuándo hacer para poder implementarlos dinámicamente aquí?
-export const getMissionsOpened = async ({
-  title = undefined,
-  pagination,
-  excludeOwnerId = undefined,
-  minPayment = undefined,
-  maxPayment = undefined,
-  maxDistanceKm = undefined,
-  originUserId = undefined,
-}) => {
-  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  const values = [MISSION_STATUS.OPENED.ID, MISSION_STATUS.REOPENED.ID];
-
-  const shouldFilterByDistance =
-    maxDistanceKm !== undefined && originUserId !== undefined;
-
-  let requesterJoin = '';
-  let distanceSelect = '';
-
-  if (shouldFilterByDistance) {
-    values.push(originUserId);
-
-    requesterJoin = ` JOIN app_user AS requester ON requester.uid = $${values.length}`;
-
-    distanceSelect = `,
-    ROUND((ST_Distance(m.location, requester.location) / 1000)::numeric, 1) AS distance_km`;
-  }
-
-  let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
-    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username${distanceSelect}, COUNT(*) OVER() AS total_count
-    FROM mission AS m
-    JOIN app_user AS a ON (m.owner_id = a.uid)
-    ${requesterJoin}
-    WHERE (m.status = $1 OR m.status = $2)`;
-
-  if (title) {
-    values.push(title);
-    query += ` AND unaccent(title) ILIKE unaccent('%' || $${values.length} || '%')`;
-    if (excludeOwnerId) {
-      values.push(excludeOwnerId);
-      query += ` AND m.owner_id != $${values.length}`;
-    }
-  }
-  if (minPayment !== undefined || maxPayment !== undefined) {
-    const vacancyPaymentConditions = [
-      'mp_payment.mid = m.mid',
-      'mp_payment.adventurer_id IS NULL',
-    ];
-
-    if (minPayment !== undefined) {
-      values.push(minPayment);
-      vacancyPaymentConditions.push(
-        `mp_payment.monetary_reward >= $${values.length}`,
-      );
-    }
-
-    if (maxPayment !== undefined) {
-      values.push(maxPayment);
-      vacancyPaymentConditions.push(
-        `mp_payment.monetary_reward <= $${values.length}`,
-      );
-    }
-
-    query += `
-      AND EXISTS (
-        SELECT 1
-        FROM mission_participation AS mp_payment
-        WHERE ${vacancyPaymentConditions.join(' AND ')}
-      )
-    `;
-  }
-
-  if (shouldFilterByDistance) {
-    values.push(maxDistanceKm);
-    query += `
-      AND m.location IS NOT NULL
-      AND requester.location IS NOT NULL
-      AND ST_DWithin(
-        m.location,
-        requester.location,
-        $${values.length}::double precision * 1000
-      )
-    `;
-  }
-
-  if (shouldFilterByDistance) {
-    query += ` ORDER BY ST_Distance(m.location, requester.location) ASC`;
-  } else {
-    query += ` ORDER BY m.publication_date DESC`;
-  }
-
-  if (pagination) {
-    values.push(pagination.limit);
-    query += ` LIMIT $${values.length}`;
-
-    values.push(pagination.offset);
-    query += ` OFFSET $${values.length}`;
-  }
-
-  const result = await pool.query(query, values);
-  if (result.rows.length === 0) {
-    return { rows: [], totalCount: 0 };
-  }
-
-  // Postgres returns total_count in each row so we take the first one and clear it
-  const totalCount = parseInt(result.rows[0].total_count);
-
-  // Total_count column is cleared so the mission objective is not cluttered
-  const rows = result.rows.map((row) => {
-    // eslint-disable-next-line no-unused-vars
-    const { total_count, ...missionData } = row;
-    return missionData;
-  });
-
-  return { rows, totalCount };
 };
 
 export const getAllMissionsInDraft = async () => {

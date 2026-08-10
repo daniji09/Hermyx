@@ -31,6 +31,7 @@ import {
   kickAdventurerOutBodySchema,
   publishMissionFilesSchema,
   editMissionFilesSchema,
+  getOpenedMissionsQuerySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
@@ -53,16 +54,17 @@ router.get(
   missionController.getMissions,
 );
 
-//List all draft missions
-router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// List all opened missions
+// Get all opened missions
 router.get(
   '/opened',
-  validateQuerySchema(getMissionsQuerySchema),
-  await pagination(),
+  validateQuerySchema(getOpenedMissionsQuerySchema),
+  pagination(),
   missionController.getMissionsOpened,
 );
+
+//------------
+//List all draft missions
+router.get('/in-draft', missionController.getAllMissionsInDraft);
 
 //Get mission by id
 router.get(

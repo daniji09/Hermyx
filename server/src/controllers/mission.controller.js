@@ -24,7 +24,6 @@ import {
   updateMissionStatus,
   finishMissionAndCloseConversation,
   getByUidAndTitle,
-  getMissionsOpened as _getMissionsOpened,
   updateMission,
   adventurerUnjoined,
   emptyMission,
@@ -95,6 +94,28 @@ export const getMissions = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get all opened missions
+export const getMissionsOpened = async (req, res, next) => {
+  try {
+    const { title, minPayment, maxPayment, maxDistanceKm } = req.query;
+    const pagination = req.pagination;
+    const excludeOwnerId = title ? req.user?.uid : undefined;
+    const user = req.user;
+    const { missions, paginationData } = await missionService.getOpenedMissions(
+      title,
+      minPayment,
+      maxPayment,
+      maxDistanceKm,
+      pagination,
+      excludeOwnerId,
+      user,
+    );
+    return res.status(200).json({ missions, pagination: paginationData });
+  } catch (error) {
+    next(error);
+  }
+};
 // -------
 export const getMissionById = async (req, res) => {
   try {
@@ -146,49 +167,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   try {
     const missions = await _getAllMissionsInDraft();
     res.status(200).json({ data: missions });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-export const getMissionsOpened = async (req, res) => {
-  const { title, minPayment, maxPayment, maxDistanceKm } = req.query;
-  const pagination = req.pagination;
-  const excludeOwnerId = title ? req.user?.uid : undefined;
-
-  try {
-    // Gets all missions filtering what is needed
-    const { rows: missions, totalCount } = await _getMissionsOpened({
-      title,
-      minPayment,
-      maxPayment,
-      maxDistanceKm,
-      originUserId: maxDistanceKm !== undefined ? req.user.uid : undefined,
-      pagination,
-      excludeOwnerId,
-    });
-
-    const totalItems = parseInt(totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      // Pagination object is built
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });

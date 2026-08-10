@@ -45,6 +45,7 @@ export const getMissionsQuerySchema = z.object({
   title: titleBaseSchema.optional(),
 });
 
+// Get all opened missions
 export const getOpenedMissionsQuerySchema = z
   .object({
     page: pageBaseSchema,

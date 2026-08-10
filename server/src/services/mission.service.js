@@ -74,6 +74,53 @@ export const getMissions = async (title, pagination) => {
     );
 };
 
+// Get all opened missions
+export const getOpenedMissions = async (
+  title,
+  minPayment,
+  maxPayment,
+  maxDistanceKm,
+  pagination,
+  excludeOwnerId,
+  user,
+) => {
+  // Gets all missions filtering what is needed
+  const { rows: missions, totalCount } = await missionModel.findAllOpened({
+    title,
+    minPayment,
+    maxPayment,
+    maxDistanceKm,
+    originUserId: maxDistanceKm !== undefined ? user.uid : undefined,
+    pagination,
+    excludeOwnerId,
+  });
+
+  const totalItems = parseInt(totalCount);
+
+  if (missions && pagination) {
+    const totalPages = Math.ceil(totalItems / pagination.limit);
+    const hasMore = pagination.page < totalPages;
+
+    // Pagination object is built
+    return {
+      missions,
+      paginationData: {
+        currentPage: pagination.page,
+        totalPages: totalPages,
+        totalItems: totalItems,
+        hasMore: hasMore,
+      },
+    };
+  } else if (missions && !pagination) {
+    return { missions };
+  } else
+    throw new AppError(
+      messages.MISSION.GENERAL.MISSIONS_NOT_FOUND,
+      404,
+      'general',
+    );
+};
+
 /// Data checks
 const checkTitle = (title) => {
   if (!title) throw new Error(messages.GENERAL.FIELD_REQUIRED('Title'));
