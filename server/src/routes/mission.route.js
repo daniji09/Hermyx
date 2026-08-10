@@ -62,16 +62,16 @@ router.get(
   missionController.getMissionsOpened,
 );
 
+// Get mission by mid
+router.get(
+  '/:mid',
+  validateParamsSchema(getMissionSchema),
+  missionController.getMissionByMid,
+);
+
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-//Get mission by id
-router.get(
-  '/:id',
-  validateParamsSchema(getMissionSchema),
-  missionController.getMissionById,
-);
 
 /// POST
 

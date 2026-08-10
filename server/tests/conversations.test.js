@@ -5,7 +5,7 @@ import pool from '../src/config/db.config.js';
 import {
   createMission as createMissionRecord,
   finishMissionAndCloseConversation,
-  getMissionById,
+  findByMid,
 } from '../src/models/mission.model.js';
 import {
   joinVacancy,
@@ -230,8 +230,8 @@ describe('Mission conversation lifecycle', () => {
     const { mission, conversation } = await createMissionWithConversation(
       owner.uid,
     );
-    const ownerMissionView = await getMissionById(mission.mid, owner.uid);
-    const outsiderMissionView = await getMissionById(mission.mid, outsider.uid);
+    const ownerMissionView = await findByMid(mission.mid, owner.uid);
+    const outsiderMissionView = await findByMid(mission.mid, outsider.uid);
 
     const participantsResult = await pool.query(
       `
@@ -259,7 +259,7 @@ describe('Mission conversation lifecycle', () => {
 
     await joinVacancy(mission.mid, vacancy.id, adventurer.uid);
 
-    const joinedMissionView = await getMissionById(mission.mid, adventurer.uid);
+    const joinedMissionView = await findByMid(mission.mid, adventurer.uid);
 
     const joinedParticipant = await pool.query(
       `
@@ -275,10 +275,7 @@ describe('Mission conversation lifecycle', () => {
 
     await unjoinVacancy(mission.mid, vacancy.id, adventurer.uid);
 
-    const unjoinedMissionView = await getMissionById(
-      mission.mid,
-      adventurer.uid,
-    );
+    const unjoinedMissionView = await findByMid(mission.mid, adventurer.uid);
 
     const accessResponse = await request(app)
       .get(`/api/conversations/${conversation.cid}/messages`)
@@ -312,10 +309,7 @@ describe('Mission conversation lifecycle', () => {
 
     await releaseParticipation(mission.mid, adventurer.uid);
 
-    const releasedMissionView = await getMissionById(
-      mission.mid,
-      adventurer.uid,
-    );
+    const releasedMissionView = await findByMid(mission.mid, adventurer.uid);
 
     const historyResponse = await request(app)
       .get(`/api/conversations/${conversation.cid}/messages`)

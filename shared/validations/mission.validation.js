@@ -22,6 +22,14 @@ const decimalQueryNumberSchema = (fieldName) =>
       .optional(),
   );
 
+// Mid
+const midBaseSchema = z.coerce
+  .number({
+    invalid_type_error: 'Mission id must be a number.',
+  })
+  .int('Mission id must be an integer.')
+  .min(0, 'Mission id be positive.');
+
 // Title
 const titleBaseSchema = z
   .string()
@@ -65,6 +73,11 @@ export const getOpenedMissionsQuerySchema = z
       path: ['minPayment'],
     },
   );
+
+// Get mission by mid
+export const getMissionSchema = z.object({
+  mid: midBaseSchema,
+});
 
 // ------
 
@@ -408,16 +421,6 @@ export const draftMissionSchema = z.object({
   description: z.string().trim().optional(),
   vacancies: optionalNumberFromFormSchema(z.coerce.number().int()),
   isDraft: z.boolean().optional(),
-});
-
-// Server get mission validation
-export const getMissionSchema = z.object({
-  id: z.coerce
-    .number({
-      invalid_type_error: 'Mission id must be a number.',
-    })
-    .int('Mission id must be an integer.')
-    .min(0, 'Mission id be positive.'),
 });
 
 export const searchMissionByTitleSchema = z.object({

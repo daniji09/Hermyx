@@ -18,9 +18,8 @@ import {
 import {
   createMission as _createMission,
   getAllMissionsInDraft as _getAllMissionsInDraft,
-  getMissionById as _getMissionById,
+  findByMid as _getMissionById,
   getById,
-  getParticipantsForDisplay,
   updateMissionStatus,
   finishMissionAndCloseConversation,
   getByUidAndTitle,
@@ -45,7 +44,6 @@ import {
   markVacancyAsPaidOut,
   updateStatus,
   getJoinedVacancies,
-  getWaitingForPaymentVacancies,
   cleanMissionParticipation,
   unjoinParticipant,
   updatePaymentStatus,
@@ -74,11 +72,11 @@ import {
 } from '../providers/storage.provider.js';
 import {
   deletePhoto,
-  getMissionPhotos,
+  findAllByMid,
   insertPhoto,
 } from '../models/mission-photo.model.js';
 import * as missionService from '../services/mission.service.js';
-
+import * as missionParticipationModel from '../models/mission-participation.model.js';
 /// Controller functions
 // Get all missions
 export const getMissions = async (req, res, next) => {
@@ -116,52 +114,20 @@ export const getMissionsOpened = async (req, res, next) => {
     next(error);
   }
 };
-// -------
-export const getMissionById = async (req, res) => {
+
+// Get mission by mid
+export const getMissionByMid = async (req, res, next) => {
   try {
-    // Gets the id
-    const { id } = req.params;
+    const { mid } = req.params;
     const uid = req.user.uid;
-
-    // Searches mission by id
-    const [mission, participants, waitingForPaymentVacancies, photos] =
-      await Promise.all([
-        _getMissionById(id, uid),
-        getParticipantsForDisplay(id),
-        getWaitingForPaymentVacancies(),
-        getMissionPhotos(id),
-      ]);
-    console.log(participants);
-    // Returns success or error
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
-    }
-
-    // Mission can be finished if all vacancies are empty or finished
-    const canFinish =
-      participants.every(
-        (participant) =>
-          participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||
-          participant.status === MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-      ) &&
-      MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_STATUS.FINISHED.ID,
-      );
-
-    return res.status(200).json({
-      mission: {
-        ...mission,
-        participants,
-        waitingForPaymentVacancies,
-        canFinish,
-        photos,
-      },
-    });
-  } catch (e) {
-    console.error(e);
-    res.status(500).end();
+    const mission = await missionService.getMissionByMid(mid, uid);
+    return res.status(200).json(mission);
+  } catch (error) {
+    next(error);
   }
 };
+
+// -------
 
 export const getAllMissionsInDraft = async (req, res) => {
   try {
@@ -321,7 +287,7 @@ export const editMission = async (req, res) => {
     const updatedMission = await updateMission(mission);
     console.log(newPhotos, existingPhotos);
     // Photos management, first uploading and saving new photos
-    const currentPhotosInDb = await getMissionPhotos(mission.mid);
+    const currentPhotosInDb = await findAllByMid(mission.mid);
     const isProduction = process.env.NODE_ENV === 'production';
     let uploadedPhotoUrls = [];
     if (newPhotos.length > 0) {
@@ -1306,7 +1272,7 @@ export const finishMission = async (req, res) => {
       });
 
     // Checks if every vacancy is in empty or finished state
-    const participants = await getParticipantsForDisplay(mid);
+    const participants = await missionParticipationModel.findAllByMid(mid);
     const canFinish = participants.every(
       (participant) =>
         participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||

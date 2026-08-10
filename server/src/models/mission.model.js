@@ -7,6 +7,47 @@ import {
 import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// FINDS
+// Get mission by mid
+export const findByMid = async (id, uid) => {
+  const query = `SELECT *, 
+    ST_Y(m.location::geometry) as latitude, 
+    ST_X(m.location::geometry) as longitude, 
+    EXISTS (
+      SELECT 1 
+      FROM mission_participation ma 
+      WHERE ma.mid = m.mid AND ma.adventurer_id = $2
+    ) AS is_joined,
+    COALESCE((
+      SELECT ma.status
+      FROM mission_participation ma
+      WHERE ma.mid = m.mid AND ma.adventurer_id = $2
+      LIMIT 1
+    ), NULL) AS participation_status,
+    (
+      SELECT c.cid
+      FROM conversation c
+      JOIN conversation_participant cp
+        ON cp.conversation_id = c.cid
+      WHERE c.mission_id = m.mid
+        AND c.type = 'mission'
+        AND cp.user_id = $2
+        AND cp.left_at IS NULL
+      LIMIT 1
+    ) AS conversation_id,
+    EXISTS (
+      SELECT 1
+      FROM notification n
+      WHERE payload->>'associated_mission_id' = m.mid::text
+        AND n.sender_id = $2
+        AND n.recipient_id = m.owner_id
+        AND n.type = 'invitation'
+        AND n.status = 'pending'
+    ) AS has_pending_join_request
+    FROM mission m WHERE mid = $1`;
+  const result = await pool.query(query, [id, uid]);
+  return result.rows[0];
+};
+
 // Gets all missions
 export const findAll = async ({ title = undefined, pagination }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
@@ -249,36 +290,6 @@ export const getParticipantsForRelease = async (mid) => {
   return result.rows;
 };
 
-export const getParticipantsForDisplay = async (mid) => {
-  const query = `
-    SELECT 
-      mp.id AS vacancy_id,
-      mp.title AS vacancy_title,
-      mp.description AS vacancy_description,
-      mp.monetary_reward AS reward,
-      mp.status,
-      owner_review.id AS owner_review_id,
-      owner_review.rating AS owner_review_rating,
-      owner_review.comment AS owner_review_comment,
-      owner_review.created_at AS owner_review_created_at,
-      adventurer_review.id AS adventurer_review_id,
-      adventurer_review.rating AS adventurer_review_rating,
-      adventurer_review.comment AS adventurer_review_comment,
-      adventurer_review.created_at AS adventurer_review_created_at,
-      u.uid AS adventurer_id,
-      u.username,
-      u.avatar
-    FROM mission_participation mp
-    LEFT JOIN app_user u ON mp.adventurer_id = u.uid
-    LEFT JOIN review owner_review ON owner_review.id = mp.owner_review_id
-    LEFT JOIN review adventurer_review ON adventurer_review.id = mp.adventurer_review_id
-    WHERE mp.mid = $1
-    ORDER BY mp.id ASC
-  `;
-  const result = await pool.query(query, [mid]);
-  return result.rows;
-};
-
 //Tries to set status to "releasing" only if current status is 'accepted', this prevents double payments. Returns the row if successful.
 export const lockForRelease = async (mid, ownerId) => {
   const query = `
@@ -496,46 +507,6 @@ export const getAllMissionsInDraft = async () => {
   const query = "SELECT * FROM mission WHERE status = 'draft'";
   const result = await pool.query(query, []);
   return result.rows;
-};
-
-export const getMissionById = async (id, uid) => {
-  const query = `SELECT *, 
-    ST_Y(m.location::geometry) as latitude, 
-    ST_X(m.location::geometry) as longitude, 
-    EXISTS (
-      SELECT 1 
-      FROM mission_participation ma 
-      WHERE ma.mid = m.mid AND ma.adventurer_id = $2
-    ) AS is_joined,
-    COALESCE((
-      SELECT ma.status
-      FROM mission_participation ma
-      WHERE ma.mid = m.mid AND ma.adventurer_id = $2
-      LIMIT 1
-    ), NULL) AS participation_status,
-    (
-      SELECT c.cid
-      FROM conversation c
-      JOIN conversation_participant cp
-        ON cp.conversation_id = c.cid
-      WHERE c.mission_id = m.mid
-        AND c.type = 'mission'
-        AND cp.user_id = $2
-        AND cp.left_at IS NULL
-      LIMIT 1
-    ) AS conversation_id,
-    EXISTS (
-      SELECT 1
-      FROM notification n
-      WHERE payload->>'associated_mission_id' = m.mid::text
-        AND n.sender_id = $2
-        AND n.recipient_id = m.owner_id
-        AND n.type = 'invitation'
-        AND n.status = 'pending'
-    ) AS has_pending_join_request
-    FROM mission m WHERE mid = $1`;
-  const result = await pool.query(query, [id, uid]);
-  return result.rows[0];
 };
 
 export const updateMissionStatus = async (id, updateData) => {

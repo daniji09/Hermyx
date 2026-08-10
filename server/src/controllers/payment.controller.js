@@ -40,7 +40,7 @@ import {
   getMissionPayment,
   getOccupiedVacancies,
   getVacancyById,
-  getWaitingForPaymentVacancies,
+  findAllWaitingForPaymentByMid,
   payVacancy,
   startParticipants,
   updateTransferInfo,
@@ -326,7 +326,7 @@ export async function payNew(req, res) {
     );
 
     // Finds waiting for payment vacancies
-    const waitingForPaymentVacancies = await getWaitingForPaymentVacancies();
+    const waitingForPaymentVacancies = await findAllWaitingForPaymentByMid();
     for (const vacancy of waitingForPaymentVacancies) {
       let transaction_type;
       // Each type of payment has different information or actions

@@ -24,7 +24,7 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
   ```json
   {
-    "users": ["<missions>"],
+    "missions": ["<missions>"],
     "pagination": {
       "currentPage": "<currentPage>",
       "totalPages": "<totalPages>",
@@ -73,7 +73,7 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
   ```json
   {
-    "users": ["<missions>"],
+    "missions": ["<missions>"],
     "pagination": {
       "currentPage": "<currentPage>",
       "totalPages": "<totalPages>",
@@ -94,6 +94,142 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   <br>
 
 **Workflow:** application opened missions are searched by their title, with pagination used by default, although it is optional. The database search is performed using the PostgreSQL `unaccent` extension, which removes accents and diacritics from a text string, transforming them into their base equivalent, so that text strings are compared in a way that is insensitive to accents. Includes filters for minimum payment, maximum payment and maximum distance.
+<br>
+<br>
+<br>
+
+## - Get mission by mid: `GET /api/missions/:mid`
+
+Gets the mission specified by its identifier, mid.
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission obtain successfully.
+
+  ```json
+  {
+    "mission": {
+      "mid": 1,
+      "publication_date": "2026-08-09T14:29:55.942Z",
+      "title": "Dog walker",
+      "description": "Need a dog walker in Detroit.",
+      "total_vacancies": 2,
+      "occupied_vacancies": 2,
+      "location": "0101000020E6100000D06338A955770DC0B64D88CD77354440",
+      "total_payment": "26.400000000000002",
+      "status": "IN_PROGRESS",
+      "completion_date": null,
+      "owner_id": 3,
+      "latitude": 40.41771859317252,
+      "longitude": -3.683268854173072,
+      "is_joined": false,
+      "participation_status": null,
+      "conversation_id": null,
+      "has_pending_join_request": false,
+      "participants": [
+        {
+          "vacancy_id": 6,
+          "vacancy_title": null,
+          "vacancy_description": null,
+          "reward": "24",
+          "status": "IN_PROGRESS",
+          "owner_review_id": null,
+          "owner_review_rating": null,
+          "owner_review_comment": null,
+          "owner_review_created_at": null,
+          "adventurer_review_id": null,
+          "adventurer_review_rating": null,
+          "adventurer_review_comment": null,
+          "adventurer_review_created_at": null,
+          "adventurer_id": 6,
+          "username": "johnDoe12",
+          "avatar": "/uploads/avatars/72986942-5c14-4f25-8f20-0745330515d2-avatar.jpg"
+        },
+        {
+          "vacancy_id": 7,
+          "vacancy_title": null,
+          "vacancy_description": null,
+          "reward": "24",
+          "status": "PENDING_PAYMENT",
+          "owner_review_id": null,
+          "owner_review_rating": null,
+          "owner_review_comment": null,
+          "owner_review_created_at": null,
+          "adventurer_review_id": null,
+          "adventurer_review_rating": null,
+          "adventurer_review_comment": null,
+          "adventurer_review_created_at": null,
+          "adventurer_id": 25,
+          "username": "mariaDoe24",
+          "avatar": null
+        }
+      ],
+      "waitingForPaymentVacancies": [
+        {
+          "id": 7,
+          "mid": 1,
+          "adventurer_id": 25,
+          "title": null,
+          "description": null,
+          "monetary_reward": "24",
+          "amount_paid": "0",
+          "payment_status": "UNPAID",
+          "status": "PENDING_PAYMENT",
+          "owner_review_id": null,
+          "adventurer_review_id": null
+        }
+      ],
+      "canFinish": false,
+      "photos": [
+        {
+          "id": 1,
+          "mid": 1,
+          "url": "/uploads/mission-photos/423ac646-ee83-4911-b461-4bac5022c9b7-dan-meyers-IQVFVH0ajag-unsplash.jpg"
+        },
+        {
+          "id": 2,
+          "mid": 1,
+          "url": "/uploads/mission-photos/6d98d2a6-3301-45ca-be3e-2158b9ef4248-bermix-studio-Sx4bCfXLaTg-unsplash.jpg"
+        },
+        {
+          "id": 3,
+          "mid": 1,
+          "url": "/uploads/mission-photos/df09fea8-29b4-46df-b6c4-04353cbc0da5-pierre-hieronimus-avedis-manalu-FD6zt41sWSg-unsplash.jpg"
+        }
+      ]
+    }
+  }
+  ```
+
+- `400 Bad Request`: path parameters fields validation error, path parameters query fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission not found, mission with that mid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Mission not found."]
+    }
+  }
+  ```
+    <br>
+
+**Workflow:** application mission is searched by its identifier, it retrieves all mission information, including its participants, its participants waiting for payment and its photos.
 <br>
 <br>
 <br>

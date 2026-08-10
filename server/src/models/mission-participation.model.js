@@ -9,6 +9,52 @@ import {
   makeMissionConversationParticipantReadOnly,
 } from './conversation-participant.model.js';
 
+/// FINDS
+// Get all participants from mission
+export const findAllByMid = async (mid) => {
+  const query = `
+    SELECT 
+      mp.id AS vacancy_id,
+      mp.title AS vacancy_title,
+      mp.description AS vacancy_description,
+      mp.monetary_reward AS reward,
+      mp.status,
+      owner_review.id AS owner_review_id,
+      owner_review.rating AS owner_review_rating,
+      owner_review.comment AS owner_review_comment,
+      owner_review.created_at AS owner_review_created_at,
+      adventurer_review.id AS adventurer_review_id,
+      adventurer_review.rating AS adventurer_review_rating,
+      adventurer_review.comment AS adventurer_review_comment,
+      adventurer_review.created_at AS adventurer_review_created_at,
+      u.uid AS adventurer_id,
+      u.username,
+      u.avatar
+    FROM mission_participation mp
+    LEFT JOIN app_user u ON mp.adventurer_id = u.uid
+    LEFT JOIN review owner_review ON owner_review.id = mp.owner_review_id
+    LEFT JOIN review adventurer_review ON adventurer_review.id = mp.adventurer_review_id
+    WHERE mp.mid = $1
+    ORDER BY mp.id ASC
+  `;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
+};
+
+// Gets waiting for payment participants
+export const findAllWaitingForPaymentByMid = async (mid) => {
+  const query =
+    'SELECT * FROM mission_participation WHERE status = $1 AND payment_status IN ($2, $3) AND mid = $4';
+  const result = await pool.query(query, [
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+    mid,
+  ]);
+  return result.rows;
+};
+
+//-----
 export const updateTransferInfo = async (mid, uid, transferId, amount) => {
   const query = `
     UPDATE mission_participation 
@@ -416,18 +462,6 @@ export const updatePaymentStatus = async (id, status) => {
     'UPDATE mission_participation SET payment_status = $1 WHERE id = $2';
   const result = await pool.query(query, [status, id]);
   return result.rowCount;
-};
-
-// Gets waiting for payment vacancies
-export const getWaitingForPaymentVacancies = async () => {
-  const query =
-    'SELECT * FROM mission_participation WHERE status = $1 AND payment_status IN ($2, $3)';
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
-  ]);
-  return result.rows;
 };
 
 // Unjoin every participant
