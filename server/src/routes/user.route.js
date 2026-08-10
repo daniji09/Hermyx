@@ -19,6 +19,7 @@ import {
   userConfigurationBackendValidation,
   banUserParamsSchema,
   banUserBodySchema,
+  addEmailAuthenticationSchema,
 } from '@hermyx/shared';
 import * as userController from '../controllers/user.controller.js';
 
@@ -88,9 +89,15 @@ router.patch(
   userController.updateMyEmail,
 );
 
-// ----------
-
 /// POST
+// Adds email authentication
+router.post(
+  '/me/credentials',
+  validateBodySchema(addEmailAuthenticationSchema),
+  userController.addEmailAuthentication,
+);
+
+// ----------
 
 // Bans user
 router.post(

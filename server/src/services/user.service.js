@@ -409,6 +409,72 @@ export const updateMyEmail = async (user, email) => {
       await authProvider.updateFirebaseAccount(user.firebase_uid, {
         email: currentEmail,
       });
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+};
+
+// Adds email authentication to current user
+export const addEmailAuthentication = async (user, email, password) => {
+  // First of all, email is checked to be unique
+  const userByEmail = await getUserByEmail(email);
+
+  // If it exists, then its a bad request error (unless is the same as current one)
+  if (userByEmail) throw buildEmailAlreadyExistsError(email);
+
+  // Lastly, it makes a deep check on Firebase searching for the e-mail
+  try {
+    const fbUser = await authProvider.getUserByEmail(email);
+    if (fbUser.uid !== user.firebase_uid) {
+      throw buildEmailAlreadyExistsError(email);
+    }
+  } catch (error) {
+    if (error.status) throw error;
+    // User not found is expected if the email is not in use, so any other error is returned
+    if (error.code !== 'auth/user-not-found') {
+      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+      if (errorBuilder) {
+        const mappedError = errorBuilder({ email });
+        throw new AppError(
+          mappedError.message,
+          mappedError.status,
+          mappedError.field,
+        );
+      }
+
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+  let firebaseChange;
+  try {
+    // Prepares user email authentication add
+    const firebaseUpdates = { email, password };
+    // So, email authentication is added in Firebase
+    firebaseChange = await authProvider.updateFirebaseAccount(
+      user.firebase_uid,
+      firebaseUpdates,
+    );
+
+    if (!firebaseChange)
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+
+    // Then is changed on Hermyx database
+    const hermyxChange = await userModel.updateEmail(user.uid, email);
+
+    if (hermyxChange)
+      return {
+        email: hermyxChange.email,
+      };
+    else {
+      // If email was changed on Firebase but not in Hermyx, it should rollback
+      await authProvider.unlinkFirebaseProvider(user.firebase_uid);
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  } catch (error) {
+    console.error(error);
+    // If email was changed on Firebase but not in Hermyx, it should rollback
+    if (firebaseChange)
+      await authProvider.unlinkFirebaseProvider(user.firebase_uid);
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
   }
 };
 

@@ -188,6 +188,22 @@ export const updateMyEmail = async (req, res, next) => {
   }
 };
 
+// Adds email authentication to current user
+export const addEmailAuthentication = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { email, password } = req.body;
+    const userChanged = await userService.addEmailAuthentication(
+      user,
+      email,
+      password,
+    );
+    return res.status(200).json(userChanged);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ------------
 export const getUser = async (req, res) => {
   try {

@@ -94,7 +94,7 @@ export const addEmailAuthentication = async ({
   confirmPassword,
 }) => {
   // API search
-  const { data } = await api.patch('/users/me/email', {
+  const { data } = await api.post('/users/me/credentials', {
     email,
     password,
     confirmPassword,

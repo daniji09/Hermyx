@@ -1,6 +1,6 @@
 import { messages } from '@hermyx/shared';
 import firebaseAdmin from '../config/firebase.config.js';
-import { FIREBASE_API_KEY } from '../config/config.js';
+import { FIREBASE_API_KEY, FIREBASE_PROJECT_ID } from '../config/config.js';
 
 // Creates a user in Firebase
 export const createFirebaseUser = async (user) => {
@@ -95,6 +95,39 @@ export const enableUser = async (firebaseUid) => {
 // Revokes tokens from user
 export const revokeTokens = async (firebaseUid) => {
   return await firebaseAdmin.auth().revokeRefreshTokens(firebaseUid);
+};
+
+// Unlinks a Firebase provider
+export const unlinkFirebaseProvider = async (uid, providerId = 'password') => {
+  const credential = firebaseAdmin.app().options.credential;
+  const accessTokenObj = await credential.getAccessToken();
+  const projectId =
+    firebaseAdmin.app().options.projectId || FIREBASE_PROJECT_ID;
+
+  const url = `https://identitytoolkit.googleapis.com/v1/projects/${projectId}/accounts:update`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessTokenObj.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      localId: uid,
+      deleteProvider: [providerId],
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const firebaseErrorMessage = data.error?.message || 'UNKNOWN_ERROR';
+    const error = new Error(messages.GENERAL.FIREBASE_AUTH_ERROR);
+    error.code = `auth/${firebaseErrorMessage.toLowerCase().replace(/_/g, '-')}`;
+    throw error;
+  }
+
+  return true;
 };
 
 // Deletes a user in Firebase

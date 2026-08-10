@@ -362,7 +362,7 @@ _> Note: new `email` has to be unique._
 
 **Responses:**
 
-- `200 OK`: user's avatar has been correctly updated.
+- `200 OK`: user's email has been correctly updated.
 
   ```json
   {
@@ -383,6 +383,48 @@ _> Note: new `email` has to be unique._
   <br>
 
 **Workflow:** to change the email address, the change is first made in Firebase, and if successful, it is then propagated to the Hermyx database. Therefore, a compensating transaction is necessary, if the process fails when the change has been made in Firebase but not in Hermyx, the email address must be changed back to the original in Firebase. It's also worth noting that this endpoint previously included the logic for adding email authentication, as it was very similar, but ultimately, the decision was made to adopt a one-to-one endpoint-per-functionality approach.
+<br>
+<br>
+<br>
+
+## - Add email authentication: `POST /api/users/me/credentials`
+
+Adds an email authentication to a user who has authenticated with Google.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `email` | string | Yes | New email. |
+| `password` | string | Yes | New password. |
+| `confirmPassword` | string | Yes | Password confirmation. |
+_> Note: new `email` has to be unique and `password` and `confirmPassword` must match._
+<br>
+
+**Responses:**
+
+- `200 OK`: user has added an email authentication successfully.
+
+  ```json
+  {
+    "email": "<user_new_email>"
+  }
+  ```
+
+- `400 Bad Request`: fields validation error, missing fields or logic error: e-mail already in use.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** to add an email authentication, the change is first made in Firebase, and if successful, it is then propagated to the Hermyx database. Therefore, a compensating transaction is necessary, if the process fails when the change has been made in Firebase but not in Hermyx, the new authentication must be deleted in Firebase. It's also worth noting that this endpoint previously was included in the previous endpoint, but the compensatory transaction needed to be different.
 <br>
 <br>
 <br>
