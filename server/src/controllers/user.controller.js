@@ -23,10 +23,9 @@ import {
   anonymize as _anonymize,
   deanonymize,
   updateConfiguration,
-  getById,
+  findByUid,
   ban,
   unban,
-  updateAvatar,
 } from '../models/user.model.js';
 import {
   getUserActiveMissions,
@@ -62,12 +61,6 @@ import {
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission-payment.model.js';
-import {
-  deleteFromAzureBlob,
-  deleteFromLocalStorage,
-  saveToLocalStorage,
-  uploadToAzureBlob,
-} from '../providers/storage.provider.js';
 import * as userService from '../services/user.service.js';
 
 /// Controller functions
@@ -176,6 +169,18 @@ export const updateMyProfile = async (req, res, next) => {
   }
 };
 
+// Updates current user's avatar
+
+export const updateMyAvatar = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const avatar = await userService.updateMyAvatar(user.uid, req.file);
+    return res.status(200).json({ avatar });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ------------
 export const getUser = async (req, res) => {
   try {
@@ -205,54 +210,6 @@ export const getUser = async (req, res) => {
 
       return res.status(200).json({ user });
     }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const updateMyAvatar = async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user)
-      return res
-        .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
-
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ errors: { general: [messages.NO_IMAGE_PROVIDED] } });
-    }
-
-    // Gets user
-    const currentUser = await getById(user.uid);
-
-    // Deletes old photo physically
-    if (currentUser.avatar) {
-      const isProduction = process.env.NODE_ENV === 'production';
-      if (isProduction) {
-        await deleteFromAzureBlob(currentUser.avatar, 'avatars');
-      } else {
-        await deleteFromLocalStorage(currentUser.avatar);
-      }
-    }
-
-    // Uploads new photo
-    const isProduction = process.env.NODE_ENV === 'production';
-    let updatedPhotUrl;
-    if (isProduction) {
-      updatedPhotUrl = await uploadToAzureBlob(req.file, 'avatars');
-    } else {
-      updatedPhotUrl = await saveToLocalStorage(req.file, 'uploads/avatars');
-    }
-
-    // Updates photo from db
-    await updateAvatar(user.uid, updatedPhotUrl);
-
-    return res.status(200).json({ avatar: updatedPhotUrl });
   } catch (e) {
     console.error(e);
     return res
@@ -434,7 +391,7 @@ export const banUser = async (req, res) => {
 
   try {
     // Gets user
-    const user = await getById(uid);
+    const user = await findByUid(uid);
     let banHermyx;
     try {
       // First of all, checks if user has already been banned
@@ -652,7 +609,7 @@ export const banUser = async (req, res) => {
             // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
             for (const vacancy of occupied_vacancies) {
               if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID) {
-                const adventurer = await getById(vacancy.adventurer_id);
+                const adventurer = await findByUid(vacancy.adventurer_id);
                 if (adventurer.stripe_connected_id) {
                   const transferData = {
                     amount: Math.round(vacancy.monetary_reward * 100),

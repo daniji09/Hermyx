@@ -2,7 +2,8 @@ import { messages } from '@hermyx/shared';
 import { AppError } from '../utils/error.util.js';
 import * as missionService from './mission.service.js';
 import * as userModel from '../models/user.model.js';
-import { retrieveConnectAccount } from '../providers/payment.provider.js';
+import * as paymentProvider from '../providers/payment.provider.js';
+import * as storageProvider from '../providers/storage.provider.js';
 
 /// Model access functions
 // Create user
@@ -13,6 +14,21 @@ export const createUser = async (email, username, firebaseUid) => {
 
   // Creates user
   const user = await userModel.create(email, username, firebaseUid);
+  return user;
+};
+
+// Gets user by uid
+export const getUserByUid = async (uid) => {
+  checkUid(uid);
+
+  // Gets user by uid
+  const user = await userModel.findByUid(uid);
+  return user;
+};
+
+export const getUserByUidOrThrow = async (uid) => {
+  const user = await getUserByUid(uid);
+  if (!user) throw new AppError(messages.USER.GENERAL.USER_NOT_FOUND, 404);
   return user;
 };
 
@@ -279,6 +295,44 @@ export const updateMyProfile = async (currentUser, newInformation) => {
   };
 };
 
+// Updates current user's profile
+export const updateMyAvatar = async (uid, file) => {
+  // If there is no file, error is returned
+  if (!file) throw new AppError(messages.GENERAL.NO_IMAGE_PROVIDED, 400);
+
+  // Gets user
+  const currentUser = await getUserByUidOrThrow(uid);
+  const oldAvatarUrl = currentUser.avatar;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  // New avatar is updated in storage
+  let newAvatarUrl;
+  if (isProduction)
+    newAvatarUrl = await storageProvider.uploadToAzureBlob(file, 'avatars');
+  else
+    newAvatarUrl = await storageProvider.saveToLocalStorage(
+      file,
+      'uploads/avatars',
+    );
+
+  // Updates photo from db
+  await userModel.updateAvatar(uid, newAvatarUrl);
+
+  // Deletes old photo physically if everything went correctly
+  if (oldAvatarUrl) {
+    try {
+      if (isProduction)
+        await storageProvider.deleteFromAzureBlob(oldAvatarUrl, 'avatars');
+      else await storageProvider.deleteFromLocalStorage(oldAvatarUrl);
+    } catch (error) {
+      // No exception is thrown, photo will be still in Azure as trash, but user UX won't be negatively affected
+      console.error(error);
+    }
+  }
+
+  return newAvatarUrl;
+};
+
 /// Data checks
 const checkUid = (uid) => {
   if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
@@ -313,7 +367,9 @@ const getConnectStatus = async (user) => {
     if (!user || !user.stripe_connected_id) return { isConfigured: false };
 
     // Info is retrieved from Stripe
-    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
+    const accountInfo = await paymentProvider.retrieveConnectAccount(
+      user.stripe_connected_id,
+    );
 
     // Checks if details form are ok
     if (!accountInfo.details_submitted) return { isConfigured: false };

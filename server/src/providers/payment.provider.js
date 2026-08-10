@@ -1,13 +1,13 @@
 import Stripe from 'stripe';
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-import { getById, updateStripeCustomer } from '../models/user.model.js';
+import { findByUid, updateStripeCustomer } from '../models/user.model.js';
 
 const _stripe = stripe;
 export { _stripe as stripe };
 
 //Creates a new Stripe Customer entity to track payments and save cards.
 export async function checkStripeCustomer(user) {
-  const userData = await getById(user.uid);
+  const userData = await findByUid(user.uid);
 
   if (userData && userData.stripe_customer_id) {
     return userData.stripe_customer_id;

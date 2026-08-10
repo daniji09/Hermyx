@@ -17,9 +17,12 @@ export const messages = {
     INCOMPLETE_PAGINATION: `Pagination is incomplete. Please send both 'page' and 'limit'.`,
     INCOMPLETE_PETITION: (field1, field2) =>
       `Incomplete petition. Please send ${field1} and ${field2} together.`,
+    NO_IMAGE_PROVIDED: `No image provided`,
     OPERATION_ERROR: `Operation ended abruptly.`,
     TOO_MANY_ATTEMPTS: `Too many attempts. Please, try later.`,
+    TOO_MANY_FILES: `You sent too many files for this field, or its name is incorrect.`,
     UNEXPECTED_ERROR: `Unexpected error.`,
+    UNSUPPORTED_FILE_FORMAT: `Photo format is invalid, please use .jpg, .png or .webp.`,
   },
 
   /// Auth messages
@@ -58,6 +61,7 @@ export const messages = {
     },
     GENERAL: {
       USERS_NOT_FOUND: `Users not found.`,
+      USER_NOT_FOUND: `User not found.`,
     },
   },
 
@@ -225,7 +229,6 @@ export const messages = {
 
   CHANGING_EMAIL_TO_CURRENT:
     'The new email cannot be the same as your current one.',
-  NO_IMAGE_PROVIDED: 'No image provided',
 
   //// Notification
   PENDING_NOTIFICATION_EXISTS:

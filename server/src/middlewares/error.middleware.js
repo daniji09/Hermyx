@@ -1,5 +1,6 @@
 import { consts, messages } from '@hermyx/shared';
 import { AppError } from '../utils/error.util.js';
+import multer from 'multer';
 
 // eslint-disable-next-line no-unused-vars
 export const errorHandler = (error, req, res, next) => {
@@ -19,6 +20,26 @@ export const errorHandler = (error, req, res, next) => {
         errors: { [mappedError.field]: [mappedError.message] },
       });
     }
+  }
+
+  // Multer errors
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({
+        errors: {
+          general: [messages.GENERAL.TOO_MANY_FILES],
+        },
+      });
+    } else if (error.code === 'UNSUPPORTED_FORMAT') {
+      return res.status(400).json({
+        errors: {
+          general: [messages.GENERAL.UNSUPPORTED_FILE_FORMAT],
+        },
+      });
+    }
+    return res.status(400).json({
+      errors: { general: [error.message] },
+    });
   }
 
   // Errors array, deprecated version

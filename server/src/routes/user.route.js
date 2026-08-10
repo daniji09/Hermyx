@@ -24,10 +24,7 @@ import * as userController from '../controllers/user.controller.js';
 
 import { verifyAdmin, verifyToken } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
-import multer from 'multer';
-
-// Multer config
-const upload = multer({ storage: multer.memoryStorage() });
+import { upload } from '../utils/file.utils.js';
 
 /// GET
 // Search users by partial username
@@ -77,15 +74,14 @@ router.patch(
   userController.updateMyProfile,
 );
 
-// ----------
-
 // Updates avatar
 router.patch(
   '/me/avatar',
-  verifyToken,
   upload.single('avatar'), // Multer processes the file
   userController.updateMyAvatar,
 );
+
+// ----------
 
 /// POST
 

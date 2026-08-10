@@ -15,7 +15,7 @@ import {
   getById,
   syncMissionCompletionStatus,
 } from '../models/mission.model.js';
-import { getById as getUserById } from '../models/user.model.js';
+import { findByUid as getUserById } from '../models/user.model.js';
 import {
   approveParticipation,
   getVacancyById,

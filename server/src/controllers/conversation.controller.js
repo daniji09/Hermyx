@@ -1,6 +1,6 @@
 import { messages } from '@hermyx/shared';
 
-import { getById } from '../models/user.model.js';
+import { findByUid } from '../models/user.model.js';
 
 import {
   getConversationById,
@@ -42,7 +42,7 @@ export const getOrCreatePrivateConversationWithUser = async (req, res) => {
       });
     }
 
-    const otherUser = await getById(otherUserId);
+    const otherUser = await findByUid(otherUserId);
 
     if (!otherUser) {
       return res.status(404).json({

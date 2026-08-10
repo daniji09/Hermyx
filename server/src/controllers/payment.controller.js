@@ -19,7 +19,7 @@ import {
 } from '../providers/payment.provider.js';
 
 import {
-  getById,
+  findByUid,
   updateStripeConnected as updateStripeConnectId,
 } from '../models/user.model.js';
 
@@ -470,7 +470,7 @@ export async function confirmPayment(req, res) {
 export async function connectOnboard(req, res) {
   try {
     const userId = req.user.uid;
-    const user = await getById(userId);
+    const user = await findByUid(userId);
     if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
     let accountId = user.stripe_connected_id;
@@ -637,7 +637,7 @@ export async function refundMissionPayment(req, res) {
 export async function getDashboardLink(req, res) {
   try {
     const userId = req.user.uid;
-    const user = await getById(userId);
+    const user = await findByUid(userId);
     if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
     // Checks if user actually completed login form

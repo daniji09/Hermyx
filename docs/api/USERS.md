@@ -263,7 +263,7 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
 ## - Update user: `PATCH /api/users/me/profile`
 
-Updates user public information that is shown in profile.
+Updates user's public information that is shown in profile.
 
 **Requires authentication:** Yes
 
@@ -303,6 +303,46 @@ Updates user public information that is shown in profile.
   <br>
 
 **Workflow:** frontend sends the form data entered by the user, and the backend simply updates it, verifying that the newly entered user is not already an existing one. It's worth noting that, despite being a classic database transaction workflow, it's not used in this case. If the same user updates their profile simultaneously from two different devices, the newer version overwriting the older one is a more expected outcome than printing an error, and doing so would also increase complexity and time unnecessarily. On another note, it is not needed to check whether latitude and longitude are sent together, because `postgis` extension already checks that automatically.
+<br>
+<br>
+<br>
+
+## - Update user: `PATCH /api/users/me/avatar`
+
+Updates user's avatar.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `avatar` | file | Yes | New avatar. |
+_> Note: only one `avatar` file is treated._
+<br>
+
+**Responses:**
+
+- `200 OK`: user's avatar has been correctly updated.
+
+  ```json
+  {
+    "avatar": "/url/of/new_avatar"
+  }
+  ```
+
+- `400 Bad Request`: fields validation error, missing fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** to process the image, Multer library is used, which allows to configure the number of files per endpoint, their size, and the expected format of each file. Regarding image storage, for development purposes, images are saved locally in the /public/uploads/avatars folder, while in production, Azure Blob is used (TODO:). It's worth noting that this is another backend which does not use any database transactions, as the industry standard prioritizes UX. This means that the image is first saved to storage, then to the database, and finally, the previous avatar image is deleted if it exists. Therefore, in the worst-case scenario, only a dirty image remains stored (TODO:).
 <br>
 <br>
 <br>

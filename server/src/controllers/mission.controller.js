@@ -32,7 +32,7 @@ import {
   updateMissionPayment,
   openMission,
 } from '../models/mission.model.js';
-import { getById as getUserById } from '../models/user.model.js';
+import { findByUid as getUserById } from '../models/user.model.js';
 import { getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
   getById as getMissionParticipationById,

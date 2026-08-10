@@ -23,7 +23,7 @@ import {
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
-import { getById as getUserById } from '../models/user.model.js';
+import { findByUid as getUserById } from '../models/user.model.js';
 import {
   getById,
   syncMissionCompletionStatus,

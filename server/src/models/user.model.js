@@ -12,6 +12,13 @@ export const create = async (email, username, firebaseUid) => {
 };
 
 /// FINDS
+// Get user by uid
+export const findByUid = async (uid) => {
+  const query = 'SELECT * FROM app_user WHERE uid = $1';
+  const result = await pool.query(query, [uid]);
+  return result.rows[0];
+};
+
 // Get user by username
 export const findByUsername = async (username) => {
   const query = 'SELECT * FROM app_user WHERE LOWER(username) = LOWER($1)';
@@ -122,14 +129,13 @@ export const update = async (
   }
 };
 
-//////// -------------
-
-//Get the user by their ID
-export const getById = async (uid) => {
-  const query = 'SELECT * FROM app_user WHERE uid = $1';
-  const result = await pool.query(query, [uid]);
-  return result.rows[0];
+export const updateAvatar = async (uid, avatar) => {
+  const query = `UPDATE app_user SET avatar = $1 WHERE uid = $2`;
+  const result = await pool.query(query, [avatar, uid]);
+  return result.rowCount;
 };
+
+//////// -------------
 
 //Save the Stripe Customer ID in the user table.
 export const updateStripeCustomer = async (uid, stripeCustomerId) => {
@@ -218,10 +224,4 @@ export const unban = async (uid) => {
     USER_STATUS.BANNED.ID,
   ]);
   return result.rows[0];
-};
-
-export const updateAvatar = async (uid, avatar) => {
-  const query = `UPDATE app_user SET avatar = $1 WHERE uid = $2`;
-  const result = await pool.query(query, [avatar, uid]);
-  return result.rowCount;
 };

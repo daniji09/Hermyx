@@ -1,7 +1,6 @@
 // External modules
 import { Router } from 'express';
 const router = Router();
-import multer from 'multer';
 import {
   createMission,
   getMissions,
@@ -55,9 +54,7 @@ import {
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { inviteToMission } from '../controllers/mission.controller.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
-
-// Multer config
-const upload = multer({ storage: multer.memoryStorage() });
+import { upload } from '../utils/file.utils.js';
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
