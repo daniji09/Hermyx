@@ -195,14 +195,6 @@ export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
 });
 
-// Delete user by uid backend validation
-export const deleteUserByUid = z.object({
-  uid: z.coerce
-    .number(messages.FIELD_NUMBER('uid'))
-    .int(messages.FIELD_INTEGER('uid'))
-    .min(0, messages.FIELD_POSITIVE('uid')),
-});
-
 // Update email validation
 export const updateEmailValidation = z
   .object({

@@ -14,7 +14,6 @@ import {
   getUserMissionsParamSchema,
   getUserMissionsQuerySchema,
   getUserPublicProfileMissionsQuerySchema,
-  deleteUserByUid,
   updateMyEmailSchema,
   updateMyConfigurationSchema,
   banUserParamsSchema,
@@ -22,8 +21,7 @@ import {
   addEmailAuthenticationSchema,
 } from '@hermyx/shared';
 import * as userController from '../controllers/user.controller.js';
-
-import { verifyAdmin, verifyToken } from '../middlewares/auth.middleware.js';
+import { verifyAdmin } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { upload } from '../utils/file.utils.js';
 
@@ -106,6 +104,9 @@ router.post(
 
 // ----------
 
+/// DELETE
+router.delete('/me', userController.deleteUser);
+
 // Bans user
 router.post(
   '/:uid/ban',
@@ -113,16 +114,6 @@ router.post(
   validateParamsSchema(banUserParamsSchema),
   validateBodySchema(banUserBodySchema),
   userController.banUser,
-);
-
-/// DELETE
-router.delete('/me', verifyToken, userController.deleteUser);
-
-router.delete(
-  '/:uid',
-  verifyToken,
-  validateParamsSchema(deleteUserByUid),
-  userController.deleteByUid,
 );
 
 export default router;

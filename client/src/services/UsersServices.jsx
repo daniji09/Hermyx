@@ -73,13 +73,6 @@ export const updateUserEmail = async (email) => {
   return data;
 };
 
-// Deletes user via uid (used for rollbacks)
-export const deleteUserByUid = async (uid) => {
-  // API search
-  const { data } = await api.delete(`/users/${uid}`);
-  return data;
-};
-
 // Deletes user (anonymizes it)
 export const deleteUser = async () => {
   // API search

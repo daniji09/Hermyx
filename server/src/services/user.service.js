@@ -346,35 +346,9 @@ export const updateMyEmail = async (user, email) => {
   // User's current email
   const currentEmail = user.email;
 
-  // First of all, new email is checked to be unique
-  const userByEmail = await getUserByEmail(email);
+  // Checks if new email already exists
+  await checkEmailExists(email, user);
 
-  // If it exists, then its a bad request error (unless is a new authentication with the same email)
-  if (userByEmail) throw buildEmailAlreadyExistsError(email);
-
-  // Lastly, it makes a deep check on Firebase searching for the e-mail
-  try {
-    const fbUser = await authProvider.getUserByEmail(email);
-    if (fbUser.uid !== user.firebase_uid) {
-      throw buildEmailAlreadyExistsError(email);
-    }
-  } catch (error) {
-    if (error.status) throw error;
-    // User not found is expected if the email is not in use, so any other error is returned
-    if (error.code !== 'auth/user-not-found') {
-      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
-      if (errorBuilder) {
-        const mappedError = errorBuilder({ email });
-        throw new AppError(
-          mappedError.message,
-          mappedError.status,
-          mappedError.field,
-        );
-      }
-
-      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
-    }
-  }
   let firebaseChange;
   try {
     // Prepares user email update
@@ -422,35 +396,8 @@ export const updateMyConfiguration = async (uid, configuration) => {
 
 // Adds email authentication to current user
 export const addEmailAuthentication = async (user, email, password) => {
-  // First of all, email is checked to be unique
-  const userByEmail = await getUserByEmail(email);
-
-  // If it exists, then its a bad request error (unless is the same as current one)
-  if (userByEmail) throw buildEmailAlreadyExistsError(email);
-
-  // Lastly, it makes a deep check on Firebase searching for the e-mail
-  try {
-    const fbUser = await authProvider.getUserByEmail(email);
-    if (fbUser.uid !== user.firebase_uid) {
-      throw buildEmailAlreadyExistsError(email);
-    }
-  } catch (error) {
-    if (error.status) throw error;
-    // User not found is expected if the email is not in use, so any other error is returned
-    if (error.code !== 'auth/user-not-found') {
-      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
-      if (errorBuilder) {
-        const mappedError = errorBuilder({ email });
-        throw new AppError(
-          mappedError.message,
-          mappedError.status,
-          mappedError.field,
-        );
-      }
-
-      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
-    }
-  }
+  // Checks if new email already exists
+  await checkEmailExists(email, user);
   let firebaseChange;
   try {
     // Prepares user email authentication add
@@ -553,5 +500,37 @@ const getConnectStatus = async (user) => {
   } catch (error) {
     console.error('Error fetching connect status:', error);
     return {};
+  }
+};
+
+const checkEmailExists = async (email, user) => {
+  // First of all, email is checked to be unique
+  const userByEmail = await getUserByEmail(email);
+
+  // If it exists, then its a bad request error (unless is the same as current one)
+  if (userByEmail) throw buildEmailAlreadyExistsError(email);
+
+  // Lastly, it makes a deep check on Firebase searching for the e-mail
+  try {
+    const fbUser = await authProvider.getUserByEmail(email);
+    if (fbUser.uid !== user.firebase_uid) {
+      throw buildEmailAlreadyExistsError(email);
+    }
+  } catch (error) {
+    if (error.status) throw error;
+    // User not found is expected if the email is not in use, so any other error is returned
+    if (error.code !== 'auth/user-not-found') {
+      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+      if (errorBuilder) {
+        const mappedError = errorBuilder({ email });
+        throw new AppError(
+          mappedError.message,
+          mappedError.status,
+          mappedError.field,
+        );
+      }
+
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
   }
 };

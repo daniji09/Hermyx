@@ -165,12 +165,6 @@ export const updateStripeConnected = async (uid, stripeConnectedId) => {
   await pool.query(query, [stripeConnectedId, uid]);
 };
 
-export const deleteByUid = async (uid) => {
-  const query = 'DELETE * FROM app_user WHERE uid = $1';
-  const result = await pool.query(query, [uid]);
-  return result.rows[0];
-};
-
 export const anonymize = async (uid) => {
   const query = `UPDATE app_user SET
   username = '?Unknown_' || $1,

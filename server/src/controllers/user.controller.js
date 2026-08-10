@@ -17,7 +17,6 @@ import {
 import {
   findByEmail,
   findByUsername,
-  deleteByUid as _deleteByUid,
   anonymize as _anonymize,
   deanonymize,
   findByUid,
@@ -256,33 +255,12 @@ export const getUser = async (req, res) => {
   }
 };
 
-// Deletes a user by uid
-export const deleteByUid = async (req, res) => {
-  try {
-    const { uid } = req.params;
-
-    const success = await _deleteByUid(uid);
-
-    if (!success)
-      return res
-        .status(500)
-        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-
-    return res.status(200).json({});
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-// Deletes (anonymize) current user
+// Deletes (anonymize) current user TODO: reports should be deleted?, notifications should be seen?
 export const deleteUser = async (req, res) => {
   const user = req.user;
   let anonymize;
   try {
-    // First of all, checks if user has active missions, created or joined
+    // First of all, checks if user has active missions, published or joined
     const activeMissions = await getUserActiveMissions(user.uid);
     if (activeMissions.total_active > 0)
       return res.status(409).json({
