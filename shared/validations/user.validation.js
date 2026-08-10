@@ -101,6 +101,9 @@ export const latitudeBaseSchema = z.coerce.number();
 // Longitude
 export const longitudeBaseSchema = z.coerce.number();
 
+// Configuration
+export const configurationBaseSchema = z.json();
+
 /// Endpoint complex validation
 // Search user by username
 export const searchUsersByUsernameQueryBaseSchema = z.object({
@@ -170,6 +173,11 @@ export const updateMyEmailSchema = z.object({
   email: emailBaseSchema,
 });
 
+// Updates user's configuration
+export const updateMyConfigurationSchema = z.object({
+  configuration: configurationBaseSchema,
+});
+
 // Add email authentication
 export const addEmailAuthenticationSchema = z
   .object({
@@ -234,10 +242,6 @@ export const updatePasswordValidation = z
 
 export const userConfigurationValidation = z.object({
   show_missions_to_others: z.boolean(),
-});
-
-export const userConfigurationBackendValidation = z.object({
-  configuration: z.json(),
 });
 
 // Ban user

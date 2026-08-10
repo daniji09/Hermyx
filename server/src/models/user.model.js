@@ -143,6 +143,14 @@ export const updateEmail = async (uid, email) => {
   return result.rows[0];
 };
 
+// Updates user's configuration
+export const updateConfiguration = async (uid, configuration) => {
+  const query =
+    'UPDATE app_user SET configuration = $2 WHERE uid = $1 RETURNING *';
+  const result = await pool.query(query, [uid, configuration]);
+  return result.rows[0];
+};
+
 //////// -------------
 
 //Save the Stripe Customer ID in the user table.
@@ -200,12 +208,6 @@ export const deanonymize = async (user) => {
     user.location,
   ]);
   return result.rows[0];
-};
-
-export const updateConfiguration = async (uid, configuration) => {
-  const query = 'UPDATE app_user SET configuration = $2 WHERE uid = $1';
-  const result = await pool.query(query, [uid, configuration]);
-  return result.rowCount;
 };
 
 export const ban = async (uid) => {

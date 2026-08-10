@@ -105,7 +105,9 @@ export const addEmailAuthentication = async ({
 // Updates user configuration (anonymizes it)
 export const userConfiguration = async (configuration) => {
   // API search
-  const { data } = await api.put('/users/me/configuration', { configuration });
+  const { data } = await api.patch('/users/me/configuration', {
+    configuration,
+  });
   return data;
 };
 

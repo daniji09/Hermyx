@@ -387,6 +387,45 @@ _> Note: new `email` has to be unique._
 <br>
 <br>
 
+## - Update user's email: `PATCH /api/users/me/configuration`
+
+Updates user's configuration.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `configuration` | JSON | Yes | New configuration parameters. |
+<br>
+
+**Responses:**
+
+- `200 OK`: user's configuration has been correctly updated.
+
+  ```json
+  {
+    "configuration": "<user_new_configuration>"
+  }
+  ```
+
+- `400 Bad Request`: fields validation error, missing fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** to change user's configuration, PostgreSQL's JSONB type is used, as it not only allows to store JSON configurations easily, but also does it very efficiently.
+<br>
+<br>
+<br>
+
 ## - Add email authentication: `POST /api/users/me/credentials`
 
 Adds an email authentication to a user who has authenticated with Google.

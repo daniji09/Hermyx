@@ -20,7 +20,6 @@ import {
   deleteByUid as _deleteByUid,
   anonymize as _anonymize,
   deanonymize,
-  updateConfiguration,
   findByUid,
   ban,
   unban,
@@ -188,6 +187,22 @@ export const updateMyEmail = async (req, res, next) => {
   }
 };
 
+// Updates user's configuration
+export const updateMyConfiguration = async (req, res, next) => {
+  console.log(req.body);
+  try {
+    const user = req.user;
+    const { configuration } = req.body;
+    const newConfiguration = await userService.updateMyConfiguration(
+      user.uid,
+      configuration,
+    );
+    return res.status(200).json({ configuration: newConfiguration });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Adds email authentication to current user
 export const addEmailAuthentication = async (req, res, next) => {
   try {
@@ -294,27 +309,6 @@ export const deleteUser = async (req, res) => {
 
     // If email was changed on Firebase but not in Hermyx, it should rollback
     if (anonymize > 0) await deanonymize(user);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const updateUserConfiguration = async (req, res) => {
-  const user = req.user;
-  const { configuration } = req.body;
-
-  try {
-    const success = await updateConfiguration(user.uid, configuration);
-
-    if (success === 0)
-      return res
-        .status(500)
-        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-
-    return res.status(200).json({});
-  } catch (e) {
-    console.error(e);
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });

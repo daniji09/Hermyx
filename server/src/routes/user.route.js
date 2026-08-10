@@ -16,7 +16,7 @@ import {
   getUserPublicProfileMissionsQuerySchema,
   deleteUserByUid,
   updateMyEmailSchema,
-  userConfigurationBackendValidation,
+  updateMyConfigurationSchema,
   banUserParamsSchema,
   banUserBodySchema,
   addEmailAuthenticationSchema,
@@ -89,6 +89,13 @@ router.patch(
   userController.updateMyEmail,
 );
 
+// Updates configuration
+router.patch(
+  '/me/configuration',
+  validateBodySchema(updateMyConfigurationSchema),
+  userController.updateMyConfiguration,
+);
+
 /// POST
 // Adds email authentication
 router.post(
@@ -106,15 +113,6 @@ router.post(
   validateParamsSchema(banUserParamsSchema),
   validateBodySchema(banUserBodySchema),
   userController.banUser,
-);
-
-/// PUT
-
-router.put(
-  '/me/configuration',
-  verifyToken,
-  validateBodySchema(userConfigurationBackendValidation),
-  userController.updateUserConfiguration,
 );
 
 /// DELETE

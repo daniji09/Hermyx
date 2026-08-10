@@ -413,6 +413,13 @@ export const updateMyEmail = async (user, email) => {
   }
 };
 
+// Updates user's configuration
+export const updateMyConfiguration = async (uid, configuration) => {
+  const success = await userModel.updateConfiguration(uid, configuration);
+  if (!success) throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  return success.configuration;
+};
+
 // Adds email authentication to current user
 export const addEmailAuthentication = async (user, email, password) => {
   // First of all, email is checked to be unique
