@@ -128,7 +128,7 @@ export const editMission = async (missionData) => {
           : [rawPhotos];
       }
     } catch (error) {
-      console.error('Error al desempaquetar existingPhotos:', error);
+      console.error(error);
       existingPhotosArray = [];
     }
 
@@ -152,7 +152,7 @@ export const editMission = async (missionData) => {
       }
     });
   }
-  const response = await api.post(`/missions/${missionData.mid}`, formData);
+  const response = await api.put(`/missions/${missionData.mid}`, formData);
 
   return response.data;
 };

@@ -84,6 +84,11 @@ export const messages = {
       MISSION_PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
       MISSION_WITH_SAME_TITLE: `You already have a mission titled like this.`,
     },
+    EDIT: {
+      CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
+      CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
+      CANNOT_EDIT_VACANCY: `Vacancy can't be edited on current state.`,
+    },
   },
 
   ///// Common messages

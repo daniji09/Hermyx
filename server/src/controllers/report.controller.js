@@ -18,7 +18,7 @@ import {
 import { findByUid as getUserById } from '../models/user.model.js';
 import {
   approveParticipation,
-  getVacancyById,
+  findById,
   markVacancyAsPaidOut,
   releaseParticipation,
   reopenParticipation,
@@ -30,7 +30,7 @@ import {
   getReports as getAllReports,
   getReportById,
 } from '../models/report.model.js';
-import { createNotification } from '../models/notification.model.js';
+import { create } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import { createTransfer } from '../providers/payment.provider.js';
 import { createMissionPayment } from '../models/mission-payment.model.js';
@@ -113,7 +113,7 @@ export const disputeAdventurer = async (req, res) => {
         .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
 
     // Gets vacancy
-    const vacancy = await getVacancyById(mid, vacancyId);
+    const vacancy = await findById(vacancyId);
     if (!mission)
       return res
         .status(404)
@@ -157,7 +157,7 @@ export const disputeAdventurer = async (req, res) => {
 
     // Notifies the adventurer
     const notificationMessage = `You have been reported by the applicant of the ${mission.title} mission.`;
-    const notificationId = await createNotification({
+    const notificationId = await create({
       type: NOTIFICATION_TYPE.REPORT.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.ADVENTURER_REPORT.ID,
@@ -322,10 +322,7 @@ export const acceptAdventurersWork = async (req, res) => {
         .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
 
     // Gets vacancy
-    const vacancy = await getVacancyById(
-      report.payload.associated_mission_id,
-      report.payload.associated_vacancy_id,
-    );
+    const vacancy = await findById(report.payload.associated_vacancy_id);
     if (!vacancy)
       return res
         .status(404)
@@ -396,7 +393,7 @@ export const acceptAdventurersWork = async (req, res) => {
 
     // Adventurer and applicant are informed
     const approvedMessage = `Your participation in "${mission.title}" was approved by the administration after resolving the dispute. Reward is being payed to you!`;
-    const followUpNotificationId = await createNotification({
+    const followUpNotificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
@@ -423,7 +420,7 @@ export const acceptAdventurersWork = async (req, res) => {
     );
 
     const approvedApplicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was accepted by the administration after they disputed your review. Reward is being payed to the adventurer.`;
-    const followUpNotificationApplicantId = await createNotification({
+    const followUpNotificationApplicantId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
@@ -494,10 +491,7 @@ export const rejectAdventurersWork = async (req, res) => {
         .json({ errors: { general: [messages.MISSION_CLOSED_BY_REPORT] } });
 
     // Gets vacancy
-    const vacancy = await getVacancyById(
-      report.payload.associated_mission_id,
-      report.payload.associated_vacancy_id,
-    );
+    const vacancy = await findById(report.payload.associated_vacancy_id);
     if (!vacancy)
       return res
         .status(404)
@@ -539,7 +533,7 @@ export const rejectAdventurersWork = async (req, res) => {
 
     // Adventurer and applicant are informed
     const rejectedMessage = `Your participation in "${mission.title}" was rejected by the administration after resolving the dispute. Now this vacancy is in progress again, so be sure to accomplish your applicant's goals for your work!`;
-    const followUpNotificationId = await createNotification({
+    const followUpNotificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
@@ -566,7 +560,7 @@ export const rejectAdventurersWork = async (req, res) => {
     );
 
     const rejectedApplicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was rejected by the administration after they disputed your review. Now this vacancy is in progress again, so be sure to guide your adventurer again.`;
-    const followUpNotificationApplicantId = await createNotification({
+    const followUpNotificationApplicantId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_REJECTED.ID,
@@ -641,10 +635,7 @@ export const dismiss = async (req, res) => {
           .json({ errors: { general: [messages.MISSION_NOT_FOUND] } });
 
       // Gets vacancy
-      const vacancy = await getVacancyById(
-        report.payload.associated_mission_id,
-        report.payload.associated_vacancy_id,
-      );
+      const vacancy = await findById(report.payload.associated_vacancy_id);
       if (!vacancy)
         return res
           .status(404)
@@ -659,7 +650,7 @@ export const dismiss = async (req, res) => {
 
       // Applicant is informed
       const message = `Your report on adventurer ${adventurer.username} from mission ${mission.title} has been dismissed, so it won't be kicked out.`;
-      const followUpNotificationId = await createNotification({
+      const followUpNotificationId = await create({
         type: NOTIFICATION_TYPE.MISSION.ID,
         kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
         action: NOTIFICATION_ACTION.REPORT_DISMISSED.ID,

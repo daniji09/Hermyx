@@ -79,6 +79,17 @@ router.post(
   missionController.publishMission,
 );
 
+/// PUT
+//Edit mission
+router.put(
+  '/:mid',
+  upload.array('photos', 5),
+  validateParamsSchema(editMissionParamSchema),
+  validateBodySchema(editMissionBodySchema),
+  validateFilesSchema(editMissionFilesSchema),
+  missionController.editMission,
+);
+
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
@@ -149,16 +160,6 @@ router.post(
   validateParamsSchema(kickAdventurerOutParamsSchema),
   validateBodySchema(kickAdventurerOutBodySchema),
   missionController.kickAdventurerOut,
-);
-
-//Edit mission
-router.post(
-  '/:mid',
-  upload.array('photos', 5),
-  validateParamsSchema(editMissionParamSchema),
-  validateBodySchema(editMissionBodySchema),
-  validateFilesSchema(editMissionFilesSchema),
-  missionController.editMission,
 );
 
 /// PUT

@@ -320,6 +320,37 @@ export const findPublicJoinedByUid = async (userId, pagination = null) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
+/// UPDATES
+// Update mission
+export const update = async (missionData, client = pool) => {
+  const {
+    mid,
+    title,
+    description,
+    vacancies,
+    longitude,
+    latitude,
+    totalPayment,
+  } = missionData;
+
+  const query = `
+    UPDATE mission 
+    SET title = $2, description = $3, total_vacancies = $4, location = ST_MakePoint($5, $6)::geography, total_payment = $7
+    WHERE mid = $1 
+    RETURNING *
+  `;
+  const result = await client.query(query, [
+    mid,
+    title,
+    description,
+    vacancies,
+    longitude,
+    latitude,
+    totalPayment,
+  ]);
+  return result.rows[0];
+};
+
 /// ......
 
 //Get mission by its ID
@@ -439,35 +470,6 @@ export const finishMissionAndCloseConversation = async (mid) => {
   } finally {
     client.release();
   }
-};
-
-export const updateMission = async (missionData) => {
-  const {
-    mid,
-    title,
-    description,
-    vacancies,
-    longitude,
-    latitude,
-    totalPayment,
-  } = missionData;
-
-  const query = `
-    UPDATE mission 
-    SET title = $2, description = $3, total_vacancies = $4, location = ST_MakePoint($5, $6)::geography, total_payment = $7
-    WHERE mid = $1 
-    RETURNING *
-  `;
-  const result = await pool.query(query, [
-    mid,
-    title,
-    description,
-    vacancies,
-    longitude,
-    latitude,
-    totalPayment,
-  ]);
-  return result.rows[0];
 };
 
 export const updateMissionPayment = async (mid, payment) => {

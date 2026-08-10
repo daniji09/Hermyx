@@ -135,6 +135,25 @@ const vacancySchema = z.object({
     .or(z.literal('')),
 });
 
+const vacanciesDataSchema = z
+  .string()
+  .transform((str, ctx) => {
+    try {
+      return JSON.parse(str);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Vacancy format is corrupt: ' + error,
+      });
+      return z.NEVER;
+    }
+  })
+  .pipe(
+    z
+      .array(vacancySchema)
+      .max(100, messages.GENERAL.FIELD_TOO_BIG('Vacancies', 100)),
+  );
+
 // Vacancies (num of vacancies)
 const vacancyNumBaseSchema = z.coerce
   .number(messages.GENERAL.FIELD_NUMBER('Vacancies'))
@@ -205,26 +224,43 @@ export const publishMissionSchema = z.object({
   description: descriptionBaseSchema,
   photos: photosBaseSchema,
   vacancies: vacancyNumBaseSchema,
-  vacanciesData: z
-    .string()
-    .transform((str, ctx) => {
-      try {
-        return JSON.parse(str);
-      } catch (error) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Vacancy format is corrupt: ' + error,
-        });
-        return z.NEVER;
-      }
-    })
-    .pipe(
-      z
-        .array(vacancySchema)
-        .max(100, messages.GENERAL.FIELD_TOO_BIG('Vacancies', 100)),
-    ),
+  vacanciesData: vacanciesDataSchema,
   latitude: latitudeBaseSchema,
   longitude: longitudeBaseSchema,
+});
+
+// Edit mission
+export const editMissionBodySchema = z.object({
+  mid: midBaseSchema,
+  title: titleBaseSchema,
+  description: descriptionBaseSchema,
+  vacancies: vacancyNumBaseSchema,
+  vacanciesData: vacanciesDataSchema,
+  latitude: latitudeBaseSchema,
+  longitude: longitudeBaseSchema,
+  photos: photosBaseSchema,
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
+});
+
+export const editMissionParamSchema = z.object({
+  mid: midBaseSchema,
+});
+
+export const editMissionFilesSchema = z.object({
+  photos: photosBaseSchema,
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
 });
 
 // ------
@@ -252,138 +288,6 @@ export const publishMissionFilesSchema = z.object({
     )
     .optional()
     .default([]),
-});
-
-// Server and client edit mission shared validation
-export const editMissionBodySchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-  title: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.MISSION.TITLE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Title', consts.MISSION.TITLE_MAX_LENGTH),
-    ),
-  description: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.MISSION.DESCRIPTION_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Description',
-        consts.MISSION.DESCRIPTION_MAX_LENGTH,
-      ),
-    ),
-  photos: z
-    .array(
-      z
-        .object({
-          size: z
-            .number()
-            .max(
-              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
-              messages.MISSION_PHOTO_TOO_BIG,
-            ),
-          mimetype: z.refine(
-            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
-            messages.MISSION_PHOTO_INVALID_TYPE,
-          ),
-        })
-        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
-    )
-    .max(
-      consts.MISSION.PHOTOS.MAX,
-      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
-    )
-    .optional()
-    .default([]),
-  existingPhotos: z
-    .union([z.string(), z.array(z.string())])
-    .optional()
-    .transform((val) => {
-      if (!val) return [];
-      return Array.isArray(val) ? val : [val];
-    }),
-  vacancies: z.coerce
-    .number(messages.FIELD_NUMBER('Vacancies'))
-    .int(messages.FIELD_INTEGER('Vacancies'))
-    .min(
-      consts.MISSION.VACANCIES.MIN,
-      messages.FIELD_TOO_SMALL('Vacancies', consts.MISSION.VACANCIES.MIN),
-    )
-    .max(
-      consts.MISSION.VACANCIES.MAX,
-      messages.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
-    ),
-  vacanciesData: z
-    .string()
-    .transform((str, ctx) => {
-      try {
-        return JSON.parse(str);
-      } catch (error) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Vacancy format is corrupt: ' + error,
-        });
-        return z.NEVER;
-      }
-    })
-    .pipe(
-      z.array(vacancySchema).max(100, messages.FIELD_TOO_BIG('Vacancies', 100)),
-    ),
-  latitude: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.coerce.number().optional(),
-  ),
-  longitude: z.preprocess(
-    (val) => (val === '' || val === null ? undefined : val),
-    z.coerce.number().optional(),
-  ),
-});
-
-export const editMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
-
-export const editMissionFilesSchema = z.object({
-  photos: z
-    .array(
-      z
-        .object({
-          size: z
-            .number()
-            .max(
-              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
-              messages.MISSION_PHOTO_TOO_BIG,
-            ),
-          mimetype: z.refine(
-            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
-            messages.MISSION_PHOTO_INVALID_TYPE,
-          ),
-        })
-        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,,
-    )
-    .max(
-      consts.MISSION.PHOTOS.MAX,
-      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
-    )
-    .optional()
-    .default([]),
-  existingPhotos: z
-    .union([z.string(), z.array(z.string())])
-    .optional()
-    .transform((val) => {
-      if (!val) return [];
-      return Array.isArray(val) ? val : [val];
-    }),
 });
 
 const optionalNumberFromFormSchema = (schema) =>

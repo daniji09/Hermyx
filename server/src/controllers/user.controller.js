@@ -41,13 +41,13 @@ import {
   rejectAccount,
 } from '../providers/payment.provider.js';
 import {
-  getOccupiedVacancies,
+  findAllOccupied,
   markVacancyAsPaidOut,
   refundBannedVacancy,
   unjoinParticipant,
   updatePaymentStatus,
 } from '../models/mission-participation.model.js';
-import { createNotification } from '../models/notification.model.js';
+import { create } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import { closeReport, getReportById } from '../models/report.model.js';
 import {
@@ -342,7 +342,7 @@ export const banUser = async (req, res) => {
 
           // Notifies owner of the mission
           const message = `Adventurer ${user.username} of your mission ${mission.title} has been banned by Hermyx administration, so this vacancy has been emptied.`;
-          const notificationId = await createNotification({
+          const notificationId = await create({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
             action: NOTIFICATION_ACTION.USER_BAN.ID,
@@ -444,7 +444,7 @@ export const banUser = async (req, res) => {
           );
 
           // Updates total payment on mission
-          const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+          const occupied_vacancies = await findAllOccupied(mission.mid);
           await updateMissionPayment(
             mission.mid,
             occupied_vacancies.reduce(
@@ -455,7 +455,7 @@ export const banUser = async (req, res) => {
 
           // Notifies owner of the mission
           const message = `Adventurer ${user.username} of your mission ${mission.title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you.`;
-          const notificationId = await createNotification({
+          const notificationId = await create({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
             action: NOTIFICATION_ACTION.USER_BAN.ID,
@@ -482,7 +482,7 @@ export const banUser = async (req, res) => {
         // If the user is the owner of the mission, it just delete it, using same logic as a delete
         else if (mission.owner_id === uid) {
           // Gets occupied vacancies
-          const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+          const occupied_vacancies = await findAllOccupied(mission.mid);
           if (MISSION_STATUS[mission.status].CAN_DELETE) {
             // Checks if mission can be deleted by states
             if (
@@ -565,7 +565,7 @@ export const banUser = async (req, res) => {
               const message = MISSION_STATUS[mission.status].CAN_DELETE
                 ? `Mission ${mission.title} has been deleted because the applicant has been banned, so it won't be done, we are sorry.`
                 : `Mission ${mission.title} has been cancelled because the applicant has been banned, but don't worry, your reward is on your way!`;
-              const notificationId = await createNotification({
+              const notificationId = await create({
                 type: NOTIFICATION_TYPE.MISSION.ID,
                 kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
                 action: NOTIFICATION_ACTION.MISSION_BAN.ID,

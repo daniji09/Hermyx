@@ -141,12 +141,12 @@ export const editMissionAction = async (previousState, formData) => {
     const success = await editMission({
       ...validatedFields.data,
     });
-
+    console.log(success);
     if (!success?.mission?.mid) {
       throw {
         response: {
           status: 500,
-          data: { message: messages.UNEXPECTED_ERROR },
+          data: { message: messages.GENERAL.UNEXPECTED_ERROR },
         },
       };
     }
@@ -155,7 +155,7 @@ export const editMissionAction = async (previousState, formData) => {
       throw {
         response: {
           status: 500,
-          data: { message: messages.UNEXPECTED_ERROR },
+          data: { message: messages.GENERAL.UNEXPECTED_ERROR },
         },
       };
     }

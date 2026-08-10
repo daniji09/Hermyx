@@ -38,8 +38,8 @@ import {
 
 import {
   getMissionPayment,
-  getOccupiedVacancies,
-  getVacancyById,
+  findAllOccupied,
+  findById,
   findAllWaitingForPaymentByMid,
   payVacancy,
   startParticipants,
@@ -57,7 +57,7 @@ import {
   TRANSACTION_TYPE,
   MISSION_PARTICIPATION_PAYMENT_STATUS,
 } from '@hermyx/shared';
-import { createNotification } from '../models/notification.model.js';
+import { create } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import {
   createMissionPayment,
@@ -404,7 +404,7 @@ export async function confirmPayment(req, res) {
       return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
 
     // Updates total payment on mission
-    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    const occupied_vacancies = await findAllOccupied(mission.mid);
     await updateMissionPayment(
       mission.mid,
       occupied_vacancies.reduce(
@@ -422,7 +422,7 @@ export async function confirmPayment(req, res) {
 
     // Finally, all participants are notified
     for (const transaction of transactions) {
-      const vacancy = await getVacancyById(mission.mid, transaction.vacancy_id);
+      const vacancy = await findById(transaction.vacancy_id);
       let message;
       if (transaction.transaction_type === TRANSACTION_TYPE.INITIAL_FUNDING.ID)
         message = `Mission ${mission.title} has started! Talk to your team and start working.`;
@@ -433,7 +433,7 @@ export async function confirmPayment(req, res) {
       else
         message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const notificationId = await createNotification({
+        const notificationId = await create({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
           action: NOTIFICATION_ACTION.MISSION_START.ID,
