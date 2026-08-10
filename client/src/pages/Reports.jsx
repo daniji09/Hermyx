@@ -281,6 +281,12 @@ const ReportSearchCard = ({ report }) => {
             </h2>
           </CardTitle>
           <CardDescription>{`Status: ${report.status}`}</CardDescription>
+          {report.unread_count > 0 && (
+            <CardDescription className='font-semibold text-destructive'>
+              {report.unread_count} unread message
+              {report.unread_count === 1 ? '' : 's'}
+            </CardDescription>
+          )}
           <CardAction>
             <p>{timestampToDayMonthYear(report.date)}</p>
           </CardAction>

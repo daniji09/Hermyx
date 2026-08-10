@@ -6,6 +6,7 @@ export const createMessage = async ({
   content,
   attachmentUrl = null,
   attachmentType = null,
+  database = pool,
 }) => {
   const query = `
     WITH inserted_message AS (
@@ -14,9 +15,10 @@ export const createMessage = async ({
         sender_id,
         content,
         attachment_url,
-        attachment_type
+        attachment_type,
+        created_at
       )
-      VALUES ($1, $2, $3, $4, $5)
+      VALUES ($1, $2, $3, $4, $5, clock_timestamp())
       RETURNING *
     )
     SELECT
@@ -27,13 +29,17 @@ export const createMessage = async ({
       m.attachment_url,
       m.attachment_type,
       m.created_at,
+      c.type AS conversation_type,
+      r.rid AS report_id,
       u.username AS sender_username,
       u.avatar AS sender_avatar
     FROM inserted_message m
+    JOIN conversation c ON c.cid = m.conversation_id
+    LEFT JOIN report r ON r.conversation_id = c.cid
     JOIN app_user u ON u.uid = m.sender_id
   `;
 
-  const result = await pool.query(query, [
+  const result = await database.query(query, [
     conversationId,
     senderId,
     content,
@@ -53,9 +59,13 @@ export const getMessagesByConversationId = async (conversationId) => {
       m.attachment_url,
       m.attachment_type,
       m.created_at,
+      c.type AS conversation_type,
+      r.rid AS report_id,
       u.username AS sender_username,
       u.avatar AS sender_avatar
     FROM conversation_message m
+    JOIN conversation c ON c.cid = m.conversation_id
+    LEFT JOIN report r ON r.conversation_id = c.cid
     JOIN app_user u ON u.uid = m.sender_id
     WHERE m.conversation_id = $1
     ORDER BY m.created_at ASC
@@ -65,7 +75,11 @@ export const getMessagesByConversationId = async (conversationId) => {
   return result.rows;
 };
 
-export const getUnreadMessageCountByUserId = async (userId) => {
+export const getUnreadMessageCountByUserId = async (
+  userId,
+  conversationType = null,
+  excludedConversationType = null,
+) => {
   const query = `
     SELECT COUNT(*)::int AS unread_count
     FROM conversation_participant cp
@@ -77,8 +91,14 @@ export const getUnreadMessageCountByUserId = async (userId) => {
       AND cp.left_at IS NULL
       AND m.sender_id <> $1
       AND m.created_at > cp.last_read_at
+      AND ($2::varchar IS NULL OR c.type = $2)
+      AND ($3::varchar IS NULL OR c.type <> $3)
   `;
 
-  const result = await pool.query(query, [userId]);
+  const result = await pool.query(query, [
+    userId,
+    conversationType,
+    excludedConversationType,
+  ]);
   return result.rows[0].unread_count;
 };

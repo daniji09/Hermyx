@@ -48,7 +48,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
 import { useAlert } from '../contexts/AlertContext';
-import { disputeAdventurerAction } from '../actions/ReportActions';
+import { reportAdventurerAction } from '../actions/ReportActions';
 import { useDropzone } from 'react-dropzone';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
@@ -1002,7 +1002,7 @@ export const MissionVacanciesCreator = ({
 const ReportVacancyDialog = ({ mid, vacancyId, isOpen, onClose }) => {
   // Action handling for update email form
   const [state, reportVacancyFormAction, isPending] = useActionState(
-    disputeAdventurerAction,
+    reportAdventurerAction,
     initialStateUseStateAction,
   );
 

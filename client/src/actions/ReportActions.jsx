@@ -1,23 +1,23 @@
 import {
   answerReportValidation,
-  disputeValidation,
+  reportAdventurerValidation,
   messages,
   reportMissionValidation,
   reportUserValidation,
 } from '@hermyx/shared';
 import {
-  disputeAdventurer,
+  reportAdventurer,
   reportMission,
   reportUser,
 } from './../services/ReportsServices';
 
-// Dispute adventurer action: reporting an adventurer
-export const disputeAdventurerAction = async (previousState, formData) => {
+// Reports an adventurer
+export const reportAdventurerAction = async (previousState, formData) => {
   // Data is collected
   const fieldsData = Object.fromEntries(formData);
 
   // Fields validation
-  const validatedFields = disputeValidation.safeParse(fieldsData);
+  const validatedFields = reportAdventurerValidation.safeParse(fieldsData);
 
   if (!validatedFields.success) {
     return {
@@ -29,7 +29,7 @@ export const disputeAdventurerAction = async (previousState, formData) => {
 
   // API call
   try {
-    await disputeAdventurer(fieldsData);
+    await reportAdventurer(fieldsData);
     // Success
     return { success: true, data: null, errors: {} };
   } catch (error) {

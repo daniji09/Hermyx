@@ -25,7 +25,7 @@ export const getReportByIdValidation = z.object({
     .min(0, messages.FIELD_POSITIVE('Id')),
 });
 
-export const disputeValidation = z.object({
+export const reportAdventurerValidation = z.object({
   mid: z.coerce
     .number(messages.FIELD_NUMBER('Id'))
     .int(messages.FIELD_INTEGER('Id'))
@@ -44,6 +44,9 @@ export const disputeValidation = z.object({
     )
     .default(''),
 });
+
+// Backwards-compatible alias while older clients are migrated.
+export const disputeValidation = reportAdventurerValidation;
 
 export const reportUserValidation = z.object({
   uid: z.coerce

@@ -5,7 +5,7 @@ import {
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
-export const createNotification = async (notificationData) => {
+export const createNotification = async (notificationData, database = pool) => {
   const { type, kind, action, status, message, senderId, receiverId, payload } =
     notificationData;
   const query = `
@@ -23,7 +23,7 @@ export const createNotification = async (notificationData) => {
     VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING nid
   `;
-  const result = await pool.query(query, [
+  const result = await database.query(query, [
     type,
     kind,
     action,
@@ -36,20 +36,39 @@ export const createNotification = async (notificationData) => {
   return result.rows[0].nid;
 };
 
-export const updateNotificationStatus = async (notificationId, status) => {
+export const updateNotificationStatus = async (
+  notificationId,
+  status,
+  database = pool,
+) => {
   const query = 'UPDATE notification SET status = $1 WHERE nid = $2';
-  await pool.query(query, [status, notificationId]);
+  await database.query(query, [status, notificationId]);
 };
 
-export const markAsSeen = async (notificationId) => {
+export const markAsSeen = async (notificationId, database = pool) => {
   const query = `
     UPDATE notification
     SET seen = TRUE
     WHERE nid = $1
     RETURNING *
   `;
-  const result = await pool.query(query, [notificationId]);
+  const result = await database.query(query, [notificationId]);
   return result.rows[0];
+};
+
+export const addAssociatedReport = async (
+  notificationId,
+  reportId,
+  database = pool,
+) => {
+  const result = await database.query(
+    `UPDATE notification
+     SET payload = payload || jsonb_build_object('associated_report_id', $2::int)
+     WHERE nid = $1
+     RETURNING *`,
+    [notificationId, reportId],
+  );
+  return result.rows[0] || null;
 };
 
 export const markAllAsSeenByRecipientId = async (recipientId) => {

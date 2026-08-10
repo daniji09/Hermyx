@@ -159,16 +159,17 @@ export const getActiveConversationParticipantIds = async (conversationId) => {
 export const markConversationAsReadByUserId = async (
   conversationId,
   userId,
+  database = pool,
 ) => {
   const query = `
     UPDATE conversation_participant
-    SET last_read_at = CURRENT_TIMESTAMP
+    SET last_read_at = clock_timestamp()
     WHERE conversation_id = $1
       AND user_id = $2
       AND left_at IS NULL
     RETURNING conversation_id
   `;
 
-  const result = await pool.query(query, [conversationId, userId]);
+  const result = await database.query(query, [conversationId, userId]);
   return result.rowCount > 0;
 };

@@ -19,6 +19,7 @@ import {
   Mail,
   X,
   Menu,
+  MessageSquareWarning,
   User,
 } from 'lucide-react';
 import { consts } from '@hermyx/shared';
@@ -29,6 +30,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useContext, useState } from 'react';
 import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueries';
 import { getUnreadMessageCountQueryOptions } from '../../queries/ConversationsQueries';
+import { getDisputeUnreadCountQueryOptions } from '../../queries/DisputesQueries';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
@@ -36,6 +38,12 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { data: unreadMessageCount = 0 } = useQuery(
     getUnreadMessageCountQueryOptions({
+      enabled: !!currentUser,
+      staleTime: 30000,
+    }),
+  );
+  const { data: unreadDisputeCount = 0 } = useQuery(
+    getDisputeUnreadCountQueryOptions({
       enabled: !!currentUser,
       staleTime: 30000,
     }),
@@ -93,6 +101,10 @@ export function Navbar() {
                 </DropdownMenu>
 
                 <MessagesLink unreadMessageCount={unreadMessageCount} />
+                <DisputesLink
+                  unreadCount={unreadDisputeCount}
+                  isAdmin={currentUser.isAdmin}
+                />
                 <NotificationsButton />
                 <ProfileLink currentUser={currentUser} />
               </>
@@ -164,6 +176,24 @@ export function Navbar() {
                     <Bell className='h-4 w-4' aria-hidden='true' />
                   </span>
                   Notifications
+                </Link>
+                <Link
+                  to={currentUser.isAdmin ? '/reports' : '/disputes'}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                >
+                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                    <MessageSquareWarning
+                      className='h-4 w-4'
+                      aria-hidden='true'
+                    />
+                  </span>
+                  {currentUser.isAdmin ? 'Reports' : 'My disputes'}
+                  {unreadDisputeCount > 0 && (
+                    <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+                      {unreadDisputeCount}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   to='/conversations'
@@ -243,6 +273,30 @@ const MessagesLink = ({ unreadMessageCount }) => {
     </Button>
   );
 };
+
+const DisputesLink = ({ unreadCount, isAdmin }) => (
+  <Button
+    asChild
+    variant='ghost'
+    size='icon'
+    className='rounded-full hover:bg-slate-200/50'
+  >
+    <Link
+      to={isAdmin ? '/reports' : '/disputes'}
+      aria-label={`Go to ${isAdmin ? 'reports' : 'my disputes'}${
+        unreadCount > 0 ? `, ${unreadCount} unread messages` : ''
+      }`}
+      className='relative'
+    >
+      <MessageSquareWarning className='h-5 w-5' aria-hidden='true' />
+      {unreadCount > 0 && (
+        <span className='absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+          {unreadCount}
+        </span>
+      )}
+    </Link>
+  </Button>
+);
 
 const ProfileLink = ({ currentUser }) => {
   return (

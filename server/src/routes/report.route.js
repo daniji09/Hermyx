@@ -3,7 +3,7 @@ import {
   acceptAdventurersWorkParamsValidation,
   dismissBodyValidation,
   dismissParamValidation,
-  disputeValidation,
+  reportAdventurerValidation,
   getReportByIdValidation,
   getReportsValidation,
   rejectAdventurersWorkBodyValidation,
@@ -12,16 +12,7 @@ import {
   reportUserValidation,
 } from '@hermyx/shared';
 import { Router } from 'express';
-import {
-  acceptAdventurersWork,
-  dismiss,
-  disputeAdventurer,
-  getReport,
-  getReports,
-  rejectAdventurersWork,
-  reportMission,
-  reportUser,
-} from '../controllers/report.controller.js';
+import * as reportController from '../controllers/report.controller.js';
 import {
   validateBodySchema,
   validateParamsSchema,
@@ -38,7 +29,7 @@ router.get(
   verifyAdmin,
   validateQuerySchema(getReportsValidation),
   await pagination(),
-  getReports,
+  reportController.getReports,
 );
 
 // Get report by id
@@ -46,25 +37,29 @@ router.get(
   '/:id',
   verifyAdmin,
   validateParamsSchema(getReportByIdValidation),
-  getReport,
+  reportController.getReport,
 );
 
 /// POST
 // Report adventurer
 router.post(
-  '/dispute/adventurer',
-  validateBodySchema(disputeValidation),
-  disputeAdventurer,
+  '/adventurer',
+  validateBodySchema(reportAdventurerValidation),
+  reportController.reportAdventurer,
 );
 
 // Report user
-router.post('/user', validateBodySchema(reportUserValidation), reportUser);
+router.post(
+  '/user',
+  validateBodySchema(reportUserValidation),
+  reportController.reportUser,
+);
 
 // Report mission
 router.post(
   '/mission',
   validateBodySchema(reportMissionValidation),
-  reportMission,
+  reportController.reportMission,
 );
 
 // Accept adventurer's work
@@ -73,7 +68,7 @@ router.post(
   verifyAdmin,
   validateParamsSchema(acceptAdventurersWorkParamsValidation),
   validateBodySchema(acceptAdventurersWorkBodyValidation),
-  acceptAdventurersWork,
+  reportController.acceptAdventurersWork,
 );
 
 // Reject adventurer's work
@@ -82,7 +77,7 @@ router.post(
   verifyAdmin,
   validateParamsSchema(rejectAdventurersWorkParamValidation),
   validateBodySchema(rejectAdventurersWorkBodyValidation),
-  rejectAdventurersWork,
+  reportController.rejectAdventurersWork,
 );
 
 // Dismiss report
@@ -91,7 +86,7 @@ router.post(
   verifyAdmin,
   validateParamsSchema(dismissParamValidation),
   validateBodySchema(dismissBodyValidation),
-  dismiss,
+  reportController.dismiss,
 );
 
 export default router;

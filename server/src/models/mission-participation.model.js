@@ -143,14 +143,18 @@ export const reopenParticipation = async (mid, adventurerId) => {
   return result.rows[0] || null;
 };
 
-export const disputeParticipation = async (mid, adventurerId) => {
+export const disputeParticipation = async (
+  mid,
+  adventurerId,
+  database = pool,
+) => {
   const query = `
     UPDATE mission_participation
     SET status = $3
     WHERE mid = $1 AND adventurer_id = $2
     RETURNING *
   `;
-  const result = await pool.query(query, [
+  const result = await database.query(query, [
     mid,
     adventurerId,
     MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,

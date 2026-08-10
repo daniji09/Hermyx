@@ -1,6 +1,18 @@
 import { USER_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
+export const getActiveAdmin = async (database = pool) => {
+  const result = await database.query(`
+    SELECT *
+    FROM app_user
+    WHERE role = 'ADMIN'
+      AND status = 'ACTIVE'
+    ORDER BY uid ASC
+    LIMIT 1
+  `);
+  return result.rows[0] || null;
+};
+
 //Get the user by their ID
 export const getById = async (uid) => {
   const query = 'SELECT * FROM app_user WHERE uid = $1';

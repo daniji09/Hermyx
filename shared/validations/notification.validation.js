@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
+import { consts } from '../consts/consts.js';
 
 export const respondToNotificationParamSchema = z.object({
   notificationId: z.coerce
@@ -8,6 +9,24 @@ export const respondToNotificationParamSchema = z.object({
     .min(0, messages.FIELD_POSITIVE('Notification id')),
 });
 
-export const respondToNotificationBodySchema = z.object({
-  response: z.enum(['accepted', 'accept', 'rejected', 'disputed']),
-});
+export const respondToNotificationBodySchema = z
+  .object({
+    response: z.enum(['accepted', 'accept', 'rejected', 'disputed']),
+    message: z
+      .string()
+      .trim()
+      .max(
+        consts.REPORT.MESSAGE.MAX,
+        messages.FIELD_TOO_LONG('Message', consts.REPORT.MESSAGE.MAX),
+      )
+      .optional(),
+  })
+  .superRefine(({ response, message }, context) => {
+    if (response === 'disputed' && !message) {
+      context.addIssue({
+        code: 'custom',
+        path: ['message'],
+        message: messages.FIELD_REQUIRED,
+      });
+    }
+  });

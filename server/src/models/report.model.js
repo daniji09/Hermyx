@@ -2,34 +2,70 @@ import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
 // Creates a report
-export const createReport = async ({ senderId, message, type, payload }) => {
-  const query = `INSERT INTO report (date, sender_id, message, status, type, payload)
-    VALUES (NOW(), $1, $2, $3, $4, $5)
+export const createReport = async (
+  { senderId, message, type, payload, conversationId = null },
+  database = pool,
+) => {
+  const query = `INSERT INTO report (
+      date,
+      sender_id,
+      message,
+      status,
+      type,
+      payload,
+      conversation_id
+    )
+    VALUES (NOW(), $1, $2, $3, $4, $5, $6)
     RETURNING *`;
-  const result = await pool.query(query, [
+  const result = await database.query(query, [
     senderId,
     message,
     REPORT_STATUS.SENT.ID,
     type,
     payload,
+    conversationId,
   ]);
   return result.rows[0];
 };
 
 // Get report by id
 export const getReportById = async (id) => {
-  const query = `SELECT * FROM report WHERE rid = $1`;
+  const query = `
+    SELECT
+      r.*,
+      m.title AS mission_title,
+      mp.title AS vacancy_title
+    FROM report r
+    LEFT JOIN mission m
+      ON m.mid = NULLIF(r.payload->>'associated_mission_id', '')::int
+    LEFT JOIN mission_participation mp
+      ON mp.id = NULLIF(r.payload->>'associated_vacancy_id', '')::int
+    WHERE r.rid = $1
+  `;
   const result = await pool.query(query, [id]);
   return result.rows[0];
 };
 
 // Gets all reports paginated
-export const getReports = async ({ pagination, filters }) => {
+export const getReports = async ({ pagination, filters, userId }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT *, COUNT(*) OVER() AS total_count
+  let query = `SELECT
+      r.*,
+      COALESCE((
+        SELECT COUNT(*)::int
+        FROM conversation_participant cp
+        JOIN conversation_message cm
+          ON cm.conversation_id = cp.conversation_id
+        WHERE cp.conversation_id = r.conversation_id
+          AND cp.user_id = $1
+          AND cp.left_at IS NULL
+          AND cm.sender_id <> $1
+          AND cm.created_at > cp.last_read_at
+      ), 0)::int AS unread_count,
+      COUNT(*) OVER() AS total_count
     FROM report AS r
     WHERE 1=1`;
-  const values = [];
+  const values = [userId];
 
   if (filters?.status) {
     values.push(filters.status);
@@ -71,7 +107,10 @@ export const getReports = async ({ pagination, filters }) => {
 };
 
 // Gets all active specified reports of a user
-export const checkActiveReport = async ({ senderId, type, payload }) => {
+export const checkActiveReport = async (
+  { senderId, type, payload },
+  database = pool,
+) => {
   let query = `
     SELECT rid FROM REPORT 
     WHERE sender_id = $1 
@@ -87,7 +126,7 @@ export const checkActiveReport = async ({ senderId, type, payload }) => {
   ) {
     query += `AND payload->>'associated_mission_id' = $4
       AND payload->>'associated_vacancy_id' = $5`;
-    result = await pool.query(query, [
+    result = await database.query(query, [
       senderId,
       REPORT_STATUS.SENT.ID,
       type,
@@ -96,7 +135,7 @@ export const checkActiveReport = async ({ senderId, type, payload }) => {
     ]);
   } else if (type === REPORT_TYPE.REPORT_PROFILE.ID) {
     query += `AND payload->>'associated_user_id' = $4`;
-    result = await pool.query(query, [
+    result = await database.query(query, [
       senderId,
       REPORT_STATUS.SENT.ID,
       type,
@@ -104,7 +143,7 @@ export const checkActiveReport = async ({ senderId, type, payload }) => {
     ]);
   } else if (type === REPORT_TYPE.REPORT_MISSION.ID) {
     query += `AND payload->>'associated_mission_id' = $4`;
-    result = await pool.query(query, [
+    result = await database.query(query, [
       senderId,
       REPORT_STATUS.SENT.ID,
       type,
@@ -117,15 +156,100 @@ export const checkActiveReport = async ({ senderId, type, payload }) => {
 
 // Closes a report
 export const closeReport = async (rid, decision, reason, resolved_by) => {
-  const query = `UPDATE report 
-    SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5 
-    WHERE rid = $2 RETURNING * `;
-  const result = await pool.query(query, [
-    REPORT_STATUS.ANSWERED.ID,
-    rid,
-    decision,
-    reason,
-    resolved_by,
-  ]);
-  return result.rows[0];
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      `UPDATE report
+       SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5
+       WHERE rid = $2
+       RETURNING *`,
+      [REPORT_STATUS.ANSWERED.ID, rid, decision, reason, resolved_by],
+    );
+    const report = result.rows[0];
+
+    if (report?.conversation_id) {
+      await client.query(
+        `UPDATE conversation
+         SET closed_at = CURRENT_TIMESTAMP
+         WHERE cid = $1 AND closed_at IS NULL`,
+        [report.conversation_id],
+      );
+      await client.query(
+        `UPDATE conversation_participant
+         SET can_send = FALSE
+         WHERE conversation_id = $1 AND left_at IS NULL`,
+        [report.conversation_id],
+      );
+    }
+
+    await client.query('COMMIT');
+    return report;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+export const getDisputesByUserId = async (userId) => {
+  const result = await pool.query(
+    `SELECT
+       r.*,
+       c.closed_at,
+       m.title AS mission_title,
+       mp.title AS vacancy_title,
+       counterpart.uid AS counterpart_id,
+       counterpart.username AS counterpart_username,
+       counterpart.avatar AS counterpart_avatar,
+       last_message.content AS last_message_content,
+       last_message.attachment_type AS last_message_attachment_type,
+       last_message.created_at AS last_message_created_at,
+       COALESCE(unread.unread_count, 0)::int AS unread_count
+     FROM report r
+     JOIN conversation c ON c.cid = r.conversation_id
+     JOIN conversation_participant current_participant
+       ON current_participant.conversation_id = c.cid
+      AND current_participant.user_id = $1
+      AND current_participant.left_at IS NULL
+     LEFT JOIN mission m
+       ON m.mid = NULLIF(r.payload->>'associated_mission_id', '')::int
+     LEFT JOIN mission_participation mp
+       ON mp.id = NULLIF(r.payload->>'associated_vacancy_id', '')::int
+     LEFT JOIN LATERAL (
+       SELECT u.uid, u.username, u.avatar
+       FROM conversation_participant cp
+       JOIN app_user u ON u.uid = cp.user_id
+       WHERE cp.conversation_id = c.cid
+         AND cp.user_id <> $1
+         AND u.role = 'USER'
+         AND cp.left_at IS NULL
+       ORDER BY cp.joined_at ASC
+       LIMIT 1
+     ) counterpart ON true
+     LEFT JOIN LATERAL (
+       SELECT cm.content, cm.attachment_type, cm.created_at
+       FROM conversation_message cm
+       WHERE cm.conversation_id = c.cid
+       ORDER BY cm.created_at DESC
+       LIMIT 1
+     ) last_message ON true
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS unread_count
+       FROM conversation_message cm
+       WHERE cm.conversation_id = c.cid
+         AND cm.sender_id <> $1
+         AND cm.created_at > current_participant.last_read_at
+     ) unread ON true
+     WHERE r.type IN ($2, $3)
+     ORDER BY last_message.created_at DESC NULLS LAST, r.date DESC`,
+    [
+      userId,
+      REPORT_TYPE.REVIEW_DISPUTE.ID,
+      REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
+    ],
+  );
+  return result.rows;
 };

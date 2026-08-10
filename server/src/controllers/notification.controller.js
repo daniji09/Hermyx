@@ -31,7 +31,6 @@ import {
 } from '../models/mission.model.js';
 import {
   approveParticipation,
-  disputeParticipation,
   getById as getMissionParticipationById,
   getOccupiedVacancies,
   getVacancyById,
@@ -52,7 +51,7 @@ import {
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission-payment.model.js';
-import { checkActiveReport, createReport } from '../models/report.model.js';
+import { createDisputeTicket } from '../services/dispute.service.js';
 
 export const getMyNotifications = async (req, res) => {
   try {
@@ -101,6 +100,7 @@ export const markMyNotificationsAsSeen = async (req, res) => {
 const respondToParticipationReview = async ({
   notification,
   response,
+  message: disputeReason,
   userId,
   username,
   notificationId,
@@ -156,57 +156,21 @@ const respondToParticipationReview = async ({
         .status(400)
         .json({ error: messages.CANNOT_DISPUTE_PARTICIPATION_STATE });
 
-    await disputeParticipation(missionId, notification.sender_id);
-    await syncMissionCompletionStatus(missionId);
-    await updateNotificationStatus(
+    const disputeMessage = `A dispute was opened for "${mission.title}" by ${username}.`;
+    const dispute = await createDisputeTicket({
+      senderId: userId,
+      counterpartId: notification.sender_id,
+      adventurerId: notification.sender_id,
+      missionId,
+      vacancyId: participation.id,
       notificationId,
-      NOTIFICATION_STATUS.DISPUTED.ID,
-    );
-    await markAsSeen(notificationId);
-
-    // Searches for active report by the same applicant to the same adventurer
-    const activeReport = await checkActiveReport({
-      senderId: userId,
-      type: REPORT_TYPE.REVIEW_DISPUTE.ID,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: participation.id,
-      },
-    });
-    if (activeReport > 0)
-      return res
-        .status(409)
-        .json({ errors: { general: [messages.APPLICANT_ALREADY_REPORTED] } });
-
-    // Creates report
-    const disputeMessage = `Your participation in "${mission.title}" was disputed by ${username}.`;
-    const report = await createReport({
-      senderId: userId,
-      message: disputeMessage,
-      type: REPORT_TYPE.REVIEW_DISPUTE.ID,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: participation.id,
-      },
-    });
-
-    const followUpNotificationId = await createNotification({
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
-      status: null,
-      message: disputeMessage,
-      senderId: userId,
-      receiverId: notification.sender_id,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: participation.id,
-        associated_report_id: report.rid,
-      },
+      reportType: REPORT_TYPE.REVIEW_DISPUTE.ID,
+      reason: disputeReason,
+      systemMessage: disputeMessage,
     });
 
     emitToUser(notification.sender_id, 'mission:participation-disputed', {
-      notificationId: followUpNotificationId,
+      notificationId: dispute.followUpNotificationId,
       type: NOTIFICATION_TYPE.MISSION.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
       missionId,
@@ -214,7 +178,18 @@ const respondToParticipationReview = async ({
       ownerId: userId,
       ownerUsername: username,
       message: disputeMessage,
+      reportId: dispute.report.rid,
     });
+
+    for (const recipientId of [notification.sender_id, dispute.adminId]) {
+      emitToUser(recipientId, 'conversation:message-received', {
+        conversationId: dispute.conversation.cid,
+        conversationType: 'dispute',
+        messageId: dispute.initialMessage.mid,
+        reportId: dispute.report.rid,
+        senderId: userId,
+      });
+    }
 
     return res.status(200).json({
       message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY,
@@ -346,6 +321,7 @@ const respondToParticipationReview = async ({
 const respondToParticipationRejection = async ({
   notification,
   response,
+  message: disputeReason,
   userId,
   username,
   notificationId,
@@ -382,67 +358,41 @@ const respondToParticipationRejection = async ({
       return res
         .status(400)
         .json({ error: messages.CANNOT_DISPUTE_PARTICIPATION_STATE });
-    await disputeParticipation(missionId, userId);
-    const missionAfterSync = await syncMissionCompletionStatus(missionId);
-    await updateNotificationStatus(
-      notificationId,
-      NOTIFICATION_STATUS.DISPUTED.ID,
-    );
-    await markAsSeen(notificationId);
-
-    // Searches for active report by the same adventurer to the same applicant
-    const activeReport = await checkActiveReport({
-      senderId: userId,
-      type: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: participation.id,
-      },
-    });
-    if (activeReport > 0)
-      return res
-        .status(409)
-        .json({ errors: { general: [messages.APPLICANT_ALREADY_REPORTED] } });
-
-    // Creates report
     const disputeMessage = `${username} opened a dispute for "${mission.title}".`;
-    const report = await createReport({
+    const dispute = await createDisputeTicket({
       senderId: userId,
-      message: disputeMessage,
-      type: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: participation.id,
-      },
-    });
-
-    // Sends informative notification
-    const followUpNotificationId = await createNotification({
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-      action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
-      status: null,
-      message: disputeMessage,
-      senderId: userId,
-      receiverId: mission.owner_id,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: participation.id,
-        associated_report_id: report.rid,
-      },
+      counterpartId: mission.owner_id,
+      adventurerId: userId,
+      missionId,
+      vacancyId: participation.id,
+      notificationId,
+      reportType: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
+      reason: disputeReason,
+      systemMessage: disputeMessage,
     });
 
     emitToUser(mission.owner_id, 'mission:participation-disputed', {
-      notificationId: followUpNotificationId,
+      notificationId: dispute.followUpNotificationId,
       type: NOTIFICATION_TYPE.MISSION.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_DISPUTED.ID,
       missionId,
       missionTitle: mission.title,
       adventurerId: userId,
       adventurerUsername: username,
-      missionStatus: missionAfterSync?.status,
+      missionStatus: dispute.missionAfterSync?.status,
       message: disputeMessage,
+      reportId: dispute.report.rid,
     });
+
+    for (const recipientId of [mission.owner_id, dispute.adminId]) {
+      emitToUser(recipientId, 'conversation:message-received', {
+        conversationId: dispute.conversation.cid,
+        conversationType: 'dispute',
+        messageId: dispute.initialMessage.mid,
+        reportId: dispute.report.rid,
+        senderId: userId,
+      });
+    }
 
     return res.status(200).json({
       message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY,
@@ -872,9 +822,9 @@ const respondToVacancyMonetaryRewardEdition = async ({
 };
 
 /*Receives a notification id and response. Business behavior is selected by action.*/
-export const respondToNotification = async (req, res) => {
+export const respondToNotification = async (req, res, next) => {
   const { notificationId } = req.params;
-  const { response } = req.body;
+  const { response, message } = req.body;
 
   const userId = req.user.uid;
 
@@ -901,6 +851,7 @@ export const respondToNotification = async (req, res) => {
       return await respondToParticipationReview({
         notification,
         response,
+        message,
         userId,
         username: req.user.username,
         notificationId,
@@ -915,6 +866,7 @@ export const respondToNotification = async (req, res) => {
       return await respondToParticipationRejection({
         notification,
         response,
+        message,
         userId,
         username: req.user.username,
         notificationId,
@@ -949,8 +901,7 @@ export const respondToNotification = async (req, res) => {
       .status(400)
       .json({ error: messages.INVALID_NOTIFICATION_ACTION });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+    next(error);
   }
 };
 

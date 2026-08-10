@@ -5,9 +5,14 @@ export const getMyNotifications = async () => {
   return data;
 };
 
-export const respondToNotification = async ({ notificationId, response }) => {
+export const respondToNotification = async ({
+  notificationId,
+  response,
+  message,
+}) => {
   const { data } = await api.post(`/notifications/${notificationId}/respond`, {
     response,
+    message,
   });
   return data;
 };

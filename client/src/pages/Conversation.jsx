@@ -87,11 +87,18 @@ const MessageBubbleContent = ({ message }) => (
   </BubbleContent>
 );
 
-export const Conversation = () => {
-  const { conversationId } = useParams();
+export const ConversationThread = ({
+  conversationId: providedConversationId,
+  backTo: providedBackTo,
+  showBack = true,
+  title,
+  description,
+}) => {
+  const { conversationId: routeConversationId } = useParams();
+  const conversationId = providedConversationId || routeConversationId;
   const location = useLocation();
   const { currentUser, socket } = useContext(AuthContext);
-  const backTo = location.state?.from || '/conversations';
+  const backTo = providedBackTo || location.state?.from || '/conversations';
   const [content, setContent] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [selectedPhotoPreview, setSelectedPhotoPreview] = useState('');
@@ -117,9 +124,11 @@ export const Conversation = () => {
   );
   const conversation = conversationData?.conversation;
   const isMissionConversation = conversation?.type === 'mission';
-  const conversationTitle = isMissionConversation
-    ? conversation?.mission_title
-    : otherParticipant?.username;
+  const conversationTitle =
+    title ||
+    (isMissionConversation
+      ? conversation?.mission_title
+      : otherParticipant?.username);
   const canSendMessages =
     !conversation?.closed_at && currentParticipant?.can_send !== false;
   const messageGroups = groupConsecutiveMessages(messages);
@@ -159,6 +168,11 @@ export const Conversation = () => {
         await queryClient.invalidateQueries({
           queryKey: ['getUnreadMessageCount'],
         });
+        await queryClient.invalidateQueries({
+          queryKey: ['getDisputeUnreadCount'],
+        });
+        await queryClient.invalidateQueries({ queryKey: ['getMyDisputes'] });
+        await queryClient.invalidateQueries({ queryKey: ['getReports'] });
       } catch (error) {
         console.error('Could not mark conversation as read:', error);
       }
@@ -191,6 +205,13 @@ export const Conversation = () => {
           await queryClient.invalidateQueries({
             queryKey: ['getUnreadMessageCount'],
           });
+          await queryClient.invalidateQueries({
+            queryKey: ['getDisputeUnreadCount'],
+          });
+          await queryClient.invalidateQueries({
+            queryKey: ['getMyDisputes'],
+          });
+          await queryClient.invalidateQueries({ queryKey: ['getReports'] });
         } catch (error) {
           console.error('Could not mark conversation as read:', error);
         }
@@ -297,32 +318,34 @@ export const Conversation = () => {
 
   if (isConversationLoading) {
     return (
-      <main className='container mx-auto max-w-3xl p-4 sm:p-6'>
+      <section className='container mx-auto max-w-3xl p-4 sm:p-6'>
         <div className='p-8 text-center text-muted-foreground'>
           Loading conversation
         </div>
-      </main>
+      </section>
     );
   }
 
   if (isConversationError || !conversationData) {
     return (
-      <main className='container mx-auto max-w-3xl p-4 sm:p-6'>
+      <section className='container mx-auto max-w-3xl p-4 sm:p-6'>
         <div className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'>
           Conversation not found
         </div>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main className='container mx-auto flex max-w-3xl flex-col gap-4 p-4 sm:p-6'>
-      <Button asChild variant='ghost' className='w-fit gap-2 px-0'>
-        <Link to={backTo}>
-          <ArrowLeft className='h-4 w-4' aria-hidden='true' />
-          Back
-        </Link>
-      </Button>
+    <section className='container mx-auto flex max-w-3xl flex-col gap-4 p-4 sm:p-6'>
+      {showBack && (
+        <Button asChild variant='ghost' className='w-fit gap-2 px-0'>
+          <Link to={backTo}>
+            <ArrowLeft className='h-4 w-4' aria-hidden='true' />
+            Back
+          </Link>
+        </Button>
+      )}
 
       <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
         <Card className='mx-auto h-140 w-full max-w-3xl gap-0 py-0'>
@@ -330,12 +353,16 @@ export const Conversation = () => {
             <CardTitle asChild>
               <h1>{conversationTitle || 'Conversation'}</h1>
             </CardTitle>
-            {isMissionConversation && (
+            {(description || isMissionConversation) && (
               <CardDescription>
-                Mission group · {conversationData.participants.length}{' '}
-                {conversationData.participants.length === 1
-                  ? 'participant'
-                  : 'participants'}
+                {description || (
+                  <>
+                    Mission group · {conversationData.participants.length}{' '}
+                    {conversationData.participants.length === 1
+                      ? 'participant'
+                      : 'participants'}
+                  </>
+                )}
               </CardDescription>
             )}
           </CardHeader>
@@ -515,13 +542,15 @@ export const Conversation = () => {
             ) : (
               <p className='text-sm text-muted-foreground'>
                 {conversation?.closed_at
-                  ? 'This mission conversation is closed. You can still read its history.'
-                  : 'Your mission participation is complete. This conversation is now read-only.'}
+                  ? 'This conversation is closed. You can still read its history.'
+                  : 'This conversation is now read-only.'}
               </p>
             )}
           </CardFooter>
         </Card>
       </MessageScrollerProvider>
-    </main>
+    </section>
   );
 };
+
+export const Conversation = () => <ConversationThread />;

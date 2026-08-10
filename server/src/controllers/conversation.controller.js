@@ -128,7 +128,9 @@ export const sendMessage = async (req, res) => {
       .forEach((participantId) => {
         emitToUser(participantId, 'conversation:message-received', {
           conversationId: Number(conversationId),
+          conversationType: message.conversation_type,
           messageId: message.mid,
+          reportId: message.report_id,
           senderId,
         });
       });
@@ -221,7 +223,11 @@ export const getMyConversations = async (req, res) => {
 
 export const getMyUnreadMessageCount = async (req, res) => {
   try {
-    const unreadCount = await getUnreadMessageCountByUserId(req.user.uid);
+    const unreadCount = await getUnreadMessageCountByUserId(
+      req.user.uid,
+      null,
+      'dispute',
+    );
 
     return res.status(200).json({ unreadCount });
   } catch (e) {

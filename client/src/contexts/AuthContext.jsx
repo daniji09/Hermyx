@@ -98,18 +98,38 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
-        socketRef.current.on('conversation:message-received', () => {
-          queryClient.invalidateQueries({
-            queryKey: ['getUnreadMessageCount'],
-          });
-          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+        socketRef.current.on('conversation:message-received', (payload) => {
+          if (payload.conversationType === 'dispute') {
+            queryClient.invalidateQueries({
+              queryKey: ['getDisputeUnreadCount'],
+            });
+            queryClient.invalidateQueries({ queryKey: ['getMyDisputes'] });
+            if (payload.reportId) {
+              queryClient.invalidateQueries({
+                queryKey: ['getDispute', String(payload.reportId)],
+              });
+            }
+            queryClient.invalidateQueries({ queryKey: ['getReports'] });
+          } else {
+            queryClient.invalidateQueries({
+              queryKey: ['getUnreadMessageCount'],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ['getMyConversations'],
+            });
+          }
         });
 
-        socketRef.current.on('conversation:closed', (payload) => {
+        socketRef.current.on('conversation:closed', () => {
           queryClient.invalidateQueries({
-            queryKey: ['getConversation', String(payload.conversationId)],
+            queryKey: ['getConversation'],
           });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyDisputes'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getDisputeUnreadCount'],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getReports'] });
         });
 
         socketRef.current.on('mission:participation-submitted', (payload) => {

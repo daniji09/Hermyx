@@ -104,6 +104,15 @@ export const closeMissionConversation = async (missionId, database = pool) => {
   return result.rows[0] || null;
 };
 
+export const createDisputeConversation = async (database = pool) => {
+  const result = await database.query(`
+    INSERT INTO conversation (type)
+    VALUES ('dispute')
+    RETURNING *
+  `);
+  return result.rows[0];
+};
+
 export const getConversationById = async (conversationId) => {
   const query = `
     SELECT
@@ -172,6 +181,7 @@ export const getConversationsByUserId = async (userId) => {
       ON last_sender.uid = last_message.sender_id
     WHERE current_participant.user_id = $1
       AND current_participant.left_at IS NULL
+      AND c.type <> 'dispute'
     ORDER BY last_message.created_at DESC NULLS LAST, c.created_at DESC
   `;
 

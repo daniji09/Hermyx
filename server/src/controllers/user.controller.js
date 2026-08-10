@@ -69,7 +69,8 @@ import {
 } from '../models/mission-participation.model.js';
 import { createNotification } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
-import { closeReport, getReportById } from '../models/report.model.js';
+import { getReportById } from '../models/report.model.js';
+import { closeReportAndConversation } from '../services/report.service.js';
 import {
   createMissionPayment,
   getMissionPaymentsByVacancy,
@@ -1104,7 +1105,7 @@ export const banUser = async (req, res) => {
       }
 
       // Report is closed
-      const reportClosed = await closeReport(
+      const reportClosed = await closeReportAndConversation(
         rid,
         REPORT_DECISION.BAN_USER.ID,
         reason,

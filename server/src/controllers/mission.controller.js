@@ -67,7 +67,8 @@ import {
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission-payment.model.js';
-import { closeReport, getReportById } from '../models/report.model.js';
+import { getReportById } from '../models/report.model.js';
+import { closeReportAndConversation } from '../services/report.service.js';
 import {
   deleteFromAzureBlob,
   deleteFromLocalStorage,
@@ -1460,7 +1461,7 @@ export const banMission = async (req, res) => {
     await updateMissionStatus(mid, MISSION_STATUS.REPORTED.ID);
 
     // Report is closed
-    const reportClosed = await closeReport(
+    const reportClosed = await closeReportAndConversation(
       rid,
       REPORT_DECISION.BAN_MISSION.ID,
       reason,
@@ -1640,7 +1641,7 @@ export const kickAdventurerOut = async (req, res) => {
     }
 
     // Report is closed
-    const reportClosed = await closeReport(
+    const reportClosed = await closeReportAndConversation(
       rid,
       REPORT_DECISION.KICK_ADVENTURER_OUT.ID,
       reason,

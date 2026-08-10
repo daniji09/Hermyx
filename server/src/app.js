@@ -33,6 +33,8 @@ import reviewsRouter from './routes/review.route.js';
 import reportsRouter from './routes/report.route.js';
 import { verifyToken } from './middlewares/auth.middleware.js';
 import conversationsRouter from './routes/conversation.route.js';
+import disputesRouter from './routes/dispute.route.js';
+import { errorHandler } from './middlewares/error.middleware.js';
 
 // Application routes
 app.use('/api/stripe', verifyToken, paymentRouter);
@@ -42,5 +44,9 @@ app.use('/api/notifications', verifyToken, notificationRouter);
 app.use('/api/reviews', verifyToken, reviewsRouter);
 app.use('/api/conversations', verifyToken, conversationsRouter);
 app.use('/api/reports', verifyToken, reportsRouter);
+app.use('/api/disputes', verifyToken, disputesRouter);
+
+// Error handling
+app.use(errorHandler);
 
 export default app;
