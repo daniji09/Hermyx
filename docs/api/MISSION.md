@@ -255,7 +255,7 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
 
 **Responses:**
 
-- `200 OK`: mission obtain successfully.
+- `201 OK`: mission created successfully.
 
   ```json
   {
@@ -319,27 +319,101 @@ Close a mission after been opened or reopened.
 
 - `403 Unauthorized`: user is unauthorized to do this action: mission does not belong to him.
 
-```json
-{
-  "errors": {
-    "general": ["User is not authorized for this action."]
+  ```json
+  {
+    "errors": {
+      "general": ["User is not authorized for this action."]
+    }
   }
-}
-```
+  ```
 
 - `404 Not Found`: mission not found.
 
-```json
-{
-  "errors": {
-    "general": ["Mission not found."]
+  ```json
+  {
+    "errors": {
+      "general": ["Mission not found."]
+    }
   }
-}
-```
+  ```
 
-    <br>
+<br>
 
 **Workflow:** mission close process must be performed on missions in the 'opened' or 'reopened' state. In the first case, the mission must have at least one 'joined' adventurer to be closed, while in the second, the mission can be closed again without any new adventurers joining. Additionally, a database transaction is performed to update the mission's status to 'in_progress', as well as the vacancies of newly joined adventurers to the 'in_progress' status. Finally, as always, the necessary notifications are sent.
+<br>
+<br>
+<br>
+
+## - Close mission: `POST /api/missions/:mid/join`
+
+Adventurers sends a join request notification to the owner of the mission, linking a specific vacancy.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Body:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `vacancyId` | integer | Yes | Vacancy identifier. |
+| `message` | string | No | Message send to owner. |
+<br>
+
+**Responses:**
+
+- `200 OK`: notification created successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot join their own mission.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You can't join your own mission."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission or vacancy not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission/Vacancy not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** the process of sending a mission join request notification is quite simple, all necessary checks are performed and, if they are correct, the notification is sent.
 <br>
 <br>
 <br>
@@ -397,7 +471,17 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
   }
   ```
 
-    <br>
+- `404 Not Found`: mission not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission not found."]
+    }
+  }
+  ```
+
+<br>
 
 **Workflow:** to edit a mission, it's needed to enter the title, description, and information about the available vacancies, which must include at least one vacancy and its title and monetary reward. Optionally, it's aso possible to add up to five images, which are handled by the `multer` library, and a location, which is handled by the `postgis` extension for PostgreSQL. The process consists of four steps: first, performing all necessary validations on the entered data to ensure its accuracy; second, processing the new images, locally in development environments and in Azure Blob environments in production; third, performing all internal updates using a database transaction; and fourth, deleting the eliminated images and finally sending the necessary notifications. This order is used to ensure data integrity, so in the worst-case scenario, some corrupted images may remain in storage, or some notifications may not be sent. If the process were performed in a different order, notifications, for example, could not be rolled back.
 Besides, mission and mission participations information can always be changed without permission, except on obvious states such as 'finished', 'deleted' or 'cancelled' for missions and 'accepted' or 'released' for mission participations. Mission participation monetary reward can be change with permission of the adventurer that occupied that participation, if any. Mission participation deletion is only permitted on empty participation or on 'opened' missions.

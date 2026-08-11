@@ -336,14 +336,13 @@ const closeMissionValidations = async (mid, user) => {
   const mission = await getMissionByIdOrThrow(mid);
 
   // Checks mission is owned by user
-  if (mission.owner_id !== user.uid)
-    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+  checkMissionBelongsToUser(mission.owner_id, user.uid);
 
   // Checks occupied vacancies
   const occupied_vacancies =
     await missionParticipationModel.findAllOccupied(mid);
   if (occupied_vacancies.length === 0)
-    throw new AppError(messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS, 400);
+    throw new AppError(messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS, 409);
 
   // Different checks for opened or reopened mission
   let nextMissionStatus, vacanciesToUpdate, message;
@@ -354,7 +353,7 @@ const closeMissionValidations = async (mid, user) => {
         MISSION_STATUS.CLOSED.ID,
       )
     )
-      throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 400);
+      throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 409);
 
     nextMissionStatus = MISSION_STATUS.CLOSED.ID;
     vacanciesToUpdate = occupied_vacancies.filter(
@@ -367,7 +366,7 @@ const closeMissionValidations = async (mid, user) => {
         MISSION_STATUS.IN_PROGRESS.ID,
       )
     )
-      throw new AppError(messages.MISSION.REOPEN.CANNOT_ON_CURRENT_STATE, 400);
+      throw new AppError(messages.MISSION.REOPEN.CANNOT_ON_CURRENT_STATE, 409);
 
     nextMissionStatus = MISSION_STATUS.IN_PROGRESS.ID;
     vacanciesToUpdate = await missionParticipationModel.findAllJoined(
@@ -382,7 +381,7 @@ const closeMissionValidations = async (mid, user) => {
             mission.title,
           );
   } else {
-    throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 400);
+    throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 409);
   }
 
   return {
@@ -463,6 +462,84 @@ const closeMissionInternalUpdates = async (
   }
 };
 
+// Join mission
+export const joinMission = async (mid, user, message, vacancyId) => {
+  checkMid(mid);
+  checkUser(user);
+  checkVacancyId(vacancyId);
+
+  // Mission is searched
+  const mission = await getMissionByIdOrThrow(mid);
+
+  // Checks if mission was created by the current user
+  if (mission.owner_id === user.uid)
+    throw new AppError(messages.MISSION.JOIN.OWN_MISSION, 403);
+
+  // Checks if mission status is valid for accepting adventurers
+  if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS)
+    throw new AppError(messages.MISSION.JOIN.NOT_ACCEPTS_ADVENTURERS, 409);
+
+  // Checks if mission is already full
+  if (mission.occupied_vacancies === mission.total_vacancies)
+    throw new AppError(messages.MISSION.JOIN.FILLED, 409);
+
+  // Checks if user has already joined that mission
+  const alreadyJoined =
+    await missionParticipationModel.findByMidAndAdventurerId(mid, user.uid);
+  if (alreadyJoined)
+    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+
+  // Checks if vacancy exists
+  const vacancy = await missionParticipationModel.findById(vacancyId);
+  if (!vacancy) throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+  if (vacancy.adventurer_id !== null) {
+    throw new AppError(messages.MISSION.JOIN.FILLED, 409);
+  }
+
+  // Checks if user has already requested the joining for this mission
+  const ownerId = mission.owner_id;
+  const pendingRequest = await notificationService.hasPendingJoinNotification(
+    mid,
+    user.uid,
+    ownerId,
+    vacancyId,
+  );
+  if (pendingRequest)
+    throw new AppError(messages.MISSION.JOIN.REQUEST_ALREADY_SENT, 409);
+
+  // Checks if user has configured their bank account
+  if (user.stripe_connected_id === null)
+    throw new AppError(
+      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+      403,
+    );
+
+  // Otherwise, creates the notification for the joining request (or invite)
+  const notificationId = await notificationService.createNotification({
+    type: NOTIFICATION_TYPE.INVITATION.ID,
+    kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+    action: NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    status: NOTIFICATION_STATUS.PENDING.ID,
+    message,
+    senderId: user.uid,
+    receiverId: ownerId,
+    payload: { associated_mission_id: mid, associated_vacancy_id: vacancyId },
+  });
+
+  // And sends it to the user
+  socketProvider.emitToUser(ownerId, 'notification:created', {
+    notificationId,
+    missionId: mid,
+    vacancyId: vacancyId,
+    missionTitle: mission.title,
+    senderId: user.uid,
+    senderUsername: user.username,
+    receiverId: ownerId,
+    type: NOTIFICATION_TYPE.INVITATION.ID,
+    message,
+  });
+};
+
 // Edit mission
 export const editMission = async (user, mission, newPhotos, existingPhotos) => {
   checkUid(user.uid);
@@ -529,14 +606,14 @@ const editMissionValidations = async (
 
   // Gets original mission info
   const originalMission = await missionModel.findByMidExcludingUid(mission.mid);
+  if (!originalMission) throw buildMissionNotFoundError();
 
   // Checks mission is owned by user
-  if (originalMission.owner_id !== uid)
-    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+  checkMissionBelongsToUser(originalMission.owner_id, uid);
 
   // Checks that mission is in a editable status
   if (!MISSION_STATUS[originalMission.status].CAN_EDIT)
-    throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_MISSION, 400);
+    throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_MISSION, 409);
 
   // Checks if user has a mission already with the same title and different id
   await checkUserMissionWithSameTitle(uid, mission.title, mission.mid);
@@ -566,6 +643,7 @@ const editMissionValidations = async (
     if (existingIds.length < originalVacancies.length) {
       throw new AppError(
         messages.MISSION.EDIT.CANNOT_DELETE_EXISTING_VACANCIES,
+        409,
       );
     }
   }
@@ -585,7 +663,7 @@ const editMissionValidations = async (
         currentOriginal.description !== vacancy.description ||
         currentOriginal.title !== vacancy.title
       ) {
-        throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_VACANCY, 400);
+        throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_VACANCY, 409);
       }
     }
   }
@@ -1096,6 +1174,11 @@ const checkVacanciesData = (vacanciesData) => {
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancies data'));
 };
 
+const checkVacancyId = (vacancyId) => {
+  if (!vacancyId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancy id'));
+};
+
 const checkUid = (uid) => {
   if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
 };
@@ -1123,4 +1206,10 @@ const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
   );
   if (hasDuplicate)
     throw new AppError(messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE, 400);
+};
+
+const checkMissionBelongsToUser = async (missionOwnerUid, currentUserUid) => {
+  // Checks mission is owned by user
+  if (missionOwnerUid !== currentUserUid)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 };

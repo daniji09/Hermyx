@@ -58,6 +58,36 @@ export const findByActionStatusAndVacancy = async (
   return result.rows;
 };
 
+export const hasPendingJoinNotification = async (
+  missionId,
+  senderId,
+  recipientId,
+  vacancyId,
+) => {
+  const query = `
+    SELECT EXISTS (
+      SELECT 1
+      FROM notification
+      WHERE payload->>'associated_mission_id' = $1::text
+        AND sender_id = $2
+        AND recipient_id = $3
+        AND payload->>'associated_vacancy_id' = $4::text
+        AND status = $5
+        AND action IN ($6, $7)
+    ) AS "hasPendingJoinNotification"
+  `;
+  const result = await pool.query(query, [
+    missionId,
+    senderId,
+    recipientId,
+    vacancyId,
+    NOTIFICATION_STATUS.PENDING.ID,
+    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    NOTIFICATION_ACTION.MISSION_INVITE.ID,
+  ]);
+  return result.rows[0].hasPendingJoinNotification;
+};
+
 /// UPDATES
 // Update notification
 export const update = async (notificationData, client = pool) => {
@@ -124,36 +154,6 @@ export const findById = async (id) => {
   const query = 'SELECT * FROM notification WHERE nid = $1';
   const result = await pool.query(query, [id]);
   return result.rows[0];
-};
-
-export const hasPendingJoinNotification = async (
-  missionId,
-  senderId,
-  recipientId,
-  vacancyId,
-) => {
-  const query = `
-    SELECT EXISTS (
-      SELECT 1
-      FROM notification
-      WHERE payload->>'associated_mission_id' = $1::text
-        AND sender_id = $2
-        AND recipient_id = $3
-        AND payload->>'associated_vacancy_id' = $4::text
-        AND status = $5
-        AND action IN ($6, $7)
-    ) AS "hasPendingJoinNotification"
-  `;
-  const result = await pool.query(query, [
-    missionId,
-    senderId,
-    recipientId,
-    vacancyId,
-    NOTIFICATION_STATUS.PENDING.ID,
-    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
-    NOTIFICATION_ACTION.MISSION_INVITE.ID,
-  ]);
-  return result.rows[0].hasPendingJoinNotification;
 };
 
 export const getByRecipientId = async (recipientId) => {

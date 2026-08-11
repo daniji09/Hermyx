@@ -229,6 +229,11 @@ CREATE TABLE NOTIFICATION (
 	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid) ON DELETE CASCADE
 );
 
+CREATE UNIQUE INDEX unique_pending_join 
+	ON notification 
+	(sender_id, recipient_id, (payload->>'associated_mission_id'), (payload->>'associated_vacancy_id')) 
+	WHERE status = 'PENDING' AND action = 'JOIN_REQUEST'; -- To avoid users sending the same notification twice due to a double click
+
 CREATE TABLE REPORT (
 	rid SERIAL PRIMARY KEY,
 	date TIMESTAMP NOT NULL,

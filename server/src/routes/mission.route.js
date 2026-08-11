@@ -86,6 +86,14 @@ router.post(
   missionController.closeMission,
 );
 
+// Joins an adventurer into a mission
+router.post(
+  '/:mid/join',
+  validateParamsSchema(joinMissionParamSchema),
+  validateBodySchema(joinMissionBodySchema),
+  missionController.joinMission,
+);
+
 /// PUT
 // Edits mission
 router.put(
@@ -100,14 +108,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// Joins an adventurer into a mission
-router.post(
-  '/:mid/join',
-  validateParamsSchema(joinMissionParamSchema),
-  validateBodySchema(joinMissionBodySchema),
-  missionController.joinMission,
-);
 
 // Create a notification
 router.post(

@@ -27,7 +27,7 @@ import {
 import { findByUid as getUserById } from '../models/user.model.js';
 import { getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
-  getById as getMissionParticipationById,
+  findByMidAndAdventurerId as getMissionParticipationById,
   submitParticipation as submitMissionParticipationRecord,
   findById,
   unjoinVacancy,
@@ -129,7 +129,7 @@ export const publishMission = async (req, res, next) => {
       longitude,
       photos,
     );
-    return res.status(200).json({ mission });
+    return res.status(201).json({ mission });
   } catch (error) {
     next(error);
   }
@@ -144,6 +144,18 @@ export const closeMission = async (req, res, next) => {
       req.user,
     );
     return res.status(200).json({ status, participants });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Sends a join request to the mission owner instead of joining immediately
+export const joinMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { message, vacancyId } = req.body;
+    await missionService.joinMission(mid, req.user, message, vacancyId);
+    return res.status(200).json({});
   } catch (error) {
     next(error);
   }
@@ -187,104 +199,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Sends a join request to the mission owner instead of joining immediately
-export const joinMission = async (req, res) => {
-  const { mid } = req.params;
-  const uid = req.user.uid;
-  const message = req.body.message || '';
-  const vacancyId = req.body.vacancyId;
-  try {
-    // Mission is searched
-    const mission = await findByMid(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Checks if mission was created by the current user
-    if (mission.owner_id === uid)
-      return res.status(403).json({ error: messages.JOIN_OWN_MISSION });
-
-    // Checks if mission status is valid for accepting adventurers
-    if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS)
-      return res.status(409).json({
-        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-      });
-
-    // Checks if mission is already full
-    if (mission.occupied_vacancies === mission.total_vacancies)
-      return res.status(409).json({
-        error: messages.MISSION_FILLED,
-      });
-
-    // Checks if user has already joined that mission
-    const alreadyJoined = await getMissionParticipationById(mid, uid);
-    if (alreadyJoined)
-      return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
-
-    // Checks if vacancy exists
-    const vacancy = await findById(vacancyId);
-    if (!vacancy)
-      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
-    if (vacancy.adventurer_id !== null) {
-      return res.status(409).json({ error: messages.MISSION_FILLED });
-    }
-
-    // Checks if user has already requested the joining for this mission
-    const ownerId = mission.owner_id;
-    const pendingRequest = await hasPendingJoinNotification(
-      mid,
-      uid,
-      ownerId,
-      vacancyId,
-    );
-    if (pendingRequest) {
-      return res.status(409).json({
-        error: messages.REQUEST_ALREADY_SENT,
-      });
-    }
-
-    // Checks if user has configured their bank account
-    if (req.user.stripe_connected_id === null) {
-      return res
-        .status(403)
-        .json({ error: messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED });
-    }
-
-    // Otherwise, creates the notification for the joining request (or invite)
-    const action =
-      mission.owner_id === uid
-        ? NOTIFICATION_ACTION.MISSION_INVITE.ID
-        : NOTIFICATION_ACTION.JOIN_REQUEST.ID;
-    const notificationId = await create({
-      type: NOTIFICATION_TYPE.INVITATION.ID,
-      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-      action,
-      status: NOTIFICATION_STATUS.PENDING.ID,
-      message,
-      senderId: uid,
-      receiverId: ownerId,
-      payload: { associated_mission_id: mid, associated_vacancy_id: vacancyId },
-    });
-
-    // And sends it to the user
-    emitToUser(ownerId, 'notification:created', {
-      notificationId,
-      missionId: mid,
-      vacancyId: vacancyId,
-      missionTitle: mission.title,
-      senderId: uid,
-      senderUsername: req.user.username,
-      receiverId: ownerId,
-      type: NOTIFICATION_TYPE.INVITATION.ID,
-      message,
-    });
-
-    return res.status(201).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 

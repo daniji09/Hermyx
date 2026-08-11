@@ -154,6 +154,12 @@ const vacanciesDataSchema = z
       .max(100, messages.GENERAL.FIELD_TOO_BIG('Vacancies', 100)),
   );
 
+// Vacancy id
+const vacancyIdBaseSchema = z.coerce
+  .number(messages.GENERAL.FIELD_NUMBER('Vacancy id'))
+  .int(messages.GENERAL.FIELD_INTEGER('Vacancy id'))
+  .min(0, messages.GENERAL.FIELD_POSITIVE('Vacancy id'));
+
 // Vacancies (num of vacancies)
 const vacancyNumBaseSchema = z.coerce
   .number(messages.GENERAL.FIELD_NUMBER('Vacancies'))
@@ -268,6 +274,27 @@ export const closeMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
+// Join mission
+export const joinMissionParamSchema = z.object({
+  mid: midBaseSchema,
+});
+
+export const joinMissionBodySchema = z.object({
+  vacancyId: vacancyIdBaseSchema,
+  message: z
+    .string()
+    .trim()
+    .max(
+      consts.NOTIFICATION.MESSAGE.MAX_LENGTH,
+      messages.GENERAL.FIELD_TOO_LONG(
+        'Notification message',
+        consts.NOTIFICATION.MESSAGE.MAX_LENGTH,
+      ),
+    )
+    .optional()
+    .default(''),
+});
+
 // ------
 export const publishMissionFilesSchema = z.object({
   photos: z
@@ -340,32 +367,6 @@ export const searchMissionByTitleSchema = z.object({
       consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
       messages.FIELD_TOO_LONG('Input'),
     ),
-});
-
-export const joinMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
-
-export const joinMissionBodySchema = z.object({
-  vacancyId: z.coerce
-    .number(messages.FIELD_NUMBER('Vacancy id'))
-    .int(messages.FIELD_INTEGER('Vacancy id'))
-    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
-  message: z
-    .string()
-    .trim()
-    .max(
-      consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Notification message',
-        consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
-      ),
-    )
-    .optional()
-    .default(''),
 });
 
 export const unjoinMissionParamSchema = z.object({

@@ -38,6 +38,16 @@ export const findById = async (vacancyId, client = pool) => {
   return result.rows[0] || null;
 };
 
+export const findByMidAndAdventurerId = async (mid, adventurerId) => {
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE mid = $1 AND adventurer_id = $2
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
 // Get all participants from mission
 export const findAllByMid = async (mid) => {
   const query = `
@@ -182,16 +192,6 @@ export const deleteParticipant = async (mid, adventurerId) => {
     DROP * FROM mission_participation WHERE mid = $1 AND adventurer_id = $2`;
   const result = await pool.query(query, [mid, adventurerId]);
   return result.rows[0];
-};
-
-export const getById = async (mid, adventurerId) => {
-  const query = `
-    SELECT *
-    FROM mission_participation
-    WHERE mid = $1 AND adventurer_id = $2
-  `;
-  const result = await pool.query(query, [mid, adventurerId]);
-  return result.rows[0] || null;
 };
 
 export const submitParticipation = async (mid, adventurerId) => {

@@ -171,15 +171,19 @@ export const consts = {
     DESCRIPTION_MAX_LENGTH: 1000,
   },
 
+  NOTIFICATION: {
+    MESSAGE: {
+      MAX_LENGTH: 500,
+    },
+    MESSAGE_MAX_LENGTH: 500,
+  },
+
   // Account update consts
   NAME_MAX_LENGTH: 50,
   SURNAMES_MAX_LENGTH: 100,
   LOCATION_MAX_LENGTH: 300,
   DESCRIPTION_MAX_LENGTH: 500,
 
-  NOTIFICATION: {
-    MESSAGE_MAX_LENGTH: 500,
-  },
   REPORT: {
     MESSAGE: { MAX: 1000 },
     REASON_MESSAGE: { MAX: 1000 },

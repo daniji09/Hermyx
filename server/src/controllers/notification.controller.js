@@ -32,7 +32,7 @@ import {
 import {
   approveParticipation,
   disputeParticipation,
-  getById as getMissionParticipationById,
+  findByMidAndAdventurerId as getMissionParticipationById,
   findAllOccupied,
   findById as _findById,
   joinVacancy,

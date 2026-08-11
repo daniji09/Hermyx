@@ -40,6 +40,29 @@ export const updateNotification = async (notificationData, client) => {
   await notificationModel.update(notificationData, client);
 };
 
+// Has pending join notification
+export const hasPendingJoinNotification = async (
+  mid,
+  uid,
+  ownerId,
+  vacancyId,
+) => {
+  checkMid(mid);
+  checkUid(uid);
+  checkOwnerId(ownerId);
+  checkVacancyId(vacancyId);
+
+  // Checks if user has pending join notifications in this vacancy
+  const hasPendingJoinNotification =
+    await notificationModel.hasPendingJoinNotification(
+      mid,
+      uid,
+      ownerId,
+      vacancyId,
+    );
+  return hasPendingJoinNotification;
+};
+
 /// Data checks
 const checkNotificationData = (notificationData) => {
   if (!notificationData)
@@ -57,4 +80,16 @@ const checkStatus = (status) => {
 const checkVacancyId = (vacancyId) => {
   if (!vacancyId)
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancy id'));
+};
+
+const checkMid = (mid) => {
+  if (!mid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Mid'));
+};
+
+const checkUid = (uid) => {
+  if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
+};
+
+const checkOwnerId = (ownerId) => {
+  if (!ownerId) throw new Error(messages.GENERAL.FIELD_REQUIRED('Owner id'));
 };

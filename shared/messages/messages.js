@@ -76,6 +76,9 @@ export const messages = {
       MISSION_NOT_FOUND: `Mission not found.`,
       MISSIONS_NOT_FOUND: `Missions not found.`,
     },
+    VACANCY: {
+      NOT_FOUND: `Vacancy not found`,
+    },
     TYPE: { INVALID_MISSION_TYPE: `Invalid type of mission.` },
     GET_ALL: {
       MIN_PAYMENT_GREATER_MAX_PAYMENT: `Min payment cannot be greater than max payment.`,
@@ -98,6 +101,14 @@ export const messages = {
       CANNOT_ON_CURRENT_STATE: `Can't reopen mission on current state.`,
       CANNOT_WITHOUT_EMPTY_VACANCIES: `Can't reopen mission with no empty vacancies that can be filled.`,
       CANNOT_REOPEN: `Can't reopen mission.`,
+    },
+    JOIN: {
+      OWN_MISSION: `You can't join your own mission.`,
+      NOT_ACCEPTS_ADVENTURERS: `This mission is no longer accepting adventurers.`,
+      FILLED: `There are no vacancies open left in this mission. Try another one!`,
+      ALREADY_JOINED: `You have already joined this mission`,
+      REQUEST_ALREADY_SENT: `You have already sent a join request for this vacancy.`,
+      ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
     },
   },
 
