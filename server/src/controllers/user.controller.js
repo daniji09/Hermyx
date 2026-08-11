@@ -1,7 +1,6 @@
 // External modules
 import {
   messages,
-  consts,
   MISSION_STATUS,
   MISSION_PARTICIPATION_STATUS,
   NOTIFICATION_ACTION,
@@ -16,58 +15,39 @@ import {
   REPORT_STATUS,
 } from '@hermyx/shared';
 import {
-  getByEmail,
-  getByUsername,
-  searchByUsername,
-  create,
-  getByFirebaseUid,
-  getByUsernameExcludingUid,
-  updateMyProfile as updateMyProfileInDb,
-  deleteByUid as _deleteByUid,
-  updateUserEmail as _updateUserEmail,
+  findByEmail,
+  findByUsername,
   anonymize as _anonymize,
   deanonymize,
-  updateConfiguration,
-  getLocationByUid,
-  getById,
+  findByUid,
   ban,
   unban,
-  updateAvatar,
 } from '../models/user.model.js';
 import {
-  getPublicProfileCreatedMissions,
-  getPublicProfileJoinedMissions,
-  getMissionsByUid,
-  getMissionsJoinedByUser,
   getUserActiveMissions,
-  adventurerUnjoined,
+  updateOccupiedVacancies,
   updateMissionPayment,
-  updateMissionStatus,
+  updateStatus,
 } from '../models/mission.model.js';
 import {
-  createFirebaseUser,
   deleteFirebaseUser,
   disableUser,
   enableUser,
-  getUserByEmail,
   revokeTokens,
-  updateFirebaseAccount,
 } from '../providers/auth.provider.js';
-import { stringShortener } from '../utils/string.util.js';
 import {
   createRefund,
   createTransfer,
   rejectAccount,
-  retrieveConnectAccount,
 } from '../providers/payment.provider.js';
 import {
-  getOccupiedVacancies,
+  findAllOccupied,
   markVacancyAsPaidOut,
   refundBannedVacancy,
   unjoinParticipant,
   updatePaymentStatus,
 } from '../models/mission-participation.model.js';
-import { createNotification } from '../models/notification.model.js';
+import { create } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import { getReportById } from '../models/report.model.js';
 import { closeReportAndConversation } from '../services/report.service.js';
@@ -76,21 +56,178 @@ import {
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission-payment.model.js';
-import {
-  deleteFromAzureBlob,
-  deleteFromLocalStorage,
-  saveToLocalStorage,
-  uploadToAzureBlob,
-} from '../providers/storage.provider.js';
+import * as userService from '../services/user.service.js';
 
-export const getUsers = async (req, res) => {
+/// Controller functions
+// Search users by username partial match
+export const searchUsersByUsername = async (req, res, next) => {
+  try {
+    const username = req.query.username;
+    const pagination = req.pagination;
+    const { users, pagination: paginationData } =
+      await userService.searchUserByUsername(
+        username,
+        req.user.uid,
+        pagination,
+      );
+    return res.status(200).json({ users, pagination: paginationData });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Gets current user information
+export const getMe = async (req, res, next) => {
+  try {
+    // Authentication middleware already searched user by their firebaseUid,
+    // So current user information is already saved on req.user
+    return res.status(200).json(req.user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Gets current user profile
+export const getMyProfile = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const profile = await userService.getMyProfile(user);
+    return res.status(200).json(profile);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Gets the missions from the user, joined or published
+export const getUserMissions = async (req, res, next) => {
+  try {
+    const { uid } = req.params;
+    const { type } = req.query;
+    const pagination = req.pagination;
+    const { missions, pagination: paginationData } =
+      await userService.getUserMissions(uid, type, pagination);
+    return res.status(200).json({ missions, pagination: paginationData });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get user public profile
+export const getUserPublicProfile = async (req, res, next) => {
+  try {
+    const username = req.params.username;
+    const { user, missionsVisible } =
+      await userService.getUserPublicProfile(username);
+    return res.status(200).json({ user, missionsVisible });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get user public profile missions
+export const getUserPublicProfileMissions = async (req, res, next) => {
+  try {
+    const username = req.params.username;
+    const { type } = req.query;
+    const pagination = req.pagination;
+    const { missions, pagination: paginationData } =
+      await userService.getUserPublicMissions(username, type, pagination);
+    return res.status(200).json({ missions, pagination: paginationData });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Updates current user's profile
+export const updateMyProfile = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const newInformation = {
+      username: req.body.username,
+      name: req.body.name,
+      surnames: req.body.surnames,
+      description: req.body.description,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+    };
+    const updatedUser = await userService.updateMyProfile(user, newInformation);
+    return res.status(200).json({
+      profile: {
+        username: updatedUser.username,
+        name: updatedUser.name,
+        surnames: updatedUser.surnames,
+        description: updatedUser.description,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Updates current user's avatar
+export const updateMyAvatar = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const avatar = await userService.updateMyAvatar(user.uid, req.file);
+    return res.status(200).json({ avatar });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Updates current user's email
+export const updateMyEmail = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { email } = req.body;
+    const userChanged = await userService.updateMyEmail(user, email);
+    return res.status(200).json(userChanged);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Updates user's configuration
+export const updateMyConfiguration = async (req, res, next) => {
+  console.log(req.body);
+  try {
+    const user = req.user;
+    const { configuration } = req.body;
+    const newConfiguration = await userService.updateMyConfiguration(
+      user.uid,
+      configuration,
+    );
+    return res.status(200).json({ configuration: newConfiguration });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Adds email authentication to current user
+export const addEmailAuthentication = async (req, res, next) => {
+  try {
+    const user = req.user;
+    const { email, password } = req.body;
+    const userChanged = await userService.addEmailAuthentication(
+      user,
+      email,
+      password,
+    );
+    return res.status(200).json(userChanged);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ------------
+export const getUser = async (req, res) => {
   try {
     // Gets attributes
     const { email, username } = req.query;
 
     if (email) {
       // It searches user by email
-      const user = await getByEmail(email);
+      const user = await findByEmail(email);
 
       // Returns success or error
       if (!user)
@@ -101,7 +238,7 @@ export const getUsers = async (req, res) => {
       return res.status(200).json({ user });
     } else if (username) {
       // It searches user by username
-      const user = await getByUsername(username);
+      const user = await findByUsername(username);
 
       // Returns success or error
       if (!user)
@@ -119,526 +256,12 @@ export const getUsers = async (req, res) => {
   }
 };
 
-export const searchUsersByUsername = async (req, res) => {
-  try {
-    const username = req.query.username.toLowerCase().trim();
-    const users = await searchByUsername(username, req.user.uid);
-
-    return res.status(200).json({ users });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getUsersByFirebaseUid = async (req, res) => {
-  try {
-    // Gets attributes
-    const { firebaseUid } = req.params;
-
-    if (firebaseUid) {
-      // It searches user by email
-      const user = await getByFirebaseUid(firebaseUid);
-
-      // Returns success or error
-      if (!user)
-        return res.status(404).json({
-          errors: { general: [messages.FIREBASE_UID_NOT_FOUND(firebaseUid)] },
-        });
-
-      return res.status(200).json({ user });
-    }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getUserMissions = async (req, res) => {
-  const { uid } = req.params;
-  const { type } = req.query;
-  const pagination = req.pagination;
-
-  // It missions from user of a type
-  try {
-    let result = { rows: [], totalCount: 0 };
-
-    if (type === 'published') {
-      result = await getMissionsByUid(uid, pagination);
-    } else if (type === 'joined') {
-      result = await getMissionsJoinedByUser(uid, pagination);
-    } else {
-      return res
-        .status(400)
-        .json({ errors: { general: [messages.INVALID_MISSION_TYPE] } });
-    }
-    const missions = result.rows;
-    const totalItems = parseInt(result.totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      // Pagination object is built
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const getUserPublicProfile = async (req, res) => {
-  try {
-    const username = req.params.username.toLowerCase().trim();
-
-    const user = await getByUsername(username);
-
-    if (!user) {
-      return res.status(404).json({
-        errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
-      });
-    }
-
-    const publicProfile = {
-      uid: user.uid,
-      username: user.username,
-      name: user.name,
-      surnames: user.surnames,
-      description: user.description,
-      location: user.location,
-      avatar: user.avatar,
-    };
-
-    return res.status(200).json({
-      user: publicProfile,
-      missionsVisible: user.configuration?.show_missions_to_others !== false,
-    });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      errors: { general: [messages.UNEXPECTED_ERROR] },
-    });
-  }
-};
-
-export const getUserPublicProfileMissions = async (req, res) => {
-  try {
-    const username = req.params.username.toLowerCase().trim();
-    const { type } = req.query;
-    const pagination = req.pagination;
-
-    const user = await getByUsername(username);
-
-    if (!user) {
-      return res.status(404).json({
-        errors: { general: [messages.USERNAME_NOT_FOUND(username)] },
-      });
-    }
-
-    const missionsVisible =
-      user.configuration?.show_missions_to_others !== false;
-
-    if (!missionsVisible) {
-      return res.status(200).json({
-        missions: [],
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: 0,
-          totalItems: 0,
-          hasMore: false,
-        },
-      });
-    }
-
-    let missionsResult = { rows: [], totalCount: 0 };
-
-    if (type === 'created') {
-      missionsResult = await getPublicProfileCreatedMissions(
-        user.uid,
-        pagination,
-      );
-    } else if (type === 'joined') {
-      missionsResult = await getPublicProfileJoinedMissions(
-        user.uid,
-        pagination,
-      );
-    }
-
-    const missions = missionsResult.rows;
-    const totalItems = parseInt(missionsResult.totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else {
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
-    }
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({
-      errors: { general: [messages.UNEXPECTED_ERROR] },
-    });
-  }
-};
-
-export const getMyProfile = async (req, res) => {
-  try {
-    const user = req.user;
-
-    if (!user) {
-      return res
-        .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
-    }
-
-    const location = await getLocationByUid(req.user.uid);
-
-    const bankAccount = await getConnectStatus(user);
-
-    const profile = {
-      username: user.username,
-      email: user.email,
-      name: user.name,
-      surnames: user.surnames,
-      description: user.description,
-      location: location,
-      avatar: user.avatar,
-      configuration: user.configuration,
-      stripe_connected_id: user.stripe_connected_id,
-      bank_account: bankAccount,
-    };
-
-    return res.status(200).json({
-      user: profile,
-    });
-  } catch (e) {
-    console.log(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-const getConnectStatus = async (user) => {
-  try {
-    // If there is no ID, is not configured
-    if (!user || !user.stripe_connected_id) return { isConfigured: false };
-
-    // Info is retrieved from Stripe
-    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
-
-    // Checks if details form are ok
-    if (!accountInfo.details_submitted) return { isConfigured: false };
-
-    // Bank account info is extracted
-    const bankAccounts = accountInfo.external_accounts?.data || [];
-    const defaultBank = bankAccounts.length > 0 ? bankAccounts[0] : null;
-
-    // Data is sent to front
-    return {
-      isConfigured: true,
-      payoutsEnabled: accountInfo.payouts_enabled,
-      bankName: defaultBank?.bank_name || 'Bank account',
-      last4: defaultBank?.last4 || '****',
-    };
-  } catch (error) {
-    console.error('Error fetching connect status:', error);
-    return {};
-  }
-};
-
-export const signUp = async (req, res) => {
-  try {
-    // Gets new account attributes
-    const email = req.body.email;
-    const username = req.body.username;
-    const { password } = req.body;
-
-    // Checks if the email is already in use
-    const userByEmail = await getByEmail(email);
-
-    // If it exists, then its a bad request error
-    if (userByEmail)
-      return res.status(400).json({
-        errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
-      });
-
-    // Checks if the username is already in use
-    const userByUsername = await getByUsername(username);
-
-    // If it exists, then its a bad request error
-    if (userByUsername)
-      return res.status(400).json({
-        errors: { username: [messages.USERNAME_ALREADY_EXISTS(username)] },
-      });
-
-    // Lastly, it makes a deep check on Firebase searching for the e-mail
-    try {
-      await await getUserByEmail(email);
-      return res.status(400).json({
-        errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
-      });
-    } catch (error) {
-      // User not found is expected if the email is not in use, so any other error is returned
-      if (error.code !== 'auth/user-not-found') {
-        const errorBuilder = consts.FIREBASE_ERRORS[error.code];
-        if (errorBuilder) {
-          const mappedError = errorBuilder({ email });
-          return res.status(mappedError.status).json({
-            errors: { [mappedError.field]: [mappedError.message] },
-          });
-        }
-
-        if (error.errors) return res.status(500).json(error.errors);
-
-        return res.status(500).json({
-          errors: { general: [messages.UNEXPECTED_ERROR] },
-        });
-      }
-    }
-
-    let firebaseUser;
-    try {
-      // User is created on Firebase
-      firebaseUser = await createFirebaseUser({ email, username, password });
-    } catch (error) {
-      // Firebase errors and exceptions are treated
-      const errorBuilder = consts.FIREBASE_ERRORS[error.code];
-      if (errorBuilder) {
-        const mappedError = errorBuilder({ email });
-        return res.status(mappedError.status).json({
-          errors: { [mappedError.field]: [mappedError.message] },
-        });
-      }
-
-      if (error.errors) return res.status(500).json(error.errors);
-
-      return res.status(500).json({
-        errors: { general: [messages.UNEXPECTED_ERROR] },
-      });
-    }
-    try {
-      // Creates user in Hermyx DB
-      const user = await create(email, username, firebaseUser.uid);
-
-      // Returns success or error
-      if (user) return res.status(201).json({ user });
-      else {
-        // If there is an error, Firebase user must be deleted
-        await deleteFirebaseUser(firebaseUser.uid);
-        return res.status(400).json({
-          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
-        });
-      }
-    } catch (e) {
-      // If there is an error, Firebase user must be deleted
-      await deleteFirebaseUser(firebaseUser.uid);
-      throw e;
-    }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const updateMyProfile = async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user) {
-      return res
-        .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
-    }
-
-    const username = req.body.username.toLowerCase().trim();
-
-    const existingUsername = await getByUsernameExcludingUid(
-      username,
-      user.uid,
-    );
-    if (existingUsername) {
-      return res.status(400).json({
-        errors: { username: [messages.USERNAME_ALREADY_EXISTS(username)] },
-      });
-    }
-
-    const updatedUser = await updateMyProfileInDb(user.uid, {
-      username,
-      name: req.body.name,
-      surnames: req.body.surnames,
-      description: req.body.description,
-      latitude: req.body.latitude,
-      longitude: req.body.longitude,
-    });
-
-    return res.status(200).json({
-      message: messages.PROFILE_UPDATED_SUCCESSFULLY,
-      profile: {
-        username: updatedUser.username,
-        name: updatedUser.name,
-        surnames: updatedUser.surnames,
-        description: updatedUser.description,
-      },
-    });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const updateMyAvatar = async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user)
-      return res
-        .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
-
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ errors: { general: [messages.NO_IMAGE_PROVIDED] } });
-    }
-
-    // Gets user
-    const currentUser = await getById(user.uid);
-
-    // Deletes old photo physically
-    if (currentUser.avatar) {
-      const isProduction = process.env.NODE_ENV === 'production';
-      if (isProduction) {
-        await deleteFromAzureBlob(currentUser.avatar, 'avatars');
-      } else {
-        await deleteFromLocalStorage(currentUser.avatar);
-      }
-    }
-
-    // Uploads new photo
-    const isProduction = process.env.NODE_ENV === 'production';
-    let updatedPhotUrl;
-    if (isProduction) {
-      updatedPhotUrl = await uploadToAzureBlob(req.file, 'avatars');
-    } else {
-      updatedPhotUrl = await saveToLocalStorage(req.file, 'uploads/avatars');
-    }
-
-    // Updates photo from db
-    await updateAvatar(user.uid, updatedPhotUrl);
-
-    return res.status(200).json({ avatar: updatedPhotUrl });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const syncGoogle = async (req, res) => {
-  try {
-    // Gets account attributes
-    const { email, username, firebaseUid, isNewUser } = req.body;
-
-    // Checks if user already exist to check if Firebase action was the correct one (determined via isNewUser)
-    const checkedUser = await getByEmail(email);
-
-    if (checkedUser) {
-      // Its a login
-      if (!isNewUser) return res.status(200).json({ checkedUser });
-      else {
-        return res.status(400).json({
-          errors: { general: [messages.COULD_NOT_LOG_IN] },
-        });
-      }
-    } else {
-      // Its a signup
-      if (isNewUser) {
-        // Username was generated by the emails name, so it has to be ensure that is unique
-        const uniqueUsername = generateUniqueUsername(username);
-
-        // The user is created in Hermyx bd
-        const user = await create(email, uniqueUsername, firebaseUid);
-
-        // Returns success or error
-        if (user) return res.status(201).json({ user });
-        return res.status(400).json({
-          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
-        });
-      } else {
-        return res.status(400).json({
-          errors: { general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT] },
-        });
-      }
-    }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-// Deletes a user by uid
-export const deleteByUid = async (req, res) => {
-  try {
-    const { uid } = req.params;
-
-    const success = await _deleteByUid(uid);
-
-    if (!success)
-      return res
-        .status(500)
-        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-
-    return res.status(200).json({});
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-// Deletes (anonymize) current user
+// Deletes (anonymize) current user TODO: reports should be deleted?, notifications should be seen?
 export const deleteUser = async (req, res) => {
   const user = req.user;
   let anonymize;
   try {
-    // First of all, checks if user has active missions, created or joined
+    // First of all, checks if user has active missions, published or joined
     const activeMissions = await getUserActiveMissions(user.uid);
     if (activeMissions.total_active > 0)
       return res.status(409).json({
@@ -671,139 +294,6 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// Updates user email on DB and Firebase
-export const updateUserEmail = async (req, res) => {
-  const user = req.user;
-  const currentEmail = user.email;
-  let firebaseChange;
-  try {
-    const { email, password } = req.body;
-
-    // First of all, new email is checked to be unique
-    const userByEmail = await getByEmail(email);
-
-    // If it exists, then its a bad request error (unless is a new authentication with the same email)
-    if (
-      (userByEmail && !password) ||
-      (userByEmail && password && userByEmail.uid !== user.uid)
-    )
-      return res.status(400).json({
-        errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
-      });
-
-    // Lastly, it makes a deep check on Firebase searching for the e-mail
-    try {
-      const fbUser = await getUserByEmail(email);
-      if (fbUser.uid !== user.firebase_uid && password) {
-        return res.status(400).json({
-          errors: { email: [messages.EMAIL_ALREADY_EXISTS(email)] },
-        });
-      }
-    } catch (error) {
-      // User not found is expected if the email is not in use, so any other error is returned
-      if (error.code !== 'auth/user-not-found') {
-        const errorBuilder = consts.FIREBASE_ERRORS[error.code];
-        if (errorBuilder) {
-          const mappedError = errorBuilder({ email });
-          return res.status(mappedError.status).json({
-            errors: { [mappedError.field]: [mappedError.message] },
-          });
-        }
-
-        if (error.errors) return res.status(500).json(error.errors);
-
-        return res.status(500).json({
-          errors: { general: [messages.UNEXPECTED_ERROR] },
-        });
-      }
-    }
-
-    // Prepares user email update
-    const firebaseUpdates = { email };
-    if (password) {
-      firebaseUpdates.password = password; // If there is password, its added
-    }
-
-    // So, email is changed on Firebase
-    firebaseChange = await updateFirebaseAccount(
-      user.firebase_uid,
-      firebaseUpdates,
-    );
-
-    if (!firebaseChange)
-      return res
-        .status(500)
-        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-
-    // Then is changed on Hermyx database
-    const hermyxChange = await _updateUserEmail(user.uid, email);
-
-    if (hermyxChange) return res.status(200).json({ user: hermyxChange });
-    else {
-      // If email was changed on Firebase but not in Hermyx, it should rollback
-      await updateFirebaseAccount(user.firebase_uid, currentEmail);
-      return res
-        .status(500)
-        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-    }
-  } catch (e) {
-    console.error(e);
-    // If email was changed on Firebase but not in Hermyx, it should rollback
-    if (firebaseChange)
-      await updateFirebaseAccount(user.firebase_uid, currentEmail);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-export const updateUserConfiguration = async (req, res) => {
-  const user = req.user;
-  const { configuration } = req.body;
-
-  try {
-    const success = await updateConfiguration(user.uid, configuration);
-
-    if (success === 0)
-      return res
-        .status(500)
-        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-
-    return res.status(200).json({});
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-function generateUniqueUsername(username) {
-  let uniqueUsername,
-    isUnique = false;
-
-  // If original username is too long it gets shortened
-  username = stringShortener(username, consts.ORIGINAL_USERNAME_MAX_LENGTH);
-
-  // Tries to get an unique username, it should execute once per signup
-  while (!isUnique) {
-    // Creates username
-    const rand = Math.random();
-    uniqueUsername = username + (rand + '').split('.')[1];
-
-    // Username gets shortened again
-    uniqueUsername = stringShortener(
-      uniqueUsername,
-      consts.USERNAME_MAX_LENGTH,
-    );
-
-    // Checks if username is unique
-    isUnique = getByUsername(uniqueUsername);
-  }
-
-  return uniqueUsername;
-}
-
 // Bans user
 export const banUser = async (req, res) => {
   const { uid } = req.params;
@@ -811,7 +301,7 @@ export const banUser = async (req, res) => {
 
   try {
     // Gets user
-    const user = await getById(uid);
+    const user = await findByUid(uid);
     let banHermyx;
     try {
       // First of all, checks if user has already been banned
@@ -847,13 +337,13 @@ export const banUser = async (req, res) => {
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
           // Updates mission
-          const unjoinMission = await adventurerUnjoined(mission.mid);
+          const unjoinMission = await updateOccupiedVacancies(mission.mid);
           if (unjoinMission < 1)
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
           // Notifies owner of the mission
           const message = `Adventurer ${user.username} of your mission ${mission.title} has been banned by Hermyx administration, so this vacancy has been emptied.`;
-          const notificationId = await createNotification({
+          const notificationId = await create({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
             action: NOTIFICATION_ACTION.USER_BAN.ID,
@@ -891,7 +381,7 @@ export const banUser = async (req, res) => {
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
           // Updates mission
-          const unjoinMission = await adventurerUnjoined(mission.mid);
+          const unjoinMission = await updateOccupiedVacancies(mission.mid);
           if (unjoinMission < 1)
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
@@ -955,7 +445,7 @@ export const banUser = async (req, res) => {
           );
 
           // Updates total payment on mission
-          const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+          const occupied_vacancies = await findAllOccupied(mission.mid);
           await updateMissionPayment(
             mission.mid,
             occupied_vacancies.reduce(
@@ -966,7 +456,7 @@ export const banUser = async (req, res) => {
 
           // Notifies owner of the mission
           const message = `Adventurer ${user.username} of your mission ${mission.title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you.`;
-          const notificationId = await createNotification({
+          const notificationId = await create({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
             action: NOTIFICATION_ACTION.USER_BAN.ID,
@@ -993,7 +483,7 @@ export const banUser = async (req, res) => {
         // If the user is the owner of the mission, it just delete it, using same logic as a delete
         else if (mission.owner_id === uid) {
           // Gets occupied vacancies
-          const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+          const occupied_vacancies = await findAllOccupied(mission.mid);
           if (MISSION_STATUS[mission.status].CAN_DELETE) {
             // Checks if mission can be deleted by states
             if (
@@ -1006,7 +496,7 @@ export const banUser = async (req, res) => {
                 .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
             // Then mission status is updated
-            await updateMissionStatus(mission.mid, MISSION_STATUS.DELETED.ID);
+            await updateStatus(mission.mid, MISSION_STATUS.DELETED.ID);
           }
           // If mission has to be cancelled, it will be
           else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
@@ -1021,15 +511,12 @@ export const banUser = async (req, res) => {
                 .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
             // Then mission status is updated
-            await updateMissionStatus(
-              mission.mid,
-              MISSION_STATUS.CANCELLING.ID,
-            );
+            await updateStatus(mission.mid, MISSION_STATUS.CANCELLING.ID);
 
             // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
             for (const vacancy of occupied_vacancies) {
               if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID) {
-                const adventurer = await getById(vacancy.adventurer_id);
+                const adventurer = await findByUid(vacancy.adventurer_id);
                 if (adventurer.stripe_connected_id) {
                   const transferData = {
                     amount: Math.round(vacancy.monetary_reward * 100),
@@ -1060,7 +547,7 @@ export const banUser = async (req, res) => {
                 }
               }
             }
-            await updateMissionStatus(mission.mid, MISSION_STATUS.CANCELLED.ID);
+            await updateStatus(mission.mid, MISSION_STATUS.CANCELLED.ID);
           }
           // Otherwise, mission can't be deleted or cancelled
           else
@@ -1076,7 +563,7 @@ export const banUser = async (req, res) => {
               const message = MISSION_STATUS[mission.status].CAN_DELETE
                 ? `Mission ${mission.title} has been deleted because the applicant has been banned, so it won't be done, we are sorry.`
                 : `Mission ${mission.title} has been cancelled because the applicant has been banned, but don't worry, your reward is on your way!`;
-              const notificationId = await createNotification({
+              const notificationId = await create({
                 type: NOTIFICATION_TYPE.MISSION.ID,
                 kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
                 action: NOTIFICATION_ACTION.MISSION_BAN.ID,

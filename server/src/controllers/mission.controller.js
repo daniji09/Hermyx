@@ -1,12 +1,10 @@
 //External modules
 import {
-  consts,
   messages,
   MISSION_STATUS,
   MISSION_PARTICIPATION_STATUS,
   NOTIFICATION_ACTION,
   NOTIFICATION_KIND,
-  NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
   HERMYX_FEE,
   HERMYX_SYSTEM_ID,
@@ -16,50 +14,28 @@ import {
   REPORT_STATUS,
 } from '@hermyx/shared';
 import {
-  createMission as _createMission,
   getAllMissionsInDraft as _getAllMissionsInDraft,
-  getMissionById as _getMissionById,
-  getMissions as _getMissions,
-  getById,
-  getParticipantsForDisplay,
-  updateMissionStatus,
+  findByMid,
+  updateStatus,
   finishMissionAndCloseConversation,
-  getByUidAndTitle,
-  getMissionsOpened as _getMissionsOpened,
-  updateMission,
-  adventurerUnjoined,
+  updateOccupiedVacancies,
   emptyMission,
   updateMissionPayment,
   openMission,
 } from '../models/mission.model.js';
-import { getById as getUserById } from '../models/user.model.js';
+import { findByUid as getUserById } from '../models/user.model.js';
 import { getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
-  getById as getMissionParticipationById,
-  submitParticipation as submitMissionParticipationRecord,
-  getVacancyById,
-  insertVacancies,
-  unjoinVacancy,
-  updateVacancy,
-  deleteUnoccupiedVacancies,
-  getOccupiedVacancies,
+  findById,
+  findAllOccupied,
   getEmptyVacancies,
   markVacancyAsPaidOut,
-  updateStatus,
-  getJoinedVacancies,
-  getWaitingForPaymentVacancies,
   cleanMissionParticipation,
   unjoinParticipant,
   updatePaymentStatus,
   refundBannedVacancy,
 } from '../models/mission-participation.model.js';
-import {
-  createNotification,
-  countParticipationReviewAttempts,
-  hasPendingJoinNotification,
-  findByActionStatusAndVacancy,
-  updateNotification,
-} from '../models/notification.model.js';
+import { create } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import { createRefund, createTransfer } from '../providers/payment.provider.js';
 import {
@@ -67,159 +43,62 @@ import {
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission-payment.model.js';
-import { getReportById } from '../models/report.model.js';
-import { closeReportAndConversation } from '../services/report.service.js';
-import {
-  deleteFromAzureBlob,
-  deleteFromLocalStorage,
-  saveToLocalStorage,
-  uploadToAzureBlob,
-} from '../providers/storage.provider.js';
-import {
-  deletePhoto,
-  getMissionPhotos,
-  insertPhoto,
-} from '../models/mission-photo.model.js';
+import { closeReport, getReportById } from '../models/report.model.js';
+import * as missionService from '../services/mission.service.js';
+import * as missionParticipationModel from '../models/mission-participation.model.js';
 
-export const getMissionById = async (req, res) => {
+/// Controller functions
+// Get all missions
+export const getMissions = async (req, res, next) => {
   try {
-    // Gets the id
-    const { id } = req.params;
-    const uid = req.user.uid;
-
-    // Searches mission by id
-    const [mission, participants, waitingForPaymentVacancies, photos] =
-      await Promise.all([
-        _getMissionById(id, uid),
-        getParticipantsForDisplay(id),
-        getWaitingForPaymentVacancies(),
-        getMissionPhotos(id),
-      ]);
-    console.log(participants);
-    // Returns success or error
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
-    }
-
-    // Mission can be finished if all vacancies are empty or finished
-    const canFinish =
-      participants.every(
-        (participant) =>
-          participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||
-          participant.status === MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-      ) &&
-      MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_STATUS.FINISHED.ID,
-      );
-
-    return res.status(200).json({
-      mission: {
-        ...mission,
-        participants,
-        waitingForPaymentVacancies,
-        canFinish,
-        photos,
-      },
-    });
-  } catch (e) {
-    console.error(e);
-    res.status(500).end();
-  }
-};
-
-export const getMissions = async (req, res) => {
-  const { title } = req.query;
-  const pagination = req.pagination;
-
-  try {
-    // Gets all missions filtering what is needed
-    const { rows: missions, totalCount } = await _getMissions({
+    const { title } = req.query;
+    const pagination = req.pagination;
+    const { missions, paginationData } = await missionService.getMissions(
       title,
       pagination,
-    });
-
-    const totalItems = parseInt(totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      // Pagination object is built
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+    );
+    return res.status(200).json({ missions, pagination: paginationData });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getAllMissionsInDraft = async (req, res) => {
+// Get all opened missions
+export const getMissionsOpened = async (req, res, next) => {
   try {
-    const missions = await _getAllMissionsInDraft();
-    res.status(200).json({ data: missions });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-export const getMissionsOpened = async (req, res) => {
-  const { title, minPayment, maxPayment, maxDistanceKm } = req.query;
-  const pagination = req.pagination;
-  const excludeOwnerId = title ? req.user?.uid : undefined;
-
-  try {
-    // Gets all missions filtering what is needed
-    const { rows: missions, totalCount } = await _getMissionsOpened({
+    const { title, minPayment, maxPayment, maxDistanceKm } = req.query;
+    const pagination = req.pagination;
+    const excludeOwnerId = title ? req.user?.uid : undefined;
+    const user = req.user;
+    const { missions, paginationData } = await missionService.getOpenedMissions(
       title,
       minPayment,
       maxPayment,
       maxDistanceKm,
-      originUserId: maxDistanceKm !== undefined ? req.user.uid : undefined,
       pagination,
       excludeOwnerId,
-    });
-
-    const totalItems = parseInt(totalCount);
-
-    if (missions) {
-      const totalPages = Math.ceil(totalItems / pagination.limit);
-      const hasMore = pagination.page < totalPages;
-
-      // Pagination object is built
-      return res.status(200).json({
-        missions,
-        pagination: {
-          currentPage: pagination.page,
-          totalPages: totalPages,
-          totalItems: totalItems,
-          hasMore: hasMore,
-        },
-      });
-    } else
-      return res.status(404).json({
-        errors: { general: [messages.MISSIONS_NOT_FOUND] },
-      });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+      user,
+    );
+    return res.status(200).json({ missions, pagination: paginationData });
+  } catch (error) {
+    next(error);
   }
 };
 
-/*Check whether the user wants to save the creation or create a new mission. 
-Depending on that, the fields are checked or not, and the status is updated accordingly.*/
-export const createMission = async (req, res) => {
+// Get mission by mid
+export const getMissionByMid = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const uid = req.user.uid;
+    const mission = await missionService.getMissionByMid(mid, uid);
+    return res.status(200).json(mission);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Publishes mission
+export const publishMission = async (req, res, next) => {
   try {
     const { uid } = req.user;
     const {
@@ -230,66 +109,100 @@ export const createMission = async (req, res) => {
       latitude,
       longitude,
     } = req.body;
-    const photos = req.files.photos;
-    const missionData = {
-      title: title || 'Mission not titled',
-      description: description || 'No description',
-      vacancies: vacancies || 0,
-      vacanciesData: vacanciesData || '',
-      totalPayment: 0,
-      latitude: latitude || null,
-      longitude: longitude || null,
-      status: MISSION_STATUS.OPENED.ID,
-      ownerId: uid,
-    };
-
-    // Checks if user has a mission already with the same title
-    const { hasDuplicate } = await getByUidAndTitle(uid, title);
-    if (hasDuplicate)
-      return res.status(400).json({
-        errors: { general: [messages.MISSION_SAME_TITLE] },
-      });
-
-    // Creates the new mission
-    const newMission = await _createMission(missionData);
-
-    // Checks if photo number is correct
-    if (photos.length > consts.MISSION.PHOTOS.MAX) {
-      return res.status(400).json({
-        errors: { general: [messages.MISSION_SAME_TITLE] },
-      });
-    }
-
-    // Saves photos
-    let uploadedPhotoUrls = [];
-    if (photos.length > 0) {
-      // Environment variable determines whether photos are uploaded locally or to Azure
-      const isProduction = process.env.NODE_ENV === 'production';
-      uploadedPhotoUrls = await Promise.all(
-        photos.map(async (file) => {
-          if (isProduction) {
-            return await uploadToAzureBlob(file, 'mission-photos');
-          } else {
-            return await saveToLocalStorage(file, 'uploads/mission-photos');
-          }
-        }),
-      );
-    }
-
-    // Inserts photos
-    for (const photoURL of uploadedPhotoUrls)
-      await insertPhoto(newMission.mid, photoURL);
-
-    return res.status(201).json({ mission: newMission });
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+    console.log(req.body);
+    const photos = req.files.photos || [];
+    const mission = await missionService.publishMission(
+      uid,
+      title,
+      description,
+      vacancies,
+      vacanciesData || [],
+      latitude,
+      longitude,
+      photos,
+    );
+    return res.status(201).json({ mission });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const editMission = async (req, res) => {
+// Closes a mission
+export const closeMission = async (req, res, next) => {
   try {
-    const { uid } = req.user;
+    const { mid } = req.params;
+    const { status, participants } = await missionService.closeMission(
+      mid,
+      req.user,
+    );
+    return res.status(200).json({ status, participants });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
+export const inviteToMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { receiverId, vacancyId, message } = req.body;
+    const nid = await missionService.inviteToMission(
+      mid,
+      vacancyId,
+      req.user.uid,
+      receiverId,
+      message,
+      req.user,
+    );
+    return res.status(200).json(nid);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Sends a join request to the mission owner instead of joining immediately
+export const joinMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { message, vacancyId } = req.body;
+    await missionService.joinMission(mid, req.user, message, vacancyId);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Unjoin mission by adventurer before mission has started
+export const unjoinMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { vacancyId } = req.body;
+    await missionService.unjoinMission(mid, vacancyId, req.user);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Submit participation
+export const submitMissionParticipation = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const updatedParticipation =
+      await missionService.submitMissionParticipation(mid, req.user);
+    return res.status(200).json({
+      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
+      participation: updatedParticipation,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Edits a mission
+export const editMission = async (req, res, next) => {
+  try {
+    const user = req.user;
     const mission = req.body;
 
     // New and old photos are extracted
@@ -303,812 +216,27 @@ export const editMission = async (req, res) => {
         ? req.body.existingPhotos
         : [req.body.existingPhotos]
       : [];
-
-    // Checks if photo number is correct
-    if (newPhotos.length + existingPhotos.length > consts.MISSION.PHOTOS.MAX) {
-      return res.status(400).json({
-        errors: { general: [messages.MISSION_SAME_TITLE] },
-      });
-    }
-
-    // Gets original mission info
-    const originalMission = await _getMissionById(mission.mid);
-    mission.totalPayment = originalMission.total_payment;
-
-    // Checks that mission is in a editable status
-    if (!MISSION_STATUS[originalMission.status].CAN_EDIT)
-      return res.status(400).json({
-        errors: { general: [messages.CANNOT_EDIT_MISSION] },
-      });
-
-    // Checks if user has a mission already with the same title and different id
-    const { hasDuplicate } = await getByUidAndTitle(
-      uid,
-      mission.title,
-      mission.mid,
+    const newMission = await missionService.editMission(
+      user,
+      mission,
+      newPhotos,
+      existingPhotos,
     );
-    if (hasDuplicate)
-      return res.status(400).json({
-        errors: { general: [messages.MISSION_SAME_TITLE] },
-      });
+    return res.status(200).json({ mission: newMission });
+  } catch (error) {
+    next(error);
+  }
+};
 
-    // Gets current vacancies info
-    const originalVacancies = await getOccupiedVacancies(mission.mid);
+// -------
 
-    // Updates each vacancy of the mission, first, new and existing vacancies are selected
-    const newVacancies = mission.vacanciesData.filter(
-      (v) =>
-        typeof v.id === 'string' ||
-        (typeof v.id === 'number' &&
-          v.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID),
-    );
-    const existingVacancies = mission.vacanciesData.filter(
-      (v) =>
-        typeof v.id === 'number' &&
-        v.status !== MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-    );
-    // Id array including existing vacancies that stayed
-    const existingIds = existingVacancies.map((v) => v.id);
-
-    // New mission info can delete existing vacancies only in opened state
-    if (!MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS) {
-      if (existingIds.length < originalVacancies.length) {
-        return res.status(400).json({
-          errors: {
-            general: [messages.CANNOT_DELETE_EXISTING_VACANCIES],
-          },
-        });
-      }
-    }
-
-    // Updates mission
-    const updatedMission = await updateMission(mission);
-    console.log(newPhotos, existingPhotos);
-    // Photos management, first uploading and saving new photos
-    const currentPhotosInDb = await getMissionPhotos(mission.mid);
-    const isProduction = process.env.NODE_ENV === 'production';
-    let uploadedPhotoUrls = [];
-    if (newPhotos.length > 0) {
-      uploadedPhotoUrls = await Promise.all(
-        newPhotos.map(async (file) => {
-          if (isProduction) {
-            return await uploadToAzureBlob(file, 'mission-photos');
-          } else {
-            return await saveToLocalStorage(file, 'uploads/mission-photos');
-          }
-        }),
-      );
-    }
-
-    // Then, inserting them on db
-    for (const photoURL of uploadedPhotoUrls) {
-      await insertPhoto(mission.mid, photoURL);
-    }
-
-    // Photos that are not in existingPhotos but exist in db, must be deleted physically and from db
-    for (const dbPhoto of currentPhotosInDb) {
-      if (!existingPhotos.includes(dbPhoto.url)) {
-        if (isProduction) {
-          await deleteFromAzureBlob(dbPhoto.url, 'mission-photos');
-        } else {
-          await deleteFromLocalStorage(dbPhoto.url);
-        }
-        await deletePhoto(dbPhoto.id);
-      }
-    }
-
-    // First operation, deleting vacancies that are not occupied from the original mission
-    await deleteUnoccupiedVacancies(mission.mid, existingIds);
-
-    const vacanciesToNotify = [];
-    // After that, updating existing vacancies
-    const updatePromises = existingVacancies.map((vacancy) => {
-      // Finds existing vacancy
-      const currentOriginalVacancy = originalVacancies.find(
-        (vac) => vac.id === vacancy.id,
-      );
-      // Updates existing vacancy only if its found, that means it hasn't been added or deleted
-      if (currentOriginalVacancy !== undefined) {
-        // Checks for each vacancy if any field has been changed
-        if (
-          Number(currentOriginalVacancy?.monetary_reward) !==
-            Number(vacancy.reward) ||
-          currentOriginalVacancy?.description + '' !== vacancy.description ||
-          currentOriginalVacancy?.title + '' !== vacancy.title
-        ) {
-          // If that vacancy is not editable, its an error
-          if (!MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT)
-            return res.status(400).json({
-              errors: { general: [messages.CANNOT_EDIT_VACANCY] },
-            });
-          // So its saves that vacancy because its owner will have to be notified
-          const vacancyToSave = {
-            adventurer_id: currentOriginalVacancy?.adventurer_id,
-            ...vacancy,
-          };
-          vacanciesToNotify.push(vacancyToSave);
-        }
-
-        // Then, makes allowed changes in vacancy (anything but monetary reward)
-        return updateVacancy(mission.mid, vacancy);
-      }
-    });
-    await Promise.all(updatePromises);
-
-    // Lastly, inserting new vacancies
-    await insertVacancies(mission.mid, newVacancies);
-
-    // First, if mission info is changed, every old vacancy is notified
-    const changes = [];
-    Object.keys(updatedMission).forEach((key) => {
-      // Detects changes in mission info, except for publication date and total payment
-      if (
-        originalMission[key] !== updatedMission[key] &&
-        key !== 'publication_date' &&
-        key !== 'total_payment'
-      ) {
-        if (key === 'total_vacancies') key = 'total vacancies';
-        changes.push(key);
-      }
-    });
-
-    if (changes.length > 0) {
-      for (const vacancyId of existingIds) {
-        const vacancy = await getVacancyById(mission.mid, vacancyId);
-        if (
-          vacancy.adventurer_id &&
-          MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
-        ) {
-          const message = `${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
-          const notificationId = await createNotification({
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-            action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
-            status: null,
-            message: message,
-            senderId: uid,
-            receiverId: vacancy.adventurer_id,
-            payload: {
-              associated_mission_id: mission.mid,
-              associated_vacancy_id: vacancyId,
-            },
-          });
-          emitToUser(vacancy.adventurer_id, 'mission:edited', {
-            notificationId,
-            missionId: mission.mid,
-            vacancyId: vacancyId,
-            missionTitle: mission.title,
-            senderId: uid,
-            senderUsername: req.user.username,
-            receiverId: vacancy.adventurer_id,
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            message: message,
-          });
-        }
-      }
-    }
-
-    // Then, if vacancy info is changed, each adventurer is notified. If monetary reward is changed, the notification is actionable.
-    for (const vacancy of vacanciesToNotify) {
-      const changes = [];
-      Object.keys(vacancy).forEach((key) => {
-        // Detects changes in mission info
-        if (
-          originalVacancies.find((vac) => vac.id === vacancy.id)[key] !==
-            vacancy[key] &&
-          key !== 'reward'
-        )
-          changes.push(key);
-        // The reward has different key name on each object
-        if (
-          key === 'reward' &&
-          Number(
-            originalVacancies.find((vac) => vac.id === vacancy.id)[
-              'monetary_reward'
-            ],
-          ) !== Number(vacancy[key])
-        )
-          changes.push(key);
-      });
-
-      if (
-        changes.length > 0 &&
-        !(changes.length === 1 && changes.includes('reward')) && // If the only change is the reward, no additional notification is needed
-        vacancy.adventurer_id &&
-        MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
-      ) {
-        // First, informational notification is sended
-        const message = `Your vacancy at ${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
-        const notificationId = await createNotification({
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-          action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
-          status: null,
-          message: message,
-          senderId: uid,
-          receiverId: vacancy.adventurer_id,
-          payload: {
-            associated_mission_id: mission.mid,
-            associated_vacancy_id: vacancy.id,
-          },
-        });
-        emitToUser(vacancy.adventurer_id, 'mission:edited', {
-          notificationId,
-          missionId: mission.mid,
-          vacancyId: vacancy.id,
-          missionTitle: mission.title,
-          senderId: uid,
-          senderUsername: req.user.username,
-          receiverId: vacancy.adventurer_id,
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          message: message,
-        });
-      }
-
-      // Then, if monetary reward has been changed, notification is sended
-      if (changes.includes('reward')) {
-        // First, if a pending monetary reward notification exists, it changes its value
-        // eslint-disable-next-line prefer-const
-        let notification = await findByActionStatusAndVacancy(
-          NOTIFICATION_ACTION.MISSION_EDIT.ID,
-          NOTIFICATION_STATUS.PENDING.ID,
-          vacancy.id,
-        );
-        if (notification.length > 0) {
-          notification[0].payload.new_offer = vacancy.reward;
-          notification[0].message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
-          await updateNotification({
-            nid: notification[0].nid,
-            type: notification[0].type,
-            kind: notification[0].kind,
-            action: notification[0].action,
-            status: notification[0].status,
-            message: notification[0].message,
-            senderId: notification[0].sender_id,
-            recipientId: notification[0].recipient_id,
-            payload: notification[0].payload,
-          });
-        } else {
-          // If not, the new notification is send
-          if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-            const message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
-            const notificationId = await createNotification({
-              type: NOTIFICATION_TYPE.MISSION.ID,
-              kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-              action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
-              status: NOTIFICATION_STATUS.PENDING.ID,
-              message: message,
-              senderId: uid,
-              receiverId: vacancy.adventurer_id,
-              payload: {
-                associated_mission_id: mission.mid,
-                associated_vacancy_id: vacancy.id,
-                new_offer: vacancy.reward,
-              },
-            });
-            emitToUser(vacancy.adventurer_id, 'mission:edited', {
-              notificationId,
-              missionId: mission.mid,
-              vacancyId: vacancy.id,
-              missionTitle: mission.title,
-              senderId: uid,
-              senderUsername: req.user.username,
-              receiverId: vacancy.adventurer_id,
-              type: NOTIFICATION_TYPE.MISSION.ID,
-              message: message,
-            });
-          }
-        }
-      }
-    }
-
-    return res.status(200).json({ mission: updatedMission });
+export const getAllMissionsInDraft = async (req, res) => {
+  try {
+    const missions = await _getAllMissionsInDraft();
+    res.status(200).json({ data: missions });
   } catch (e) {
-    console.log(e);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-/*Verify that the owner of the mission is the one closing it and that at least one person is assigned to close the mission.*/
-export const close = async (req, res) => {
-  const { mid } = req.params;
-  const userId = req.user.uid;
-
-  try {
-    const mission = await getById(mid);
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-    }
-
-    if (mission.owner_id !== userId) {
-      return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
-    }
-
-    // Checks occupied vacancies
-    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-    if (occupied_vacancies === 0) {
-      return res
-        .status(400)
-        .json({ error: messages.CLOSE_WITHOUT_ADVENTURERS });
-    }
-    // Different close for opened or reopened mission+
-    if (mission.status === MISSION_STATUS.OPENED.ID) {
-      // Checks if mission can be closed by states
-      if (
-        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_STATUS.CLOSED.ID,
-        )
-      )
-        return res.status(400).json({ error: messages.CANNOT_CLOSE_STATE });
-
-      // Then, it updates the mission
-      await updateMissionStatus(mid, MISSION_STATUS.CLOSED.ID);
-
-      // Updates vacancies status, there is 2 for because if a vacancy fails when a notification has been sent, there is no rollback possible
-      for (const vacancy of occupied_vacancies)
-        if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID)
-          updateStatus(
-            vacancy.id,
-            MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-          );
-
-      const message = `Mission ${mission.title} has been closed. Waiting for owner payment to start. You can't unjoin anymore, but owner is able to cancel it yet.`;
-      // Finally, all occupied vacancies are notified
-      for (const vacancy of occupied_vacancies) {
-        if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-          const notificationId = await createNotification({
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-            action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
-            status: null,
-            message: message,
-            senderId: userId,
-            receiverId: vacancy.adventurer_id,
-            payload: {
-              associated_mission_id: mission.mid,
-            },
-          });
-          emitToUser(vacancy.adventurer_id, 'mission:closed', {
-            notificationId,
-            missionId: mission.mid,
-            vacancyId: vacancy.adventurer_id,
-            missionTitle: mission.title,
-            senderId: userId,
-            senderUsername: req.user.username,
-            receiverId: vacancy.adventurer_id,
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            message: message,
-          });
-        }
-      }
-      return res.status(200).json({
-        status: MISSION_STATUS.CLOSED.ID,
-        participants: occupied_vacancies,
-      });
-    } else if (mission.status === MISSION_STATUS.REOPENED.ID) {
-      // Checks if mission can be started by states
-      if (
-        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_STATUS.IN_PROGRESS.ID,
-        )
-      )
-        return res
-          .status(400)
-          .json({ error: messages.CANNOT_REOPEN_MISSION_STATE });
-
-      // Then, it updates the mission
-      await updateMissionStatus(mid, MISSION_STATUS.IN_PROGRESS.ID);
-
-      // And the vacancies are updated
-      const joined_vacancies = await getJoinedVacancies(mission.mid);
-      for (const vacancy of joined_vacancies)
-        updateStatus(
-          vacancy.id,
-          MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-        );
-
-      // Finally, all occupied vacancies are notified
-      const occupied_vacancies = await getOccupiedVacancies(mission.mid);
-      const message =
-        joined_vacancies.length === 0
-          ? `Mission ${mission.title} has been closed after being reopened. No new adventurers have joined.`
-          : `Mission ${mission.title} has been closed after being reopened. Waiting for owner payment to start new adventurers.`;
-      for (const vacancy of occupied_vacancies) {
-        if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-          const notificationId = await createNotification({
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-            action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
-            status: null,
-            message: message,
-            senderId: userId,
-            receiverId: vacancy.adventurer_id,
-            payload: {
-              associated_mission_id: mission.mid,
-            },
-          });
-          emitToUser(vacancy.adventurer_id, 'mission:closed', {
-            notificationId,
-            missionId: mission.mid,
-            vacancyId: vacancy.adventurer_id,
-            missionTitle: mission.title,
-            senderId: userId,
-            senderUsername: req.user.username,
-            receiverId: vacancy.adventurer_id,
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            message: message,
-          });
-        }
-      }
-      return res.status(200).json({
-        status: MISSION_STATUS.IN_PROGRESS.ID,
-        participants: occupied_vacancies,
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Sends a join request to the mission owner instead of joining immediately
-export const joinMission = async (req, res) => {
-  const { mid } = req.params;
-  const uid = req.user.uid;
-  const message = req.body.message || '';
-  const vacancyId = req.body.vacancyId;
-  try {
-    // Mission is searched
-    const mission = await getById(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Checks if mission was created by the current user
-    if (mission.owner_id === uid)
-      return res.status(403).json({ error: messages.JOIN_OWN_MISSION });
-
-    // Checks if mission status is valid for accepting adventurers
-    if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS)
-      return res.status(409).json({
-        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-      });
-
-    // Checks if mission is already full
-    if (mission.occupied_vacancies === mission.total_vacancies)
-      return res.status(409).json({
-        error: messages.MISSION_FILLED,
-      });
-
-    // Checks if user has already joined that mission
-    const alreadyJoined = await getMissionParticipationById(mid, uid);
-    if (alreadyJoined)
-      return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
-
-    // Checks if vacancy exists
-    const vacancy = await getVacancyById(mid, vacancyId);
-    if (!vacancy)
-      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
-    if (vacancy.adventurer_id !== null) {
-      return res.status(409).json({ error: messages.MISSION_FILLED });
-    }
-
-    // Checks if user has already requested the joining for this mission
-    const ownerId = mission.owner_id;
-    const pendingRequest = await hasPendingJoinNotification(
-      mid,
-      uid,
-      ownerId,
-      vacancyId,
-    );
-    if (pendingRequest) {
-      return res.status(409).json({
-        error: messages.REQUEST_ALREADY_SENT,
-      });
-    }
-
-    // Checks if user has configured their bank account
-    if (req.user.stripe_connected_id === null) {
-      return res
-        .status(403)
-        .json({ error: messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED });
-    }
-
-    // Otherwise, creates the notification for the joining request (or invite)
-    const action =
-      mission.owner_id === uid
-        ? NOTIFICATION_ACTION.MISSION_INVITE.ID
-        : NOTIFICATION_ACTION.JOIN_REQUEST.ID;
-    const notificationId = await createNotification({
-      type: NOTIFICATION_TYPE.INVITATION.ID,
-      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-      action,
-      status: NOTIFICATION_STATUS.PENDING.ID,
-      message,
-      senderId: uid,
-      receiverId: ownerId,
-      payload: { associated_mission_id: mid, associated_vacancy_id: vacancyId },
-    });
-
-    // And sends it to the user
-    emitToUser(ownerId, 'notification:created', {
-      notificationId,
-      missionId: mid,
-      vacancyId: vacancyId,
-      missionTitle: mission.title,
-      senderId: uid,
-      senderUsername: req.user.username,
-      receiverId: ownerId,
-      type: NOTIFICATION_TYPE.INVITATION.ID,
-      message,
-    });
-
-    return res.status(201).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
-export const inviteToMission = async (req, res) => {
-  const { missionId, receiverId, vacancyId, message } = req.body;
-  const senderId = req.user.uid;
-
-  if (senderId === receiverId) {
-    return res.status(400).json({ error: messages.CANNOT_INVITE_YOURSELF });
-  }
-
-  try {
-    const [mission, receiver, vacancy] = await Promise.all([
-      getById(missionId),
-      getUserById(receiverId),
-      getVacancyById(missionId, vacancyId),
-    ]);
-
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
-    }
-
-    if (!receiver) {
-      return res.status(404).json({ error: messages.RECEIVER_NOT_FOUND });
-    }
-
-    if (!vacancy) {
-      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
-    }
-
-    if (vacancy.adventurer_id !== null) {
-      return res.status(409).json({ error: messages.VACANCY_ALREADY_OCCUPIED });
-    }
-
-    if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS) {
-      return res.status(409).json({
-        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-      });
-    }
-
-    const type = NOTIFICATION_TYPE.INVITATION.ID;
-    const action =
-      mission.owner_id === senderId
-        ? NOTIFICATION_ACTION.MISSION_INVITE.ID
-        : NOTIFICATION_ACTION.JOIN_REQUEST.ID;
-
-    const hasPending = await hasPendingJoinNotification(
-      missionId,
-      senderId,
-      receiverId,
-      vacancyId,
-    );
-
-    if (hasPending) {
-      return res.status(409).json({
-        error: messages.PENDING_NOTIFICATION_EXISTS,
-      });
-    }
-
-    const adventurerId = mission.owner_id === senderId ? receiverId : senderId;
-
-    if (mission.total_vacancies <= mission.occupied_vacancies) {
-      return res.status(409).json({ error: messages.NO_VACANCIES_AVAILABLE });
-    }
-
-    const alreadyJoined = await getMissionParticipationById(
-      missionId,
-      adventurerId,
-    );
-    if (alreadyJoined) {
-      return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
-    }
-
-    const notificationData = {
-      type,
-      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-      status: NOTIFICATION_STATUS.PENDING.ID,
-      action,
-      message,
-      senderId,
-      receiverId,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: vacancyId,
-      },
-    };
-
-    const newNotificationId = await createNotification(notificationData);
-
-    emitToUser(receiverId, 'notification:created', {
-      notificationId: newNotificationId,
-      missionId,
-      vacancyId,
-      missionTitle: mission.title,
-      senderId,
-      senderUsername: req.user.username,
-      receiverId,
-      type,
-      message,
-    });
-
-    return res.status(201).json(newNotificationId);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Database error' });
-  }
-};
-
-export const submitMissionParticipation = async (req, res) => {
-  const { mid } = req.params;
-  const adventurerId = req.user.uid;
-
-  try {
-    const mission = await getById(mid);
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-    }
-
-    const participation = await getMissionParticipationById(mid, adventurerId);
-    if (!participation) {
-      return res.status(403).json({
-        error: messages.MISSION_PARTICIPATION_REQUIRED,
-      });
-    }
-
-    if (participation.status !== MISSION_STATUS.IN_PROGRESS.ID) {
-      return res.status(409).json({
-        error: messages.MISSION_PART_ALREADY_SUBMITTED,
-      });
-    }
-
-    if (
-      participation.payment_status !==
-      MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID
-    ) {
-      return res.status(409).json({
-        error: messages.CANNOT_SUBMIT_UNPAID,
-      });
-    }
-
-    const updatedParticipation = await submitMissionParticipationRecord(
-      mid,
-      adventurerId,
-    );
-
-    if (!updatedParticipation) {
-      return res
-        .status(409)
-        .json({ error: messages.MISSION_PART_ALREADY_SUBMITTED });
-    }
-
-    const attempts =
-      (await countParticipationReviewAttempts(mid, adventurerId)) + 1;
-    const missionCompletionMessage = `The participation in "${mission.title}" was submitted by ${req.user.username}.`;
-    const notificationId = await createNotification({
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-      action: NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
-      status: NOTIFICATION_STATUS.PENDING.ID,
-      message: missionCompletionMessage,
-      senderId: adventurerId,
-      receiverId: mission.owner_id,
-      payload: { associated_mission_id: Number(mid), attempt: attempts },
-    });
-
-    emitToUser(mission.owner_id, 'mission:participation-submitted', {
-      notificationId,
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      missionId: Number(mid),
-      missionTitle: mission.title,
-      adventurerId,
-      adventurerUsername: req.user.username,
-      message: missionCompletionMessage,
-    });
-
-    return res.status(200).json({
-      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
-      participation: updatedParticipation,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Unjoin mission by adventurer before mission has started
-export const unjoinMission = async (req, res) => {
-  const { mid } = req.params;
-  const uid = req.user.uid;
-  const vacancyId = req.body?.vacancyId;
-
-  try {
-    // Mission is searched
-    const mission = await getById(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Checks if mission is opened, so unjoin can be done
-    if (!MISSION_STATUS[mission.status].ADVENTURERS_CAN_UNJOIN) {
-      return res.status(400).json({
-        errors: {
-          general: [messages.CANNOT_UNJOIN_IN_PROGRESS_MISSION],
-        },
-      });
-    }
-
-    // Vacancy is searched
-    const vacancy = await getVacancyById(mid, vacancyId);
-
-    // Checks if adventurer can unjoin can be deleted by states
-    if (
-      !MISSION_PARTICIPATION_STATUS[vacancy.status].VALID_NEXT_STATES.includes(
-        MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-      )
-    )
-      return res
-        .status(400)
-        .json({ error: messages.CANNOT_UNJOIN_VACANCY_STATE });
-
-    // Checks if user has actually joined that mission
-    const alreadyJoined = await getMissionParticipationById(mid, uid);
-    if (alreadyJoined < 1)
-      return res
-        .status(409)
-        .json({ error: messages.VACANCY_NOT_JOINED_BY_USER });
-
-    // Unjoin is done
-    await unjoinVacancy(mid, vacancyId, uid);
-
-    // Gets adventurer fled information
-    const adventurer = await getUserById(vacancy.adventurer_id);
-    const message = `Adventurer ${adventurer.username} fled the vacancy ${vacancy.title} from your mission ${mission.title}.`;
-    // Finally, a notification is sent to the owner
-    const notificationId = await createNotification({
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-      action: NOTIFICATION_ACTION.MISSION_UNJOIN.ID,
-      status: null,
-      message: message,
-      senderId: uid,
-      receiverId: mission.owner_id,
-      payload: {
-        associated_mission_id: mission.mid,
-        associated_vacancy_id: vacancy.id,
-      },
-    });
-    emitToUser(vacancy.adventurer_id, 'mission:unjoined', {
-      notificationId,
-      missionId: mission.mid,
-      vacancyId: vacancy.adventurer_id,
-      missionTitle: mission.title,
-      senderId: uid,
-      senderUsername: adventurer.username,
-      receiverId: mission.owner_id,
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      message: message,
-    });
-
-    return res.status(200).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
+    console.error(e);
+    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 
@@ -1119,7 +247,7 @@ export const cancelMission = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -1128,7 +256,7 @@ export const cancelMission = async (req, res) => {
       return res.status(403).json({ error: messages.CANNOT_DELETE_MISSION });
 
     // Gets occupied vacancies
-    const occupied_vacancies = await getOccupiedVacancies(mid);
+    const occupied_vacancies = await findAllOccupied(mid);
 
     // If mission has to be "deleted", it will be
     if (MISSION_STATUS[mission.status].CAN_DELETE) {
@@ -1143,7 +271,7 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSION_STATUS.DELETED.ID);
+      await updateStatus(mid, MISSION_STATUS.DELETED.ID);
     }
     // If mission has to be cancelled, it will be
     else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
@@ -1158,7 +286,7 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSION_STATUS.CANCELLING.ID);
+      await updateStatus(mid, MISSION_STATUS.CANCELLING.ID);
 
       // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
       for (const vacancy of occupied_vacancies) {
@@ -1191,7 +319,7 @@ export const cancelMission = async (req, res) => {
           }
         }
       }
-      await updateMissionStatus(mid, MISSION_STATUS.CANCELLED.ID);
+      await updateStatus(mid, MISSION_STATUS.CANCELLED.ID);
     }
     // Otherwise, mission can't be deleted or cancelled
     else
@@ -1207,7 +335,7 @@ export const cancelMission = async (req, res) => {
         const message = MISSION_STATUS[mission.status].CAN_DELETE
           ? `Mission ${mission.title} has been deleted, so it won't be done, we are sorry.`
           : `Mission ${mission.title} has been cancelled, but don't worry, your reward is on your way!.`;
-        const notificationId = await createNotification({
+        const notificationId = await create({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
           action: MISSION_STATUS[mission.status].CAN_DELETE
@@ -1251,7 +379,7 @@ export const reopenMission = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -1282,14 +410,14 @@ export const reopenMission = async (req, res) => {
       });
 
     // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSION_STATUS.REOPENED.ID);
+    await updateStatus(mid, MISSION_STATUS.REOPENED.ID);
 
     // And all adventurers are informed
-    const occupied_vacancies = await getOccupiedVacancies(mid);
+    const occupied_vacancies = await findAllOccupied(mid);
     for (const vacancy of occupied_vacancies) {
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const message = `Mission ${mission.title} has been reopened, so new teammates will enter!`;
-        const notificationId = await createNotification({
+        const notificationId = await create({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
           action: NOTIFICATION_ACTION.MISSION_REOPEN.ID,
@@ -1329,7 +457,7 @@ export const finishMission = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -1350,7 +478,7 @@ export const finishMission = async (req, res) => {
       });
 
     // Checks if every vacancy is in empty or finished state
-    const participants = await getParticipantsForDisplay(mid);
+    const participants = await missionParticipationModel.findAllByMid(mid);
     const canFinish = participants.every(
       (participant) =>
         participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||
@@ -1406,12 +534,12 @@ export const banMission = async (req, res) => {
       return res.status(409).json({ errors: messages.REPORT_ALREADY_ANSWERED });
 
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
     // Participation is got
-    const participation = await getOccupiedVacancies(mid);
+    const participation = await findAllOccupied(mid);
 
     // Mission state changes logic, if payment has been done it has to be release to adventurers
     if (MISSION_STATUS[mission.status].CAN_DELETE) {
@@ -1458,7 +586,7 @@ export const banMission = async (req, res) => {
     }
 
     // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSION_STATUS.REPORTED.ID);
+    await updateStatus(mid, MISSION_STATUS.REPORTED.ID);
 
     // Report is closed
     const reportClosed = await closeReportAndConversation(
@@ -1476,7 +604,7 @@ export const banMission = async (req, res) => {
       : `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers.`;
 
     // Applicant is informed
-    const notificationId = await createNotification({
+    const notificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.MISSION_BAN.ID,
@@ -1503,7 +631,7 @@ export const banMission = async (req, res) => {
     // All adventurers are informed
     for (const vacancy of participation) {
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const notificationId = await createNotification({
+        const notificationId = await create({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
           action: NOTIFICATION_ACTION.MISSION_BAN.ID,
@@ -1543,12 +671,12 @@ export const kickAdventurerOut = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
     // Adventurer participation is got
-    const vacancy = await getVacancyById(mid, vacancyId);
+    const vacancy = await findById(vacancyId);
     if (!vacancy)
       return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
     if (vacancy.mid !== mid)
@@ -1565,7 +693,7 @@ export const kickAdventurerOut = async (req, res) => {
       return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
     // Updates mission
-    const unjoinMission = await adventurerUnjoined(mission.mid);
+    const unjoinMission = await updateOccupiedVacancies(mission.mid);
     if (unjoinMission < 1)
       return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
@@ -1626,7 +754,7 @@ export const kickAdventurerOut = async (req, res) => {
       await refundBannedVacancy(vacancyId, vacancy.monetary_reward);
 
       // Updates total payment on mission
-      const occupied_vacancies = await getOccupiedVacancies(mid);
+      const occupied_vacancies = await findAllOccupied(mid);
       await updateMissionPayment(
         mission.mid,
         occupied_vacancies.reduce(
@@ -1636,7 +764,7 @@ export const kickAdventurerOut = async (req, res) => {
       );
     } else {
       // If not, mission is closed, so it checks if it was the only adventurer
-      const occupied_vacancies = await getOccupiedVacancies(mid);
+      const occupied_vacancies = await findAllOccupied(mid);
       if (occupied_vacancies.length === 0) await openMission(mid);
     }
 
@@ -1654,7 +782,7 @@ export const kickAdventurerOut = async (req, res) => {
     let messageOwner = `Adventurer ${adventurer.username} of your mission ${mission.title} has been kicked out by Hermyx administration, so this vacancy has been emptied.`;
     if (MISSION_STATUS[mission.status].CAN_CANCEL)
       messageOwner += ` Their reward is being refunded to you.`;
-    const notificationId = await createNotification({
+    const notificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,
@@ -1683,7 +811,7 @@ export const kickAdventurerOut = async (req, res) => {
     const messageAdventurer = `You have been kicked out of the mission ${mission.title}, so you won't be able to receive the reward.`;
     if (MISSION_STATUS[mission.status].CAN_CANCEL)
       messageOwner += `Their reward is being refunded to you.`;
-    const notificationAdventurerId = await createNotification({
+    const notificationAdventurerId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,

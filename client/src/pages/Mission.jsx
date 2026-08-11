@@ -4,7 +4,7 @@ import {
   getMissionByIdQueryOptions,
   inviteToMissionMutationOptions,
 } from './../queries/MissionsQueries';
-import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
+import { searchUsersByUsernameInfiniteQueryOptions } from '../queries/UsersQueries';
 import {
   Card,
   CardContent,
@@ -75,7 +75,10 @@ import {
 } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { reportMissionAction } from '../actions/ReportActions';
-import { initialStateUseStateAction } from './../consts/consts';
+import {
+  initialStateUseStateAction,
+  PAGINATION_LIMIT,
+} from './../consts/consts';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -924,6 +927,11 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
 };
 
 const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
+  // Query options
+  const retryOption = (failureCount, error) => {
+    if (error.response?.status === 404) return false; // So Axios won't try to search again the data if there is none
+    return failureCount < 3;
+  };
   const queryClient = useQueryClient();
   const [username, setUsername] = useState('');
   const [foundUsers, setFoundUsers] = useState([]);
@@ -965,9 +973,16 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
     setErrorMessage('');
 
     try {
-      const users = await queryClient.fetchQuery(
-        searchUsersByUsernameQueryOptions(trimmedUsername),
+      const data = await queryClient.fetchInfiniteQuery(
+        searchUsersByUsernameInfiniteQueryOptions(
+          PAGINATION_LIMIT.MISSIONS,
+          { username: trimmedUsername },
+          {
+            retry: retryOption,
+          },
+        ),
       );
+      const users = data?.pages.flatMap((page) => page.users);
       setFoundUsers(users);
       if (users.length === 0) {
         setErrorMessage('No adventurer found with that username.');

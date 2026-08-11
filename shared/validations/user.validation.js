@@ -2,241 +2,204 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
+import * as paginationValidation from './pagination.validation.js';
+import * as helperValidation from './helper.validation.js';
+import * as missionValidation from './mission.validation.js';
 
-// Backend endpoint getUsers
-export const getUsersQuerySchema = z
-  .object({
-    username: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .max(
-        consts.USERNAME_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-      )
-      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS)
-      .optional(),
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
-  })
-  .refine((val) => val.email || val.username || val.firebaseUid, {
-    message: messages.EMAIL_USERNAME_NOT_PROVIDED,
-    path: ['email'],
-  });
+/// Base validations, raw logic
+// Uid
+export const uidBaseSchema = z.coerce
+  .number(messages.FIELD_NUMBER('Uid'))
+  .int(messages.FIELD_INTEGER('Uid'))
+  .min(0, messages.FIELD_POSITIVE('Uid'));
 
-export const searchUsersByUsernameQuerySchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.USERNAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    )
-    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
+// Username
+export const usernameBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Username'))
+  .max(
+    consts.USER.USERNAME.MAX_LENGTH,
+    messages.FIELD_TOO_LONG('Username', consts.USER.USERNAME.MAX_LENGTH),
+  )
+  .regex(regex.USER.USERNAME, messages.USER.USERNAME.INVALID_CHARACTERS);
+
+// Email
+export const emailBaseSchema = z
+  .email(messages.GENERAL.FIELD_NOT_VALID('email'))
+  .trim()
+  .toLowerCase();
+
+// Password
+export const passwordBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Password'));
+
+export const newPasswordBaseSchema = passwordBaseSchema
+  .min(
+    consts.USER.PASSWORD.MIN_LENGTH,
+    messages.FIELD_TOO_SHORT('Password', consts.USER.PASSWORD.MIN_LENGTH),
+  )
+  .max(
+    consts.USER.PASSWORD.MAX_LENGTH,
+    messages.FIELD_TOO_LONG('Password', consts.USER.PASSWORD.MAX_LENGTH),
+  ) // Firebase requirement
+  .regex(regex.USER.PASSWORD.UPPERCASE, messages.USER.PASSWORD.UPPERCASE)
+  .regex(regex.USER.PASSWORD.LOWERCASE, messages.USER.PASSWORD.LOWERCASE)
+  .regex(regex.USER.PASSWORD.NUMBER, messages.USER.PASSWORD.NUMBER)
+  .regex(regex.USER.PASSWORD.SYMBOL, messages.USER.PASSWORD.SYMBOL);
+
+// Confirm password
+export const confirmPasswordBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.AUTH.SIGNUP.CONFIRM_PASSWORD);
+
+// FirebaseUid
+export const firebaseUidBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Firebase UID'));
+
+// Name
+export const nameBaseSchema = z
+  .string()
+  .trim()
+  .max(
+    consts.USER.NAME.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG('Name', consts.USER.NAME.MAX_LENGTH),
+  );
+
+// Surnames
+export const surnamesBaseSchema = z
+  .string()
+  .trim()
+  .max(
+    consts.USER.SURNAMES.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Surnames',
+      consts.USER.SURNAMES.MAX_LENGTH,
+    ),
+  );
+
+// Description
+export const descriptionBaseSchema = z
+  .string()
+  .trim()
+  .max(
+    consts.USER.DESCRIPTION.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Description',
+      consts.USER.DESCRIPTION.MAX_LENGTH,
+    ),
+  );
+
+// Latitude
+export const latitudeBaseSchema = z.coerce.number();
+
+// Longitude
+export const longitudeBaseSchema = z.coerce.number();
+
+// Configuration
+export const configurationBaseSchema = z.json();
+
+/// Endpoint complex validation
+// Search user by username
+export const searchUsersByUsernameQueryBaseSchema = z.object({
+  username: usernameBaseSchema,
+  page: paginationValidation.pageBaseSchema,
+  limit: paginationValidation.limitBaseSchema,
 });
 
-// Server and client sign up shared validation
-export const signUpSchema = z
-  .object({
-    username: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .max(
-        consts.USERNAME_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-      )
-      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim().toLowerCase(),
-    password: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .min(
-        consts.PASSWORD_MIN_LENGTH,
-        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
-      )
-      .max(
-        consts.PASSWORD_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
-      ) // Firebase requirement
-      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
-      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
-      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
-      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL),
-    confirmPassword: z.string().trim().min(1, messages.CONFIRM_PASSWORD),
-  })
-  .refine((val) => val.password === val.confirmPassword, {
-    message: messages.PASSWORDS_NOT_MATCH,
-    path: ['confirmPassword'],
-  });
+export const searchUsersByUsernameQuerySchema =
+  helperValidation.requireBothOrNeither(
+    searchUsersByUsernameQueryBaseSchema,
+    'page',
+    'limit',
+    messages.GENERAL.INCOMPLETE_PAGINATION,
+  );
 
-// Server and client log in shared validation
-export const logInSchema = z
-  .object({
-    username: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .max(
-        consts.USERNAME_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-      )
-      .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS)
-      .optional(),
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim().optional(),
-    password: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  })
-  .refine((val) => val.email || val.username, {
-    message: messages.EMAIL_USERNAME_NOT_PROVIDED,
-    path: ['usernameEmail'],
-  });
-
-export const getUsersByFirebaseUidParamSchema = z.object({
-  firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
+// Get missions from user
+export const getUserMissionsParamSchema = z.object({
+  uid: uidBaseSchema,
 });
 
-export const getUserByUsernameParamSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.USERNAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    )
-    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
+export const getUserMissionsBaseQuerySchema = z.object({
+  type: missionValidation.typeBaseSchema,
+  page: paginationValidation.pageBaseSchema,
+  limit: paginationValidation.limitBaseSchema,
 });
 
-export const getMissionsFromUserParamSchema = z.object({
-  uid: z.coerce
-    .number(messages.FIELD_NUMBER('uid'))
-    .int(messages.FIELD_INTEGER('uid'))
-    .min(0, messages.FIELD_POSITIVE('uid')),
+export const getUserMissionsQuerySchema = helperValidation.requireBothOrNeither(
+  getUserMissionsBaseQuerySchema,
+  'page',
+  'limit',
+  messages.GENERAL.INCOMPLETE_PAGINATION,
+);
+
+// Get user public profile
+export const getUserPublicProfileParamSchema = z.object({
+  username: usernameBaseSchema,
 });
 
-export const getMissionsFromUserQuerySchema = z.object({
-  type: z.string().min(1, messages.FIELD_REQUIRED),
-  page: z.coerce
-    .number(messages.FIELD_NUMBER('Page'))
-    .int(messages.FIELD_INTEGER('Page'))
-    .min(0, messages.FIELD_POSITIVE('Page'))
-    .optional(),
-  limit: z.coerce
-    .number(messages.FIELD_NUMBER('Limit'))
-    .int(messages.FIELD_INTEGER('Limit'))
-    .min(0, messages.FIELD_POSITIVE('Limit'))
-    .optional(),
+// Get user public profile missions
+export const getUserPublicProfileMissionsBaseQuerySchema = z.object({
+  type: missionValidation.typeBaseSchema,
+  page: paginationValidation.pageBaseSchema,
+  limit: paginationValidation.limitBaseSchema,
 });
 
-export const getPublicProfileMissionsQuerySchema = z.object({
-  type: z.enum(['created', 'joined'], {
-    message: messages.INVALID_MISSION_TYPE,
-  }),
-  page: z.coerce
-    .number(messages.FIELD_NUMBER('Page'))
-    .int(messages.FIELD_INTEGER('Page'))
-    .min(0, messages.FIELD_POSITIVE('Page'))
-    .optional(),
-  limit: z.coerce
-    .number(messages.FIELD_NUMBER('Limit'))
-    .int(messages.FIELD_INTEGER('Limit'))
-    .min(0, messages.FIELD_POSITIVE('Limit'))
-    .optional(),
-});
+export const getUserPublicProfileMissionsQuerySchema =
+  helperValidation.requireBothOrNeither(
+    getUserPublicProfileMissionsBaseQuerySchema,
+    'page',
+    'limit',
+    messages.GENERAL.INCOMPLETE_PAGINATION,
+  );
 
-// Server and client profile update shared validation
+// Update current users profile
 export const updateMyProfileSchema = z.object({
-  username: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.USERNAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    )
-    .regex(regex.USERNAME_REGEX, messages.USERNAME_INVALID_CHARACTERS),
-  name: z
-    .string()
-    .trim()
-    .max(
-      consts.NAME_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Name', consts.NAME_MAX_LENGTH),
-    )
-    .optional(),
-  surnames: z
-    .string()
-    .trim()
-    .max(
-      consts.SURNAMES_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Surnames', consts.SURNAMES_MAX_LENGTH),
-    )
-    .optional(),
-  description: z
-    .string()
-    .trim()
-    .max(
-      consts.DESCRIPTION_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Description', consts.DESCRIPTION_MAX_LENGTH),
-    )
-    .optional(),
-  latitude: z.coerce.number().optional(),
-  longitude: z.coerce.number().optional(),
-});
-
-// Sync with Google backend validation
-export const syncGoogleSchema = z.object({
-  username: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
-  firebaseUid: z.string().trim().min(1, messages.FIELD_REQUIRED),
-  isNewUser: z.boolean(),
+  username: usernameBaseSchema,
+  name: nameBaseSchema.optional(),
+  surnames: surnamesBaseSchema.optional(),
+  description: descriptionBaseSchema.optional(),
+  latitude: latitudeBaseSchema.optional(),
+  longitude: longitudeBaseSchema.optional(),
 });
 
 // Updates user email
-export const updateUserEmailSchema = z
+export const updateMyEmailSchema = z.object({
+  email: emailBaseSchema,
+});
+
+// Updates user's configuration
+export const updateMyConfigurationSchema = z.object({
+  configuration: configurationBaseSchema,
+});
+
+// Add email authentication
+export const addEmailAuthenticationSchema = z
   .object({
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
-    password: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .min(
-        consts.PASSWORD_MIN_LENGTH,
-        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
-      )
-      .max(
-        consts.PASSWORD_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
-      ) // Firebase requirement
-      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
-      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
-      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
-      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL)
-      .optional(),
-    confirmPassword: z
-      .string()
-      .trim()
-      .min(1, messages.CONFIRM_PASSWORD)
-      .optional(),
+    email: emailBaseSchema,
+    password: newPasswordBaseSchema,
+    confirmPassword: confirmPasswordBaseSchema,
   })
   .refine((val) => val.password === val.confirmPassword, {
-    message: messages.PASSWORDS_NOT_MATCH,
+    message: messages.AUTH.SIGNUP.PASSWORDS_NOT_MATCH,
     path: ['confirmPassword'],
   });
 
-// Delete user by uid backend validation
-export const deleteUserByUid = z.object({
-  uid: z.coerce
-    .number(messages.FIELD_NUMBER('uid'))
-    .int(messages.FIELD_INTEGER('uid'))
-    .min(0, messages.FIELD_POSITIVE('uid')),
+/// -----------------------
+export const getUsersByFirebaseUidParamSchema = z.object({
+  firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
 });
 
 // Update email validation
 export const updateEmailValidation = z
   .object({
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
-    confirmEmail: z.email(messages.FIELD_NOT_VALID('email')).trim(),
+    email: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
+    confirmEmail: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
   })
   .refine((val) => val.email === val.confirmEmail, {
     message: messages.EMAILS_NOT_MATCH,
@@ -269,46 +232,13 @@ export const updatePasswordValidation = z
     path: ['confirmPassword'],
   });
 
-// Server and client add email authentication shared validation
-export const addEmailAuthenticationSchema = z
-  .object({
-    email: z.email(messages.FIELD_NOT_VALID('email')).trim(),
-    password: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .min(
-        consts.PASSWORD_MIN_LENGTH,
-        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
-      )
-      .max(
-        consts.PASSWORD_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
-      ) // Firebase requirement
-      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
-      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
-      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
-      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL),
-    confirmPassword: z.string().trim().min(1, messages.CONFIRM_PASSWORD),
-  })
-  .refine((val) => val.password === val.confirmPassword, {
-    message: messages.PASSWORDS_NOT_MATCH,
-    path: ['confirmPassword'],
-  });
-
 export const userConfigurationValidation = z.object({
   show_missions_to_others: z.boolean(),
 });
 
-export const userConfigurationBackendValidation = z.object({
-  configuration: z.json(),
-});
-
+// Ban user
 export const banUserParamsSchema = z.object({
-  uid: z.coerce
-    .number(messages.FIELD_NUMBER('Uid'))
-    .int(messages.FIELD_INTEGER('Uid'))
-    .min(0, messages.FIELD_POSITIVE('Uid')),
+  uid: uidBaseSchema,
 });
 
 export const banUserBodySchema = z.object({

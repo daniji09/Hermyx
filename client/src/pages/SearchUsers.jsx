@@ -1,7 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
+import { searchUsersByUsernameInfiniteQueryOptions } from '../queries/UsersQueries';
 import { UserSearchContainer } from '../components/custom/users/UserSearchContainer';
+import { PAGINATION_LIMIT } from '../consts/consts';
 
 export const SearchUsers = () => {
   const [searchParams] = useSearchParams();
@@ -13,14 +14,17 @@ export const SearchUsers = () => {
     return failureCount < 3;
   };
 
-  const { data, isLoading, isError } = useQuery(
-    searchUsersByUsernameQueryOptions(trimmedUsername, {
-      enabled: !!trimmedUsername,
-      retry: retryOption,
-    }),
+  const { data, isLoading, isError } = useInfiniteQuery(
+    searchUsersByUsernameInfiniteQueryOptions(
+      PAGINATION_LIMIT.MISSIONS,
+      { username: trimmedUsername },
+      {
+        enabled: !!trimmedUsername,
+        retry: retryOption,
+      },
+    ),
   );
-
-  const users = data || [];
+  const users = data?.pages.flatMap((page) => page.users); // TODO: pagination must be done with infinite scroll
 
   return (
     <main>

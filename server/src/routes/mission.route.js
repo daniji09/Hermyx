@@ -1,26 +1,6 @@
 // External modules
 import { Router } from 'express';
 const router = Router();
-import multer from 'multer';
-import {
-  createMission,
-  getMissions,
-  getAllMissionsInDraft,
-  getMissionById,
-  // UpdateMission,
-  joinMission,
-  submitMissionParticipation,
-  getMissionsOpened,
-  editMission,
-  unjoinMission,
-  cancelMission,
-  reopenMission,
-  close,
-  finishMission,
-  banMission,
-  kickAdventurerOut,
-} from '../controllers/mission.controller.js';
-
 import {
   validateBodySchema,
   validateQuerySchema,
@@ -42,7 +22,6 @@ import {
   unjoinMissionBodySchema,
   cancelMissionParamSchema,
   reopenMissionParamSchema,
-  inviteToMissionSchema,
   closeMissionParamSchema,
   finishMissionParamSchema,
   banMissionParamsSchema,
@@ -51,13 +30,14 @@ import {
   kickAdventurerOutBodySchema,
   publishMissionFilesSchema,
   editMissionFilesSchema,
+  getOpenedMissionsQuerySchema,
+  inviteToMissionParamSchema,
+  inviteToMissionBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
-import { inviteToMission } from '../controllers/mission.controller.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
-
-// Multer config
-const upload = multer({ storage: multer.memoryStorage() });
+import { upload } from '../utils/file.utils.js';
+import * as missionController from '../controllers/mission.controller.js';
 
 //Dynamic middleware to decide which schema to use
 const dynamicValidation = (req, res, next) => {
@@ -67,45 +47,44 @@ const dynamicValidation = (req, res, next) => {
 };
 
 /// GET
-
-//List all missions
+// Get all missions
 router.get(
   '/',
   validateQuerySchema(getMissionsQuerySchema),
-  await pagination(),
-  getMissions,
+  pagination(),
+  missionController.getMissions,
 );
 
-//List all draft missions
-router.get('/in-draft', getAllMissionsInDraft);
-
-// List all opened missions
+// Get all opened missions
 router.get(
   '/opened',
-  validateQuerySchema(getMissionsQuerySchema),
-  await pagination(),
-  getMissionsOpened,
+  validateQuerySchema(getOpenedMissionsQuerySchema),
+  pagination(),
+  missionController.getMissionsOpened,
 );
 
-//Get mission by id
-router.get('/:id', validateParamsSchema(getMissionSchema), getMissionById);
+// Get mission by mid
+router.get(
+  '/:mid',
+  validateParamsSchema(getMissionSchema),
+  missionController.getMissionByMid,
+);
 
 /// POST
-
-//Create mission
+// Publishes mission
 router.post(
   '/',
   upload.array('photos', 5),
   dynamicValidation,
   validateFilesSchema(publishMissionFilesSchema),
-  createMission,
+  missionController.publishMission,
 );
 
-//Closes a mission
+// Closes a mission
 router.post(
   '/:mid/close',
   validateParamsSchema(closeMissionParamSchema),
-  close,
+  missionController.closeMission,
 );
 
 // Joins an adventurer into a mission
@@ -113,42 +92,66 @@ router.post(
   '/:mid/join',
   validateParamsSchema(joinMissionParamSchema),
   validateBodySchema(joinMissionBodySchema),
-  joinMission,
+  missionController.joinMission,
 );
 
-// Create a notification
+// Invites user to mission
 router.post(
-  '/invite',
-  validateBodySchema(inviteToMissionSchema),
-  inviteToMission,
+  '/:mid/invite',
+  validateParamsSchema(inviteToMissionParamSchema),
+  validateBodySchema(inviteToMissionBodySchema),
+  missionController.inviteToMission,
+);
+
+// Unjoin adventurer from mission
+router.post(
+  '/:mid/unjoin',
+  validateParamsSchema(unjoinMissionParamSchema),
+  validateBodySchema(unjoinMissionBodySchema),
+  missionController.unjoinMission,
 );
 
 // Submits current adventurer participation for owner review
 router.post(
   '/:mid/submit',
   validateParamsSchema(submitMissionParticipationSchema),
-  submitMissionParticipation,
+  missionController.submitMissionParticipation,
 );
+
+/// PUT
+// Edits mission
+router.put(
+  '/:mid',
+  upload.array('photos', 5),
+  validateParamsSchema(editMissionParamSchema),
+  validateBodySchema(editMissionBodySchema),
+  validateFilesSchema(editMissionFilesSchema),
+  missionController.editMission,
+);
+
+//------------
+//List all draft missions
+router.get('/in-draft', missionController.getAllMissionsInDraft);
 
 // Cancels a mission
 router.post(
   '/:mid/cancel',
   validateParamsSchema(cancelMissionParamSchema),
-  cancelMission,
+  missionController.cancelMission,
 );
 
 // Reopens a mission
 router.post(
   '/:mid/reopen',
   validateParamsSchema(reopenMissionParamSchema),
-  reopenMission,
+  missionController.reopenMission,
 );
 
 // Reopens a mission
 router.post(
   '/:mid/finish',
   validateParamsSchema(finishMissionParamSchema),
-  finishMission,
+  missionController.finishMission,
 );
 
 // Bans mission
@@ -157,7 +160,7 @@ router.post(
   verifyAdmin,
   validateParamsSchema(banMissionParamsSchema),
   validateBodySchema(banMissionBodySchema),
-  banMission,
+  missionController.banMission,
 );
 
 // Kicks an adventurer out
@@ -166,30 +169,12 @@ router.post(
   verifyAdmin,
   validateParamsSchema(kickAdventurerOutParamsSchema),
   validateBodySchema(kickAdventurerOutBodySchema),
-  kickAdventurerOut,
-);
-
-//Edit mission
-router.post(
-  '/:mid',
-  upload.array('photos', 5),
-  validateParamsSchema(editMissionParamSchema),
-  validateBodySchema(editMissionBodySchema),
-  validateFilesSchema(editMissionFilesSchema),
-  editMission,
+  missionController.kickAdventurerOut,
 );
 
 /// PUT
 
 //Update mission
 //Router.put('/:id', dynamicValidation, updateMission);
-
-// Joins an adventurer into a mission
-router.delete(
-  '/:mid/unjoin',
-  validateParamsSchema(unjoinMissionParamSchema),
-  validateBodySchema(unjoinMissionBodySchema),
-  unjoinMission,
-);
 
 export default router;

@@ -1,30 +1,5 @@
 import api from '../config/api';
 
-// Creates new user
-export const createUser = async (user) => {
-  // API search
-  const { data } = await api.post('/users', user);
-
-  return data;
-};
-
-// Handles google sync
-export const syncUserWithGoogleAccount = async (
-  email,
-  username,
-  firebaseUid,
-  isNewUser,
-) => {
-  const { data } = await api.post('/users/sync-google', {
-    email,
-    username,
-    firebaseUid,
-    isNewUser,
-  });
-
-  return data;
-};
-
 // Finds user via username
 export const getUserByUsername = async (username) => {
   // API search
@@ -36,19 +11,22 @@ export const getUserByUsername = async (username) => {
 };
 
 // Searches users by partial username
-export const searchUsersByUsername = async (username) => {
-  const { data } = await api.get('/users/search', {
-    params: { username },
-  });
-
-  return data.users;
+export const searchUsersByUsername = async (options) => {
+  const { page, limit } = options;
+  if (page && limit) {
+    const { data } = await api.get('/users/search', {
+      params: { page, limit, ...options.params },
+    });
+    console.log(data);
+    return data;
+  }
 };
 
-// Finds user via FirebaseUid
-export const getUserByFirebaseUid = async (firebaseUid) => {
+// Finds current user information
+export const getMe = async () => {
   // API search
-  const { data } = await api.get(`/users/firebase/${firebaseUid}`);
-  return data.user;
+  const { data } = await api.get(`/users/me`);
+  return data;
 };
 
 //Get public profile by username
@@ -91,14 +69,7 @@ export const updateMyAvatar = async (profile) => {
 // Updates users email on DB and Firebase
 export const updateUserEmail = async (email) => {
   // API search
-  const { data } = await api.put('/users/me/email', { email });
-  return data;
-};
-
-// Deletes user via uid (used for rollbacks)
-export const deleteUserByUid = async (uid) => {
-  // API search
-  const { data } = await api.delete(`/users/${uid}`);
+  const { data } = await api.patch('/users/me/email', { email });
   return data;
 };
 
@@ -116,7 +87,7 @@ export const addEmailAuthentication = async ({
   confirmPassword,
 }) => {
   // API search
-  const { data } = await api.put('/users/me/email', {
+  const { data } = await api.post('/users/me/credentials', {
     email,
     password,
     confirmPassword,
@@ -127,7 +98,9 @@ export const addEmailAuthentication = async ({
 // Updates user configuration (anonymizes it)
 export const userConfiguration = async (configuration) => {
   // API search
-  const { data } = await api.put('/users/me/configuration', { configuration });
+  const { data } = await api.patch('/users/me/configuration', {
+    configuration,
+  });
   return data;
 };
 

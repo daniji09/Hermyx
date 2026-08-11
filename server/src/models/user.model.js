@@ -1,64 +1,8 @@
 import { USER_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
+import { executePaginatedQuery } from '../utils/pagination.util.js';
 
-export const getActiveAdmin = async (database = pool) => {
-  const result = await database.query(`
-    SELECT *
-    FROM app_user
-    WHERE role = 'ADMIN'
-      AND status = 'ACTIVE'
-    ORDER BY uid ASC
-    LIMIT 1
-  `);
-  return result.rows[0] || null;
-};
-
-//Get the user by their ID
-export const getById = async (uid) => {
-  const query = 'SELECT * FROM app_user WHERE uid = $1';
-  const result = await pool.query(query, [uid]);
-  return result.rows[0];
-};
-
-//Save the Stripe Customer ID in the user table.
-export const updateStripeCustomer = async (uid, stripeCustomerId) => {
-  const query = 'UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2';
-  await pool.query(query, [stripeCustomerId, uid]);
-};
-
-//Saves the Stripe Connect Account ID in the user table.
-export const updateStripeConnected = async (uid, stripeConnectedId) => {
-  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
-  await pool.query(query, [stripeConnectedId, uid]);
-};
-
-//Get the user by their email
-export const getByEmail = async (email) => {
-  const query = 'SELECT * FROM app_user WHERE email = $1';
-  const result = await pool.query(query, [email]);
-  return result.rows[0];
-};
-
-// Get user by username
-export const getByUsername = async (username) => {
-  const query = 'SELECT * FROM app_user WHERE username = $1';
-  const result = await pool.query(query, [username]);
-  return result.rows[0];
-};
-
-export const searchByUsername = async (username, excludedUid) => {
-  const query = `
-    SELECT uid, username, email, avatar, name, surnames
-    FROM app_user
-    WHERE unaccent(username) ILIKE unaccent('%' || $1 || '%')
-      AND uid <> $2
-    ORDER BY username ASC
-    LIMIT 10
-  `;
-  const result = await pool.query(query, [username, excludedUid]);
-  return result.rows;
-};
-
+/// CREATES
 // Creates new user
 export const create = async (email, username, firebaseUid) => {
   const query =
@@ -67,20 +11,76 @@ export const create = async (email, username, firebaseUid) => {
   return result.rows[0];
 };
 
-// Get user by Firebase ID
-export const getByFirebaseUid = async (firebaseUid) => {
-  const query = 'SELECT * FROM app_user WHERE firebase_uid = $1';
-  const result = await pool.query(query, [firebaseUid]);
+/// FINDS
+// Get user by uid
+export const findByUid = async (uid) => {
+  const query = 'SELECT * FROM app_user WHERE uid = $1';
+  const result = await pool.query(query, [uid]);
   return result.rows[0];
 };
 
-export const getByUsernameExcludingUid = async (username, uid) => {
+// Get user by username
+export const findByUsername = async (username) => {
+  const query = 'SELECT * FROM app_user WHERE LOWER(username) = LOWER($1)';
+  const result = await pool.query(query, [username]);
+  return result.rows[0];
+};
+
+// Gets user by username excluding current user
+export const findByUsernameExcludingUid = async (username, uid) => {
   const query = 'SELECT * FROM app_user WHERE username = $1 AND uid <> $2';
   const result = await pool.query(query, [username, uid]);
   return result.rows[0];
 };
 
-export const updateMyProfile = async (
+// Get user by email
+export const findByEmail = async (email) => {
+  const query = 'SELECT * FROM app_user WHERE email = $1';
+  const result = await pool.query(query, [email]);
+  return result.rows[0];
+};
+
+// Get user by Firebase UID
+export const findByFirebaseUid = async (firebaseUid) => {
+  const query = 'SELECT * FROM app_user WHERE firebase_uid = $1';
+  const result = await pool.query(query, [firebaseUid]);
+  return result.rows[0];
+};
+
+// Gets location by Uid
+export const findLocationByUid = async (uid) => {
+  const query = `SELECT 
+    ST_Y(location::geometry) as latitude, 
+    ST_X(location::geometry) as longitude
+    FROM app_user
+    WHERE uid = $1`;
+  const result = await pool.query(query, [uid]);
+  return result.rows[0];
+};
+
+// Searches usernames by partial match
+export const searchByUsername = async ({
+  username = undefined,
+  excludedUid = undefined,
+  pagination,
+}) => {
+  // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
+  let query = `SELECT uid, username, email, avatar, name, surnames, COUNT(*) OVER() AS total_count
+    FROM app_user 
+    WHERE uid <> $1`;
+  const values = [excludedUid];
+
+  if (username) {
+    values.push(username);
+    query += ` AND unaccent(username) ILIKE unaccent('%' || $${values.length} || '%')`;
+  }
+  query += ` ORDER BY name DESC`;
+  return await executePaginatedQuery(query, values, pagination);
+};
+
+/// UPDATES
+// Updates user
+export const update = async (
   uid,
   { username, name, surnames, description, latitude, longitude },
 ) => {
@@ -129,16 +129,40 @@ export const updateMyProfile = async (
   }
 };
 
-export const updateUserEmail = async (uid, email) => {
+// Updates user' avatar
+export const updateAvatar = async (uid, avatar) => {
+  const query = `UPDATE app_user SET avatar = $1 WHERE uid = $2`;
+  const result = await pool.query(query, [avatar, uid]);
+  return result.rowCount;
+};
+
+// Updates user's email
+export const updateEmail = async (uid, email) => {
   const query = 'UPDATE app_user SET email = $1 WHERE uid = $2 RETURNING *';
   const result = await pool.query(query, [email, uid]);
   return result.rows[0];
 };
 
-export const deleteByUid = async (uid) => {
-  const query = 'DELETE * FROM app_user WHERE uid = $1';
-  const result = await pool.query(query, [uid]);
+// Updates user's configuration
+export const updateConfiguration = async (uid, configuration) => {
+  const query =
+    'UPDATE app_user SET configuration = $2 WHERE uid = $1 RETURNING *';
+  const result = await pool.query(query, [uid, configuration]);
   return result.rows[0];
+};
+
+//////// -------------
+
+//Save the Stripe Customer ID in the user table.
+export const updateStripeCustomer = async (uid, stripeCustomerId) => {
+  const query = 'UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2';
+  await pool.query(query, [stripeCustomerId, uid]);
+};
+
+//Saves the Stripe Connect Account ID in the user table.
+export const updateStripeConnected = async (uid, stripeConnectedId) => {
+  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
+  await pool.query(query, [stripeConnectedId, uid]);
 };
 
 export const anonymize = async (uid) => {
@@ -180,22 +204,6 @@ export const deanonymize = async (user) => {
   return result.rows[0];
 };
 
-export const updateConfiguration = async (uid, configuration) => {
-  const query = 'UPDATE app_user SET configuration = $2 WHERE uid = $1';
-  const result = await pool.query(query, [uid, configuration]);
-  return result.rowCount;
-};
-
-export const getLocationByUid = async (uid) => {
-  const query = `SELECT 
-    ST_Y(location::geometry) as latitude, 
-    ST_X(location::geometry) as longitude
-    FROM app_user
-    WHERE uid = $1`;
-  const result = await pool.query(query, [uid]);
-  return result.rows[0];
-};
-
 export const ban = async (uid) => {
   const query = `UPDATE app_user SET status = $1 WHERE uid = $2 AND status = $3 RETURNING *`;
   const result = await pool.query(query, [
@@ -214,10 +222,4 @@ export const unban = async (uid) => {
     USER_STATUS.BANNED.ID,
   ]);
   return result.rows[0];
-};
-
-export const updateAvatar = async (uid, avatar) => {
-  const query = `UPDATE app_user SET avatar = $1 WHERE uid = $2`;
-  const result = await pool.query(query, [avatar, uid]);
-  return result.rowCount;
 };

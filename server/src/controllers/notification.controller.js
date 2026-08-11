@@ -13,7 +13,7 @@ import {
   MISSION_PARTICIPATION_PAYMENT_STATUS,
 } from '@hermyx/shared';
 import {
-  createNotification,
+  create,
   findByActionStatusAndVacancy,
   findByActionStatusSenderAndMission,
   findById,
@@ -23,17 +23,18 @@ import {
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
-import { getById as getUserById } from '../models/user.model.js';
+import { findByUid as getUserById } from '../models/user.model.js';
 import {
-  getById,
+  findByMid,
   syncMissionCompletionStatus,
   updateMissionPayment,
 } from '../models/mission.model.js';
 import {
   approveParticipation,
-  getById as getMissionParticipationById,
-  getOccupiedVacancies,
-  getVacancyById,
+  disputeParticipation,
+  findByMidAndAdventurerId as getMissionParticipationById,
+  findAllOccupied,
+  findById as _findById,
   joinVacancy,
   markVacancyAsPaidOut,
   refundVacancy,
@@ -107,7 +108,7 @@ const respondToParticipationReview = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
 
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
@@ -216,7 +217,7 @@ const respondToParticipationReview = async ({
     await markAsSeen(notificationId);
 
     const revisionMessage = `Your participation in "${mission.title}" was rejected by ${username}. Please accept the revision or open a dispute.`;
-    const followUpNotificationId = await createNotification({
+    const followUpNotificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.ACTIONABLE.ID,
       action: NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
@@ -291,7 +292,7 @@ const respondToParticipationReview = async ({
   await markAsSeen(notificationId);
 
   const approvedMessage = `Your participation in "${mission.title}" was approved by ${username}.`;
-  const followUpNotificationId = await createNotification({
+  const followUpNotificationId = await create({
     type: NOTIFICATION_TYPE.MISSION.ID,
     kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
     action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
@@ -328,7 +329,7 @@ const respondToParticipationRejection = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
 
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
@@ -433,7 +434,7 @@ const respondToMissionJoinNotification = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
 
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
@@ -450,7 +451,7 @@ const respondToMissionJoinNotification = async ({
       notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
         ? `Your invitation to join "${mission.title}" was rejected.`
         : `Your request to join "${mission.title}" was rejected.`;
-    const followUpNotificationId = await createNotification({
+    const followUpNotificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: notification.action,
@@ -488,7 +489,7 @@ const respondToMissionJoinNotification = async ({
     });
   }
 
-  const vacancy = await getVacancyById(missionId, vacancyId);
+  const vacancy = await _findById(vacancyId);
 
   // Checks if vacancy can be joined by states
   if (
@@ -567,7 +568,7 @@ const respondToMissionJoinNotification = async ({
       notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
         ? `Your invitation to join "${mission.title}" was rejected.`
         : `Your request to join "${mission.title}" was rejected.`;
-    const followUpNotificationId = await createNotification({
+    const followUpNotificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: notification.action,
@@ -596,7 +597,7 @@ const respondToMissionJoinNotification = async ({
     notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
       ? `Your invitation to join "${mission.title}" was accepted.`
       : `Your request to join "${mission.title}" was accepted. You are now part of the team.`;
-  const followUpNotificationId = await createNotification({
+  const followUpNotificationId = await create({
     type: NOTIFICATION_TYPE.MISSION.ID,
     kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
     action: notification.action,
@@ -631,7 +632,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
   }
@@ -657,7 +658,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     await markAsSeen(notificationId);
 
     const rejectionMessage = `${username} rejected your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
-    const followUpNotificationId = await createNotification({
+    const followUpNotificationId = await create({
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
       action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
@@ -765,7 +766,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
     );
 
     // Updates total payment on mission
-    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    const occupied_vacancies = await findAllOccupied(mission.mid);
     await updateMissionPayment(
       mission.mid,
       occupied_vacancies.reduce(
@@ -791,7 +792,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
   }
 
   const acceptMessage = `${username} accepted your new monetary reward offer for "${mission.title}": ${participation.monetary_reward}€ -> ${notification.payload.new_offer}€.`;
-  const followUpNotificationId = await createNotification({
+  const followUpNotificationId = await create({
     type: NOTIFICATION_TYPE.MISSION.ID,
     kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
     action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
@@ -923,7 +924,7 @@ export const autoAcceptParticipation = async (req, res) => {
     for (const expiredReview of expiredReviews) {
       console.log(expiredReview);
       // Gets mission
-      const mission = await getById(
+      const mission = await findByMid(
         expiredReview.payload.associated_mission_id,
       );
       if (!mission)
@@ -993,7 +994,7 @@ export const autoAcceptParticipation = async (req, res) => {
           await markAsSeen(expiredReview.nid);
 
           const approvedMessage = `Your participation in "${mission.title}" was approved automatically by the system after it wasn't reviewed on time (one week).`;
-          const followUpNotificationId = await createNotification({
+          const followUpNotificationId = await create({
             type: NOTIFICATION_TYPE.MISSION.ID,
             kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
             action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,

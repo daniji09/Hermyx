@@ -5,10 +5,198 @@ import {
 import pool from '../config/db.config.js';
 import {
   addMissionConversationParticipant,
-  leaveMissionConversation,
   makeMissionConversationParticipantReadOnly,
 } from './conversation-participant.model.js';
 
+/// INSERTS
+// Create mission participation
+export const create = async (mid, vacancy, client = pool) => {
+  const query = `
+    INSERT INTO mission_participation (mid, monetary_reward, title, description, status, amount_paid)
+    VALUES ($1, $2, $3, $4, $5, $6)
+  `;
+  await client.query(query, [
+    mid,
+    vacancy.reward,
+    vacancy.title || null,
+    vacancy.description || null,
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    0,
+  ]);
+};
+
+/// FINDS
+// Get participation by id
+export const findById = async (vacancyId, client = pool) => {
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE id = $1
+  `;
+  const result = await client.query(query, [vacancyId]);
+  return result.rows[0] || null;
+};
+
+export const findByMidAndAdventurerId = async (mid, adventurerId) => {
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE mid = $1 AND adventurer_id = $2
+  `;
+  const result = await pool.query(query, [mid, adventurerId]);
+  return result.rows[0] || null;
+};
+
+// Get all participants from mission
+export const findAllByMid = async (mid) => {
+  const query = `
+    SELECT 
+      mp.id AS vacancy_id,
+      mp.title AS vacancy_title,
+      mp.description AS vacancy_description,
+      mp.monetary_reward AS reward,
+      mp.status,
+      owner_review.id AS owner_review_id,
+      owner_review.rating AS owner_review_rating,
+      owner_review.comment AS owner_review_comment,
+      owner_review.created_at AS owner_review_created_at,
+      adventurer_review.id AS adventurer_review_id,
+      adventurer_review.rating AS adventurer_review_rating,
+      adventurer_review.comment AS adventurer_review_comment,
+      adventurer_review.created_at AS adventurer_review_created_at,
+      u.uid AS adventurer_id,
+      u.username,
+      u.avatar
+    FROM mission_participation mp
+    LEFT JOIN app_user u ON mp.adventurer_id = u.uid
+    LEFT JOIN review owner_review ON owner_review.id = mp.owner_review_id
+    LEFT JOIN review adventurer_review ON adventurer_review.id = mp.adventurer_review_id
+    WHERE mp.mid = $1
+    ORDER BY mp.id ASC
+  `;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
+};
+
+// Gets waiting for payment participants
+export const findAllWaitingForPaymentByMid = async (mid) => {
+  const query =
+    'SELECT * FROM mission_participation WHERE status = $1 AND payment_status IN ($2, $3) AND mid = $4';
+  const result = await pool.query(query, [
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+    mid,
+  ]);
+  return result.rows;
+};
+
+// Gets occupied participations
+export const findAllOccupied = async (mid) => {
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL`;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
+};
+
+// Gets joined participations
+export const findAllJoined = async (mid) => {
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
+  const result = await pool.query(query, [
+    mid,
+    MISSION_PARTICIPATION_STATUS.JOINED.ID,
+  ]);
+  return result.rows;
+};
+
+/// UPDATES
+// Update mission participation
+export const update = async (mid, vacancy, client = pool) => {
+  // Only makes update if its actually different
+  const updateQuery = `
+    UPDATE mission_participation 
+    SET title = $1, description = $2
+    WHERE id = $3 AND mid = $4
+      AND (
+        title IS DISTINCT FROM $1 OR 
+        description IS DISTINCT FROM $2
+      )
+    RETURNING id, adventurer_id, title, description, monetary_reward;
+  `;
+
+  const result = await client.query(updateQuery, [
+    vacancy.title || null,
+    vacancy.description || null,
+    vacancy.id,
+    mid,
+  ]);
+
+  return result.rows[0];
+};
+
+// Update mission participation status
+export const updateStatus = async (id, status, client = pool) => {
+  const query = 'UPDATE mission_participation SET status = $1 WHERE id = $2';
+  const result = await client.query(query, [status, id]);
+  return result.rowCount;
+};
+
+// Update status by mid and adventurer
+export const updateStatusByMidAndAdventurer = async (
+  mid,
+  adventurerId,
+  status,
+  client = pool,
+) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
+    RETURNING *
+  `;
+  const result = await client.query(query, [mid, adventurerId, status]);
+  return result.rows[0] || null;
+};
+
+// Unjoin vacancy
+export const updateAdventurerAndStatus = async (
+  id,
+  adventurerId,
+  status,
+  client = pool,
+) => {
+  const query = `
+    UPDATE mission_participation
+    SET adventurer_id = $2, status = $3
+    WHERE id = $1
+    RETURNING *
+  `;
+
+  const result = await client.query(query, [id, adventurerId, status]);
+  return result.rows[0] || null;
+};
+
+/// DELETES
+export const deleteAllUnoccupied = async (mid, existingIds, client = pool) => {
+  let query, result;
+  if (existingIds.length > 0) {
+    // Vacancies that are deleted have to be unoccupied
+    query = `
+      DELETE FROM mission_participation 
+      WHERE mid = $1 AND id != ALL($2::int[]) AND adventurer_id IS NULL
+    `;
+    result = await client.query(query, [mid, existingIds]);
+  } else {
+    // If there is no vacancies that stayed the same, all of them are deleted
+    query = `
+      DELETE FROM mission_participation 
+      WHERE mid = $1 AND adventurer_id IS NULL
+    `;
+    result = await client.query(query, [mid]);
+  }
+  return result.rowCount;
+};
+
+//-----
 export const updateTransferInfo = async (mid, uid, transferId, amount) => {
   const query = `
     UPDATE mission_participation 
@@ -38,31 +226,6 @@ export const deleteParticipant = async (mid, adventurerId) => {
     DROP * FROM mission_participation WHERE mid = $1 AND adventurer_id = $2`;
   const result = await pool.query(query, [mid, adventurerId]);
   return result.rows[0];
-};
-
-export const getById = async (mid, adventurerId) => {
-  const query = `
-    SELECT *
-    FROM mission_participation
-    WHERE mid = $1 AND adventurer_id = $2
-  `;
-  const result = await pool.query(query, [mid, adventurerId]);
-  return result.rows[0] || null;
-};
-
-export const submitParticipation = async (mid, adventurerId) => {
-  const query = `
-    UPDATE mission_participation
-    SET status = $3
-    WHERE mid = $1 AND adventurer_id = $2
-    RETURNING *
-  `;
-  const result = await pool.query(query, [
-    mid,
-    adventurerId,
-    MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
-  ]);
-  return result.rows[0] || null;
 };
 
 export const approveParticipation = async (mid, adventurerId) => {
@@ -162,16 +325,6 @@ export const disputeParticipation = async (
   return result.rows[0] || null;
 };
 
-export const getVacancyById = async (mid, vacancyId) => {
-  const query = `
-    SELECT *
-    FROM mission_participation
-    WHERE mid = $1 AND id = $2
-  `;
-  const result = await pool.query(query, [mid, vacancyId]);
-  return result.rows[0] || null;
-};
-
 export const joinVacancy = async (mid, vacancyId, uid) => {
   const client = await pool.connect();
 
@@ -214,92 +367,6 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
   }
 };
 
-export const unjoinVacancy = async (mid, vacancyId, adventurerId) => {
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    const result = await client.query(
-      `
-        UPDATE mission_participation
-        SET adventurer_id = NULL, status = $4
-        WHERE mid = $1
-          AND id = $2
-          AND adventurer_id = $3
-      `,
-      [mid, vacancyId, adventurerId, MISSION_PARTICIPATION_STATUS.EMPTY.ID],
-    );
-
-    if (result.rowCount < 1) {
-      await client.query('ROLLBACK');
-      return 0;
-    }
-
-    await client.query(
-      `
-        UPDATE mission
-        SET occupied_vacancies = occupied_vacancies - 1
-        WHERE mid = $1
-      `,
-      [mid],
-    );
-
-    await leaveMissionConversation(mid, adventurerId, client);
-    await client.query('COMMIT');
-
-    return result.rowCount;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-export const deleteUnoccupiedVacancies = async (mid, existingIds) => {
-  let query, result;
-  if (existingIds.length > 0) {
-    // Vacancies that are deleted have to be unoccupied
-    query = `
-      DELETE FROM mission_participation 
-      WHERE mid = $1 AND id != ALL($2::int[]) AND adventurer_id IS NULL
-    `;
-    result = await pool.query(query, [mid, existingIds]);
-  } else {
-    // If there is no vacancies that stayed the same, all of them are deleted
-    query = `
-      DELETE FROM mission_participation 
-      WHERE mid = $1 AND adventurer_id IS NULL
-    `;
-    result = await pool.query(query, [mid]);
-  }
-  return result.rowCount;
-};
-
-export const updateVacancy = async (mid, vacancy) => {
-  // Only makes update if its actually different
-  const updateQuery = `
-    UPDATE mission_participation 
-    SET title = $1, description = $2
-    WHERE id = $3 AND mid = $4
-      AND (
-        title IS DISTINCT FROM $1 OR 
-        description IS DISTINCT FROM $2
-      )
-    RETURNING id, adventurer_id, title, description, monetary_reward;
-  `;
-
-  const result = await pool.query(updateQuery, [
-    vacancy.title || null,
-    vacancy.description || null,
-    vacancy.id,
-    mid,
-  ]);
-
-  return result.rows[0];
-};
-
 export const insertVacancies = async (mid, vacancies) => {
   const insertPromises = vacancies.map((vacancy) => {
     const insertQuery = `
@@ -316,21 +383,6 @@ export const insertVacancies = async (mid, vacancies) => {
   });
   const result = await Promise.all([...insertPromises]);
   return result;
-};
-
-export const getJoinedVacancies = async (mid) => {
-  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
-  const result = await pool.query(query, [
-    mid,
-    MISSION_PARTICIPATION_STATUS.JOINED.ID,
-  ]);
-  return result.rows;
-};
-
-export const getOccupiedVacancies = async (mid) => {
-  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL`;
-  const result = await pool.query(query, [mid]);
-  return result.rows;
 };
 
 export const getEmptyVacancies = async (mid) => {
@@ -407,31 +459,12 @@ export const markVacancyAsPaidOut = async (id) => {
   return result.rowCount;
 };
 
-//Updates just the status
-export const updateStatus = async (id, status) => {
-  const query = 'UPDATE mission_participation SET status = $1 WHERE id = $2';
-  const result = await pool.query(query, [status, id]);
-  return result.rowCount;
-};
-
 //Updates just the payment status
 export const updatePaymentStatus = async (id, status) => {
   const query =
     'UPDATE mission_participation SET payment_status = $1 WHERE id = $2';
   const result = await pool.query(query, [status, id]);
   return result.rowCount;
-};
-
-// Gets waiting for payment vacancies
-export const getWaitingForPaymentVacancies = async () => {
-  const query =
-    'SELECT * FROM mission_participation WHERE status = $1 AND payment_status IN ($2, $3)';
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
-  ]);
-  return result.rows;
 };
 
 // Unjoin every participant

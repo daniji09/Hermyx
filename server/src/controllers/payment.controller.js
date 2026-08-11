@@ -19,12 +19,12 @@ import {
 } from '../providers/payment.provider.js';
 
 import {
-  getById,
+  findByUid,
   updateStripeConnected as updateStripeConnectId,
 } from '../models/user.model.js';
 
 import {
-  getById as _getById,
+  findByMid as _getById,
   updatePaymentInfo,
   lockForRelease,
   getParticipantsForRelease,
@@ -32,15 +32,14 @@ import {
   updateReleaseStatus,
   lockForRefund,
   finalizeRefund,
-  updateMissionStatus,
   updateMissionPayment,
 } from '../models/mission.model.js';
 
 import {
   getMissionPayment,
-  getOccupiedVacancies,
-  getVacancyById,
-  getWaitingForPaymentVacancies,
+  findAllOccupied,
+  findById,
+  findAllWaitingForPaymentByMid,
   payVacancy,
   startParticipants,
   updateTransferInfo,
@@ -57,7 +56,7 @@ import {
   TRANSACTION_TYPE,
   MISSION_PARTICIPATION_PAYMENT_STATUS,
 } from '@hermyx/shared';
-import { createNotification } from '../models/notification.model.js';
+import { create } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import {
   createMissionPayment,
@@ -326,7 +325,7 @@ export async function payNew(req, res) {
     );
 
     // Finds waiting for payment vacancies
-    const waitingForPaymentVacancies = await getWaitingForPaymentVacancies();
+    const waitingForPaymentVacancies = await findAllWaitingForPaymentByMid();
     for (const vacancy of waitingForPaymentVacancies) {
       let transaction_type;
       // Each type of payment has different information or actions
@@ -404,7 +403,7 @@ export async function confirmPayment(req, res) {
       return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
 
     // Updates total payment on mission
-    const occupied_vacancies = await getOccupiedVacancies(mission.mid);
+    const occupied_vacancies = await findAllOccupied(mission.mid);
     await updateMissionPayment(
       mission.mid,
       occupied_vacancies.reduce(
@@ -414,7 +413,7 @@ export async function confirmPayment(req, res) {
     );
 
     // Mission and participants life cycle is updated
-    await updateMissionStatus(missionId, MISSION_STATUS.IN_PROGRESS.ID);
+    await updateStatus(missionId, MISSION_STATUS.IN_PROGRESS.ID);
     await startParticipants(missionId);
 
     // Gets all operations made in that payment
@@ -422,7 +421,7 @@ export async function confirmPayment(req, res) {
 
     // Finally, all participants are notified
     for (const transaction of transactions) {
-      const vacancy = await getVacancyById(mission.mid, transaction.vacancy_id);
+      const vacancy = await findById(transaction.vacancy_id);
       let message;
       if (transaction.transaction_type === TRANSACTION_TYPE.INITIAL_FUNDING.ID)
         message = `Mission ${mission.title} has started! Talk to your team and start working.`;
@@ -433,7 +432,7 @@ export async function confirmPayment(req, res) {
       else
         message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const notificationId = await createNotification({
+        const notificationId = await create({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
           action: NOTIFICATION_ACTION.MISSION_START.ID,
@@ -470,7 +469,7 @@ export async function confirmPayment(req, res) {
 export async function connectOnboard(req, res) {
   try {
     const userId = req.user.uid;
-    const user = await getById(userId);
+    const user = await findByUid(userId);
     if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
     let accountId = user.stripe_connected_id;
@@ -637,7 +636,7 @@ export async function refundMissionPayment(req, res) {
 export async function getDashboardLink(req, res) {
   try {
     const userId = req.user.uid;
-    const user = await getById(userId);
+    const user = await findByUid(userId);
     if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
 
     // Checks if user actually completed login form

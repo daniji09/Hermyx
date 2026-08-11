@@ -1,10 +1,8 @@
 import pool from '../config/db.config.js';
 
-export const addConversationParticipant = async (
-  conversationId,
-  userId,
-  database = pool,
-) => {
+/// INSERTS
+// Create
+export const create = async (conversationId, userId, client = pool) => {
   const query = `
     INSERT INTO conversation_participant (conversation_id, user_id)
     VALUES ($1, $2)
@@ -12,9 +10,35 @@ export const addConversationParticipant = async (
     RETURNING *
   `;
 
-  const result = await database.query(query, [conversationId, userId]);
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rows[0];
+};
+
+/// UPDATES
+export const leaveMissionConversation = async (
+  missionId,
+  userId,
+  client = pool,
+) => {
+  const query = `
+    UPDATE conversation_participant cp
+    SET
+      left_at = CURRENT_TIMESTAMP,
+      can_send = FALSE
+    FROM conversation c
+    WHERE cp.conversation_id = c.cid
+      AND c.mission_id = $1
+      AND c.type = 'mission'
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
+    RETURNING cp.*
+  `;
+
+  const result = await client.query(query, [missionId, userId]);
   return result.rows[0] || null;
 };
+
+// ------
 
 export const addPrivateConversationParticipants = async (
   conversationId,
@@ -43,29 +67,6 @@ export const addMissionConversationParticipant = async (
       AND type = 'mission'
     ON CONFLICT (conversation_id, user_id) DO NOTHING
     RETURNING *
-  `;
-
-  const result = await database.query(query, [missionId, userId]);
-  return result.rows[0] || null;
-};
-
-export const leaveMissionConversation = async (
-  missionId,
-  userId,
-  database = pool,
-) => {
-  const query = `
-    UPDATE conversation_participant cp
-    SET
-      left_at = CURRENT_TIMESTAMP,
-      can_send = FALSE
-    FROM conversation c
-    WHERE cp.conversation_id = c.cid
-      AND c.mission_id = $1
-      AND c.type = 'mission'
-      AND cp.user_id = $2
-      AND cp.left_at IS NULL
-    RETURNING cp.*
   `;
 
   const result = await database.query(query, [missionId, userId]);

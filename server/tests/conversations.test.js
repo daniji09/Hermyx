@@ -3,14 +3,14 @@ import request from 'supertest';
 import app from '../src/app.js';
 import pool from '../src/config/db.config.js';
 import {
-  createMission as createMissionRecord,
+  create as createMissionRecord,
   finishMissionAndCloseConversation,
-  getMissionById,
+  findByMidExcludingUid,
 } from '../src/models/mission.model.js';
 import {
   joinVacancy,
   releaseParticipation,
-  unjoinVacancy,
+  updateAdventurerAndStatus,
 } from '../src/models/mission-participation.model.js';
 import { MISSION_STATUS } from '@hermyx/shared';
 
@@ -230,8 +230,14 @@ describe('Mission conversation lifecycle', () => {
     const { mission, conversation } = await createMissionWithConversation(
       owner.uid,
     );
-    const ownerMissionView = await getMissionById(mission.mid, owner.uid);
-    const outsiderMissionView = await getMissionById(mission.mid, outsider.uid);
+    const ownerMissionView = await findByMidExcludingUid(
+      mission.mid,
+      owner.uid,
+    );
+    const outsiderMissionView = await findByMidExcludingUid(
+      mission.mid,
+      outsider.uid,
+    );
 
     const participantsResult = await pool.query(
       `
@@ -259,7 +265,10 @@ describe('Mission conversation lifecycle', () => {
 
     await joinVacancy(mission.mid, vacancy.id, adventurer.uid);
 
-    const joinedMissionView = await getMissionById(mission.mid, adventurer.uid);
+    const joinedMissionView = await findByMidExcludingUid(
+      mission.mid,
+      adventurer.uid,
+    );
 
     const joinedParticipant = await pool.query(
       `
@@ -273,9 +282,9 @@ describe('Mission conversation lifecycle', () => {
     expect(joinedParticipant.rows[0].can_send).toBe(true);
     expect(joinedMissionView.conversation_id).toBe(conversation.cid);
 
-    await unjoinVacancy(mission.mid, vacancy.id, adventurer.uid);
+    await updateAdventurerAndStatus(mission.mid, vacancy.id, adventurer.uid);
 
-    const unjoinedMissionView = await getMissionById(
+    const unjoinedMissionView = await findByMidExcludingUid(
       mission.mid,
       adventurer.uid,
     );
@@ -312,7 +321,7 @@ describe('Mission conversation lifecycle', () => {
 
     await releaseParticipation(mission.mid, adventurer.uid);
 
-    const releasedMissionView = await getMissionById(
+    const releasedMissionView = await findByMidExcludingUid(
       mission.mid,
       adventurer.uid,
     );

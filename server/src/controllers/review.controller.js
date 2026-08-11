@@ -1,5 +1,5 @@
 import { consts, messages } from '@hermyx/shared';
-import { getByUsername } from '../models/user.model.js';
+import { findByUsername } from '../models/user.model.js';
 import {
   createAdventurerReview,
   createOwnerReview,
@@ -16,7 +16,7 @@ export const getUserReviews = async (req, res) => {
         (consts.PAGINATION.DEFAULT_PAGE - 1) * consts.PAGINATION.DEFAULT_LIMIT,
     };
 
-    const user = await getByUsername(username);
+    const user = await findByUsername(username);
 
     if (!user) {
       return res.status(404).json({

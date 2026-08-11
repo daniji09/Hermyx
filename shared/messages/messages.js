@@ -1,10 +1,161 @@
 import { consts } from '../consts/consts.js';
 
 export const messages = {
+  /// General messages
+  GENERAL: {
+    CONNECTION_ERROR: `Connection error, please check your network.`,
+    FIELD_INTEGER: (field) => `${field} must be an integer.`,
+    FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
+    FIELD_NUMBER: (field) => `${field} must be a number.`,
+    FIELD_POSITIVE: (field) => `${field} must be positive.`,
+    FIELD_REQUIRED: (field) => `${field} is required.`,
+    FIELD_TOO_BIG: (field, max) => `${field} can't be greater than ${max}.`,
+    FIELD_TOO_LONG: (field, max) =>
+      `${field} must be shorter than ${max} characters.`,
+    FIELD_TOO_SMALL: (field, min) => `${field} can't be less than ${min}.`,
+    FIREBASE_AUTH_ERROR: `Firebase Auth error.`,
+    FORBIDDEN_BAN_USER: `This user is banned from Hermyx.`,
+    INCOMPLETE_PAGINATION: `Pagination is incomplete. Please send both 'page' and 'limit'.`,
+    INCOMPLETE_PETITION: (field1, field2) =>
+      `Incomplete petition. Please send ${field1} and ${field2} together.`,
+    NO_IMAGE_PROVIDED: `No image provided`,
+    OPERATION_ERROR: `Operation ended abruptly.`,
+    TOO_MANY_ATTEMPTS: `Too many attempts. Please, try later.`,
+    TOO_MANY_FILES: `You sent too many files for this field, or its name is incorrect.`,
+    UNAUTHORIZED_ERROR: `User is not authorized for this action.`,
+    UNEXPECTED_ERROR: `Unexpected error.`,
+    UNSUPPORTED_FILE_FORMAT: `Photo format is invalid, please use .jpg, .png or .webp.`,
+  },
+
+  /// Auth messages
+  AUTH: {
+    FIREBASE_ERRORS: {
+      CREDENTIAL_ALREADY_IN_USE: `This Google account is already linked to another Hermyx account`,
+      NO_SUCH_PROVIDER: `The user isn't linked to the provider or the provider doesn't exist.`,
+    },
+    LOGIN: {
+      NO_EMAIL_OR_USERNAME: `You must provide an e-mail or a username.`,
+      INVALID_CREDENTIALS: `Invalid credentials.`,
+      COULD_NOT_LOG_IN: `Could not log in.`,
+    },
+    SIGNUP: {
+      CONFIRM_PASSWORD: 'Please, confirm password.',
+      PASSWORDS_NOT_MATCH: 'Passwords do not match.',
+      EMAIL_ALREADY_EXISTS: (email) =>
+        `User with email ${email} already exists.`,
+      USERNAME_ALREADY_EXISTS: (username) =>
+        `Username ${username} already in use.`,
+      COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
+    },
+  },
+
+  /// User messages
+  USER: {
+    USERNAME: {
+      INVALID_CHARACTERS: `Username must start with a letter or number, and may contain [._-].`,
+      USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
+    },
+    EMAIL: {
+      EMAIL_NOT_FOUND: (email) => `Email ${email} not found.`,
+    },
+    PASSWORD: {
+      UPPERCASE: 'Password must include at least one uppercase letter.',
+      LOWERCASE: 'Password must include at least one lowercase letter.',
+      NUMBER: 'Password must include at least one number.',
+      SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
+    },
+    GENERAL: {
+      USERS_NOT_FOUND: `Users not found.`,
+      USER_NOT_FOUND: `User not found.`,
+    },
+  },
+
+  /// Mission messages
+  MISSION: {
+    GENERAL: {
+      MISSION_NOT_FOUND: `Mission not found.`,
+      MISSIONS_NOT_FOUND: `Missions not found.`,
+      VACANCY_NOT_IN_MISSION: `This vacancy is not in this mission.`,
+    },
+    VACANCY: {
+      NOT_FOUND: `Vacancy not found`,
+      ALREADY_MODIFIED: `Vacancy already modified`,
+    },
+    TYPE: { INVALID_MISSION_TYPE: `Invalid type of mission.` },
+    GET_ALL: {
+      MIN_PAYMENT_GREATER_MAX_PAYMENT: `Min payment cannot be greater than max payment.`,
+    },
+    PUBLISH: {
+      MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB`,
+      MISSION_PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
+      MISSION_WITH_SAME_TITLE: `You already have a mission titled like this.`,
+    },
+    EDIT: {
+      CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies when the mission is not opened anymore.`,
+      CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
+      CANNOT_EDIT_VACANCY: `Vacancy can't be edited on current state.`,
+    },
+    CLOSE: {
+      CANNOT_WITHOUT_ADVENTURERS: `You can't close a mission without adventurers.`,
+      CANNOT_ON_CURRENT_STATE: `Can't close mission on current state.`,
+    },
+    REOPEN: {
+      CANNOT_ON_CURRENT_STATE: `Can't reopen mission on current state.`,
+      CANNOT_WITHOUT_EMPTY_VACANCIES: `Can't reopen mission with no empty vacancies that can be filled.`,
+      CANNOT_REOPEN: `Can't reopen mission.`,
+    },
+    JOIN: {
+      OWN_MISSION: `You can't join your own mission.`,
+      NOT_ACCEPTS_ADVENTURERS: `This mission is no longer accepting adventurers.`,
+      FILLED: `There are no vacancies open left in this mission. Try another one!`,
+      ALREADY_JOINED: `You have already joined this mission`,
+      REQUEST_ALREADY_SENT: `You have already sent a join request for this vacancy.`,
+      ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
+    },
+    INVITE: {
+      CANNOT_INVITE_YOURSELF: `You can't invite yourself.`,
+      VACANCY_ALREADY_OCCUPIED: `This vacancy is already occupied.`,
+      NO_VACANCIES_AVAILABLE: `There is no vacancies available.`,
+      INVITATION_ALREADY_SENT: `You have already sent an invitation for this vacancy to this user.`,
+    },
+    UNJOIN: {
+      VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
+      CANNOT_IN_PROGRESS_MISSION: `You can't unjoin a mission that has already closed.`,
+      CANNOT_IN_CURRENT_VACANCY_STATE: `Vacancy can't be unjoined on current state.`,
+    },
+    SUBMIT_PARTICIPATION: {
+      MISSION_PART_ALREADY_SUBMITTED: `Your have already submitted your participation.`,
+      CANNOT_SUBMIT_UNPAID: `Not completely paid adventurer can't submit their part.`,
+      CANNOT_IN_CURRENT_STATE: `Cannot submit participation in current mission state`,
+    },
+  },
+
+  /// Notification messages
+  NOTIFICATION: {
+    MISSION_EDIT: {
+      MISSION_INFO_CHANGED: (title, changes) =>
+        `${title} info has been changed: ${changes.join(', ')}. Check it out!`,
+      VACANCY_INFO_CHANGED: (title, changes) =>
+        `Your vacancy at ${title} info has been changed: ${changes.join(', ')}. Check it out!`,
+      NEW_REWARD_OFFER: (title, oldReward, newReward) =>
+        `A new monetary reward offer at ${title} has been made: ${oldReward}€ -> ${newReward}€. Accept or reject it!`,
+    },
+    MISSION_CLOSE: {
+      CLOSED: (title) =>
+        `Mission ${title} has been closed. Waiting for owner payment to start. You can't unjoin anymore, but owner is able to cancel it yet.`,
+      CLOSE_AFTER_REOPENED_NEW_ADVENTURERS: (title) =>
+        `Mission ${title} has been closed after being reopened.  Waiting for owner payment to start new adventurers.`,
+      CLOSE_AFTER_REOPENED_NO_NEW_ADVENTURERS: (title) =>
+        `Mission ${title} has been closed after being reopened. No new adventurers have joined.`,
+    },
+    SUBMIT_PARTICIPATION: (title, username) =>
+      `The participation in "${title}" was submitted by ${username}.`,
+    UNJOIN_MISSION: (username, vacancyTitle, missionTitle) =>
+      `Adventurer ${username} fled the vacancy ${vacancyTitle} from your mission ${missionTitle}.`,
+  },
+
   ///// Common messages
   //// Error
-  CONNECTION_ERROR: 'Connection error, please check your network.',
-  FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
   FIELD_NUMBER: (field) => `${field} must be a number.`,
   FIELD_POSITIVE: (field) => `${field} must be positive.`,
   FIELD_INTEGER: (field) => `${field} must be an integer.`,
@@ -17,45 +168,24 @@ export const messages = {
   FIELD_REQUIRED: 'This field is required.',
   FORBIDDEN: 'Action is not authorized.',
   SYSTEM_FORBIDDEN: 'Action is only authorize for the system.',
-  FORBIDDEN_BAN_USER: 'This user is banned from Hermyx.',
-  OPERATION_ERROR: 'Operation ended abruptly.',
+
   UNAUTHORIZED_ERROR: 'User is not authorized for this action.',
-  UNEXPECTED_ERROR: 'Unexpected error.',
 
   ///// User messages
   //// Sign up
   // Validation errors
-  PASSWORD_UPPERCASE: 'Password must include at least one uppercase letter.',
-  PASSWORD_LOWERCASE: 'Password must include at least one lowercase letter.',
-  PASSWORD_NUMBER: 'Password must include at least one number.',
-  PASSWORD_SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
-  CONFIRM_PASSWORD: 'Please, confirm password.',
-  EMAIL_USERNAME_NOT_PROVIDED: 'Username or email must be provided.',
+
   FIREBASE_UID_REQUIRED: 'Firebase UID is required.',
-  PASSWORDS_NOT_MATCH: 'Passwords do not match.',
-  USERNAME_INVALID_CHARACTERS:
-    'Username must start with a letter or number, and may contain [._-].',
 
   // Server errors
-  EMAIL_ALREADY_EXISTS: (email) => `User with email ${email} already exists.`,
+
   EMAIL_NOT_FOUND: (email) => `User with email ${email} not found.`,
-  USERNAME_ALREADY_EXISTS: (username) => `Username ${username} already in use.`,
-  USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
-  COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
-  USER_NOT_FOUND: `User not found.`,
 
-  //// Log In
-  // Server errors
-  INVALID_CREDENTIALS: 'Invalid credentials.',
-  PASSWORD_WRONG: 'Wrong password.',
-  COULD_NOT_LOG_IN: 'Could not log in.',
+  USER_NOT_FOUND: `User not found.`,
 
   //// Get users
   FIREBASE_UID_NOT_FOUND: (firebaseUid) =>
     `Username with Firebase Uid ${firebaseUid} not found.`,
-
-  //// Get user missions
-  INVALID_MISSION_TYPE: 'Invalid type of mission.',
 
   ///// Mission messages
   //// General
@@ -177,13 +307,11 @@ export const messages = {
   COULD_NOT_UPDATE_PASSWORD: 'Could not create update password.',
   COULD_NOT_LINK_GOOGLE_ACCOUNT: `Could not link Google account.`,
   COULD_NOT_UNLINK_GOOGLE_ACCOUNT: `Could not unlink Google account.`,
-  NO_SUCH_PROVIDER: `The user isn't linked to the provider or the provider doesn't exist.`,
+
   COULD_NOT_ADD_EMAIL_AUTHENTICATION: `Could not add new e-mail authentication.`,
-  CREDENTIAL_ALREADY_IN_USE:
-    'This Google account is already linked to another Hermyx account',
+
   CHANGING_EMAIL_TO_CURRENT:
     'The new email cannot be the same as your current one.',
-  NO_IMAGE_PROVIDED: 'No image provided',
 
   //// Notification
   PENDING_NOTIFICATION_EXISTS:

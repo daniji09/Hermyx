@@ -5,7 +5,9 @@ import {
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
-export const createNotification = async (notificationData, database = pool) => {
+/// INSERTS
+// Create notification
+export const create = async (notificationData, client = pool) => {
   const { type, kind, action, status, message, senderId, receiverId, payload } =
     notificationData;
   const query = `
@@ -23,7 +25,7 @@ export const createNotification = async (notificationData, database = pool) => {
     VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING nid
   `;
-  const result = await database.query(query, [
+  const result = await client.query(query, [
     type,
     kind,
     action,
@@ -36,23 +38,125 @@ export const createNotification = async (notificationData, database = pool) => {
   return result.rows[0].nid;
 };
 
-export const updateNotificationStatus = async (
-  notificationId,
+/// FINDS
+export const findByActionStatusAndVacancy = async (
+  action,
   status,
-  database = pool,
+  associated_vacancy_id,
+  client = pool,
 ) => {
-  const query = 'UPDATE notification SET status = $1 WHERE nid = $2';
-  await database.query(query, [status, notificationId]);
+  const query = `SELECT * 
+  FROM notification 
+  WHERE action = $1 
+    AND status = $2 
+    AND payload->>'associated_vacancy_id' = $3::text`;
+  const result = await client.query(query, [
+    action,
+    status,
+    associated_vacancy_id,
+  ]);
+  return result.rows;
 };
 
-export const markAsSeen = async (notificationId, database = pool) => {
+export const hasPendingJoinNotification = async (
+  missionId,
+  senderId,
+  recipientId,
+  vacancyId,
+) => {
+  const query = `
+    SELECT EXISTS (
+      SELECT 1
+      FROM notification
+      WHERE payload->>'associated_mission_id' = $1::text
+        AND sender_id = $2
+        AND recipient_id = $3
+        AND payload->>'associated_vacancy_id' = $4::text
+        AND status = $5
+        AND action IN ($6, $7)
+    ) AS "hasPendingJoinNotification"
+  `;
+  const result = await pool.query(query, [
+    missionId,
+    senderId,
+    recipientId,
+    vacancyId,
+    NOTIFICATION_STATUS.PENDING.ID,
+    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    NOTIFICATION_ACTION.MISSION_INVITE.ID,
+  ]);
+  return result.rows[0].hasPendingJoinNotification;
+};
+
+// Count participations review attempts
+export const countParticipationReviewAttempts = async (
+  missionId,
+  adventurerId,
+) => {
+  const query = `
+    SELECT COUNT(*)::int AS attempts
+    FROM notification
+    WHERE payload->>'associated_mission_id' = $1::text
+      AND sender_id = $2
+      AND type = $3
+      AND action = $4
+  `;
+  const result = await pool.query(query, [
+    missionId,
+    adventurerId,
+    NOTIFICATION_TYPE.MISSION.ID,
+    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
+  ]);
+  return result.rows[0].attempts;
+};
+
+/// UPDATES
+// Update notification
+export const update = async (notificationData, client = pool) => {
+  const {
+    nid,
+    type,
+    kind,
+    action,
+    status,
+    message,
+    senderId,
+    recipientId,
+    payload,
+  } = notificationData;
+
+  const query = `UPDATE notification 
+  SET type = $1, kind = $2, action = $3, status = $4, message = $5, sender_id = $6, recipient_id = $7, payload = $8
+  WHERE nid = $9`;
+  const result = await client.query(query, [
+    type,
+    kind,
+    action,
+    status,
+    message,
+    senderId,
+    recipientId,
+    payload,
+    nid,
+  ]);
+  return result.rowCount;
+};
+
+// ------
+
+export const updateNotificationStatus = async (notificationId, status) => {
+  const query = 'UPDATE notification SET status = $1 WHERE nid = $2';
+  await pool.query(query, [status, notificationId]);
+};
+
+export const markAsSeen = async (notificationId) => {
   const query = `
     UPDATE notification
     SET seen = TRUE
     WHERE nid = $1
     RETURNING *
   `;
-  const result = await database.query(query, [notificationId]);
+  const result = await pool.query(query, [notificationId]);
   return result.rows[0];
 };
 
@@ -89,36 +193,6 @@ export const findById = async (id) => {
   return result.rows[0];
 };
 
-export const hasPendingJoinNotification = async (
-  missionId,
-  senderId,
-  recipientId,
-  vacancyId,
-) => {
-  const query = `
-    SELECT EXISTS (
-      SELECT 1
-      FROM notification
-      WHERE payload->>'associated_mission_id' = $1::text
-        AND sender_id = $2
-        AND recipient_id = $3
-        AND payload->>'associated_vacancy_id' = $4::text
-        AND status = $5
-        AND action IN ($6, $7)
-    ) AS "hasPendingJoinNotification"
-  `;
-  const result = await pool.query(query, [
-    missionId,
-    senderId,
-    recipientId,
-    vacancyId,
-    NOTIFICATION_STATUS.PENDING.ID,
-    NOTIFICATION_ACTION.JOIN_REQUEST.ID,
-    NOTIFICATION_ACTION.MISSION_INVITE.ID,
-  ]);
-  return result.rows[0].hasPendingJoinNotification;
-};
-
 export const getByRecipientId = async (recipientId) => {
   const query = `
     SELECT
@@ -151,75 +225,6 @@ export const getByRecipientId = async (recipientId) => {
     NOTIFICATION_STATUS.PENDING.ID,
   ]);
   return result.rows;
-};
-
-export const countParticipationReviewAttempts = async (
-  missionId,
-  adventurerId,
-) => {
-  const query = `
-    SELECT COUNT(*)::int AS attempts
-    FROM notification
-    WHERE payload->>'associated_mission_id' = $1::text
-      AND sender_id = $2
-      AND type = $3
-      AND action = $4
-  `;
-  const result = await pool.query(query, [
-    missionId,
-    adventurerId,
-    NOTIFICATION_TYPE.MISSION.ID,
-    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
-  ]);
-  return result.rows[0].attempts;
-};
-
-export const findByActionStatusAndVacancy = async (
-  action,
-  status,
-  associated_vacancy_id,
-) => {
-  const query = `SELECT * 
-  FROM notification 
-  WHERE action = $1 
-    AND status = $2 
-    AND payload->>'associated_vacancy_id' = $3::text`;
-  const result = await pool.query(query, [
-    action,
-    status,
-    associated_vacancy_id,
-  ]);
-  return result.rows;
-};
-
-export const updateNotification = async (notificationData) => {
-  const {
-    nid,
-    type,
-    kind,
-    action,
-    status,
-    message,
-    senderId,
-    recipientId,
-    payload,
-  } = notificationData;
-
-  const query = `UPDATE notification 
-  SET type = $1, kind = $2, action = $3, status = $4, message = $5, sender_id = $6, recipient_id = $7, payload = $8
-  WHERE nid = $9`;
-  const result = await pool.query(query, [
-    type,
-    kind,
-    action,
-    status,
-    message,
-    senderId,
-    recipientId,
-    payload,
-    nid,
-  ]);
-  return result.rowCount;
 };
 
 export const findByActionStatusSenderAndMission = async (

@@ -26,7 +26,9 @@ const pool = new Pool({
 
 // To check whether the connection was successful or not
 pool.on('connect', () => {
-  console.log(`Connected to Hermyx Database successfully`);
+  console.log(
+    `Connected to Hermyx ${isTesting ? 'Test' : ''} Database successfully`,
+  );
 });
 
 pool.on('error', (err) => {
