@@ -538,7 +538,7 @@ const respondToMissionJoinNotification = async ({
     });
   }
 
-  const vacancy = await _findById(missionId, vacancyId);
+  const vacancy = await _findById(vacancyId);
 
   // Checks if vacancy can be joined by states
   if (

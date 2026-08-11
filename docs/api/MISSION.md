@@ -277,7 +277,67 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
 
     <br>
 
-**Workflow:** to publish a mission, it's needed to enter the title, description, and information about the available vacancies, which must include at least one vacancy and its title and monetary reward. Optionally, it's aso possible to add up to five images, which are handled by the `multer` library, and a location, which is handled by the `postgis` extension for PostgreSQL. Because creating a mission requires entering data into missions, mission participants, conversations, conversation participants, and mission photos, a database transaction is necessary.
+**Workflow:** to publish a mission, it's needed to enter the title, description, and information about the available vacancies, which must include at least one vacancy and its title and monetary reward. Optionally, it's aso possible to add up to five images, which are handled by the `multer` (Azure TODO:)library, and a location, which is handled by the `postgis` extension for PostgreSQL. Because creating a mission requires entering data into missions, mission participants, conversations, conversation participants, and mission photos, a database transaction is necessary.
+<br>
+<br>
+<br>
+
+## - Edit mission: `PUT /api/missions/:mid`
+
+Edits information from a mission that has already been published.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `title` | string | Yes | Mission title. |
+| `description` | string | Yes | Mission description. |
+| `photos` | array | No | Mission array of all photos. |
+| `existingPhotos` | array | No | Mission array of photos that were already on the mission. |
+| `vacancies` | integer | Yes | Mission vacancy number. |
+| `vacanciesData` | array | Yes | Mission vacancies data. |
+| `latitude` | integer | No* | Mission latitude location. |
+| `longitude` | integer | No* | Mission longitude location. |
+_> Note: `latitude` and `longitude` are optional, but if one is provided, both must be sent together._
+
+**Files:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `photos` | array | No | Mission array of all photos. |
+| `existingPhotos` | array | No | Mission array of photos that were already on the mission. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission updated successfully.
+
+  ```json
+  {
+    "mission": {
+      "mission_info": "<updated_mission_info>"
+    }
+  }
+  ```
+
+- `400 Bad Request`: fields validation error, missing fields or logic error: user already has a mission named like that, cannot edit mission in current state, cannot delete vacancy in current state, cannot edit vacancy in current state.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+    <br>
+
+**Workflow:** to edit a mission, it's needed to enter the title, description, and information about the available vacancies, which must include at least one vacancy and its title and monetary reward. Optionally, it's aso possible to add up to five images, which are handled by the `multer` library, and a location, which is handled by the `postgis` extension for PostgreSQL. The process consists of four steps: first, performing all necessary validations on the entered data to ensure its accuracy; second, processing the new images, locally in development environments and in Azure Blob environments in production; third, performing all internal updates using a database transaction; and fourth, deleting the eliminated images and finally sending the necessary notifications. This order is used to ensure data integrity, so in the worst-case scenario, some corrupted images may remain in storage, or some notifications may not be sent. If the process were performed in a different order, notifications, for example, could not be rolled back.
 <br>
 <br>
 <br>

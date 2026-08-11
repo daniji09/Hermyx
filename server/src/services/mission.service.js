@@ -293,7 +293,7 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
 
   // Then external preparation (storage provider) is made
   const isProduction = process.env.NODE_ENV === 'production';
-  const { uploadedPhotoUrls, currentPhotosInDb, photosToDelete } =
+  const { uploadedPhotoUrls, photosToDelete } =
     await externalPreparationEditMission(
       newPhotos,
       existingPhotos,
@@ -307,11 +307,12 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
       mission,
       originalMission,
       uploadedPhotoUrls,
-      currentPhotosInDb,
+      photosToDelete,
       existingIds,
       existingVacancies,
       originalVacancies,
       newVacancies,
+      user,
     );
 
   // Lastly, after database commit, storage provider deletion is done
@@ -360,10 +361,8 @@ const validateEditMission = async (uid, mission, newPhotos, existingPhotos) => {
   // Id array including existing vacancies that stayed
   const existingIds = existingVacancies.map((v) => v.id);
 
-  console.log(mission, existingIds, existingVacancies);
   // New mission info can delete existing vacancies only in opened state
   if (!MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS) {
-    console.log(existingIds.length, originalVacancies.length);
     if (existingIds.length < originalVacancies.length) {
       throw new AppError(
         messages.MISSION.EDIT.CANNOT_DELETE_EXISTING_VACANCIES,
@@ -376,6 +375,7 @@ const validateEditMission = async (uid, mission, newPhotos, existingPhotos) => {
     const currentOriginal = originalVacancies.find(
       (vac) => vac.id === vacancy.id,
     );
+
     if (
       currentOriginal &&
       !MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT
@@ -407,6 +407,7 @@ const externalPreparationEditMission = async (
 ) => {
   // Photos management, first uploading and saving new photos
   let uploadedPhotoUrls = [];
+
   if (newPhotos.length > 0) {
     uploadedPhotoUrls = await Promise.all(
       newPhotos.map(async (file) => {
@@ -429,14 +430,14 @@ const externalPreparationEditMission = async (
     (dbPhoto) => !existingPhotos.includes(dbPhoto.url),
   );
 
-  return { uploadedPhotoUrls, currentPhotosInDb, photosToDelete };
+  return { uploadedPhotoUrls, photosToDelete };
 };
 
 const internalUpdatesEditMission = async (
   mission,
   originalMission,
   uploadedPhotoUrls,
-  currentPhotosInDb,
+  photosToDelete,
   existingIds,
   existingVacancies,
   originalVacancies,
@@ -453,7 +454,7 @@ const internalUpdatesEditMission = async (
       mission,
       originalMission,
       uploadedPhotoUrls,
-      currentPhotosInDb,
+      photosToDelete,
       existingIds,
       existingVacancies,
       originalVacancies,
@@ -488,7 +489,7 @@ const internalUpdates = async (
   mission,
   originalMission,
   uploadedPhotoUrls,
-  currentPhotosInDb,
+  photosToDelete,
   existingIds,
   existingVacancies,
   originalVacancies,
@@ -506,7 +507,7 @@ const internalUpdates = async (
     await missionPhotoModel.create(mission.mid, photoURL, client);
   }
   // And deletes old photos from db
-  for (const dbPhoto of currentPhotosInDb) {
+  for (const dbPhoto of photosToDelete) {
     await missionPhotoModel.deleteById(dbPhoto.id, client);
   }
 
@@ -640,7 +641,10 @@ const missionChangedNotifications = async (
         vacancy.adventurer_id &&
         MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
       ) {
-        const message = `${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
+        const message = messages.NOTIFICATION.MISSION_EDIT.MISSION_INFO_CHANGED(
+          updatedMission.title,
+          changes,
+        );
         const notificationId = await notificationService.createNotification(
           {
             type: NOTIFICATION_TYPE.MISSION.ID,
@@ -714,7 +718,10 @@ const vacancyChangedNotifications = async (
     MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
   ) {
     // First, informational notification is sended
-    const message = `Your vacancy at ${updatedMission.title} info has been changed: ${changes.join(', ')}. Check it out!`;
+    const message = messages.NOTIFICATION.MISSION_EDIT.VACANCY_INFO_CHANGED(
+      updatedMission.title,
+      changes,
+    );
     const notificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.MISSION.ID,
@@ -763,15 +770,22 @@ const monetaryRewardChangedNotifications = async (
   if (changes.includes('reward')) {
     // First, if a pending monetary reward notification exists, it changes its value
     // eslint-disable-next-line prefer-const
-    let notification = await notificationService.findByActionStatusAndVacancy(
-      NOTIFICATION_ACTION.MISSION_EDIT.ID,
-      NOTIFICATION_STATUS.PENDING.ID,
-      vacancy.id,
-      client,
-    );
+    let notification =
+      await notificationService.findNotificationByActionStatusAndVacancyId(
+        NOTIFICATION_ACTION.MISSION_EDIT.ID,
+        NOTIFICATION_STATUS.PENDING.ID,
+        vacancy.id,
+        client,
+      );
     if (notification.length > 0) {
       notification[0].payload.new_offer = vacancy.reward;
-      notification[0].message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
+      notification[0].message =
+        messages.NOTIFICATION.MISSION_EDIT.NEW_REWARD_OFFER(
+          updatedMission.title,
+          originalVacancies.find((vac) => vac.id === vacancy.id)
+            .monetary_reward,
+          vacancy.reward,
+        );
       await notificationService.updateNotification({
         nid: notification[0].nid,
         type: notification[0].type,
@@ -786,7 +800,12 @@ const monetaryRewardChangedNotifications = async (
     } else {
       // If not, the new notification is send
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const message = `A new monetary reward offer at ${updatedMission.title} has been made: ${originalVacancies.find((vac) => vac.id === vacancy.id).monetary_reward}€ -> ${vacancy.reward}€. Accept or reject it!`;
+        const message = messages.NOTIFICATION.MISSION_EDIT.NEW_REWARD_OFFER(
+          updatedMission.title,
+          originalVacancies.find((vac) => vac.id === vacancy.id)
+            .monetary_reward,
+          vacancy.reward,
+        );
         const notificationId = await notificationService.createNotification({
           type: NOTIFICATION_TYPE.MISSION.ID,
           kind: NOTIFICATION_KIND.ACTIONABLE.ID,

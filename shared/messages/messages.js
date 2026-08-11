@@ -85,9 +85,21 @@ export const messages = {
       MISSION_WITH_SAME_TITLE: `You already have a mission titled like this.`,
     },
     EDIT: {
-      CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies because the mission is already in progress.`,
+      CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies when the mission is not opened anymore.`,
       CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
       CANNOT_EDIT_VACANCY: `Vacancy can't be edited on current state.`,
+    },
+  },
+
+  /// Notification messages
+  NOTIFICATION: {
+    MISSION_EDIT: {
+      MISSION_INFO_CHANGED: (title, changes) =>
+        `${title} info has been changed: ${changes.join(', ')}. Check it out!`,
+      VACANCY_INFO_CHANGED: (title, changes) =>
+        `Your vacancy at ${title} info has been changed: ${changes.join(', ')}. Check it out!`,
+      NEW_REWARD_OFFER: (title, oldReward, newReward) =>
+        `A new monetary reward offer at ${title} has been made: ${oldReward}€ -> ${newReward}€. Accept or reject it!`,
     },
   },
 
