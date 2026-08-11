@@ -662,6 +662,119 @@ export const inviteToMission = async (
   });
 };
 
+// Unjoin mission
+export const unjoinMission = async (mid, vacancyId, user) => {
+  // Mission is searched
+  const mission = await getMissionByIdOrThrow(mid);
+
+  // Checks if mission is opened, so unjoin can be done
+  if (!MISSION_STATUS[mission.status].ADVENTURERS_CAN_UNJOIN)
+    throw new AppError(messages.MISSION.UNJOIN.CANNOT_IN_PROGRESS_MISSION);
+
+  // Vacancy is searched
+  const vacancy = await getMissionParticipationByIdOrThrow(vacancyId);
+
+  // Checks that vacancy exists in that mission
+  checkVacancyNotMission(vacancy.mid, mid);
+
+  // Checks that participant is current user, a user can only unjoin itself
+  if (vacancy.adventurer_id !== user.uid)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+
+  // Checks if adventurer can unjoin can be deleted by states
+  if (
+    !MISSION_PARTICIPATION_STATUS[vacancy.status].VALID_NEXT_STATES.includes(
+      MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    )
+  )
+    throw new AppError(messages.MISSION.UNJOIN.CANNOT_IN_CURRENT_VACANCY_STATE);
+
+  // Checks if user has actually joined that mission
+  const alreadyJoined =
+    await missionParticipationModel.findByMidAndAdventurerId(mid, user.uid);
+  if (!alreadyJoined)
+    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+
+  // Gets adventurer fled information
+  const adventurer = await userService.getUserByUidOrThrow(
+    vacancy.adventurer_id,
+  );
+
+  // Updates and notification sending needs transaction
+  const client = await pool.connect();
+  let notificationId;
+  const message = messages.NOTIFICATION.UNJOIN_MISSION(
+    user.username,
+    vacancy.title,
+    mission.title,
+  );
+
+  try {
+    await client.query('BEGIN');
+    // Participation is updated
+    const updatedVacancy =
+      await missionParticipationModel.updateAdventurerAndStatus(
+        vacancyId,
+        null, // ¡La magia de desconectar al usuario!
+        MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+        client,
+      );
+    if (!updatedVacancy)
+      throw new AppError(messages.MISSION.VACANCY.ALREADY_MODIFIED, 409);
+
+    // Mission is updated
+    const updateMission = await missionModel.updateOccupiedVacancies(
+      mid,
+      -1,
+      client,
+    );
+    if (updateMission.length < 1)
+      throw new AppError(messages.MISSION.NOT_FOUND, 404);
+
+    // Adventurer leaves conversation
+    const leaveMissionConversation =
+      await conversationService.leaveMissionConversation(mid, user.uid, client);
+    if (!leaveMissionConversation)
+      throw new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500);
+
+    // Finally, a notification is sent to the owner
+    notificationId = await notificationService.createNotification(
+      {
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.MISSION_UNJOIN.ID,
+        status: null,
+        message: message,
+        senderId: user.uid,
+        receiverId: mission.owner_id,
+        payload: {
+          associated_mission_id: mission.mid,
+          associated_vacancy_id: vacancy.id,
+        },
+      },
+      client,
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  socketProvider.emitToUser(vacancy.adventurer_id, 'mission:unjoined', {
+    notificationId,
+    missionId: mission.mid,
+    vacancyId: vacancy.adventurer_id,
+    missionTitle: mission.title,
+    senderId: user.uid,
+    senderUsername: adventurer.username,
+    receiverId: mission.owner_id,
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    message: message,
+  });
+};
+
 // Submit participation
 export const submitMissionParticipation = async (mid, user) => {
   checkMid(mid);

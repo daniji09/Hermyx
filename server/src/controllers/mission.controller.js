@@ -18,7 +18,7 @@ import {
   findByMid,
   updateStatus,
   finishMissionAndCloseConversation,
-  adventurerUnjoined,
+  updateOccupiedVacancies,
   emptyMission,
   updateMissionPayment,
   openMission,
@@ -26,9 +26,7 @@ import {
 import { findByUid as getUserById } from '../models/user.model.js';
 import { getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
-  findByMidAndAdventurerId as getMissionParticipationById,
   findById,
-  unjoinVacancy,
   findAllOccupied,
   getEmptyVacancies,
   markVacancyAsPaidOut,
@@ -143,18 +141,6 @@ export const closeMission = async (req, res, next) => {
   }
 };
 
-// Sends a join request to the mission owner instead of joining immediately
-export const joinMission = async (req, res, next) => {
-  try {
-    const { mid } = req.params;
-    const { message, vacancyId } = req.body;
-    await missionService.joinMission(mid, req.user, message, vacancyId);
-    return res.status(200).json({});
-  } catch (error) {
-    next(error);
-  }
-};
-
 // Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
 export const inviteToMission = async (req, res, next) => {
   try {
@@ -169,6 +155,30 @@ export const inviteToMission = async (req, res, next) => {
       req.user,
     );
     return res.status(200).json(nid);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Sends a join request to the mission owner instead of joining immediately
+export const joinMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { message, vacancyId } = req.body;
+    await missionService.joinMission(mid, req.user, message, vacancyId);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Unjoin mission by adventurer before mission has started
+export const unjoinMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { vacancyId } = req.body;
+    await missionService.unjoinMission(mid, vacancyId, req.user);
+    return res.status(200).json({});
   } catch (error) {
     next(error);
   }
@@ -227,86 +237,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Unjoin mission by adventurer before mission has started
-export const unjoinMission = async (req, res) => {
-  const { mid } = req.params;
-  const uid = req.user.uid;
-  const vacancyId = req.body?.vacancyId;
-
-  try {
-    // Mission is searched
-    const mission = await findByMid(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Checks if mission is opened, so unjoin can be done
-    if (!MISSION_STATUS[mission.status].ADVENTURERS_CAN_UNJOIN) {
-      return res.status(400).json({
-        errors: {
-          general: [messages.CANNOT_UNJOIN_IN_PROGRESS_MISSION],
-        },
-      });
-    }
-
-    // Vacancy is searched
-    const vacancy = await findById(vacancyId);
-
-    // Checks if adventurer can unjoin can be deleted by states
-    if (
-      !MISSION_PARTICIPATION_STATUS[vacancy.status].VALID_NEXT_STATES.includes(
-        MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-      )
-    )
-      return res
-        .status(400)
-        .json({ error: messages.CANNOT_UNJOIN_VACANCY_STATE });
-
-    // Checks if user has actually joined that mission
-    const alreadyJoined = await getMissionParticipationById(mid, uid);
-    if (alreadyJoined < 1)
-      return res
-        .status(409)
-        .json({ error: messages.VACANCY_NOT_JOINED_BY_USER });
-
-    // Unjoin is done
-    await unjoinVacancy(mid, vacancyId, uid);
-
-    // Gets adventurer fled information
-    const adventurer = await getUserById(vacancy.adventurer_id);
-    const message = `Adventurer ${adventurer.username} fled the vacancy ${vacancy.title} from your mission ${mission.title}.`;
-    // Finally, a notification is sent to the owner
-    const notificationId = await create({
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-      action: NOTIFICATION_ACTION.MISSION_UNJOIN.ID,
-      status: null,
-      message: message,
-      senderId: uid,
-      receiverId: mission.owner_id,
-      payload: {
-        associated_mission_id: mission.mid,
-        associated_vacancy_id: vacancy.id,
-      },
-    });
-    emitToUser(vacancy.adventurer_id, 'mission:unjoined', {
-      notificationId,
-      missionId: mission.mid,
-      vacancyId: vacancy.adventurer_id,
-      missionTitle: mission.title,
-      senderId: uid,
-      senderUsername: adventurer.username,
-      receiverId: mission.owner_id,
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      message: message,
-    });
-
-    return res.status(200).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 
@@ -763,7 +693,7 @@ export const kickAdventurerOut = async (req, res) => {
       return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
     // Updates mission
-    const unjoinMission = await adventurerUnjoined(mission.mid);
+    const unjoinMission = await updateOccupiedVacancies(mission.mid);
     if (unjoinMission < 1)
       return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 

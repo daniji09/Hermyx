@@ -103,6 +103,14 @@ router.post(
   missionController.inviteToMission,
 );
 
+// Unjoin adventurer from mission
+router.post(
+  '/:mid/unjoin',
+  validateParamsSchema(unjoinMissionParamSchema),
+  validateBodySchema(unjoinMissionBodySchema),
+  missionController.unjoinMission,
+);
+
 // Submits current adventurer participation for owner review
 router.post(
   '/:mid/submit',
@@ -168,13 +176,5 @@ router.post(
 
 //Update mission
 //Router.put('/:id', dynamicValidation, updateMission);
-
-// Joins an adventurer into a mission
-router.delete(
-  '/:mid/unjoin',
-  validateParamsSchema(unjoinMissionParamSchema),
-  validateBodySchema(unjoinMissionBodySchema),
-  missionController.unjoinMission,
-);
 
 export default router;

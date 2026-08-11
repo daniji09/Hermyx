@@ -249,6 +249,10 @@ export const publishMissionSchema = z.object({
   longitude: longitudeBaseSchema,
 });
 
+export const publishMissionFilesSchema = z.object({
+  photos: photosBaseSchema,
+});
+
 // Edit mission
 export const editMissionBodySchema = z.object({
   mid: midBaseSchema,
@@ -312,37 +316,21 @@ export const inviteToMissionBodySchema = z.object({
   message: messageBaseSchema,
 });
 
+// Unjoin mission
+export const unjoinMissionParamSchema = z.object({
+  mid: midBaseSchema,
+});
+
+export const unjoinMissionBodySchema = z.object({
+  vacancyId: vacancyIdBaseSchema,
+});
+
 // Submit participation
 export const submitMissionParticipationSchema = z.object({
   mid: midBaseSchema,
 });
 
 // ------
-export const publishMissionFilesSchema = z.object({
-  photos: z
-    .array(
-      z
-        .object({
-          size: z
-            .number()
-            .max(
-              consts.MISSION.PHOTOS.MAX_FILE_SIZE,
-              messages.MISSION_PHOTO_TOO_BIG,
-            ),
-          mimetype: z.refine(
-            (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
-            messages.MISSION_PHOTO_INVALID_TYPE,
-          ),
-        })
-        .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,,
-    )
-    .max(
-      consts.MISSION.PHOTOS.MAX,
-      messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
-    )
-    .optional()
-    .default([]),
-});
 
 const optionalNumberFromFormSchema = (schema) =>
   z.preprocess((value) => {
@@ -389,20 +377,6 @@ export const searchMissionByTitleSchema = z.object({
       consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
       messages.FIELD_TOO_LONG('Input'),
     ),
-});
-
-export const unjoinMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
-
-export const unjoinMissionBodySchema = z.object({
-  vacancyId: z.coerce
-    .number(messages.FIELD_NUMBER('Vacancy id'))
-    .int(messages.FIELD_INTEGER('Vacancy id'))
-    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
 });
 
 export const banMissionParamsSchema = z.object({

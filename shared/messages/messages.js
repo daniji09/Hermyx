@@ -79,6 +79,7 @@ export const messages = {
     },
     VACANCY: {
       NOT_FOUND: `Vacancy not found`,
+      ALREADY_MODIFIED: `Vacancy already modified`,
     },
     TYPE: { INVALID_MISSION_TYPE: `Invalid type of mission.` },
     GET_ALL: {
@@ -117,6 +118,11 @@ export const messages = {
       NO_VACANCIES_AVAILABLE: `There is no vacancies available.`,
       INVITATION_ALREADY_SENT: `You have already sent an invitation for this vacancy to this user.`,
     },
+    UNJOIN: {
+      VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
+      CANNOT_IN_PROGRESS_MISSION: `You can't unjoin a mission that has already closed.`,
+      CANNOT_IN_CURRENT_VACANCY_STATE: `Vacancy can't be unjoined on current state.`,
+    },
     SUBMIT_PARTICIPATION: {
       MISSION_PART_ALREADY_SUBMITTED: `Your have already submitted your participation.`,
       CANNOT_SUBMIT_UNPAID: `Not completely paid adventurer can't submit their part.`,
@@ -144,6 +150,8 @@ export const messages = {
     },
     SUBMIT_PARTICIPATION: (title, username) =>
       `The participation in "${title}" was submitted by ${username}.`,
+    UNJOIN_MISSION: (username, vacancyTitle, missionTitle) =>
+      `Adventurer ${username} fled the vacancy ${vacancyTitle} from your mission ${missionTitle}.`,
   },
 
   ///// Common messages

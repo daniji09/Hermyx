@@ -25,7 +25,7 @@ import {
 } from '../models/user.model.js';
 import {
   getUserActiveMissions,
-  adventurerUnjoined,
+  updateOccupiedVacancies,
   updateMissionPayment,
   updateStatus,
 } from '../models/mission.model.js';
@@ -336,7 +336,7 @@ export const banUser = async (req, res) => {
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
           // Updates mission
-          const unjoinMission = await adventurerUnjoined(mission.mid);
+          const unjoinMission = await updateOccupiedVacancies(mission.mid);
           if (unjoinMission < 1)
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
@@ -380,7 +380,7 @@ export const banUser = async (req, res) => {
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 
           // Updates mission
-          const unjoinMission = await adventurerUnjoined(mission.mid);
+          const unjoinMission = await updateOccupiedVacancies(mission.mid);
           if (unjoinMission < 1)
             return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
 

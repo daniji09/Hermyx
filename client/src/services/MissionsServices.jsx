@@ -169,7 +169,7 @@ export const joinMission = async (mid, vacancyId, message = '') => {
 
 // Unjoin mission
 export const unjoinMission = async (mid, vacancyId) => {
-  const { data } = await api.delete(`/missions/${mid}/unjoin`, {
+  const { data } = await api.post(`/missions/${mid}/unjoin`, {
     data: { vacancyId },
   });
 

@@ -493,6 +493,79 @@ Applicant sends an invitation to a user, so they can join a vacancy of a mission
 <br>
 <br>
 
+## - Unjoin mission: `POST /api/missions/:mid/unjoin`
+
+User unjoins a mission they are participating in.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `vacancyId` | integer | Yes | Vacancy identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission successfully unjoined.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You can't join your own mission."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission, vacancy or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission/Vacancy not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** when current user unjoins a mission, if every check is surpassed, then, a database transaction is needed to updated the mission, the participation and the conversation associated, also to send the appropriate notification.
+<br>
+<br>
+<br>
+
 ## - Submit mission participation: `POST /api/missions/:mid/submit`
 
 Adventurers submits their part for the mission.

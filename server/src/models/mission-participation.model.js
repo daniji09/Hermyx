@@ -5,7 +5,6 @@ import {
 import pool from '../config/db.config.js';
 import {
   addMissionConversationParticipant,
-  leaveMissionConversation,
   makeMissionConversationParticipantReadOnly,
 } from './conversation-participant.model.js';
 
@@ -141,7 +140,7 @@ export const updateStatus = async (id, status, client = pool) => {
   return result.rowCount;
 };
 
-// Submit participation
+// Update status by mid and adventurer
 export const updateStatusByMidAndAdventurer = async (
   mid,
   adventurerId,
@@ -155,6 +154,24 @@ export const updateStatusByMidAndAdventurer = async (
     RETURNING *
   `;
   const result = await client.query(query, [mid, adventurerId, status]);
+  return result.rows[0] || null;
+};
+
+// Unjoin vacancy
+export const updateAdventurerAndStatus = async (
+  id,
+  adventurerId,
+  status,
+  client = pool,
+) => {
+  const query = `
+    UPDATE mission_participation
+    SET adventurer_id = $2, status = $3
+    WHERE id = $1
+    RETURNING *
+  `;
+
+  const result = await client.query(query, [id, adventurerId, status]);
   return result.rows[0] || null;
 };
 
@@ -338,49 +355,6 @@ export const joinVacancy = async (mid, vacancyId, uid) => {
 
     await client.query('COMMIT');
     return joinedVacancy;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-export const unjoinVacancy = async (mid, vacancyId, adventurerId) => {
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    const result = await client.query(
-      `
-        UPDATE mission_participation
-        SET adventurer_id = NULL, status = $4
-        WHERE mid = $1
-          AND id = $2
-          AND adventurer_id = $3
-      `,
-      [mid, vacancyId, adventurerId, MISSION_PARTICIPATION_STATUS.EMPTY.ID],
-    );
-
-    if (result.rowCount < 1) {
-      await client.query('ROLLBACK');
-      return 0;
-    }
-
-    await client.query(
-      `
-        UPDATE mission
-        SET occupied_vacancies = occupied_vacancies - 1
-        WHERE mid = $1
-      `,
-      [mid],
-    );
-
-    await leaveMissionConversation(mid, adventurerId, client);
-    await client.query('COMMIT');
-
-    return result.rowCount;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;

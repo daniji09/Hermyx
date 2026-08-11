@@ -10,7 +10,7 @@ import {
 import {
   joinVacancy,
   releaseParticipation,
-  unjoinVacancy,
+  updateAdventurerAndStatus,
 } from '../src/models/mission-participation.model.js';
 import { MISSION_STATUS } from '@hermyx/shared';
 
@@ -282,7 +282,7 @@ describe('Mission conversation lifecycle', () => {
     expect(joinedParticipant.rows[0].can_send).toBe(true);
     expect(joinedMissionView.conversation_id).toBe(conversation.cid);
 
-    await unjoinVacancy(mission.mid, vacancy.id, adventurer.uid);
+    await updateAdventurerAndStatus(mission.mid, vacancy.id, adventurer.uid);
 
     const unjoinedMissionView = await findByMidExcludingUid(
       mission.mid,
