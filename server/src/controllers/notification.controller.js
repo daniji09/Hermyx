@@ -25,7 +25,7 @@ import {
 } from '../models/notification.model.js';
 import { findByUid as getUserById } from '../models/user.model.js';
 import {
-  getById,
+  findByMid,
   syncMissionCompletionStatus,
   updateMissionPayment,
 } from '../models/mission.model.js';
@@ -107,7 +107,7 @@ const respondToParticipationReview = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
 
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
@@ -352,7 +352,7 @@ const respondToParticipationRejection = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
 
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
@@ -483,7 +483,7 @@ const respondToMissionJoinNotification = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
 
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
@@ -681,7 +681,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
   res,
 }) => {
   const missionId = notification.payload.associated_mission_id;
-  const mission = await getById(missionId);
+  const mission = await findByMid(missionId);
   if (!mission) {
     return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
   }
@@ -972,7 +972,7 @@ export const autoAcceptParticipation = async (req, res) => {
     for (const expiredReview of expiredReviews) {
       console.log(expiredReview);
       // Gets mission
-      const mission = await getById(
+      const mission = await findByMid(
         expiredReview.payload.associated_mission_id,
       );
       if (!mission)

@@ -19,6 +19,21 @@ import * as missionParticipationModel from '../models/mission-participation.mode
 import * as missionPhotoModel from '../models/mission-photo.model.js';
 
 /// Model access functions
+// Get mission by id
+export const getMissionById = async (mid) => {
+  checkMid(mid);
+
+  // Find mission by id
+  const mission = await missionModel.findByMid(mid);
+  return mission;
+};
+
+export const getMissionByIdOrThrow = async (mid) => {
+  const mission = await getMissionById(mid);
+  if (!mission) throw buildMissionNotFoundError();
+  return mission;
+};
+
 // Missions published by uid
 export const getMissionsPublishedByUid = async (uid, pagination) => {
   checkUid(uid);
@@ -145,7 +160,7 @@ export const getMissionByMid = async (mid, uid) => {
   // Searches mission by id
   const [mission, participants, waitingForPaymentVacancies, photos] =
     await Promise.all([
-      missionModel.findByMid(mid, uid),
+      missionModel.findByMidExcludingUid(mid, uid),
       missionParticipationModel.findAllByMid(mid),
       missionParticipationModel.findAllWaitingForPaymentByMid(mid),
       missionPhotoModel.findAllByMid(mid),
@@ -277,6 +292,177 @@ export const publishMission = async (
   }
 };
 
+// Close mission
+export const closeMission = async (mid, user) => {
+  checkMid(mid);
+  checkUser(user);
+
+  // First of all, data is read and validations are made
+  const {
+    vacanciesToUpdate,
+    nextMissionStatus,
+    message,
+    occupied_vacancies,
+    mission,
+  } = await closeMissionValidations(mid, user);
+
+  // Then, internal updates are made
+  const notificationsToSend = await closeMissionInternalUpdates(
+    mission,
+    mid,
+    user,
+    nextMissionStatus,
+    vacanciesToUpdate,
+    occupied_vacancies,
+    message,
+  );
+
+  // Lastly, notifications are sent
+  for (const notification of notificationsToSend)
+    socketProvider.emitToUser(
+      notification.receiverId,
+      notification.event,
+      notification.payload,
+    );
+
+  return {
+    status: MISSION_STATUS.IN_PROGRESS.ID,
+    participants: occupied_vacancies,
+  };
+};
+
+const closeMissionValidations = async (mid, user) => {
+  // Gets mission
+  const mission = await getMissionByIdOrThrow(mid);
+
+  // Checks mission is owned by user
+  if (mission.owner_id !== user.uid)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+
+  // Checks occupied vacancies
+  const occupied_vacancies =
+    await missionParticipationModel.findAllOccupied(mid);
+  if (occupied_vacancies.length === 0)
+    throw new AppError(messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS, 400);
+
+  // Different checks for opened or reopened mission
+  let nextMissionStatus, vacanciesToUpdate, message;
+
+  if (mission.status === MISSION_STATUS.OPENED.ID) {
+    if (
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.CLOSED.ID,
+      )
+    )
+      throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 400);
+
+    nextMissionStatus = MISSION_STATUS.CLOSED.ID;
+    vacanciesToUpdate = occupied_vacancies.filter(
+      (v) => v.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+    );
+    message = messages.NOTIFICATION.MISSION_CLOSE.CLOSED(mission.title);
+  } else if (mission.status === MISSION_STATUS.REOPENED.ID) {
+    if (
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.IN_PROGRESS.ID,
+      )
+    )
+      throw new AppError(messages.MISSION.REOPEN.CANNOT_ON_CURRENT_STATE, 400);
+
+    nextMissionStatus = MISSION_STATUS.IN_PROGRESS.ID;
+    vacanciesToUpdate = await missionParticipationModel.findAllJoined(
+      mission.mid,
+    );
+    message =
+      vacanciesToUpdate.length === 0
+        ? messages.NOTIFICATION.MISSION_CLOSE.CLOSE_AFTER_REOPENED_NO_NEW_ADVENTURERS(
+            mission.title,
+          )
+        : messages.NOTIFICATION.MISSION_CLOSE.CLOSE_AFTER_REOPENED_NEW_ADVENTURERS(
+            mission.title,
+          );
+  } else {
+    throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 400);
+  }
+
+  return {
+    vacanciesToUpdate,
+    nextMissionStatus,
+    message,
+    occupied_vacancies,
+    mission,
+  };
+};
+
+const closeMissionInternalUpdates = async (
+  mission,
+  mid,
+  user,
+  nextMissionStatus,
+  vacanciesToUpdate,
+  occupied_vacancies,
+  message,
+) => {
+  const client = await pool.connect();
+  const notificationsToSend = [];
+
+  try {
+    await client.query('BEGIN');
+
+    // Mission state is updated
+    await missionModel.updateStatus(mid, nextMissionStatus, client);
+
+    // Vacancies are updated
+    for (const vacancy of vacanciesToUpdate)
+      await missionParticipationModel.updateStatus(
+        vacancy.id,
+        MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+        client,
+      );
+
+    // Lastly, notifications are generated
+    for (const vacancy of occupied_vacancies) {
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+        const notificationId = await notificationService.createNotification(
+          {
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+            action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
+            status: null,
+            message: message,
+            senderId: user.uid,
+            receiverId: vacancy.adventurer_id,
+            payload: { associated_mission_id: mission.mid },
+          },
+          client,
+        );
+        notificationsToSend.push({
+          receiverId: vacancy.adventurer_id,
+          event: 'mission:closed',
+          payload: {
+            notificationId,
+            missionId: mission.mid,
+            vacancyId: vacancy.id,
+            missionTitle: mission.title,
+            senderId: user.uid,
+            senderUsername: user.username,
+            receiverId: vacancy.adventurer_id,
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            message: message,
+          },
+        });
+      }
+    }
+    await client.query('COMMIT');
+    return notificationsToSend;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
 // Edit mission
 export const editMission = async (user, mission, newPhotos, existingPhotos) => {
   checkUid(user.uid);
@@ -289,12 +475,17 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
     newVacancies,
     existingVacancies,
     existingIds,
-  } = await validateEditMission(user.uid, mission, newPhotos, existingPhotos);
+  } = await editMissionValidations(
+    user.uid,
+    mission,
+    newPhotos,
+    existingPhotos,
+  );
 
   // Then external preparation (storage provider) is made
   const isProduction = process.env.NODE_ENV === 'production';
   const { uploadedPhotoUrls, photosToDelete } =
-    await externalPreparationEditMission(
+    await editMissionExternalPreparation(
       newPhotos,
       existingPhotos,
       mission.mid,
@@ -303,7 +494,7 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
 
   // Then, database transaction is made
   const { notificationsToSend, updatedMission } =
-    await internalUpdatesEditMission(
+    await editMissionInternalUpdates(
       mission,
       originalMission,
       uploadedPhotoUrls,
@@ -316,7 +507,7 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
     );
 
   // Lastly, after database commit, storage provider deletion is done
-  await externalUpdatesEditMission(
+  await editMissionExternalUpdates(
     photosToDelete,
     existingPhotos,
     isProduction,
@@ -326,13 +517,22 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
   return updatedMission;
 };
 
-const validateEditMission = async (uid, mission, newPhotos, existingPhotos) => {
+const editMissionValidations = async (
+  uid,
+  mission,
+  newPhotos,
+  existingPhotos,
+) => {
   // Checks if photo number is correct
   if (newPhotos.length + existingPhotos.length > consts.MISSION.PHOTOS.MAX)
     throw buildTooManyFilesError();
 
   // Gets original mission info
-  const originalMission = await missionModel.findByMid(mission.mid);
+  const originalMission = await missionModel.findByMidExcludingUid(mission.mid);
+
+  // Checks mission is owned by user
+  if (originalMission.owner_id !== uid)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 
   // Checks that mission is in a editable status
   if (!MISSION_STATUS[originalMission.status].CAN_EDIT)
@@ -399,7 +599,7 @@ const validateEditMission = async (uid, mission, newPhotos, existingPhotos) => {
   };
 };
 
-const externalPreparationEditMission = async (
+const editMissionExternalPreparation = async (
   newPhotos,
   existingPhotos,
   mid,
@@ -433,7 +633,7 @@ const externalPreparationEditMission = async (
   return { uploadedPhotoUrls, photosToDelete };
 };
 
-const internalUpdatesEditMission = async (
+const editMissionInternalUpdates = async (
   mission,
   originalMission,
   uploadedPhotoUrls,
@@ -840,7 +1040,7 @@ const monetaryRewardChangedNotifications = async (
   }
 };
 
-const externalUpdatesEditMission = async (
+const editMissionExternalUpdates = async (
   photosToDelete,
   existingPhotos,
   isProduction,
@@ -860,11 +1060,11 @@ const externalUpdatesEditMission = async (
   }
 
   // And notifications are sent
-  for (const socketEvent of notificationsToSend) {
+  for (const notification of notificationsToSend) {
     socketProvider.emitToUser(
-      socketEvent.receiverId,
-      socketEvent.event,
-      socketEvent.payload,
+      notification.receiverId,
+      notification.event,
+      notification.payload,
     );
   }
 };
@@ -898,6 +1098,10 @@ const checkVacanciesData = (vacanciesData) => {
 
 const checkUid = (uid) => {
   if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
+};
+
+const checkUser = (user) => {
+  if (!user) throw new Error(messages.GENERAL.FIELD_REQUIRED('User'));
 };
 
 /// Error builders

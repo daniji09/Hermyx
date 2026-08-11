@@ -89,7 +89,18 @@ export const findAllOccupied = async (mid) => {
   return result.rows;
 };
 
+// Gets joined participations
+export const findAllJoined = async (mid) => {
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
+  const result = await pool.query(query, [
+    mid,
+    MISSION_PARTICIPATION_STATUS.JOINED.ID,
+  ]);
+  return result.rows;
+};
+
 /// UPDATES
+// Update mission participation
 export const update = async (mid, vacancy, client = pool) => {
   // Only makes update if its actually different
   const updateQuery = `
@@ -111,6 +122,13 @@ export const update = async (mid, vacancy, client = pool) => {
   ]);
 
   return result.rows[0];
+};
+
+// Update mission participation status
+export const updateStatus = async (id, status, client = pool) => {
+  const query = 'UPDATE mission_participation SET status = $1 WHERE id = $2';
+  const result = await client.query(query, [status, id]);
+  return result.rowCount;
 };
 
 /// DELETES
@@ -387,15 +405,6 @@ export const insertVacancies = async (mid, vacancies) => {
   return result;
 };
 
-export const getJoinedVacancies = async (mid) => {
-  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
-  const result = await pool.query(query, [
-    mid,
-    MISSION_PARTICIPATION_STATUS.JOINED.ID,
-  ]);
-  return result.rows;
-};
-
 export const getEmptyVacancies = async (mid) => {
   const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NULL`;
   const result = await pool.query(query, [mid]);
@@ -467,13 +476,6 @@ export const markVacancyAsPaidOut = async (id) => {
     id,
     MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
   ]);
-  return result.rowCount;
-};
-
-//Updates just the status
-export const updateStatus = async (id, status) => {
-  const query = 'UPDATE mission_participation SET status = $1 WHERE id = $2';
-  const result = await pool.query(query, [status, id]);
   return result.rowCount;
 };
 

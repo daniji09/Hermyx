@@ -22,6 +22,7 @@ export const messages = {
     OPERATION_ERROR: `Operation ended abruptly.`,
     TOO_MANY_ATTEMPTS: `Too many attempts. Please, try later.`,
     TOO_MANY_FILES: `You sent too many files for this field, or its name is incorrect.`,
+    UNAUTHORIZED_ERROR: `User is not authorized for this action.`,
     UNEXPECTED_ERROR: `Unexpected error.`,
     UNSUPPORTED_FILE_FORMAT: `Photo format is invalid, please use .jpg, .png or .webp.`,
   },
@@ -89,6 +90,15 @@ export const messages = {
       CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
       CANNOT_EDIT_VACANCY: `Vacancy can't be edited on current state.`,
     },
+    CLOSE: {
+      CANNOT_WITHOUT_ADVENTURERS: `You can't close a mission without adventurers.`,
+      CANNOT_ON_CURRENT_STATE: `Can't close mission on current state.`,
+    },
+    REOPEN: {
+      CANNOT_ON_CURRENT_STATE: `Can't reopen mission on current state.`,
+      CANNOT_WITHOUT_EMPTY_VACANCIES: `Can't reopen mission with no empty vacancies that can be filled.`,
+      CANNOT_REOPEN: `Can't reopen mission.`,
+    },
   },
 
   /// Notification messages
@@ -100,6 +110,14 @@ export const messages = {
         `Your vacancy at ${title} info has been changed: ${changes.join(', ')}. Check it out!`,
       NEW_REWARD_OFFER: (title, oldReward, newReward) =>
         `A new monetary reward offer at ${title} has been made: ${oldReward}€ -> ${newReward}€. Accept or reject it!`,
+    },
+    MISSION_CLOSE: {
+      CLOSED: (title) =>
+        `Mission ${title} has been closed. Waiting for owner payment to start. You can't unjoin anymore, but owner is able to cancel it yet.`,
+      CLOSE_AFTER_REOPENED_NEW_ADVENTURERS: (title) =>
+        `Mission ${title} has been closed after being reopened.  Waiting for owner payment to start new adventurers.`,
+      CLOSE_AFTER_REOPENED_NO_NEW_ADVENTURERS: (title) =>
+        `Mission ${title} has been closed after being reopened. No new adventurers have joined.`,
     },
   },
 

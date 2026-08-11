@@ -44,8 +44,18 @@ export const create = async (missionData, client = pool) => {
 };
 
 /// FINDS
-// Get mission by mid
-export const findByMid = async (id, uid) => {
+// Get mission by its mid
+export const findByMid = async (mid) => {
+  const query = `SELECT *,  
+    ST_Y(m.location::geometry) as latitude, 
+    ST_X(m.location::geometry) as longitude 
+    FROM mission m WHERE mid = $1`;
+  const result = await pool.query(query, [mid]);
+  return result.rows[0];
+};
+
+// Get mission by mid excluding an uid
+export const findByMidExcludingUid = async (id, uid) => {
   const query = `SELECT *, 
     ST_Y(m.location::geometry) as latitude, 
     ST_X(m.location::geometry) as longitude, 
@@ -351,14 +361,19 @@ export const update = async (missionData, client = pool) => {
   return result.rows[0];
 };
 
-/// ......
-
-//Get mission by its ID
-export const getById = async (mid) => {
-  const query = 'SELECT * FROM mission WHERE mid = $1';
-  const result = await pool.query(query, [mid]);
+// Update mission status
+export const updateStatus = async (mid, status, client = pool) => {
+  const query = `
+    UPDATE mission
+    SET status = $1
+    WHERE mid = $2
+    RETURNING *
+  `;
+  const result = await client.query(query, [status, mid]);
   return result.rows[0];
 };
+
+/// ......
 
 //Updates the Stripe Payment Intent ID and the mission status. Uses COALESCE to prevent overwriting the ID with null if only status needs update.
 export const updatePaymentInfo = async (mid, pi_id, status) => {
@@ -413,12 +428,6 @@ export const lockForRefund = async (mid, ownerId) => {
   `;
   const result = await pool.query(query, [mid, ownerId]);
   return result.rows[0];
-};
-
-//Updates just the status.
-export const updateStatus = async (mid, status) => {
-  const query = 'UPDATE mission SET status = $1 WHERE mid = $2';
-  await pool.query(query, [status, mid]);
 };
 
 // Updates mission status and stores completion date for paid-out missions.
@@ -483,18 +492,6 @@ export const getAllMissionsInDraft = async () => {
   const query = "SELECT * FROM mission WHERE status = 'draft'";
   const result = await pool.query(query, []);
   return result.rows;
-};
-
-export const updateMissionStatus = async (id, updateData) => {
-  console.log(id, updateData);
-  const query = `
-    UPDATE mission
-    SET status = $2
-    WHERE mid = $1
-    RETURNING *
-  `;
-  const result = await pool.query(query, [id, updateData]);
-  return result.rows[0];
 };
 
 export const syncMissionCompletionStatus = async (mid) => {

@@ -12,7 +12,7 @@ import {
   TRANSACTION_TYPE,
 } from '@hermyx/shared';
 import {
-  getById,
+  findByMid,
   syncMissionCompletionStatus,
 } from '../models/mission.model.js';
 import { findByUid as getUserById } from '../models/user.model.js';
@@ -102,7 +102,7 @@ export const disputeAdventurer = async (req, res) => {
   const userId = req.user.uid;
   try {
     // Gets mission
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res
         .status(404)
@@ -238,7 +238,7 @@ export const reportMission = async (req, res) => {
   const userId = req.user.uid;
   try {
     // Gets mission
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res
         .status(404)
@@ -309,7 +309,7 @@ export const acceptAdventurersWork = async (req, res) => {
         .json({ errors: messages.INCORRECT_ANSWER_FOR_REPORT });
 
     // Gets mission
-    const mission = await getById(report.payload.associated_mission_id);
+    const mission = await findByMid(report.payload.associated_mission_id);
     if (!mission)
       return res
         .status(404)
@@ -478,7 +478,7 @@ export const rejectAdventurersWork = async (req, res) => {
         .json({ errors: messages.INCORRECT_ANSWER_FOR_REPORT });
 
     // Gets mission
-    const mission = await getById(report.payload.associated_mission_id);
+    const mission = await findByMid(report.payload.associated_mission_id);
     if (!mission)
       return res
         .status(404)
@@ -628,7 +628,7 @@ export const dismiss = async (req, res) => {
     // If the report was an adventurer kick out one, applicant must be informed about the decision
     if (report.type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
       // Gets mission
-      const mission = await getById(report.payload.associated_mission_id);
+      const mission = await findByMid(report.payload.associated_mission_id);
       if (!mission)
         return res
           .status(404)

@@ -24,7 +24,7 @@ import {
 } from '../models/user.model.js';
 
 import {
-  getById as _getById,
+  findByMid as _getById,
   updatePaymentInfo,
   lockForRelease,
   getParticipantsForRelease,
@@ -32,7 +32,6 @@ import {
   updateReleaseStatus,
   lockForRefund,
   finalizeRefund,
-  updateMissionStatus,
   updateMissionPayment,
 } from '../models/mission.model.js';
 
@@ -414,7 +413,7 @@ export async function confirmPayment(req, res) {
     );
 
     // Mission and participants life cycle is updated
-    await updateMissionStatus(missionId, MISSION_STATUS.IN_PROGRESS.ID);
+    await updateStatus(missionId, MISSION_STATUS.IN_PROGRESS.ID);
     await startParticipants(missionId);
 
     // Gets all operations made in that payment

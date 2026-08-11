@@ -263,6 +263,11 @@ export const editMissionFilesSchema = z.object({
     }),
 });
 
+// Close mission
+export const closeMissionParamSchema = z.object({
+  mid: midBaseSchema,
+});
+
 // ------
 export const publishMissionFilesSchema = z.object({
   photos: z
@@ -296,13 +301,6 @@ const optionalNumberFromFormSchema = (schema) =>
     if (typeof value === 'string' && value.trim() === '') return undefined;
     return value;
   }, schema.optional());
-
-export const closeMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
 
 export const cancelMissionParamSchema = z.object({
   mid: z.coerce

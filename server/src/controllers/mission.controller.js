@@ -16,8 +16,8 @@ import {
 } from '@hermyx/shared';
 import {
   getAllMissionsInDraft as _getAllMissionsInDraft,
-  getById,
-  updateMissionStatus,
+  findByMid,
+  updateStatus,
   finishMissionAndCloseConversation,
   adventurerUnjoined,
   emptyMission,
@@ -34,8 +34,6 @@ import {
   findAllOccupied,
   getEmptyVacancies,
   markVacancyAsPaidOut,
-  updateStatus,
-  getJoinedVacancies,
   cleanMissionParticipation,
   unjoinParticipant,
   updatePaymentStatus,
@@ -137,6 +135,21 @@ export const publishMission = async (req, res, next) => {
   }
 };
 
+// Closes a mission
+export const closeMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { status, participants } = await missionService.closeMission(
+      mid,
+      req.user,
+    );
+    return res.status(200).json({ status, participants });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Edits a mission
 export const editMission = async (req, res, next) => {
   try {
     const user = req.user;
@@ -177,148 +190,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   }
 };
 
-/*Verify that the owner of the mission is the one closing it and that at least one person is assigned to close the mission.*/
-export const close = async (req, res) => {
-  const { mid } = req.params;
-  const userId = req.user.uid;
-
-  try {
-    const mission = await getById(mid);
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-    }
-
-    if (mission.owner_id !== userId) {
-      return res.status(403).json({ error: messages.UNAUTHORIZED_ERROR });
-    }
-
-    // Checks occupied vacancies
-    const occupied_vacancies = await findAllOccupied(mission.mid);
-    if (occupied_vacancies === 0) {
-      return res
-        .status(400)
-        .json({ error: messages.CLOSE_WITHOUT_ADVENTURERS });
-    }
-    // Different close for opened or reopened mission+
-    if (mission.status === MISSION_STATUS.OPENED.ID) {
-      // Checks if mission can be closed by states
-      if (
-        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_STATUS.CLOSED.ID,
-        )
-      )
-        return res.status(400).json({ error: messages.CANNOT_CLOSE_STATE });
-
-      // Then, it updates the mission
-      await updateMissionStatus(mid, MISSION_STATUS.CLOSED.ID);
-
-      // Updates vacancies status, there is 2 for because if a vacancy fails when a notification has been sent, there is no rollback possible
-      for (const vacancy of occupied_vacancies)
-        if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID)
-          updateStatus(
-            vacancy.id,
-            MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-          );
-
-      const message = `Mission ${mission.title} has been closed. Waiting for owner payment to start. You can't unjoin anymore, but owner is able to cancel it yet.`;
-      // Finally, all occupied vacancies are notified
-      for (const vacancy of occupied_vacancies) {
-        if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-          const notificationId = await create({
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-            action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
-            status: null,
-            message: message,
-            senderId: userId,
-            receiverId: vacancy.adventurer_id,
-            payload: {
-              associated_mission_id: mission.mid,
-            },
-          });
-          emitToUser(vacancy.adventurer_id, 'mission:closed', {
-            notificationId,
-            missionId: mission.mid,
-            vacancyId: vacancy.adventurer_id,
-            missionTitle: mission.title,
-            senderId: userId,
-            senderUsername: req.user.username,
-            receiverId: vacancy.adventurer_id,
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            message: message,
-          });
-        }
-      }
-      return res.status(200).json({
-        status: MISSION_STATUS.CLOSED.ID,
-        participants: occupied_vacancies,
-      });
-    } else if (mission.status === MISSION_STATUS.REOPENED.ID) {
-      // Checks if mission can be started by states
-      if (
-        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_STATUS.IN_PROGRESS.ID,
-        )
-      )
-        return res
-          .status(400)
-          .json({ error: messages.CANNOT_REOPEN_MISSION_STATE });
-
-      // Then, it updates the mission
-      await updateMissionStatus(mid, MISSION_STATUS.IN_PROGRESS.ID);
-
-      // And the vacancies are updated
-      const joined_vacancies = await getJoinedVacancies(mission.mid);
-      for (const vacancy of joined_vacancies)
-        updateStatus(
-          vacancy.id,
-          MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-        );
-
-      // Finally, all occupied vacancies are notified
-      const occupied_vacancies = await findAllOccupied(mission.mid);
-      const message =
-        joined_vacancies.length === 0
-          ? `Mission ${mission.title} has been closed after being reopened. No new adventurers have joined.`
-          : `Mission ${mission.title} has been closed after being reopened. Waiting for owner payment to start new adventurers.`;
-      for (const vacancy of occupied_vacancies) {
-        if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-          const notificationId = await create({
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-            action: NOTIFICATION_ACTION.MISSION_CLOSE.ID,
-            status: null,
-            message: message,
-            senderId: userId,
-            receiverId: vacancy.adventurer_id,
-            payload: {
-              associated_mission_id: mission.mid,
-            },
-          });
-          emitToUser(vacancy.adventurer_id, 'mission:closed', {
-            notificationId,
-            missionId: mission.mid,
-            vacancyId: vacancy.adventurer_id,
-            missionTitle: mission.title,
-            senderId: userId,
-            senderUsername: req.user.username,
-            receiverId: vacancy.adventurer_id,
-            type: NOTIFICATION_TYPE.MISSION.ID,
-            message: message,
-          });
-        }
-      }
-      return res.status(200).json({
-        status: MISSION_STATUS.IN_PROGRESS.ID,
-        participants: occupied_vacancies,
-      });
-    }
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
 // Sends a join request to the mission owner instead of joining immediately
 export const joinMission = async (req, res) => {
   const { mid } = req.params;
@@ -327,7 +198,7 @@ export const joinMission = async (req, res) => {
   const vacancyId = req.body.vacancyId;
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -428,7 +299,7 @@ export const inviteToMission = async (req, res) => {
 
   try {
     const [mission, receiver, vacancy] = await Promise.all([
-      getById(missionId),
+      findByMid(missionId),
       getUserById(receiverId),
       findById(vacancyId),
     ]);
@@ -528,7 +399,7 @@ export const submitMissionParticipation = async (req, res) => {
   const adventurerId = req.user.uid;
 
   try {
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission) {
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
     }
@@ -608,7 +479,7 @@ export const unjoinMission = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -687,7 +558,7 @@ export const cancelMission = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -711,7 +582,7 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSION_STATUS.DELETED.ID);
+      await updateStatus(mid, MISSION_STATUS.DELETED.ID);
     }
     // If mission has to be cancelled, it will be
     else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
@@ -726,7 +597,7 @@ export const cancelMission = async (req, res) => {
           .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
       // Then mission status is updated
-      await updateMissionStatus(mid, MISSION_STATUS.CANCELLING.ID);
+      await updateStatus(mid, MISSION_STATUS.CANCELLING.ID);
 
       // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
       for (const vacancy of occupied_vacancies) {
@@ -759,7 +630,7 @@ export const cancelMission = async (req, res) => {
           }
         }
       }
-      await updateMissionStatus(mid, MISSION_STATUS.CANCELLED.ID);
+      await updateStatus(mid, MISSION_STATUS.CANCELLED.ID);
     }
     // Otherwise, mission can't be deleted or cancelled
     else
@@ -819,7 +690,7 @@ export const reopenMission = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -850,7 +721,7 @@ export const reopenMission = async (req, res) => {
       });
 
     // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSION_STATUS.REOPENED.ID);
+    await updateStatus(mid, MISSION_STATUS.REOPENED.ID);
 
     // And all adventurers are informed
     const occupied_vacancies = await findAllOccupied(mid);
@@ -897,7 +768,7 @@ export const finishMission = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -974,7 +845,7 @@ export const banMission = async (req, res) => {
       return res.status(409).json({ errors: messages.REPORT_ALREADY_ANSWERED });
 
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
@@ -1026,7 +897,7 @@ export const banMission = async (req, res) => {
     }
 
     // Finally, mission is reopened
-    await updateMissionStatus(mid, MISSION_STATUS.REPORTED.ID);
+    await updateStatus(mid, MISSION_STATUS.REPORTED.ID);
 
     // Report is closed
     const reportClosed = await closeReport(
@@ -1111,7 +982,7 @@ export const kickAdventurerOut = async (req, res) => {
 
   try {
     // Mission is searched
-    const mission = await getById(mid);
+    const mission = await findByMid(mid);
     if (!mission)
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 

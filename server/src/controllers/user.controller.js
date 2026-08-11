@@ -27,7 +27,7 @@ import {
   getUserActiveMissions,
   adventurerUnjoined,
   updateMissionPayment,
-  updateMissionStatus,
+  updateStatus,
 } from '../models/mission.model.js';
 import {
   deleteFirebaseUser,
@@ -495,7 +495,7 @@ export const banUser = async (req, res) => {
                 .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
             // Then mission status is updated
-            await updateMissionStatus(mission.mid, MISSION_STATUS.DELETED.ID);
+            await updateStatus(mission.mid, MISSION_STATUS.DELETED.ID);
           }
           // If mission has to be cancelled, it will be
           else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
@@ -510,10 +510,7 @@ export const banUser = async (req, res) => {
                 .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
             // Then mission status is updated
-            await updateMissionStatus(
-              mission.mid,
-              MISSION_STATUS.CANCELLING.ID,
-            );
+            await updateStatus(mission.mid, MISSION_STATUS.CANCELLING.ID);
 
             // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
             for (const vacancy of occupied_vacancies) {
@@ -549,7 +546,7 @@ export const banUser = async (req, res) => {
                 }
               }
             }
-            await updateMissionStatus(mission.mid, MISSION_STATUS.CANCELLED.ID);
+            await updateStatus(mission.mid, MISSION_STATUS.CANCELLED.ID);
           }
           // Otherwise, mission can't be deleted or cancelled
           else

@@ -70,7 +70,7 @@ router.get(
 );
 
 /// POST
-//Create mission
+// Publishes mission
 router.post(
   '/',
   upload.array('photos', 5),
@@ -79,8 +79,15 @@ router.post(
   missionController.publishMission,
 );
 
+// Closes a mission
+router.post(
+  '/:mid/close',
+  validateParamsSchema(closeMissionParamSchema),
+  missionController.closeMission,
+);
+
 /// PUT
-//Edit mission
+// Edits mission
 router.put(
   '/:mid',
   upload.array('photos', 5),
@@ -93,13 +100,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-//Closes a mission
-router.post(
-  '/:mid/close',
-  validateParamsSchema(closeMissionParamSchema),
-  missionController.close,
-);
 
 // Joins an adventurer into a mission
 router.post(
