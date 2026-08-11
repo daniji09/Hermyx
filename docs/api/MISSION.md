@@ -344,7 +344,7 @@ Close a mission after been opened or reopened.
 <br>
 <br>
 
-## - Close mission: `POST /api/missions/:mid/join`
+## - Join mission: `POST /api/missions/:mid/join`
 
 Adventurers sends a join request notification to the owner of the mission, linking a specific vacancy.
 
@@ -414,6 +414,81 @@ Adventurers sends a join request notification to the owner of the mission, linki
 <br>
 
 **Workflow:** the process of sending a mission join request notification is quite simple, all necessary checks are performed and, if they are correct, the notification is sent.
+<br>
+<br>
+<br>
+
+## - Invite to mission: `POST /api/missions/:mid/invite`
+
+Applicant sends an invitation to a user, so they can join a vacancy of a mission.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Body:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `receiverId` | integer | Yes | User receiver identifier. |
+| `vacancyId` | integer | Yes | Vacancy identifier. |
+| `message` | string | No | Message send to owner. |
+<br>
+
+**Responses:**
+
+- `200 OK`: notification created successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot join their own mission.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You can't join your own mission."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission, vacancy or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission/Vacancy not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** the process of sending a mission join invitation is quite simple, all necessary checks are performed and, if they are correct, the invitation is sent.
 <br>
 <br>
 <br>

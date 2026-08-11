@@ -190,6 +190,20 @@ export const typeBaseSchema = z.enum(['published', 'joined'], {
   message: messages.MISSION.TYPE.INVALID_MISSION_TYPE,
 });
 
+// Notification message
+export const messageBaseSchema = z
+  .string()
+  .trim()
+  .max(
+    consts.NOTIFICATION.MESSAGE.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Notification message',
+      consts.NOTIFICATION.MESSAGE.MAX_LENGTH,
+    ),
+  )
+  .optional()
+  .default('');
+
 /// Endpoint complex validation
 // Get all missions
 export const getMissionsQuerySchema = z.object({
@@ -281,18 +295,21 @@ export const joinMissionParamSchema = z.object({
 
 export const joinMissionBodySchema = z.object({
   vacancyId: vacancyIdBaseSchema,
-  message: z
-    .string()
-    .trim()
-    .max(
-      consts.NOTIFICATION.MESSAGE.MAX_LENGTH,
-      messages.GENERAL.FIELD_TOO_LONG(
-        'Notification message',
-        consts.NOTIFICATION.MESSAGE.MAX_LENGTH,
-      ),
-    )
-    .optional()
-    .default(''),
+  message: messageBaseSchema,
+});
+
+// Invite
+export const inviteToMissionParamSchema = z.object({
+  missionId: midBaseSchema,
+});
+
+export const inviteToMissionBodySchema = z.object({
+  receiverId: z.coerce
+    .number(messages.GENERAL.FIELD_NUMBER('Receiver id'))
+    .int(messages.GENERAL.FIELD_INTEGER('Receiver id'))
+    .min(0, messages.GENERAL.FIELD_POSITIVE('Receiver id')),
+  vacancyId: vacancyIdBaseSchema,
+  message: messageBaseSchema,
 });
 
 // ------
@@ -381,33 +398,6 @@ export const unjoinMissionBodySchema = z.object({
     .number(messages.FIELD_NUMBER('Vacancy id'))
     .int(messages.FIELD_INTEGER('Vacancy id'))
     .min(0, messages.FIELD_POSITIVE('Vacancy id')),
-});
-
-export const inviteToMissionSchema = z.object({
-  missionId: z.coerce
-    .number(messages.FIELD_NUMBER('Mission id'))
-    .int(messages.FIELD_INTEGER('Mission id'))
-    .min(0, messages.FIELD_POSITIVE('Mission id')),
-  receiverId: z.coerce
-    .number(messages.FIELD_NUMBER('Receiver id'))
-    .int(messages.FIELD_INTEGER('Receiver id'))
-    .min(0, messages.FIELD_POSITIVE('Receiver id')),
-  vacancyId: z.coerce
-    .number(messages.FIELD_NUMBER('Vacancy id'))
-    .int(messages.FIELD_INTEGER('Vacancy id'))
-    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
-  message: z
-    .string()
-    .trim()
-    .max(
-      consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
-        'Notification message',
-        consts.NOTIFICATION.MESSAGE_MAX_LENGTH,
-      ),
-    )
-    .optional()
-    .default(''),
 });
 
 export const submitMissionParticipationSchema = z.object({

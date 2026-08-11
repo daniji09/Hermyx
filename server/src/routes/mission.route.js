@@ -22,7 +22,6 @@ import {
   unjoinMissionBodySchema,
   cancelMissionParamSchema,
   reopenMissionParamSchema,
-  inviteToMissionSchema,
   closeMissionParamSchema,
   finishMissionParamSchema,
   banMissionParamsSchema,
@@ -32,6 +31,8 @@ import {
   publishMissionFilesSchema,
   editMissionFilesSchema,
   getOpenedMissionsQuerySchema,
+  inviteToMissionParamSchema,
+  inviteToMissionBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
@@ -94,6 +95,14 @@ router.post(
   missionController.joinMission,
 );
 
+// Invites user to mission
+router.post(
+  '/:mid/invite',
+  validateParamsSchema(inviteToMissionParamSchema),
+  validateBodySchema(inviteToMissionBodySchema),
+  missionController.inviteToMission,
+);
+
 /// PUT
 // Edits mission
 router.put(
@@ -108,13 +117,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// Create a notification
-router.post(
-  '/invite',
-  validateBodySchema(inviteToMissionSchema),
-  missionController.inviteToMission,
-);
 
 // Submits current adventurer participation for owner review
 router.post(

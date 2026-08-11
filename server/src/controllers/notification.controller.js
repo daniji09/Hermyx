@@ -482,6 +482,7 @@ const respondToMissionJoinNotification = async ({
   notificationId,
   res,
 }) => {
+  // TODO: si es un mission invite, hay que hacer comprobación de que el aventurero tiene la cuenta de stripe activada (como en el join)
   const missionId = notification.payload.associated_mission_id;
   const mission = await findByMid(missionId);
 

@@ -182,8 +182,7 @@ export const inviteToMission = async ({
   vacancyId,
   message,
 }) => {
-  const { data } = await api.post('/missions/invite', {
-    missionId,
+  const { data } = await api.post(`/missions/${missionId}/invite`, {
     receiverId,
     vacancyId,
     message,

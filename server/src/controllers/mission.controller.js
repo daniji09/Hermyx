@@ -42,7 +42,6 @@ import {
 import {
   create,
   countParticipationReviewAttempts,
-  hasPendingJoinNotification,
 } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import { createRefund, createTransfer } from '../providers/payment.provider.js';
@@ -161,6 +160,25 @@ export const joinMission = async (req, res, next) => {
   }
 };
 
+// Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
+export const inviteToMission = async (req, res) => {
+  try {
+    const { mid } = req.params;
+    const { receiverId, vacancyId, message } = req.body;
+    const nid = await missionService.inviteToMission(
+      mid,
+      vacancyId,
+      req.user.uid,
+      receiverId,
+      message,
+    );
+    return res.status(200).json(nid);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Database error' });
+  }
+};
+
 // Edits a mission
 export const editMission = async (req, res, next) => {
   try {
@@ -199,112 +217,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
-export const inviteToMission = async (req, res) => {
-  const { missionId, receiverId, vacancyId, message } = req.body;
-  const senderId = req.user.uid;
-
-  if (senderId === receiverId) {
-    return res.status(400).json({ error: messages.CANNOT_INVITE_YOURSELF });
-  }
-
-  try {
-    const [mission, receiver, vacancy] = await Promise.all([
-      findByMid(missionId),
-      getUserById(receiverId),
-      findById(vacancyId),
-    ]);
-
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
-    }
-
-    if (!receiver) {
-      return res.status(404).json({ error: messages.RECEIVER_NOT_FOUND });
-    }
-
-    if (!vacancy) {
-      return res.status(404).json({ error: messages.VACANCY_NOT_FOUND });
-    }
-
-    if (vacancy.adventurer_id !== null) {
-      return res.status(409).json({ error: messages.VACANCY_ALREADY_OCCUPIED });
-    }
-
-    if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS) {
-      return res.status(409).json({
-        error: messages.MISSION_NOT_ACCEPTING_ADVENTURERS,
-      });
-    }
-
-    const type = NOTIFICATION_TYPE.INVITATION.ID;
-    const action =
-      mission.owner_id === senderId
-        ? NOTIFICATION_ACTION.MISSION_INVITE.ID
-        : NOTIFICATION_ACTION.JOIN_REQUEST.ID;
-
-    const hasPending = await hasPendingJoinNotification(
-      missionId,
-      senderId,
-      receiverId,
-      vacancyId,
-    );
-
-    if (hasPending) {
-      return res.status(409).json({
-        error: messages.PENDING_NOTIFICATION_EXISTS,
-      });
-    }
-
-    const adventurerId = mission.owner_id === senderId ? receiverId : senderId;
-
-    if (mission.total_vacancies <= mission.occupied_vacancies) {
-      return res.status(409).json({ error: messages.NO_VACANCIES_AVAILABLE });
-    }
-
-    const alreadyJoined = await getMissionParticipationById(
-      missionId,
-      adventurerId,
-    );
-    if (alreadyJoined) {
-      return res.status(409).json({ error: messages.MISSION_ALREADY_JOINED });
-    }
-
-    const notificationData = {
-      type,
-      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-      status: NOTIFICATION_STATUS.PENDING.ID,
-      action,
-      message,
-      senderId,
-      receiverId,
-      payload: {
-        associated_mission_id: missionId,
-        associated_vacancy_id: vacancyId,
-      },
-    };
-
-    const newNotificationId = await create(notificationData);
-
-    emitToUser(receiverId, 'notification:created', {
-      notificationId: newNotificationId,
-      missionId,
-      vacancyId,
-      missionTitle: mission.title,
-      senderId,
-      senderUsername: req.user.username,
-      receiverId,
-      type,
-      message,
-    });
-
-    return res.status(201).json(newNotificationId);
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Database error' });
   }
 };
 

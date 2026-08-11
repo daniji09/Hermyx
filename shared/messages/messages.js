@@ -75,6 +75,7 @@ export const messages = {
     GENERAL: {
       MISSION_NOT_FOUND: `Mission not found.`,
       MISSIONS_NOT_FOUND: `Missions not found.`,
+      VACANCY_NOT_IN_MISSION: `This vacancy is not in this mission.`,
     },
     VACANCY: {
       NOT_FOUND: `Vacancy not found`,
@@ -109,6 +110,12 @@ export const messages = {
       ALREADY_JOINED: `You have already joined this mission`,
       REQUEST_ALREADY_SENT: `You have already sent a join request for this vacancy.`,
       ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
+    },
+    INVITE: {
+      CANNOT_INVITE_YOURSELF: `You can't invite yourself.`,
+      VACANCY_ALREADY_OCCUPIED: `This vacancy is already occupied.`,
+      NO_VACANCIES_AVAILABLE: `There is no vacancies available.`,
+      INVITATION_ALREADY_SENT: `You have already sent an invitation for this vacancy to this user.`,
     },
   },
 

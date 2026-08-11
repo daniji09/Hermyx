@@ -12,6 +12,7 @@ import pool from '../config/db.config.js';
 import { AppError } from '../utils/error.util.js';
 import * as conversationService from '../services/conversation.service.js';
 import * as notificationService from '../services/notification.service.js';
+import * as userService from '../services/user.service.js';
 import * as storageProvider from '../providers/storage.provider.js';
 import * as socketProvider from '../providers/socket.provider.js';
 import * as missionModel from '../models/mission.model.js';
@@ -32,6 +33,22 @@ export const getMissionByIdOrThrow = async (mid) => {
   const mission = await getMissionById(mid);
   if (!mission) throw buildMissionNotFoundError();
   return mission;
+};
+
+// Get mission participation by id
+export const getMissionParticipationById = async (id) => {
+  checkVacancyId(id);
+
+  // Find mission participation by id
+  const missionParticipation = await missionParticipationModel.findById(id);
+  return missionParticipation;
+};
+
+export const getMissionParticipationByIdOrThrow = async (id) => {
+  const missionParticipation = await getMissionParticipationById(id);
+  if (!missionParticipation)
+    throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+  return missionParticipation;
 };
 
 // Missions published by uid
@@ -476,25 +493,22 @@ export const joinMission = async (mid, user, message, vacancyId) => {
     throw new AppError(messages.MISSION.JOIN.OWN_MISSION, 403);
 
   // Checks if mission status is valid for accepting adventurers
-  if (!MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS)
-    throw new AppError(messages.MISSION.JOIN.NOT_ACCEPTS_ADVENTURERS, 409);
+  checkCanAcceptAdventurers(mission.status);
 
   // Checks if mission is already full
   if (mission.occupied_vacancies === mission.total_vacancies)
     throw new AppError(messages.MISSION.JOIN.FILLED, 409);
 
   // Checks if user has already joined that mission
-  const alreadyJoined =
-    await missionParticipationModel.findByMidAndAdventurerId(mid, user.uid);
-  if (alreadyJoined)
-    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+  checkAdventurerAlreadyJoined(mid, user.uid);
 
   // Checks if vacancy exists
-  const vacancy = await missionParticipationModel.findById(vacancyId);
-  if (!vacancy) throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+  const vacancy = await getMissionParticipationByIdOrThrow(vacancyId);
   if (vacancy.adventurer_id !== null) {
     throw new AppError(messages.MISSION.JOIN.FILLED, 409);
   }
+  // Checks that vacancy exists in that mission
+  checkVacancyNotMission(vacancy.mid, mid);
 
   // Checks if user has already requested the joining for this mission
   const ownerId = mission.owner_id;
@@ -535,6 +549,88 @@ export const joinMission = async (mid, user, message, vacancyId) => {
     senderId: user.uid,
     senderUsername: user.username,
     receiverId: ownerId,
+    type: NOTIFICATION_TYPE.INVITATION.ID,
+    message,
+  });
+};
+
+// Invite to mission
+export const inviteToMission = async (
+  mid,
+  vacancyId,
+  senderId,
+  receiverId,
+  message,
+  user,
+) => {
+  checkMid(mid);
+  checkVacancyId(vacancyId);
+  checkSenderId(senderId);
+  checkReceiverId(receiverId);
+
+  // Cannot send a invitation to itself
+  if (senderId === receiverId)
+    throw new AppError(messages.MISSION.INVITE.CANNOT_INVITE_YOURSELF, 409);
+
+  // eslint-disable-next-line no-unused-vars
+  const [mission, receiver, vacancy] = await Promise.all([
+    getMissionByIdOrThrow(mid),
+    userService.getUserByUidOrThrow(receiverId),
+    getMissionParticipationByIdOrThrow(vacancyId),
+  ]);
+
+  // Checks that vacancy exists in that mission
+  checkVacancyNotMission(vacancy.mid, mid);
+
+  // Checks if vacancy is already occupied
+  if (vacancy.adventurer_id !== null)
+    throw new AppError(messages.MISSION.INVITE.VACANCY_ALREADY_OCCUPIED, 409);
+
+  // Checks if mission can accept adventurers
+  checkCanAcceptAdventurers(mission.status);
+
+  // Checks if applicant has already sent a invitation to that adventurer
+  const hasPending = await notificationService.hasPendingJoinNotification(
+    mid,
+    senderId,
+    receiverId,
+    vacancyId,
+  );
+  if (hasPending)
+    throw new AppError(messages.MISSION.INVITE.INVITATION_ALREADY_SENT, 409);
+
+  // Checks if there is available vacancies
+  if (mission.total_vacancies <= mission.occupied_vacancies)
+    throw new AppError(messages.MISSION.INVITE.NO_VACANCIES_AVAILABLE, 409);
+
+  // Checks if user has already joined that mission
+  const adventurerId = mission.owner_id === senderId ? receiverId : senderId;
+  checkAdventurerAlreadyJoined(mid, adventurerId);
+
+  const notificationData = {
+    type: NOTIFICATION_TYPE.INVITATION.ID,
+    kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+    status: NOTIFICATION_STATUS.PENDING.ID,
+    action: NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    message,
+    senderId,
+    receiverId,
+    payload: {
+      associated_mission_id: mid,
+      associated_vacancy_id: vacancyId,
+    },
+  };
+
+  const newNotificationId =
+    await notificationService.createNotification(notificationData);
+  socketProvider.emitToUser(receiverId, 'notification:created', {
+    notificationId: newNotificationId,
+    mid,
+    vacancyId,
+    missionTitle: mission.title,
+    senderId,
+    senderUsername: user.username,
+    receiverId,
     type: NOTIFICATION_TYPE.INVITATION.ID,
     message,
   });
@@ -1183,6 +1279,14 @@ const checkUid = (uid) => {
   if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
 };
 
+const checkSenderId = (senderId) => {
+  if (!senderId) throw new Error(messages.GENERAL.FIELD_REQUIRED('Sender id'));
+};
+const checkReceiverId = (receiverId) => {
+  if (!receiverId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Receiver id'));
+};
+
 const checkUser = (user) => {
   if (!user) throw new Error(messages.GENERAL.FIELD_REQUIRED('User'));
 };
@@ -1212,4 +1316,24 @@ const checkMissionBelongsToUser = async (missionOwnerUid, currentUserUid) => {
   // Checks mission is owned by user
   if (missionOwnerUid !== currentUserUid)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+};
+
+const checkVacancyNotMission = async (vacancyMid, mid) => {
+  // Checks that vacancy exists in that mission
+  if (vacancyMid !== mid)
+    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+};
+
+const checkCanAcceptAdventurers = async (status) => {
+  // Checks if mission can accept adventurers
+  if (!MISSION_STATUS[status].CAN_ACCEPT_ADVENTURERS)
+    throw new AppError(messages.MISSION.JOIN.NOT_ACCEPTS_ADVENTURERS, 409);
+};
+
+const checkAdventurerAlreadyJoined = async (mid, uid) => {
+  // Checks if user has already joined that mission
+  const alreadyJoined =
+    await missionParticipationModel.findByMidAndAdventurerId(mid, uid);
+  if (alreadyJoined)
+    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
 };
