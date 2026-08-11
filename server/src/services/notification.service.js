@@ -63,6 +63,16 @@ export const hasPendingJoinNotification = async (
   return hasPendingJoinNotification;
 };
 
+// Count participation review attempts
+export const countParticipationReviewAttempts = async (mid, adventurerId) => {
+  checkMid(mid);
+  checkAdventurerId(adventurerId);
+  // Counts participation review attempts
+  const participationReviewAttempts =
+    await notificationModel.countParticipationReviewAttempts(mid, adventurerId);
+  return participationReviewAttempts;
+};
+
 /// Data checks
 const checkNotificationData = (notificationData) => {
   if (!notificationData)
@@ -92,4 +102,9 @@ const checkUid = (uid) => {
 
 const checkOwnerId = (ownerId) => {
   if (!ownerId) throw new Error(messages.GENERAL.FIELD_REQUIRED('Owner id'));
+};
+
+const checkAdventurerId = (adventurerId) => {
+  if (!adventurerId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Adventurer id'));
 };

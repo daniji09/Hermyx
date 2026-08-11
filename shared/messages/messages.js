@@ -117,6 +117,11 @@ export const messages = {
       NO_VACANCIES_AVAILABLE: `There is no vacancies available.`,
       INVITATION_ALREADY_SENT: `You have already sent an invitation for this vacancy to this user.`,
     },
+    SUBMIT_PARTICIPATION: {
+      MISSION_PART_ALREADY_SUBMITTED: `Your have already submitted your participation.`,
+      CANNOT_SUBMIT_UNPAID: `Not completely paid adventurer can't submit their part.`,
+      CANNOT_IN_CURRENT_STATE: `Cannot submit participation in current mission state`,
+    },
   },
 
   /// Notification messages
@@ -137,6 +142,8 @@ export const messages = {
       CLOSE_AFTER_REOPENED_NO_NEW_ADVENTURERS: (title) =>
         `Mission ${title} has been closed after being reopened. No new adventurers have joined.`,
     },
+    SUBMIT_PARTICIPATION: (title, username) =>
+      `The participation in "${title}" was submitted by ${username}.`,
   },
 
   ///// Common messages

@@ -300,7 +300,7 @@ export const joinMissionBodySchema = z.object({
 
 // Invite
 export const inviteToMissionParamSchema = z.object({
-  missionId: midBaseSchema,
+  mid: midBaseSchema,
 });
 
 export const inviteToMissionBodySchema = z.object({
@@ -310,6 +310,11 @@ export const inviteToMissionBodySchema = z.object({
     .min(0, messages.GENERAL.FIELD_POSITIVE('Receiver id')),
   vacancyId: vacancyIdBaseSchema,
   message: messageBaseSchema,
+});
+
+// Submit participation
+export const submitMissionParticipationSchema = z.object({
+  mid: midBaseSchema,
 });
 
 // ------
@@ -398,13 +403,6 @@ export const unjoinMissionBodySchema = z.object({
     .number(messages.FIELD_NUMBER('Vacancy id'))
     .int(messages.FIELD_INTEGER('Vacancy id'))
     .min(0, messages.FIELD_POSITIVE('Vacancy id')),
-});
-
-export const submitMissionParticipationSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Id'))
-    .int(messages.FIELD_INTEGER('Id'))
-    .min(0, messages.FIELD_POSITIVE('Id')),
 });
 
 export const banMissionParamsSchema = z.object({

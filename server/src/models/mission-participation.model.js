@@ -141,6 +141,23 @@ export const updateStatus = async (id, status, client = pool) => {
   return result.rowCount;
 };
 
+// Submit participation
+export const updateStatusByMidAndAdventurer = async (
+  mid,
+  adventurerId,
+  status,
+  client = pool,
+) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2
+    RETURNING *
+  `;
+  const result = await client.query(query, [mid, adventurerId, status]);
+  return result.rows[0] || null;
+};
+
 /// DELETES
 export const deleteAllUnoccupied = async (mid, existingIds, client = pool) => {
   let query, result;
@@ -192,21 +209,6 @@ export const deleteParticipant = async (mid, adventurerId) => {
     DROP * FROM mission_participation WHERE mid = $1 AND adventurer_id = $2`;
   const result = await pool.query(query, [mid, adventurerId]);
   return result.rows[0];
-};
-
-export const submitParticipation = async (mid, adventurerId) => {
-  const query = `
-    UPDATE mission_participation
-    SET status = $3
-    WHERE mid = $1 AND adventurer_id = $2
-    RETURNING *
-  `;
-  const result = await pool.query(query, [
-    mid,
-    adventurerId,
-    MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
-  ]);
-  return result.rows[0] || null;
 };
 
 export const approveParticipation = async (mid, adventurerId) => {

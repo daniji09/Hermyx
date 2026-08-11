@@ -103,6 +103,13 @@ router.post(
   missionController.inviteToMission,
 );
 
+// Submits current adventurer participation for owner review
+router.post(
+  '/:mid/submit',
+  validateParamsSchema(submitMissionParticipationSchema),
+  missionController.submitMissionParticipation,
+);
+
 /// PUT
 // Edits mission
 router.put(
@@ -117,13 +124,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// Submits current adventurer participation for owner review
-router.post(
-  '/:mid/submit',
-  validateParamsSchema(submitMissionParticipationSchema),
-  missionController.submitMissionParticipation,
-);
 
 // Cancels a mission
 router.post(

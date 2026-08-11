@@ -493,6 +493,63 @@ Applicant sends an invitation to a user, so they can join a vacancy of a mission
 <br>
 <br>
 
+## - Submit mission participation: `POST /api/missions/:mid/submit`
+
+Adventurers submits their part for the mission.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: participation submitted successfully.
+
+  ```json
+  { "nid": "<notification_id>" }
+  ```
+
+- `400 Bad Request`: path fields validation error, missing path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission or vacancy not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission/Vacancy not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** when current user submits their participation, if every check is surpassed, then, a database transaction is needed to updated that participation to submitted and send the appropriate notification to the applicant.
+<br>
+<br>
+<br>
+
 ## - Edit mission: `PUT /api/missions/:mid`
 
 Edits information from a mission that has already been published.

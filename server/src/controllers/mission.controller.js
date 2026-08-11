@@ -5,7 +5,6 @@ import {
   MISSION_PARTICIPATION_STATUS,
   NOTIFICATION_ACTION,
   NOTIFICATION_KIND,
-  NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
   HERMYX_FEE,
   HERMYX_SYSTEM_ID,
@@ -28,7 +27,6 @@ import { findByUid as getUserById } from '../models/user.model.js';
 import { getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
   findByMidAndAdventurerId as getMissionParticipationById,
-  submitParticipation as submitMissionParticipationRecord,
   findById,
   unjoinVacancy,
   findAllOccupied,
@@ -39,10 +37,7 @@ import {
   updatePaymentStatus,
   refundBannedVacancy,
 } from '../models/mission-participation.model.js';
-import {
-  create,
-  countParticipationReviewAttempts,
-} from '../models/notification.model.js';
+import { create } from '../models/notification.model.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import { createRefund, createTransfer } from '../providers/payment.provider.js';
 import {
@@ -161,7 +156,7 @@ export const joinMission = async (req, res, next) => {
 };
 
 // Receives missionId, senderId and receiverId, prepares the data, and creates a notification.
-export const inviteToMission = async (req, res) => {
+export const inviteToMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
     const { receiverId, vacancyId, message } = req.body;
@@ -171,11 +166,26 @@ export const inviteToMission = async (req, res) => {
       req.user.uid,
       receiverId,
       message,
+      req.user,
     );
     return res.status(200).json(nid);
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Database error' });
+    next(error);
+  }
+};
+
+// Submit participation
+export const submitMissionParticipation = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const updatedParticipation =
+      await missionService.submitMissionParticipation(mid, req.user);
+    return res.status(200).json({
+      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
+      participation: updatedParticipation,
+    });
+  } catch (error) {
+    next(error);
   }
 };
 
@@ -217,83 +227,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-export const submitMissionParticipation = async (req, res) => {
-  const { mid } = req.params;
-  const adventurerId = req.user.uid;
-
-  try {
-    const mission = await findByMid(mid);
-    if (!mission) {
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-    }
-
-    const participation = await getMissionParticipationById(mid, adventurerId);
-    if (!participation) {
-      return res.status(403).json({
-        error: messages.MISSION_PARTICIPATION_REQUIRED,
-      });
-    }
-
-    if (participation.status !== MISSION_STATUS.IN_PROGRESS.ID) {
-      return res.status(409).json({
-        error: messages.MISSION_PART_ALREADY_SUBMITTED,
-      });
-    }
-
-    if (
-      participation.payment_status !==
-      MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID
-    ) {
-      return res.status(409).json({
-        error: messages.CANNOT_SUBMIT_UNPAID,
-      });
-    }
-
-    const updatedParticipation = await submitMissionParticipationRecord(
-      mid,
-      adventurerId,
-    );
-
-    if (!updatedParticipation) {
-      return res
-        .status(409)
-        .json({ error: messages.MISSION_PART_ALREADY_SUBMITTED });
-    }
-
-    const attempts =
-      (await countParticipationReviewAttempts(mid, adventurerId)) + 1;
-    const missionCompletionMessage = `The participation in "${mission.title}" was submitted by ${req.user.username}.`;
-    const notificationId = await create({
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-      action: NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
-      status: NOTIFICATION_STATUS.PENDING.ID,
-      message: missionCompletionMessage,
-      senderId: adventurerId,
-      receiverId: mission.owner_id,
-      payload: { associated_mission_id: Number(mid), attempt: attempts },
-    });
-
-    emitToUser(mission.owner_id, 'mission:participation-submitted', {
-      notificationId,
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      missionId: Number(mid),
-      missionTitle: mission.title,
-      adventurerId,
-      adventurerUsername: req.user.username,
-      message: missionCompletionMessage,
-    });
-
-    return res.status(200).json({
-      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
-      participation: updatedParticipation,
-    });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 

@@ -88,6 +88,28 @@ export const hasPendingJoinNotification = async (
   return result.rows[0].hasPendingJoinNotification;
 };
 
+// Count participations review attempts
+export const countParticipationReviewAttempts = async (
+  missionId,
+  adventurerId,
+) => {
+  const query = `
+    SELECT COUNT(*)::int AS attempts
+    FROM notification
+    WHERE payload->>'associated_mission_id' = $1::text
+      AND sender_id = $2
+      AND type = $3
+      AND action = $4
+  `;
+  const result = await pool.query(query, [
+    missionId,
+    adventurerId,
+    NOTIFICATION_TYPE.MISSION.ID,
+    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
+  ]);
+  return result.rows[0].attempts;
+};
+
 /// UPDATES
 // Update notification
 export const update = async (notificationData, client = pool) => {
@@ -188,27 +210,6 @@ export const getByRecipientId = async (recipientId) => {
     NOTIFICATION_STATUS.PENDING.ID,
   ]);
   return result.rows;
-};
-
-export const countParticipationReviewAttempts = async (
-  missionId,
-  adventurerId,
-) => {
-  const query = `
-    SELECT COUNT(*)::int AS attempts
-    FROM notification
-    WHERE payload->>'associated_mission_id' = $1::text
-      AND sender_id = $2
-      AND type = $3
-      AND action = $4
-  `;
-  const result = await pool.query(query, [
-    missionId,
-    adventurerId,
-    NOTIFICATION_TYPE.MISSION.ID,
-    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
-  ]);
-  return result.rows[0].attempts;
 };
 
 export const findByActionStatusSenderAndMission = async (

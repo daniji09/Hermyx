@@ -973,7 +973,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
     setErrorMessage('');
 
     try {
-      const users = await queryClient.fetchInfiniteQuery(
+      const data = await queryClient.fetchInfiniteQuery(
         searchUsersByUsernameInfiniteQueryOptions(
           PAGINATION_LIMIT.MISSIONS,
           { username: trimmedUsername },
@@ -982,6 +982,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
           },
         ),
       );
+      const users = data?.pages.flatMap((page) => page.users);
       setFoundUsers(users);
       if (users.length === 0) {
         setErrorMessage('No adventurer found with that username.');
