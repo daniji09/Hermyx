@@ -12,13 +12,13 @@ import {
   TRANSACTION_TYPE,
 } from '@hermyx/shared';
 import {
-  getById as getMissionById,
+  findByMid as getMissionById,
   syncMissionCompletionStatus,
 } from '../models/mission.model.js';
-import { getById as getUserById } from '../models/user.model.js';
+import { findByUid as getUserById } from '../models/user.model.js';
 import {
   approveParticipation,
-  getVacancyById,
+  findById as getVacancyById,
   markVacancyAsPaidOut,
   releaseParticipation,
   reopenParticipation,
@@ -30,7 +30,7 @@ import {
   getReportById,
   getReports as getReportsFromModel,
 } from '../models/report.model.js';
-import { createNotification } from '../models/notification.model.js';
+import { createNotification } from './notification.service.js';
 import { createMissionPayment } from '../models/mission-payment.model.js';
 import { getActiveConversationParticipantIds } from '../models/conversation-participant.model.js';
 import { createTransfer } from '../providers/payment.provider.js';
@@ -50,7 +50,7 @@ const getMissionOrThrow = async (missionId) => {
 };
 
 const getVacancyOrThrow = async (missionId, vacancyId) => {
-  const vacancy = await getVacancyById(missionId, vacancyId);
+  const vacancy = await getVacancyById(vacancyId);
   if (!vacancy) throw new AppError(messages.VACANCY_NOT_FOUND, 404);
   if (vacancy.mid !== missionId) {
     throw new AppError(messages.VACANCY_NOT_IN_MISSION, 409);

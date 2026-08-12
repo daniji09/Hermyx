@@ -31,7 +31,6 @@ import {
 } from '../models/mission.model.js';
 import {
   approveParticipation,
-  disputeParticipation,
   findByMidAndAdventurerId as getMissionParticipationById,
   findAllOccupied,
   findById as _findById,

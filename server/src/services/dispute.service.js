@@ -10,7 +10,6 @@ import {
 import pool from '../config/db.config.js';
 import { createDisputeConversation } from '../models/conversation.model.js';
 import {
-  addConversationParticipant,
   isConversationParticipant,
   markConversationAsReadByUserId,
 } from '../models/conversation-participant.model.js';
@@ -20,10 +19,11 @@ import {
 } from '../models/conversation-message.model.js';
 import {
   addAssociatedReport,
-  createNotification,
   markAsSeen,
   updateNotificationStatus,
 } from '../models/notification.model.js';
+import { createConversationParticipant } from './conversation.service.js';
+import { createNotification } from './notification.service.js';
 import { disputeParticipation } from '../models/mission-participation.model.js';
 import { syncMissionCompletionStatus } from '../models/mission.model.js';
 import {
@@ -127,7 +127,11 @@ export const createDisputeTicket = async ({
     await addAssociatedReport(notificationId, report.rid, client);
 
     for (const participantId of [senderId, counterpartId, admin.uid]) {
-      await addConversationParticipant(conversation.cid, participantId, client);
+      await createConversationParticipant(
+        conversation.cid,
+        participantId,
+        client,
+      );
     }
 
     await createMessage({

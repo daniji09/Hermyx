@@ -124,6 +124,8 @@ export const ConversationThread = ({
   );
   const conversation = conversationData?.conversation;
   const isMissionConversation = conversation?.type === 'mission';
+  const isHistoryOnly = Boolean(currentParticipant?.history_until);
+  const isHistoryView = isHistoryOnly || Boolean(conversation?.closed_at);
   const conversationTitle =
     title ||
     (isMissionConversation
@@ -182,7 +184,7 @@ export const ConversationThread = ({
   }, [conversationData, conversationId, queryClient]);
 
   useEffect(() => {
-    if (!socket || !conversationId) return;
+    if (!socket || !conversationId || !canSendMessages) return;
 
     socket.emit('conversation:join', conversationId);
 
@@ -224,7 +226,7 @@ export const ConversationThread = ({
       socket.emit('conversation:leave', conversationId);
       socket.off('conversation:message-created', handleMessageCreated);
     };
-  }, [socket, conversationId, currentUser?.id, queryClient]);
+  }, [socket, conversationId, currentUser?.id, queryClient, canSendMessages]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => sendMessage(conversationId, content, selectedPhoto),
@@ -355,14 +357,22 @@ export const ConversationThread = ({
             </CardTitle>
             {(description || isMissionConversation) && (
               <CardDescription>
-                {description || (
-                  <>
-                    Mission group · {conversationData.participants.length}{' '}
-                    {conversationData.participants.length === 1
-                      ? 'participant'
-                      : 'participants'}
-                  </>
-                )}
+                {description ||
+                  (isHistoryView ? (
+                    <>
+                      Mission history:{' '}
+                      {isHistoryOnly
+                        ? 'messages up to the end of your participation'
+                        : 'mission finished'}
+                    </>
+                  ) : (
+                    <>
+                      Mission group · {conversationData.participants.length}{' '}
+                      {conversationData.participants.length === 1
+                        ? 'participant'
+                        : 'participants'}
+                    </>
+                  ))}
               </CardDescription>
             )}
           </CardHeader>
@@ -541,9 +551,9 @@ export const ConversationThread = ({
               </form>
             ) : (
               <p className='text-sm text-muted-foreground'>
-                {conversation?.closed_at
-                  ? 'This conversation is closed. You can still read its history.'
-                  : 'This conversation is now read-only.'}
+                {isHistoryOnly
+                  ? 'Your participation has finished. You can view the messages sent before it ended.'
+                  : 'This mission has finished. You can view its message history.'}
               </p>
             )}
           </CardFooter>

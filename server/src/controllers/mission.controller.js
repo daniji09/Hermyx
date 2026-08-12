@@ -43,7 +43,8 @@ import {
   getMissionPaymentsByVacancy,
   refundFromPayment,
 } from '../models/mission-payment.model.js';
-import { closeReport, getReportById } from '../models/report.model.js';
+import { getReportById } from '../models/report.model.js';
+import { closeReportAndConversation } from '../services/report.service.js';
 import * as missionService from '../services/mission.service.js';
 import * as missionParticipationModel from '../models/mission-participation.model.js';
 

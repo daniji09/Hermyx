@@ -382,6 +382,17 @@ export const updateOccupiedVacancies = async (mid, amount, client = pool) => {
   return result.rowCount;
 };
 
+export const updateMissionPayment = async (mid, payment, client = pool) => {
+  const query = `
+    UPDATE mission
+    SET total_payment = $2
+    WHERE mid = $1
+    RETURNING *
+  `;
+  const result = await client.query(query, [mid, payment]);
+  return result.rows[0] || null;
+};
+
 /// ......
 
 //Updates the Stripe Payment Intent ID and the mission status. Uses COALESCE to prevent overwriting the ID with null if only status needs update.
@@ -488,35 +499,6 @@ export const finishMissionAndCloseConversation = async (mid) => {
   } finally {
     client.release();
   }
-};
-
-// Gets mission by uid and title
-export const findByUidAndTitle = async (uid, title, mid = undefined) => {
-  // If mid is not undefined, then the mission has to be different than that one
-  let query, result;
-  if (!mid) {
-    query = `
-    SELECT EXISTS (
-      SELECT 1 
-      FROM mission 
-      WHERE owner_id = $1 
-        AND LOWER(TRIM(title)) = LOWER($2)
-    ) AS "hasDuplicate";
-  `;
-    result = await pool.query(query, [uid, title]);
-  } else {
-    query = `
-    SELECT EXISTS (
-      SELECT 1 
-      FROM mission 
-      WHERE owner_id = $1 
-        AND LOWER(TRIM(title)) = LOWER($2) AND mid <> $3
-    ) AS "hasDuplicate";
-  `;
-    result = await pool.query(query, [uid, title, mid]);
-  }
-
-  return result.rows[0];
 };
 
 export const getAllMissionsInDraft = async () => {

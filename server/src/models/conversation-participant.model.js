@@ -73,14 +73,16 @@ export const addMissionConversationParticipant = async (
   return result.rows[0] || null;
 };
 
-export const makeMissionConversationParticipantReadOnly = async (
+export const freezeMissionConversationHistory = async (
   missionId,
   userId,
   database = pool,
 ) => {
   const query = `
     UPDATE conversation_participant cp
-    SET can_send = FALSE
+    SET
+      can_send = FALSE,
+      history_until = clock_timestamp()
     FROM conversation c
     WHERE cp.conversation_id = c.cid
       AND c.mission_id = $1
@@ -94,7 +96,10 @@ export const makeMissionConversationParticipantReadOnly = async (
   return result.rows[0] || null;
 };
 
-export const getConversationParticipants = async (conversationId) => {
+export const getConversationParticipants = async (
+  conversationId,
+  userId = null,
+) => {
   const query = `
     SELECT
       u.uid,
@@ -102,15 +107,35 @@ export const getConversationParticipants = async (conversationId) => {
       u.avatar,
       cp.joined_at,
       cp.left_at,
-      cp.can_send
+      cp.can_send,
+      cp.history_until
     FROM conversation_participant cp
+    LEFT JOIN conversation_participant viewer
+      ON viewer.conversation_id = cp.conversation_id
+      AND viewer.user_id = $2
     JOIN app_user u ON u.uid = cp.user_id
     WHERE cp.conversation_id = $1
       AND cp.left_at IS NULL
+      AND (
+        $2::int IS NULL
+        OR (
+          viewer.left_at IS NULL
+          AND (
+            viewer.history_until IS NULL
+            OR cp.joined_at <= viewer.history_until
+          )
+        )
+      )
+      AND (
+        $2::int IS NULL
+        OR viewer.history_until IS NOT NULL
+        OR cp.history_until IS NULL
+        OR cp.user_id = $2
+      )
     ORDER BY cp.joined_at ASC
   `;
 
-  const result = await pool.query(query, [conversationId]);
+  const result = await pool.query(query, [conversationId, userId]);
   return result.rows;
 };
 
@@ -151,6 +176,8 @@ export const getActiveConversationParticipantIds = async (conversationId) => {
     FROM conversation_participant
     WHERE conversation_id = $1
       AND left_at IS NULL
+      AND can_send = TRUE
+      AND history_until IS NULL
   `;
 
   const result = await pool.query(query, [conversationId]);

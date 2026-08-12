@@ -168,7 +168,10 @@ export const getConversation = async (req, res) => {
       });
     }
 
-    const participants = await getConversationParticipants(conversationId);
+    const participants = await getConversationParticipants(
+      conversationId,
+      userId,
+    );
 
     return res.status(200).json({ conversation, participants });
   } catch (e) {
@@ -195,7 +198,10 @@ export const getConversationMessages = async (req, res) => {
       });
     }
 
-    const messagesList = await getMessagesByConversationId(conversationId);
+    const messagesList = await getMessagesByConversationId(
+      conversationId,
+      userId,
+    );
 
     return res.status(200).json({ messages: messagesList });
   } catch (e) {

@@ -5,7 +5,7 @@ import {
 import pool from '../config/db.config.js';
 import {
   addMissionConversationParticipant,
-  makeMissionConversationParticipantReadOnly,
+  freezeMissionConversationHistory,
 } from './conversation-participant.model.js';
 
 /// INSERTS
@@ -264,7 +264,7 @@ export const releaseParticipation = async (mid, adventurerId) => {
       return null;
     }
 
-    await makeMissionConversationParticipantReadOnly(mid, adventurerId, client);
+    await freezeMissionConversationHistory(mid, adventurerId, client);
     await client.query('COMMIT');
 
     return result.rows[0];

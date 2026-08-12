@@ -2,7 +2,7 @@ import { Server } from 'socket.io';
 import { corsOptions } from '../app.js';
 import { findByFirebaseUid } from '../models/user.model.js';
 import { verifyIdToken } from './auth.provider.js';
-import { isConversationParticipant } from '../models/conversation-participant.model.js';
+import { canSendMessageToConversation } from '../models/conversation-participant.model.js';
 
 let io;
 
@@ -53,12 +53,12 @@ export const initializeSocketServer = (httpServer) => {
 
     socket.on('conversation:join', async (conversationId) => {
       try {
-        const isParticipant = await isConversationParticipant(
+        const canReceiveLiveMessages = await canSendMessageToConversation(
           conversationId,
           socket.user.uid,
         );
 
-        if (!isParticipant) return;
+        if (!canReceiveLiveMessages) return;
 
         socket.join(`conversation:${conversationId}`);
       } catch (error) {

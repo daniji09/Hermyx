@@ -126,6 +126,7 @@ export const getConversationsByUserId = async (userId) => {
       c.created_at,
       c.closed_at,
       current_participant.can_send,
+      current_participant.history_until,
       mission_details.title AS mission_title,
       participant_summary.participant_count,
       other_user.uid AS other_user_id,
@@ -160,11 +161,17 @@ export const getConversationsByUserId = async (userId) => {
       FROM conversation_participant participant
       WHERE participant.conversation_id = c.cid
         AND participant.left_at IS NULL
+        AND participant.can_send = TRUE
+        AND participant.history_until IS NULL
     ) participant_summary ON true
     LEFT JOIN LATERAL (
       SELECT m.*
       FROM conversation_message m
       WHERE m.conversation_id = c.cid
+        AND (
+          current_participant.history_until IS NULL
+          OR m.created_at <= current_participant.history_until
+        )
       ORDER BY m.created_at DESC
       LIMIT 1
     ) last_message ON true

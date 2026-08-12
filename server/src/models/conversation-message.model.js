@@ -49,7 +49,7 @@ export const createMessage = async ({
   return result.rows[0];
 };
 
-export const getMessagesByConversationId = async (conversationId) => {
+export const getMessagesByConversationId = async (conversationId, userId) => {
   const query = `
     SELECT
       m.mid,
@@ -64,14 +64,22 @@ export const getMessagesByConversationId = async (conversationId) => {
       u.username AS sender_username,
       u.avatar AS sender_avatar
     FROM conversation_message m
+    JOIN conversation_participant cp
+      ON cp.conversation_id = m.conversation_id
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
     JOIN conversation c ON c.cid = m.conversation_id
     LEFT JOIN report r ON r.conversation_id = c.cid
     JOIN app_user u ON u.uid = m.sender_id
     WHERE m.conversation_id = $1
+      AND (
+        cp.history_until IS NULL
+        OR m.created_at <= cp.history_until
+      )
     ORDER BY m.created_at ASC
   `;
 
-  const result = await pool.query(query, [conversationId]);
+  const result = await pool.query(query, [conversationId, userId]);
   return result.rows;
 };
 
@@ -91,6 +99,10 @@ export const getUnreadMessageCountByUserId = async (
       AND cp.left_at IS NULL
       AND m.sender_id <> $1
       AND m.created_at > cp.last_read_at
+      AND (
+        cp.history_until IS NULL
+        OR m.created_at <= cp.history_until
+      )
       AND ($2::varchar IS NULL OR c.type = $2)
       AND ($3::varchar IS NULL OR c.type <> $3)
   `;
