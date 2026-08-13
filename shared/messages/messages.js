@@ -147,6 +147,7 @@ export const messages = {
     GENERAL: {
       PAYMENT_METHOD_NOT_FOUND: `Payment method not found.`,
       PAYMENT_METHOD_NOT_FROM_USER: `Payment method does not belong to the current user.`,
+      NO_DEFAULT_CARD: `User doesn't have a default card selected.`,
     },
   },
 

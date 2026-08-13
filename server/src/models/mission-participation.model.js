@@ -33,6 +33,18 @@ export const findById = async (vacancyId, client = pool) => {
   return result.rows[0] || null;
 };
 
+// Finds mission payment by mid
+export const findMissionPaymentByMid = async (mid) => {
+  const query = `SELECT SUM(monetary_reward - amount_paid) 
+  FROM mission_participation 
+  WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
+  const result = await pool.query(query, [
+    mid,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+  ]);
+  return result.rows[0].sum;
+};
+
 export const findByMidAndAdventurerId = async (mid, adventurerId) => {
   const query = `
     SELECT *
@@ -387,15 +399,6 @@ export const updateVacancyMonetaryReward = async (
   const query = `UPDATE mission_participation SET monetary_reward = $2 WHERE id = $1 RETURNING *`;
   const result = await client.query(query, [id, monetaryReward]);
   return result.rows[0];
-};
-
-export const getMissionPayment = async (mid) => {
-  const query = `SELECT SUM(monetary_reward - amount_paid) FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
-  const result = await pool.query(query, [
-    mid,
-    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-  ]);
-  return result.rows[0].sum;
 };
 
 export const payVacancies = async (mid, amount_paid) => {

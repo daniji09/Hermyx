@@ -1,6 +1,4 @@
 import {
-  retrieveCustomer,
-  createPaymentIntentDefault,
   createPaymentIntentNew,
   retrievePI,
   createExpressAccount,
@@ -18,7 +16,6 @@ import {
 
 import {
   findByMid as _getById,
-  updatePaymentInfo,
   lockForRelease,
   getParticipantsForRelease,
   updateStatus,
@@ -29,7 +26,7 @@ import {
 } from '../models/mission.model.js';
 
 import {
-  getMissionPayment,
+  findMissionPaymentByMid,
   findAllOccupied,
   findById,
   findAllWaitingForPaymentByMid,
@@ -95,6 +92,21 @@ export const setDefaultCard = async (req, res, next) => {
   }
 };
 
+// Charges the mission cost using the user's saved default card.
+export const payDefault = async (req, res, next) => {
+  try {
+    const { mid } = req.body;
+    const { pi, defaultPm } = await paymentService.payDefault(mid, req.user);
+    return res.status(200).json({
+      clientSecret: pi.client_secret,
+      paymentIntentId: pi.id,
+      paymentMethodId: defaultPm,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Deletes a card. If it was the default, clears the default setting.
 export const deleteCard = async (req, res, next) => {
   try {
@@ -146,55 +158,6 @@ const getReusablePaymentIntent = async (mission, customerId) => {
   return null;
 };
 
-//Charges the mission cost using the user's saved default card.
-export async function payDefault(req, res, next) {
-  try {
-    const customerId = req.user.stripe_customer_id;
-    const { missionId } = req.body;
-
-    if (!missionId) return res.status(400).json({ error: 'missing missionId' });
-
-    const mission = await _getById(missionId);
-    if (!mission) return res.status(404).json({ error: 'Mission not found' });
-    if (!ensureMissionOwner(mission, req.user.uid, res)) return;
-
-    const customer = await retrieveCustomer(customerId);
-    const defaultPm = customer.invoice_settings?.default_payment_method;
-
-    if (!defaultPm) return res.status(400).json({ error: 'No default card' });
-
-    const reusablePi = await getReusablePaymentIntent(mission, customerId);
-    if (reusablePi) {
-      return res.json({
-        clientSecret: reusablePi.client_secret,
-        paymentIntentId: reusablePi.id,
-        paymentMethodId: defaultPm,
-      });
-    }
-
-    const pi = await createPaymentIntentDefault(
-      {
-        amount: Math.round(mission.total_payment * 100),
-        currency: 'eur',
-        customer: customerId,
-        payment_method: defaultPm,
-        metadata: { missionId, ownerId: req.user.uid },
-      },
-      `pay_default_${missionId}_${Date.now()}`,
-    );
-
-    await updatePaymentInfo(missionId, pi.id, MISSION_STATUS.IN_PROGRESS.ID);
-
-    res.json({
-      clientSecret: pi.client_secret,
-      paymentIntentId: pi.id,
-      paymentMethodId: defaultPm,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
-
 //Creates a PaymentIntent for a new card. Can optionally save the card for future use.
 export async function payNew(req, res, next) {
   try {
@@ -207,7 +170,7 @@ export async function payNew(req, res, next) {
     if (!ensureMissionOwner(mission, req.user.uid, res)) return;
 
     // Finds how much it has to be payed
-    const paymentAmount = await getMissionPayment(mid);
+    const paymentAmount = await findMissionPaymentByMid(mid);
     const reusablePi = await getReusablePaymentIntent(mission, customerId);
     if (reusablePi) {
       return res.json({

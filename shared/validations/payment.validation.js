@@ -19,6 +19,11 @@ export const deleteCardParamSchema = z.object({
   paymentMethodId: paymentMethodIdSchema,
 });
 
+// Pay with the default card
+export const payDefaultBodySchema = z.object({
+  mid: midBaseSchema,
+});
+
 // Pay with new card
 export const payNewBodySchema = z.object({
   mid: midBaseSchema,

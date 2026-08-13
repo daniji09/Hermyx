@@ -66,7 +66,106 @@ Sets a card to be the default one.
   {}
   ```
 
-  **Workflow:** the process for setting a card as a default is quite simple, with some interesting logic though. Backend receives the Stripe id of the payment method and it has to check whether that id exists on Stripe and that it actually belongs to the current user, to avoid someone paying with the info of another user. Then, it just sets that card as default.
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot set as default a card that does not belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Payment method does not belong to the current user."]
+    }
+  }
+  ```
+
+- `404 Not Found`: payment method not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Payment method not found."]
+    }
+  }
+  ```
+
+**Workflow:** the process for setting a card as a default is quite simple, with some interesting logic though. Backend receives the Stripe id of the payment method and it has to check whether that id exists on Stripe and that it actually belongs to the current user, to avoid someone paying with the info of another user. Then, it just sets that card as default.
+<br>
+<br>
+<br>
+
+## - Create payment intent with default card: `POST /stripe/pay/default`
+
+Creates a payment intent using the user's default card
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | int | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: card set as default successfully.
+
+  ```json
+  {
+    "clientSecret": "<client_secret>",
+    "paymentIntentId": "<PI>",
+    "paymentMethodId": "<defaultPm>"
+  }
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["User is not authorized for this action."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+  **Workflow:** this endpoints creates a payment intent (PI) for a mission and retrieves to frontend, so it just warns Stripe that there will be a payment from that user of a certain quantity using their default payment. All basic checks are done.
   <br>
   <br>
   <br>
@@ -89,6 +188,36 @@ Deletes the specified card.
 
   ```json
   {}
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot delete a card that does not belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Payment method does not belong to the current user."]
+    }
+  }
+  ```
+
+- `404 Not Found`: payment method not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Payment method not found."]
+    }
+  }
   ```
 
   **Workflow:** the process for deleting card as a default is quite simple, with some interesting logic though. Backend receives the Stripe id of the payment method and it has to check whether that id exists on Stripe and that it actually belongs to the current user, to avoid someone deleting the payment method of another user. Then, deletes the card from Stripe and ensures that, if that card was the default one, this field is set to null in Stripe (even though is something that Stripe actually does on its backend).

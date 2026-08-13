@@ -6,6 +6,7 @@ import { requireStripeCustomerId } from '../middlewares/payment.middleware.js';
 import { validateBodySchema } from '../middlewares/validation.middleware.js';
 import {
   deleteCardParamSchema,
+  payDefaultBodySchema,
   payNewBodySchema,
   setDefaultCardSchema,
 } from '@hermyx/shared';
@@ -26,6 +27,14 @@ router.post(
   paymentController.setDefaultCard,
 );
 
+// Pay with a predetermined card
+router.post(
+  '/pay/default',
+  requireStripeCustomerId,
+  validateBodySchema(payDefaultBodySchema),
+  paymentController.payDefault,
+);
+
 /// DELETES
 // Delete a card
 router.delete(
@@ -36,13 +45,6 @@ router.delete(
 );
 
 // -----
-
-//Pay with a predetermined card
-router.post(
-  '/pay/default',
-  requireStripeCustomerId,
-  paymentController.payDefault,
-);
 
 //Pay with a new card
 router.post(

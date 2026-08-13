@@ -81,6 +81,12 @@ export const getMissionParticipationByMidAndAdventurerIdOrThrow = async (
   return missionParticipation;
 };
 
+// Gets mission current payment
+export const getMissionPaymentByMid = async (mid) => {
+  checkMid(mid);
+  return await missionParticipationModel.findMissionPaymentByMid(mid);
+};
+
 export const getMissionParticipationReviewContext = async (
   mid,
   adventurerId,

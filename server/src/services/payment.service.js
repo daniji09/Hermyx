@@ -1,6 +1,7 @@
-import { messages } from '@hermyx/shared';
+import { HERMYX_FEE, messages } from '@hermyx/shared';
 import * as missionPaymentModel from '../models/mission-payment.model.js';
 import * as paymentProvider from '../providers/payment.provider.js';
+import * as missionService from '../services/mission.service.js';
 import { AppError } from '../utils/error.util.js';
 
 /// Model access functions
@@ -59,6 +60,46 @@ export const setDefaultCard = async (stripeCustomerId, paymentMethodId) => {
   return;
 };
 
+// Pay default
+export const payDefault = async (mid, user) => {
+  // Parameters check
+  checkMid(mid);
+  checkUser(user);
+
+  // Finds mission
+  const mission = await missionService.getMissionByIdOrThrow(mid);
+
+  // Checks if mission belongs to user
+  checkMissionBelongsToUser(mission.owner_id, user.uid);
+
+  // Gets customer from Stripe
+  const customer = await paymentProvider.retrieveCustomer(
+    user.stripe_customer_id,
+  );
+
+  // Gets its default card
+  const defaultPm = customer.invoice_settings?.default_payment_method;
+  if (!defaultPm)
+    throw new AppError(messages.PAYMENT.GENERAL.NO_DEFAULT_CARD, 409);
+
+  // Gets how much has to be payed
+  const paymentAmount = await missionService.getMissionPaymentByMid(mid);
+
+  // Creates a new payment intent
+  const pi = await paymentProvider.createPaymentIntentDefault(
+    {
+      amount: Math.round(paymentAmount * 100 * HERMYX_FEE),
+      currency: 'eur',
+      customer: user.stripe_customer_id,
+      payment_method: defaultPm,
+      metadata: { mid, ownerId: user.uid },
+    },
+    `pay_default_${mid}_${Date.now()}`,
+  );
+
+  return { pi, defaultPm };
+};
+
 // Delete card
 export const deleteCard = async (stripeCustomerId, paymentMethodId) => {
   // Parameter checks
@@ -94,6 +135,14 @@ const checkPaymentMethodId = (paymentMethodId) => {
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment method id'));
 };
 
+const checkMid = (mid) => {
+  if (!mid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Mid'));
+};
+
+const checkUser = (user) => {
+  if (!user) throw new Error(messages.GENERAL.FIELD_REQUIRED('User'));
+};
+
 /// Helper functions
 // Checks if the payment provided by the user is actually theirs
 const ensurePaymentMethodOwner = async (paymentMethodId, customerId) => {
@@ -124,4 +173,10 @@ const getPaymentMethodCustomerId = (paymentMethod) => {
   if (!paymentMethod.customer) return null;
   if (typeof paymentMethod.customer === 'string') return paymentMethod.customer;
   return paymentMethod.customer.id;
+};
+
+const checkMissionBelongsToUser = (missionOwnerUid, currentUserUid) => {
+  // Checks mission is owned by user
+  if (missionOwnerUid !== currentUserUid)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 };
