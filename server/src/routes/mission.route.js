@@ -125,6 +125,13 @@ router.post(
   missionController.cancelMission,
 );
 
+// Reopens a mission
+router.post(
+  '/:mid/reopen',
+  validateParamsSchema(reopenMissionParamSchema),
+  missionController.reopenMission,
+);
+
 /// PUT
 // Edits mission
 router.put(
@@ -139,13 +146,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// Reopens a mission
-router.post(
-  '/:mid/reopen',
-  validateParamsSchema(reopenMissionParamSchema),
-  missionController.reopenMission,
-);
 
 // Reopens a mission
 router.post(

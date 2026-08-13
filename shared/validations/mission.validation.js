@@ -298,10 +298,12 @@ export const submitMissionParticipationSchema = z.object({
 
 // Cancel mission
 export const cancelMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
+  mid: midBaseSchema,
+});
+
+// Reopen mission
+export const reopenMissionParamSchema = z.object({
+  mid: midBaseSchema,
 });
 
 // Edit mission
@@ -346,13 +348,6 @@ const optionalNumberFromFormSchema = (schema) =>
     if (typeof value === 'string' && value.trim() === '') return undefined;
     return value;
   }, schema.optional());
-
-export const reopenMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
 
 export const finishMissionParamSchema = z.object({
   mid: z.coerce

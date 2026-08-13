@@ -619,7 +619,10 @@ const closeMissionValidations = async (mid, user) => {
         MISSION_STATUS.IN_PROGRESS.ID,
       )
     )
-      throw new AppError(messages.MISSION.REOPEN.CANNOT_ON_CURRENT_STATE, 409);
+      throw new AppError(
+        messages.MISSION.REOPEN.CANNOT_CLOSE_ON_CURRENT_STATE,
+        409,
+      );
 
     nextMissionStatus = MISSION_STATUS.IN_PROGRESS.ID;
     vacanciesToUpdate = await missionParticipationModel.findAllJoined(
@@ -789,6 +792,8 @@ export const joinMission = async (mid, user, message, vacancyId) => {
     type: NOTIFICATION_TYPE.INVITATION.ID,
     message,
   });
+
+  return;
 };
 
 // Invite to mission
@@ -872,6 +877,8 @@ export const inviteToMission = async (
     type: NOTIFICATION_TYPE.INVITATION.ID,
     message,
   });
+
+  return;
 };
 
 // Unjoin mission
@@ -990,6 +997,8 @@ export const unjoinMission = async (mid, vacancyId, user) => {
     type: NOTIFICATION_TYPE.MISSION.ID,
     message: message,
   });
+
+  return;
 };
 
 // Submit participation
@@ -1106,6 +1115,9 @@ export const cancelMission = async (mid, user) => {
   checkMid(mid);
   checkUser(user);
 
+  // To save successful payments
+  const successfulPayments = [];
+
   // Mission is searched
   const mission = await getMissionByIdOrThrow(mid);
 
@@ -1214,6 +1226,7 @@ export const cancelMission = async (mid, user) => {
               );
 
               await client.query('COMMIT');
+              successfulPayments.push(vacancy.id);
             } catch (dbError) {
               await client.query('ROLLBACK');
               // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
@@ -1240,40 +1253,170 @@ export const cancelMission = async (mid, user) => {
   }
 
   // Either way, all adventurers are informed
-  for (const vacancy of occupied_vacancies) {
-    if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-      const message = isDeleting
-        ? messages.NOTIFICATION.DELETE_MISSION(mission.title)
-        : messages.NOTIFICATION.CANCEL_MISSION(mission.title);
-      const action = isDeleting
-        ? NOTIFICATION_ACTION.MISSION_DELETE.ID
-        : NOTIFICATION_ACTION.MISSION_CANCEL.ID;
+  const notificationsToSend = [];
+  const client = await pool.connect();
 
-      const notificationId = await notificationService.createNotification({
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-        action: action,
-        status: null,
-        message: message,
-        senderId: user.uid,
-        receiverId: vacancy.adventurer_id,
-        payload: { associated_mission_id: mission.mid },
-      });
+  // Notifications are created in a transaction
+  try {
+    await client.query('BEGIN');
+    for (const vacancy of occupied_vacancies) {
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+        const message = isDeleting
+          ? messages.NOTIFICATION.DELETE_MISSION(mission.title)
+          : successfulPayments.includes(vacancy.id)
+            ? messages.NOTIFICATION.CANCEL_MISSION.SUCCESSFUL(mission.title)
+            : messages.NOTIFICATION.CANCEL_MISSION.ISSUED(mission.title);
+        const action = isDeleting
+          ? NOTIFICATION_ACTION.MISSION_DELETE.ID
+          : NOTIFICATION_ACTION.MISSION_CANCEL.ID;
 
-      const eventName = isDeleting ? 'mission:delete' : 'mission:cancel';
-      socketProvider.emitToUser(vacancy.adventurer_id, eventName, {
-        notificationId,
-        missionId: mission.mid,
-        vacancyId: vacancy.id,
-        missionTitle: mission.title,
-        senderId: user.uid,
-        senderUsername: user.username,
-        receiverId: vacancy.adventurer_id,
-        type: NOTIFICATION_TYPE.MISSION.ID,
-        message: message,
-      });
+        const notificationId = await notificationService.createNotification(
+          {
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+            action: action,
+            status: null,
+            message: message,
+            senderId: user.uid,
+            receiverId: vacancy.adventurer_id,
+            payload: { associated_mission_id: mission.mid },
+          },
+          client,
+        );
+
+        const eventName = isDeleting ? 'mission:delete' : 'mission:cancel';
+        notificationsToSend.push({
+          receiverId: vacancy.adventurer_id,
+          event: eventName,
+          payload: {
+            notificationId,
+            missionId: mission.mid,
+            vacancyId: vacancy.id,
+            missionTitle: mission.title,
+            senderId: user.uid,
+            senderUsername: user.username,
+            receiverId: vacancy.adventurer_id,
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            message: message,
+          },
+        });
+      }
     }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
+
+  // And finally, notifications are sent
+  for (const notification of notificationsToSend) {
+    socketProvider.emitToUser(
+      notification.receiverId,
+      notification.eventName,
+      notification.payload,
+    );
+  }
+
+  return;
+};
+
+// Reopen mission
+export const reopenMission = async (mid, user) => {
+  // Parameters check
+  checkMid(mid);
+  checkUser(user);
+
+  // Mission is searched
+  const mission = await getMissionByIdOrThrow(mid);
+
+  // Checks if mission was created by the current user
+  checkMissionBelongsToUser(mission.owner_id, user.uid);
+
+  // Checks if mission can be reopened by state
+  if (
+    !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+      MISSION_STATUS.REOPENED.ID,
+    )
+  )
+    throw new AppError(messages.MISSION.REOPEN.CANNOT_ON_CURRENT_STATE, 409);
+
+  // Checks if there is at least one empty vacancy, so mission can be reopened
+  const vacancies = await missionParticipationModel.findAllUnoccupied(mid);
+
+  if (vacancies.length < 1)
+    throw new AppError(
+      messages.MISSION.REOPEN.CANNOT_WITHOUT_EMPTY_VACANCIES,
+      409,
+    );
+
+  // Gets adventurers
+  const occupied_vacancies =
+    await missionParticipationModel.findAllOccupied(mid);
+
+  // Mission status change and notifications sending need to be in a db transaction
+  const notificationsToSend = [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Finally, mission is reopened
+    await missionModel.updateStatus(mid, MISSION_STATUS.REOPENED.ID, client);
+
+    // And all adventurers are informed
+    for (const vacancy of occupied_vacancies) {
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+        const message = messages.NOTIFICATION.REOPEN_MISSION(mission.title);
+        const notificationId = await notificationService.createNotification(
+          {
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+            action: NOTIFICATION_ACTION.MISSION_REOPEN.ID,
+            status: null,
+            message: message,
+            senderId: user.uid,
+            receiverId: vacancy.adventurer_id,
+            payload: {
+              associated_mission_id: mission.mid,
+            },
+          },
+          client,
+        );
+        notificationsToSend.push({
+          receiverId: vacancy.adventurer_id,
+          eventName: 'mission:reopened',
+          payload: {
+            notificationId,
+            missionId: mission.mid,
+            vacancyId: vacancy.id,
+            missionTitle: mission.title,
+            senderId: user.uid,
+            senderUsername: user.username,
+            receiverId: vacancy.adventurer_id,
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            message: message,
+          },
+        });
+      }
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  // And finally, notifications are sent
+  for (const notification of notificationsToSend) {
+    socketProvider.emitToUser(
+      notification.receiverId,
+      notification.eventName,
+      notification.payload,
+    );
+  }
+
+  return;
 };
 
 // Edit mission

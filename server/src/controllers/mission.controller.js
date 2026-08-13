@@ -28,7 +28,6 @@ import { findByConversationId as getConversationParticipants } from '../models/c
 import {
   findById,
   findAllOccupied,
-  getEmptyVacancies,
   updatePaymentStatusById,
   cleanMissionParticipation,
   unjoinParticipant,
@@ -210,6 +209,17 @@ export const cancelMission = async (req, res, next) => {
   }
 };
 
+// Reopens mission
+export const reopenMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    await missionService.reopenMission(mid, req.user);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Edits a mission
 export const editMission = async (req, res, next) => {
   try {
@@ -248,84 +258,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Reopens mission
-export const reopenMission = async (req, res) => {
-  const { mid } = req.params;
-  const uid = req.user.uid;
-
-  try {
-    // Mission is searched
-    const mission = await findByMid(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Checks if mission was created by the current user
-    if (mission.owner_id !== uid)
-      return res.status(403).json({ error: messages.CANNOT_REOPEN_MISSION });
-
-    // Checks if mission can be reopened by state
-    if (
-      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_STATUS.REOPENED.ID,
-      )
-    )
-      return res.status(400).json({
-        errors: {
-          general: [messages.CANNOT_REOPEN_MISSION_STATE],
-        },
-      });
-
-    // Checks if there is at least one empty vacancy, so mission can be reopened
-    const vacancies = await getEmptyVacancies(mid);
-
-    if (vacancies < 1)
-      return res.status(400).json({
-        errors: {
-          general: [messages.CANNOT_REOPEN_MISSION_WITHOUT_EMPTY_VACANCIES],
-        },
-      });
-
-    // Finally, mission is reopened
-    await updateStatus(mid, MISSION_STATUS.REOPENED.ID);
-
-    // And all adventurers are informed
-    const occupied_vacancies = await findAllOccupied(mid);
-    for (const vacancy of occupied_vacancies) {
-      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const message = `Mission ${mission.title} has been reopened, so new teammates will enter!`;
-        const notificationId = await create({
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-          action: NOTIFICATION_ACTION.MISSION_REOPEN.ID,
-          status: null,
-          message: message,
-          senderId: uid,
-          receiverId: vacancy.adventurer_id,
-          payload: {
-            associated_mission_id: mission.mid,
-          },
-        });
-        emitToUser(vacancy.adventurer_id, 'mission:reopened', {
-          notificationId,
-          missionId: mission.mid,
-          vacancyId: vacancy.id,
-          missionTitle: mission.title,
-          senderId: uid,
-          senderUsername: req.user.username,
-          receiverId: vacancy.adventurer_id,
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          message: message,
-        });
-      }
-    }
-
-    return res.status(200).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 

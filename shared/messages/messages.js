@@ -100,9 +100,10 @@ export const messages = {
       CANNOT_ON_CURRENT_STATE: `Can't close mission on current state.`,
     },
     REOPEN: {
-      CANNOT_ON_CURRENT_STATE: `Can't reopen mission on current state.`,
+      CANNOT_CLOSE_ON_CURRENT_STATE: `Can't close reopened mission on current state.`,
       CANNOT_WITHOUT_EMPTY_VACANCIES: `Can't reopen mission with no empty vacancies that can be filled.`,
       CANNOT_REOPEN: `Can't reopen mission.`,
+      CANNOT_ON_CURRENT_STATE: `Can't reopen mission on current state.`,
     },
     JOIN: {
       OWN_MISSION: `You can't join your own mission.`,
@@ -159,8 +160,14 @@ export const messages = {
       `Adventurer ${username} fled the vacancy ${vacancyTitle} from your mission ${missionTitle}.`,
     DELETE_MISSION: (title) =>
       `Mission ${title} has been deleted, so it won't be done, we are sorry.`,
-    CANCEL_MISSION: (title) =>
-      `Mission ${title} has been cancelled, but don't worry, your reward is on your way!.`,
+    CANCEL_MISSION: {
+      SUCCESSFUL: (title) =>
+        `Mission ${title} has been cancelled, but don't worry, your reward is on your way!.`,
+      ISSUED: (title) =>
+        `Mission ${title} has been cancelled. We had an issue transferring your compensation. Please contact support.`,
+    },
+    REOPEN_MISSION: (title) =>
+      `Mission ${title} has been reopened, so new teammates will enter!`,
   },
 
   ///// Common messages

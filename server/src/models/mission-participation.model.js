@@ -125,6 +125,12 @@ export const findAllOccupied = async (mid, client = pool) => {
   return result.rows;
 };
 
+export const findAllUnoccupied = async (mid) => {
+  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NULL`;
+  const result = await pool.query(query, [mid]);
+  return result.rows;
+};
+
 // Gets joined participations
 export const findAllJoined = async (mid) => {
   const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL AND status = $2`;
@@ -371,12 +377,6 @@ export const insertVacancies = async (mid, vacancies) => {
   });
   const result = await Promise.all([...insertPromises]);
   return result;
-};
-
-export const getEmptyVacancies = async (mid) => {
-  const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NULL`;
-  const result = await pool.query(query, [mid]);
-  return result.rows;
 };
 
 export const updateVacancyMonetaryReward = async (

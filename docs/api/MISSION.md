@@ -640,7 +640,7 @@ Cancels a mission, if it hadn't been started, then is a deletion.
 - `200 OK`: mission deleted successfully.
 
   ```json
-  { "nid": "<notification_id>" }
+  {}
   ```
 
 - `400 Bad Request`: path fields validation error, missing path fields.
@@ -685,7 +685,74 @@ Cancels a mission, if it hadn't been started, then is a deletion.
 
 <br>
 
-**Workflow:** mission deletion and cancellation have a quite simple foundation, if basic checks pass and the status is valid, the status changes to "deleted" or "cancelled," notifying all adventurers who had joined. However, cancelling a mission implies paying the adventurers their monetary reward as compensation. Consequently, the process follows this workflow: the mission changes to an intermediate "cancelling" status indicating the intent; then, each vacancy is processed individually to execute the bank transfer first, and, upon success, save the transaction to the database and update the slot's status, with this last entire operation being atomic thanks to a database transaction. This sequence ensures that if any operation fails, it does not cause subsequent operations to fail; instead, the failure is saved so it can be retried later (using a logging service, which is not currently implemented).
+**Workflow:** mission deletion and cancellation have a quite simple foundation, if basic checks pass and the status is valid, the status changes to "deleted" or "cancelled," notifying all adventurers who had joined. However, cancelling a mission implies paying the adventurers their monetary reward as compensation. Consequently, the process follows this workflow: the mission changes to an intermediate "cancelling" status indicating the intent; then, each vacancy is processed individually to execute the bank transfer first, and, upon success, save the transaction to the database and update the slot's status, with this last entire operation being atomic thanks to a database transaction. This sequence ensures that if any operation fails, it does not cause subsequent operations to fail; instead, the failure is saved so it can be retried later (using a logging service, which is not currently implemented). After all the process is complete, notifications are send using a different transaction, and, is worth noting that, for each successful transaction, its vacancy id has been save, so when notifications are sent, failed ones will know it.
+<br>
+<br>
+<br>
+
+## - Reopen mission: `POST /api/missions/:mid/reopen`
+
+Reopens a mission after being closed.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission reopened successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path fields validation error, missing path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You can't join your own mission."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission, vacancy or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission/Vacancy/User not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** mission reopen process is quite simple, if mission was already closed and there is empty vacancies available, it can be reopened, notifying every other occupied vacancy.
 <br>
 <br>
 <br>
