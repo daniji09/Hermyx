@@ -1,20 +1,8 @@
 import { Router } from 'express';
 const router = Router();
-import {
-  addCardToCustomer,
-  listCards,
-  setDefaultCard,
-  deleteCard,
-  payDefault,
-  payNew,
-  confirmPayment,
-  connectOnboard,
-  connectSuccess,
-  releaseMissionPayment,
-  refundMissionPayment,
-  getDashboardLink,
-} from '../controllers/payment.controller.js';
-import { checkStripeCustomer } from '../providers/payment.provider.js';
+
+import * as paymentController from '../controllers/payment.controller.js';
+import { requireStripeCustomerId } from '../middlewares/payment.middleware.js';
 import {
   validateBodySchema,
   validateParamsSchema,
@@ -25,83 +13,78 @@ import {
   setDefaultCardSchema,
 } from '@hermyx/shared';
 
-//Middleware to require customerId
-const requireCustomer = async (req, res, next) => {
-  try {
-    const customerId = await checkStripeCustomer(req.user);
+/// GETS
+//List the cards
+router.get('/cards', requireStripeCustomerId, paymentController.listCards);
 
-    req.user.stripe_customer_id = customerId;
-
-    next();
-  } catch (error) {
-    console.error('Error in requireCustomer middleware:', error);
-    return res.status(500).json({
-      errors: { general: ['Error managing payment customer'] },
-    });
-  }
-};
+// -----
 
 //Add a card
-router.post('/add-card-to-customer', requireCustomer, addCardToCustomer);
-
-//List the cards
-router.get('/cards', requireCustomer, listCards);
+router.post(
+  '/add-card-to-customer',
+  requireStripeCustomerId,
+  paymentController.addCardToCustomer,
+);
 
 //Set a card as default
 router.post(
   '/cards/default',
-  requireCustomer,
+  requireStripeCustomerId,
   validateBodySchema(setDefaultCardSchema),
-  setDefaultCard,
+  paymentController.setDefaultCard,
 );
 
 //Delete a card
 router.delete(
   '/cards/:paymentMethodId',
-  requireCustomer,
+  requireStripeCustomerId,
   validateParamsSchema(deleteCardParamSchema),
-  deleteCard,
+  paymentController.deleteCard,
 );
 
 //Pay with a predetermined card
-router.post('/pay/default', requireCustomer, payDefault);
+router.post(
+  '/pay/default',
+  requireStripeCustomerId,
+  paymentController.payDefault,
+);
 
 //Pay with a new card
 router.post(
   '/pay/new',
-  requireCustomer,
+  requireStripeCustomerId,
   validateBodySchema(payNewBodySchema),
-  payNew,
+  paymentController.payNew,
 );
 
 //Route to confirm that we have charged the customer
 router.post(
   '/missions/:missionId/confirm-payment',
-  requireCustomer,
-  confirmPayment,
+  requireStripeCustomerId,
+  paymentController.confirmPayment,
 );
 
 //Route to register as a connected account
-router.post('/connect/onboard', connectOnboard);
+router.post('/connect/onboard', paymentController.connectOnboard);
 
 //Successful connected account route
-router.get('/connect/success', connectSuccess);
+router.get('/connect/success', paymentController.connectSuccess);
 
 //Route to release the money
 router.post(
   '/missions/:missionId/release',
-  requireCustomer,
-  releaseMissionPayment,
+  requireStripeCustomerId,
+  paymentController.releaseMissionPayment,
 );
 
 //Refund route
 router.post(
   '/missions/:missionId/refund',
-  requireCustomer,
-  refundMissionPayment,
+  requireStripeCustomerId,
+  paymentController.refundMissionPayment,
 );
 
 //Route to get the dashboard link for connected accounts
-router.post('/connect/login-link', getDashboardLink);
+router.post('/connect/login-link', paymentController.getDashboardLink);
 
 export default router;

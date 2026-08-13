@@ -143,25 +143,31 @@ export const update = async (
 };
 
 // Updates user' avatar
-export const updateAvatar = async (uid, avatar) => {
+export const updateAvatarByUid = async (uid, avatar) => {
   const query = `UPDATE app_user SET avatar = $1 WHERE uid = $2`;
   const result = await pool.query(query, [avatar, uid]);
   return result.rowCount;
 };
 
 // Updates user's email
-export const updateEmail = async (uid, email) => {
+export const updateEmailByUid = async (uid, email) => {
   const query = 'UPDATE app_user SET email = $1 WHERE uid = $2 RETURNING *';
   const result = await pool.query(query, [email, uid]);
   return result.rows[0];
 };
 
 // Updates user's configuration
-export const updateConfiguration = async (uid, configuration) => {
+export const updateConfigurationByUid = async (uid, configuration) => {
   const query =
     'UPDATE app_user SET configuration = $2 WHERE uid = $1 RETURNING *';
   const result = await pool.query(query, [uid, configuration]);
   return result.rows[0];
+};
+
+// Updates user's Stripe customer id
+export const updateStripeCustomerIdByUid = async (uid, stripeCustomerId) => {
+  const query = 'UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2';
+  await pool.query(query, [stripeCustomerId, uid]);
 };
 
 export const updateAdventurerRating = async (uid, client = pool) => {
@@ -196,12 +202,6 @@ export const updateOwnerRating = async (uid, client = pool) => {
 };
 
 //////// -------------
-
-//Save the Stripe Customer ID in the user table.
-export const updateStripeCustomer = async (uid, stripeCustomerId) => {
-  const query = 'UPDATE app_user SET stripe_customer_id = $1 WHERE uid = $2';
-  await pool.query(query, [stripeCustomerId, uid]);
-};
 
 //Saves the Stripe Connect Account ID in the user table.
 export const updateStripeConnected = async (uid, stripeConnectedId) => {

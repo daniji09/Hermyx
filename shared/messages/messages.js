@@ -20,6 +20,7 @@ export const messages = {
       `Incomplete petition. Please send ${field1} and ${field2} together.`,
     NO_IMAGE_PROVIDED: `No image provided`,
     OPERATION_ERROR: `Operation ended abruptly.`,
+    STRIPE_CUSTOMER_ERROR: `Error managing Stripe customer account.`,
     TOO_MANY_ATTEMPTS: `Too many attempts. Please, try later.`,
     TOO_MANY_FILES: `You sent too many files for this field, or its name is incorrect.`,
     UNAUTHORIZED_ERROR: `User is not authorized for this action.`,

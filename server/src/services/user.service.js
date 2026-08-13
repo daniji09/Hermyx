@@ -77,6 +77,18 @@ export const getUserByFirebaseUid = async (firebaseUid) => {
   return user;
 };
 
+// Updates user's Stripe customer id
+export const updateUserStripeCustomerIdByUid = async (
+  uid,
+  stripeCustomerId,
+) => {
+  checkUid(uid);
+  checkStripeCustomerId(stripeCustomerId);
+
+  // Updates user's Stripe customer id
+  await userModel.updateStripeCustomerIdByUid(uid, stripeCustomerId);
+};
+
 export const getActiveAdmin = async (client) =>
   userModel.getActiveAdmin(client);
 
@@ -327,7 +339,7 @@ export const updateMyAvatar = async (uid, file) => {
     );
 
   // Updates photo from db
-  await userModel.updateAvatar(uid, newAvatarUrl);
+  await userModel.updateAvatarByUid(uid, newAvatarUrl);
 
   // Deletes old photo physically if everything went correctly
   if (oldAvatarUrl) {
@@ -366,7 +378,7 @@ export const updateMyEmail = async (user, email) => {
       throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
 
     // Then is changed on Hermyx database
-    const hermyxChange = await userModel.updateEmail(user.uid, email);
+    const hermyxChange = await userModel.updateEmailByUid(user.uid, email);
 
     if (hermyxChange)
       return {
@@ -392,7 +404,7 @@ export const updateMyEmail = async (user, email) => {
 
 // Updates user's configuration
 export const updateMyConfiguration = async (uid, configuration) => {
-  const success = await userModel.updateConfiguration(uid, configuration);
+  const success = await userModel.updateConfigurationByUid(uid, configuration);
   if (!success) throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
   return success.configuration;
 };
@@ -425,7 +437,7 @@ export const addEmailAuthentication = async (user, email, password) => {
       throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
 
     // Then is changed on Hermyx database
-    const hermyxChange = await userModel.updateEmail(user.uid, email);
+    const hermyxChange = await userModel.updateEmailByUid(user.uid, email);
 
     if (hermyxChange)
       return {
@@ -461,6 +473,11 @@ const checkUsername = (username) => {
 const checkFirebaseUid = (firebaseUid) => {
   if (!firebaseUid)
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Firebase UID'));
+};
+
+const checkStripeCustomerId = (stripeCustomerId) => {
+  if (!stripeCustomerId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Stripe customer id'));
 };
 
 const checkCurrentUser = (currentUser) => {

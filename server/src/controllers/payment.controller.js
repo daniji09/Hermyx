@@ -1,10 +1,8 @@
 import {
   //CreateCustomer,
   createSetupIntent,
-  checkStripeCustomer,
   retrieveCustomer,
   retrievePaymentMethod,
-  listCards as _listCards,
   setDefaultCard as _setDefaultCard,
   detachCard,
   createPaymentIntentDefault,
@@ -60,8 +58,7 @@ import { createNotification as create } from '../services/notification.service.j
 import { emitToUser } from '../providers/socket.provider.js';
 import { findByStripeTransactionId as getMissionPaymentsByStripeTransactionId } from '../models/mission-payment.model.js';
 import { FRONTEND_URL } from '../config/config.js';
-
-//Registers the current user as a Stripe Customer to allow making payments.
+import * as paymentService from '../services/payment.service.js';
 
 const ensureMissionOwner = (mission, userId, res) => {
   if (mission.owner_id !== userId) {
@@ -137,26 +134,6 @@ const ensurePaymentMethodOwner = async (paymentMethodId, customerId) => {
   return paymentMethod;
 };
 
-export async function register(req, res) {
-  try {
-    const { email, name, stripe_customer_id } = req.user;
-
-    if (stripe_customer_id) {
-      return res.json({ customerId: stripe_customer_id });
-    }
-
-    const customer = await checkStripeCustomer(name, email);
-    req.session.customerId = customer.id;
-
-    res.json({
-      message: 'User registered with Stripe',
-      customerId: customer.id,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}
-
 //Creates a SetupIntent to save a credit card without charging it yet.
 export async function addCardToCustomer(req, res) {
   try {
@@ -171,31 +148,21 @@ export async function addCardToCustomer(req, res) {
   }
 }
 
-//List the user's saved cards and identifies the default one.
-//A second of courtesy if you change the default card and immediately list the cards again
-export async function listCards(req, res) {
+// List the user's saved cards and identifies the default one.
+// A second of courtesy if you change the default card and immediately list the cards again
+export const listCards = async (req, res, next) => {
   try {
     const customerId = req.user.stripe_customer_id;
-
-    if (!customerId)
-      return res.status(400).json({ error: 'You do not have a Customer ID' });
-
-    const [customer, cards] = await Promise.all([
-      retrieveCustomer(customerId),
-      _listCards(customerId),
-    ]);
-
-    res.json({
-      success: true,
+    const { customer, cards } = await paymentService.listCards(customerId);
+    return res.status(200).json({
       defaultPaymentMethodId:
         customer.invoice_settings?.default_payment_method || null,
       cards: cards.data,
     });
-  } catch (err) {
-    console.log('Error listing cards');
-    handlePaymentError(err, res);
+  } catch (error) {
+    next(error);
   }
-}
+};
 
 //Updates the customer's default payment method in Stripe.
 export async function setDefaultCard(req, res) {
