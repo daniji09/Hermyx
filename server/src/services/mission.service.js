@@ -1287,7 +1287,7 @@ export const cancelMission = async (mid, user) => {
         const eventName = isDeleting ? 'mission:delete' : 'mission:cancel';
         notificationsToSend.push({
           receiverId: vacancy.adventurer_id,
-          event: eventName,
+          eventName: eventName,
           payload: {
             notificationId,
             missionId: mission.mid,
@@ -1417,6 +1417,61 @@ export const reopenMission = async (mid, user) => {
   }
 
   return;
+};
+
+// Finish mission
+export const finishMission = async (mid, user) => {
+  // Parameters check
+  checkMid(mid);
+  checkUser(user);
+
+  // Mission is searched
+  const mission = await getMissionByIdOrThrow(mid);
+
+  // Checks if mission was created by the current user
+  checkMissionBelongsToUser(mission.owner_id, user.uid);
+
+  // Checks if mission can be finished by state
+  if (
+    !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+      MISSION_STATUS.FINISHED.ID,
+    )
+  )
+    throw new AppError(
+      messages.MISSION.FINISH.CANNOT_IN_CURRENT_MISSION_STATE,
+      409,
+    );
+
+  // Checks if every vacancy is in empty or finished state
+  const participants = await missionParticipationModel.findAllByMid(mid);
+  const canFinish = participants.every(
+    (participant) =>
+      participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||
+      participant.status === MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+  );
+  if (!canFinish)
+    throw new AppError(
+      messages.MISSION.FINISH.CANNOT_ADVENTURERS_IN_PROGRESS,
+      409,
+    );
+
+  // Then, mission status update and conversation closure are made
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // Mission status is changed
+    await missionModel.updateStatus(mid, MISSION_STATUS.FINISHED.ID, client);
+
+    // And conversation is ended
+    await conversationService.closeMissionConversationType(mid, client);
+    await client.query('COMMIT');
+    return;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 // Edit mission

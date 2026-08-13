@@ -757,6 +757,73 @@ Reopens a mission after being closed.
 <br>
 <br>
 
+## - Reopen mission: `POST /api/missions/:mid/finish`
+
+Finishes a mission.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission finished successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path fields validation error, missing path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You can't join your own mission."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission or vacancy not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission/Vacancy not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** mission finish process is quite simple, if mission is in a valid state and all participants are in 'released' state, i.e. all participants have been payed, then mission can be finished. A database transaction is needed for updating the mission status and finish the conversation, but no notifications are sent. It is just and administrative state for the applicant to ensure the application that the mission has finished and won't be reopened again because there is something left.
+<br>
+<br>
+<br>
+
 ## - Edit mission: `PUT /api/missions/:mid`
 
 Edits information from a mission that has already been published.

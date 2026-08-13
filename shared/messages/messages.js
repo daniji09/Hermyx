@@ -134,6 +134,11 @@ export const messages = {
       CANNOT_DELETE_MISSION_STATE: `Can't delete mission on current state.`,
       CANNOT_CANCEL_MISSION_STATE: `Can't cancel mission on current state.`,
     },
+    FINISH: {
+      CANNOT_ADVENTURERS_IN_PROGRESS: `Can't finish mission because there are adventurers that have not finished yet.`,
+      CANNOT_IN_CURRENT_MISSION_STATE: `Can't finish mission on current state.`,
+      CANNOT_FINISH: `Can't finish mission`,
+    },
   },
 
   /// Notification messages

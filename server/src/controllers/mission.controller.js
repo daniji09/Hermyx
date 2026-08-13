@@ -17,14 +17,12 @@ import {
   getAllMissionsInDraft as _getAllMissionsInDraft,
   findByMid,
   updateStatus,
-  finishMissionAndCloseConversation,
   updateOccupiedVacancies,
   emptyMission,
   updateMissionPayment,
   openMission,
 } from '../models/mission.model.js';
 import { findByUid as getUserById } from '../models/user.model.js';
-import { findByConversationId as getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
   findById,
   findAllOccupied,
@@ -44,7 +42,6 @@ import {
 import { findById as getReportById } from '../models/report.model.js';
 import { closeReportAndConversation } from '../services/report.service.js';
 import * as missionService from '../services/mission.service.js';
-import * as missionParticipationModel from '../models/mission-participation.model.js';
 
 /// Controller functions
 // Get all missions
@@ -220,6 +217,17 @@ export const reopenMission = async (req, res, next) => {
   }
 };
 
+// Finishes mission
+export const finishMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    await missionService.finishMission(mid, req.user);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Edits a mission
 export const editMission = async (req, res, next) => {
   try {
@@ -258,72 +266,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Finishes mission
-export const finishMission = async (req, res) => {
-  const { mid } = req.params;
-  const uid = req.user.uid;
-
-  try {
-    // Mission is searched
-    const mission = await findByMid(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Checks if mission was created by the current user
-    if (mission.owner_id !== uid)
-      return res.status(403).json({ error: messages.CANNOT_FINISH });
-
-    // Checks if mission can be reopened by state
-    if (
-      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_STATUS.FINISHED.ID,
-      )
-    )
-      return res.status(400).json({
-        errors: {
-          general: [messages.CANNOT_FINISH_MISSION_STATE],
-        },
-      });
-
-    // Checks if every vacancy is in empty or finished state
-    const participants = await missionParticipationModel.findAllByMid(mid);
-    const canFinish = participants.every(
-      (participant) =>
-        participant.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID ||
-        participant.status === MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-    );
-
-    if (!canFinish)
-      return res.status(400).json({
-        errors: {
-          general: [messages.CANNOT_FINISH_ADVENTURERS_IN_PROGRESS],
-        },
-      });
-
-    // Finally, mission and its conversation are closed
-    const { conversation } = await finishMissionAndCloseConversation(mid);
-
-    if (conversation) {
-      const conversationParticipants = await getConversationParticipants(
-        conversation.cid,
-      );
-
-      for (const participant of conversationParticipants) {
-        emitToUser(participant.uid, 'conversation:closed', {
-          conversationId: conversation.cid,
-          missionId: Number(mid),
-          closedAt: conversation.closed_at,
-        });
-      }
-    }
-
-    return res.status(200).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 

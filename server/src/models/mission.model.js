@@ -1,6 +1,5 @@
 import pool from '../config/db.config.js';
 import { MISSION_STATUS, MISSION_PARTICIPATION_STATUS } from '@hermyx/shared';
-import { closeMissionConversation } from './conversation.model.js';
 import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// INSERTS
@@ -468,37 +467,6 @@ export const finalizeRefund = async (mid, refundId) => {
     WHERE mid = $2
   `;
   await pool.query(query, [refundId, mid]);
-};
-
-export const finishMissionAndCloseConversation = async (mid) => {
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    const missionResult = await client.query(
-      `
-        UPDATE mission
-        SET status = $2
-        WHERE mid = $1
-        RETURNING *
-      `,
-      [mid, MISSION_STATUS.FINISHED.ID],
-    );
-
-    const conversation = await closeMissionConversation(mid, client);
-    await client.query('COMMIT');
-
-    return {
-      mission: missionResult.rows[0] || null,
-      conversation,
-    };
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
 };
 
 export const getAllMissionsInDraft = async () => {

@@ -125,6 +125,13 @@ export const getUnreadMessageCountByUserId = async (
   );
 };
 
+export const closeMissionConversationType = async (mid, client) => {
+  checkMid(mid);
+
+  // Closes mission conversation type
+  return await conversationModel.closeMissionType(mid, client);
+};
+
 /// Endpoint complex functions
 export const getConversationByIdOrThrow = async (conversationId, client) => {
   const conversation = await getConversationById(conversationId, client);

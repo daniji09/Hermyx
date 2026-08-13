@@ -306,6 +306,11 @@ export const reopenMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
+// Finish mission
+export const finishMissionParamSchema = z.object({
+  mid: midBaseSchema,
+});
+
 // Edit mission
 export const editMissionBodySchema = z.object({
   mid: midBaseSchema,
@@ -348,13 +353,6 @@ const optionalNumberFromFormSchema = (schema) =>
     if (typeof value === 'string' && value.trim() === '') return undefined;
     return value;
   }, schema.optional());
-
-export const finishMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
 
 // Server and client sign up shared validation
 export const draftMissionSchema = z.object({
