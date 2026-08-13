@@ -45,3 +45,28 @@ Creates an intent in Stripe for that user to add a card.
   <br>
   <br>
   <br>
+
+## - Set card as default: `post /stripe/cards/default`
+
+Sets a card to be the default one.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `paymentMethodId` | string | Yes | Stripe's payment method identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: card set as default successfully.
+
+  ```json
+  {}
+  ```
+
+  **Workflow:** the process for setting a card as a default is quite simple, with some interesting logic though. Backend receives the Stripe id of the payment method and it has to check whether that id exists on Stripe and that it actually belongs to the current user, to avoid someone paying with the info of another user. Then, it just sets that card as default.
+  <br>
+  <br>
+  <br>

@@ -1,20 +1,26 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
+import { midBaseSchema } from './mission.validation.js';
 
-const paymentMethodIdSchema = z.string().trim().min(1, messages.FIELD_REQUIRED);
+/// Base validations, raw logic
+const paymentMethodIdSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Payment method id'));
 
+/// Endpoint complex validation
+// Set a default card
 export const setDefaultCardSchema = z.object({
   paymentMethodId: paymentMethodIdSchema,
 });
 
+// Delete a card
 export const deleteCardParamSchema = z.object({
   paymentMethodId: paymentMethodIdSchema,
 });
 
+// Pay with new card
 export const payNewBodySchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
+  mid: midBaseSchema,
   saveCard: z.boolean().optional(),
 });

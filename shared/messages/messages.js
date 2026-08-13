@@ -52,6 +52,10 @@ export const messages = {
 
   /// User messages
   USER: {
+    GENERAL: {
+      USERS_NOT_FOUND: `Users not found.`,
+      USER_NOT_FOUND: `User not found.`,
+    },
     USERNAME: {
       INVALID_CHARACTERS: `Username must start with a letter or number, and may contain [._-].`,
       USERNAME_NOT_FOUND: (username) => `Username ${username} not found.`,
@@ -64,10 +68,6 @@ export const messages = {
       LOWERCASE: 'Password must include at least one lowercase letter.',
       NUMBER: 'Password must include at least one number.',
       SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
-    },
-    GENERAL: {
-      USERS_NOT_FOUND: `Users not found.`,
-      USER_NOT_FOUND: `User not found.`,
     },
   },
 
@@ -139,6 +139,14 @@ export const messages = {
       CANNOT_ADVENTURERS_IN_PROGRESS: `Can't finish mission because there are adventurers that have not finished yet.`,
       CANNOT_IN_CURRENT_MISSION_STATE: `Can't finish mission on current state.`,
       CANNOT_FINISH: `Can't finish mission`,
+    },
+  },
+
+  /// Payment messages
+  PAYMENT: {
+    GENERAL: {
+      PAYMENT_METHOD_NOT_FOUND: `Payment method not found.`,
+      PAYMENT_METHOD_NOT_FROM_USER: `Payment method does not belong to the current user.`,
     },
   },
 

@@ -20,8 +20,6 @@ router.get('/cards', requireStripeCustomerId, paymentController.listCards);
 // Add a card to the user
 router.post('/cards', requireStripeCustomerId, paymentController.addCard);
 
-// -----
-
 //Set a card as default
 router.post(
   '/cards/default',
@@ -29,6 +27,8 @@ router.post(
   validateBodySchema(setDefaultCardSchema),
   paymentController.setDefaultCard,
 );
+
+// -----
 
 //Delete a card
 router.delete(

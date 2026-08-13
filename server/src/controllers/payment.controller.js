@@ -59,7 +59,7 @@ import { FRONTEND_URL } from '../config/config.js';
 import * as paymentService from '../services/payment.service.js';
 
 /// Controller functions
-// List the user's saved cards and identifies the default one.
+// List the user's saved cards and identifies the default one
 // A second of courtesy if you change the default card and immediately list the cards again
 export const listCards = async (req, res, next) => {
   try {
@@ -75,12 +75,24 @@ export const listCards = async (req, res, next) => {
   }
 };
 
-// Creates a SetupIntent to save a credit card without charging it yet.
+// Creates a SetupIntent to save a credit card without charging it yet
 export async function addCard(req, res, next) {
   try {
     const customerId = req.user.stripe_customer_id;
     const setupIntent = await paymentService.addCard(customerId);
     return res.status(200).json({ clientSecret: setupIntent.client_secret });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Updates the customer's default payment method in Stripe
+export async function setDefaultCard(req, res, next) {
+  try {
+    const customerId = req.user.stripe_customer_id;
+    const { paymentMethodId } = req.body;
+    await paymentService.setDefaultCard(customerId, paymentMethodId);
+    return res.status(200).json({});
   } catch (error) {
     next(error);
   }
@@ -153,24 +165,6 @@ const ensurePaymentMethodOwner = async (paymentMethodId, customerId) => {
 
   return paymentMethod;
 };
-
-//Updates the customer's default payment method in Stripe.
-export async function setDefaultCard(req, res, next) {
-  try {
-    const customerId = req.user.stripe_customer_id;
-    const { paymentMethodId } = req.body;
-
-    await ensurePaymentMethodOwner(paymentMethodId, customerId);
-
-    await _setDefaultCard(customerId, paymentMethodId);
-    res.json({
-      success: true,
-      message: 'Card set as default',
-    });
-  } catch (error) {
-    next(error);
-  }
-}
 
 //Deletes a card. If it was the default, clears the default setting
 export async function deleteCard(req, res, next) {
