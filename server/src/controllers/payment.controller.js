@@ -1,8 +1,5 @@
 import {
   retrieveCustomer,
-  retrievePaymentMethod,
-  setDefaultCard as _setDefaultCard,
-  detachCard,
   createPaymentIntentDefault,
   createPaymentIntentNew,
   retrievePI,
@@ -76,7 +73,7 @@ export const listCards = async (req, res, next) => {
 };
 
 // Creates a SetupIntent to save a credit card without charging it yet
-export async function addCard(req, res, next) {
+export const addCard = async (req, res, next) => {
   try {
     const customerId = req.user.stripe_customer_id;
     const setupIntent = await paymentService.addCard(customerId);
@@ -84,10 +81,10 @@ export async function addCard(req, res, next) {
   } catch (error) {
     next(error);
   }
-}
+};
 
 // Updates the customer's default payment method in Stripe
-export async function setDefaultCard(req, res, next) {
+export const setDefaultCard = async (req, res, next) => {
   try {
     const customerId = req.user.stripe_customer_id;
     const { paymentMethodId } = req.body;
@@ -96,7 +93,19 @@ export async function setDefaultCard(req, res, next) {
   } catch (error) {
     next(error);
   }
-}
+};
+
+// Deletes a card. If it was the default, clears the default setting.
+export const deleteCard = async (req, res, next) => {
+  try {
+    const customerId = req.user.stripe_customer_id;
+    const { paymentMethodId } = req.params;
+    await paymentService.deleteCard(customerId, paymentMethodId);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
 
 // ------
 
@@ -136,58 +145,6 @@ const getReusablePaymentIntent = async (mission, customerId) => {
 
   return null;
 };
-
-const getPaymentMethodCustomerId = (paymentMethod) => {
-  if (!paymentMethod.customer) return null;
-  if (typeof paymentMethod.customer === 'string') return paymentMethod.customer;
-  return paymentMethod.customer.id;
-};
-
-const ensurePaymentMethodOwner = async (paymentMethodId, customerId) => {
-  let paymentMethod;
-
-  try {
-    paymentMethod = await retrievePaymentMethod(paymentMethodId);
-  } catch (error) {
-    console.error('Error retrieving payment method:', error);
-    const paymentMethodNotFoundError = new Error('Payment method not found.');
-    paymentMethodNotFoundError.status = 404;
-    throw paymentMethodNotFoundError;
-  }
-
-  if (getPaymentMethodCustomerId(paymentMethod) !== customerId) {
-    const paymentMethodOwnerError = new Error(
-      'Payment method does not belong to the logged user.',
-    );
-    paymentMethodOwnerError.status = 403;
-    throw paymentMethodOwnerError;
-  }
-
-  return paymentMethod;
-};
-
-//Deletes a card. If it was the default, clears the default setting
-export async function deleteCard(req, res, next) {
-  try {
-    const customerId = req.user.stripe_customer_id;
-    const { paymentMethodId } = req.params;
-
-    await ensurePaymentMethodOwner(paymentMethodId, customerId);
-
-    const customer = await retrieveCustomer(customerId);
-    const defaultPm = customer.invoice_settings?.default_payment_method || null;
-
-    await detachCard(paymentMethodId);
-
-    if (defaultPm === paymentMethodId) {
-      await _setDefaultCard(customerId, null);
-    }
-
-    res.json({ success: true, message: 'Card deleted' });
-  } catch (error) {
-    next(error);
-  }
-}
 
 //Charges the mission cost using the user's saved default card.
 export async function payDefault(req, res, next) {

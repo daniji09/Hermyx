@@ -3,10 +3,7 @@ const router = Router();
 
 import * as paymentController from '../controllers/payment.controller.js';
 import { requireStripeCustomerId } from '../middlewares/payment.middleware.js';
-import {
-  validateBodySchema,
-  validateParamsSchema,
-} from '../middlewares/validation.middleware.js';
+import { validateBodySchema } from '../middlewares/validation.middleware.js';
 import {
   deleteCardParamSchema,
   payNewBodySchema,
@@ -17,6 +14,7 @@ import {
 // List user's cards
 router.get('/cards', requireStripeCustomerId, paymentController.listCards);
 
+/// POSTS
 // Add a card to the user
 router.post('/cards', requireStripeCustomerId, paymentController.addCard);
 
@@ -28,15 +26,16 @@ router.post(
   paymentController.setDefaultCard,
 );
 
-// -----
-
-//Delete a card
+/// DELETES
+// Delete a card
 router.delete(
-  '/cards/:paymentMethodId',
+  '/cards',
   requireStripeCustomerId,
-  validateParamsSchema(deleteCardParamSchema),
+  validateBodySchema(deleteCardParamSchema),
   paymentController.deleteCard,
 );
+
+// -----
 
 //Pay with a predetermined card
 router.post(

@@ -48,13 +48,37 @@ export const addCard = async (stripeCustomerId) => {
 export const setDefaultCard = async (stripeCustomerId, paymentMethodId) => {
   // Parameter checks
   checkStripeCustomerId(stripeCustomerId);
+
+  // Checks if payment method received actually belongs to the current user
+  if (paymentMethodId)
+    await ensurePaymentMethodOwner(paymentMethodId, stripeCustomerId);
+
+  // Then, changes the default card
+  await paymentProvider.setDefaultCard(stripeCustomerId, paymentMethodId);
+
+  return;
+};
+
+// Delete card
+export const deleteCard = async (stripeCustomerId, paymentMethodId) => {
+  // Parameter checks
+  checkStripeCustomerId(stripeCustomerId);
   checkPaymentMethodId(paymentMethodId);
 
   // Checks if payment method received actually belongs to the current user
   await ensurePaymentMethodOwner(paymentMethodId, stripeCustomerId);
 
-  // Then, changes the default card
-  await paymentProvider.setDefaultCard(stripeCustomerId, paymentMethodId);
+  // Gets the user linked to that Stripe customer id
+  const customer = await paymentProvider.retrieveCustomer(stripeCustomerId);
+  const defaultPm = customer.invoice_settings?.default_payment_method || null;
+
+  // Deletes from them the corresponding card
+  await paymentProvider.detachCard(paymentMethodId);
+
+  // And, finally, checks if that card was the default one, so that field is nullified
+  if (defaultPm === paymentMethodId) {
+    await setDefaultCard(stripeCustomerId, null);
+  }
 
   return;
 };

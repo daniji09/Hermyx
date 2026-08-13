@@ -25,7 +25,7 @@ Gets all cards saved by user.
   <br>
   <br>
 
-## - Create intent for card addition: `post /stripe/cards`
+## - Create intent for card addition: `POST /stripe/cards`
 
 Creates an intent in Stripe for that user to add a card.
 
@@ -46,7 +46,7 @@ Creates an intent in Stripe for that user to add a card.
   <br>
   <br>
 
-## - Set card as default: `post /stripe/cards/default`
+## - Set card as default: `POST /stripe/cards/default`
 
 Sets a card to be the default one.
 
@@ -67,6 +67,31 @@ Sets a card to be the default one.
   ```
 
   **Workflow:** the process for setting a card as a default is quite simple, with some interesting logic though. Backend receives the Stripe id of the payment method and it has to check whether that id exists on Stripe and that it actually belongs to the current user, to avoid someone paying with the info of another user. Then, it just sets that card as default.
+  <br>
+  <br>
+  <br>
+
+## - Delete a card: `DELETE /stripe/cards`
+
+Deletes the specified card.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `paymentMethodId` | string | Yes | Stripe's payment method identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: card deleted successfully.
+
+  ```json
+  {}
+  ```
+
+  **Workflow:** the process for deleting card as a default is quite simple, with some interesting logic though. Backend receives the Stripe id of the payment method and it has to check whether that id exists on Stripe and that it actually belongs to the current user, to avoid someone deleting the payment method of another user. Then, deletes the card from Stripe and ensures that, if that card was the default one, this field is set to null in Stripe (even though is something that Stripe actually does on its backend).
   <br>
   <br>
   <br>

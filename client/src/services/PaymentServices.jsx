@@ -41,7 +41,9 @@ export const setDefaultSavedCard = async (paymentMethodId) => {
 };
 
 export const deleteSavedCard = async (paymentMethodId) => {
-  const { data } = await api.delete(`/stripe/cards/${paymentMethodId}`);
+  const { data } = await api.delete(`/stripe/cards`, {
+    paymentMethodId,
+  });
   return data;
 };
 
