@@ -45,6 +45,40 @@ export const findMissionPaymentByMid = async (mid) => {
   return result.rows[0].sum;
 };
 
+// Pays a vacancy
+export const payParticipant = async (id, amount_paid, client = pool) => {
+  const query = `
+    UPDATE mission_participation 
+    SET payment_status = $1, amount_paid = amount_paid + $5 
+    WHERE id = $2 AND adventurer_id IS NOT NULL AND payment_status IN ($3, $6) AND status = $4`;
+
+  const result = await client.query(query, [
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID,
+    id,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+    amount_paid,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
+  ]);
+  return result.rowCount;
+};
+
+// Start a participant
+export const startParticipants = async (mid, client = pool) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = $2
+    WHERE mid = $1 AND status = $3
+    RETURNING *
+  `;
+  const result = await client.query(query, [
+    mid,
+    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
+    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
+  ]);
+  return result.rows;
+};
+
 export const findByMidAndAdventurerId = async (mid, adventurerId) => {
   const query = `
     SELECT *
@@ -131,7 +165,7 @@ export const findAllWaitingForPaymentByMid = async (mid) => {
 };
 
 // Gets occupied participations
-export const findAllOccupied = async (mid, client = pool) => {
+export const findAllOccupiedByMid = async (mid, client = pool) => {
   const query = `SELECT * FROM mission_participation WHERE mid = $1 AND adventurer_id IS NOT NULL`;
   const result = await client.query(query, [mid]);
   return result.rows;
@@ -256,21 +290,6 @@ export const updateTransferInfo = async (mid, uid, transferId, amount) => {
     WHERE mid = $3 AND adventurer_id = $4
   `;
   await pool.query(query, [transferId, amount, mid, uid]);
-};
-
-export const startParticipants = async (mid) => {
-  const query = `
-    UPDATE mission_participation
-    SET status = $2
-    WHERE mid = $1 AND status = $3
-    RETURNING *
-  `;
-  const result = await pool.query(query, [
-    mid,
-    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
-    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-  ]);
-  return result.rows;
 };
 
 export const deleteParticipant = async (mid, adventurerId) => {
@@ -409,23 +428,6 @@ export const payVacancies = async (mid, amount_paid) => {
     MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
     MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
     amount_paid,
-  ]);
-  return result.rowCount;
-};
-
-export const payVacancy = async (id, amount_paid) => {
-  const query = `
-    UPDATE mission_participation 
-    SET payment_status = $1, amount_paid = amount_paid + $5 
-    WHERE id = $2 AND adventurer_id IS NOT NULL AND payment_status IN ($3, $6) AND status = $4`;
-
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID,
-    id,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
-    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-    amount_paid,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
   ]);
   return result.rowCount;
 };

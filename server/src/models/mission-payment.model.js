@@ -13,6 +13,7 @@ export const create = async (missionPaymentData, client = pool) => {
     transaction_type,
     amount_paid,
   } = missionPaymentData;
+  console.log(missionPaymentData);
   const query = `INSERT INTO mission_payment (mid, vacancy_id, sender_id, receiver_id, stripe_transaction_id, transaction_type, amount_paid, amount_refunded, status, created_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, NOW())
     RETURNING *`;
@@ -29,20 +30,22 @@ export const create = async (missionPaymentData, client = pool) => {
   return result.rows[0];
 };
 
-// ------
-
-export const findByMissionId = async (mid, client = pool) => {
-  const query = `SELECT * FROM mission_payment WHERE mid = $1`;
-  const result = await client.query(query, [mid]);
-  return result.rows;
-};
-
+/// SELECTS
+// Finds transaction by Stripe transaction id
 export const findByStripeTransactionId = async (
   stripeTransactionId,
   client = pool,
 ) => {
   const query = `SELECT * FROM mission_payment WHERE stripe_transaction_id = $1`;
   const result = await client.query(query, [stripeTransactionId]);
+  return result.rows;
+};
+
+// ------
+
+export const findByMissionId = async (mid, client = pool) => {
+  const query = `SELECT * FROM mission_payment WHERE mid = $1`;
+  const result = await client.query(query, [mid]);
   return result.rows;
 };
 

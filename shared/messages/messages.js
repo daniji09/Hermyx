@@ -148,6 +148,14 @@ export const messages = {
       PAYMENT_METHOD_NOT_FOUND: `Payment method not found.`,
       PAYMENT_METHOD_NOT_FROM_USER: `Payment method does not belong to the current user.`,
       NO_DEFAULT_CARD: `User doesn't have a default card selected.`,
+      PAYMENT_NOT_FROM_USER: `Payment does not belong to the current user.`,
+      PAYMENT_NOT_SUCCEEDED: (status) =>
+        `Payment was not completed (status=${status})`,
+    },
+    CONFIRM_PAYMENT: {
+      CANNOT_PAY_MISSION_STATE: `Can't pay mission on current state.`,
+      STRIPE_ONBOARDING_NOT_COMPLETED:
+        'You have not completed the Stripe onboarding yet.',
     },
   },
 
@@ -183,6 +191,12 @@ export const messages = {
     },
     REOPEN_MISSION: (title) =>
       `Mission ${title} has been reopened, so new teammates will enter!`,
+    MISSION_STARTED: (title) =>
+      `Mission ${title} has started! Talk to your team and start working.`,
+    MISSION_NEGOTIATION_EXTRA: (title) =>
+      `Your new monetary reward for ${title} has been funded. Now you can submit your part!`,
+    MISSION_RESTARTED: (title) =>
+      `Mission ${title} has started for you! Talk to your team and start working.`,
   },
 
   ///// Common messages

@@ -1,8 +1,22 @@
-import { HERMYX_FEE, messages } from '@hermyx/shared';
+import {
+  HERMYX_FEE,
+  HERMYX_SYSTEM_ID,
+  messages,
+  MISSION_PARTICIPATION_PAYMENT_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+  MISSION_STATUS,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_TYPE,
+  TRANSACTION_TYPE,
+} from '@hermyx/shared';
+import { AppError } from '../utils/error.util.js';
 import * as missionPaymentModel from '../models/mission-payment.model.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as missionService from '../services/mission.service.js';
-import { AppError } from '../utils/error.util.js';
+import * as notificationService from '../services/notification.service.js';
+import * as socketProvider from '../providers/socket.provider.js';
+import pool from '../config/db.config.js';
 
 /// Model access functions
 // Get mission payments by vacancy id
@@ -131,6 +145,177 @@ export const payNew = async (mid, user, saveCard) => {
   return pi;
 };
 
+// Confirm payments and makes changes on db
+export const confirmPayment = async (mid, paymentIntentId, user) => {
+  checkMid(mid);
+  checkPaymentIntentId(paymentIntentId);
+  checkUser(user);
+
+  // Gets mission
+  const mission = await missionService.getMissionByIdOrThrow(mid);
+
+  // Checks if mission belongs to user
+  checkMissionBelongsToUser(mission.owner_id, user.uid);
+
+  // Checks if mission can be in progress by status
+  if (
+    mission.status !== MISSION_STATUS.IN_PROGRESS.ID &&
+    !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+      MISSION_STATUS.IN_PROGRESS.ID,
+    )
+  )
+    throw new AppError(
+      messages.PAYMENT.CONFIRM_PAYMENT.CANNOT_PAY_MISSION_STATE,
+      409,
+    );
+
+  // Gets payment intent
+  const pi = await paymentProvider.retrievePI(paymentIntentId);
+
+  // Checks if payment intent belongs to current user
+  if (pi.customer !== user.stripe_customer_id)
+    throw new AppError(messages.PAYMENT.GENERAL.PAYMENT_NOT_FROM_USER);
+
+  // Confirms payment
+  if (pi.status !== 'succeeded')
+    throw new AppError(
+      messages.PAYMENT.GENERAL.PAYMENT_NOT_SUCCEEDED(pi.status),
+      409,
+    );
+
+  // Finds waiting for payment vacancies
+  const waitingForPaymentVacancies =
+    await missionService.getAllWaitingForPaymentByMid(mid);
+
+  const occupied_vacancies = await missionService.getAllOccupiedByMid(
+    mission.mid,
+  );
+
+  // Updates database
+  const client = await pool.connect();
+  const notificationsToSend = [];
+
+  try {
+    await client.query('BEGIN');
+    // Treats each vacancy sequentially
+    for (const vacancy of waitingForPaymentVacancies) {
+      let transaction_type;
+
+      // Each type of payment has different information or actions
+      if (mission.status === MISSION_STATUS.CLOSED.ID) {
+        // If mission is in closed state, is funding payment
+        transaction_type = TRANSACTION_TYPE.INITIAL_FUNDING.ID;
+      } else if (
+        vacancy.payment_status ===
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID
+      ) {
+        // If vacancy is partially pay, is a reward negotiation
+        transaction_type = TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID;
+      } else {
+        // Any other option means a new adventurer joined the mission via reopening
+        transaction_type = TRANSACTION_TYPE.NEW_ADVENTURER_FUNDING.ID;
+      }
+
+      // Adds mission payment
+      await missionService.createMissionPayment(
+        {
+          mid,
+          vacancy_id: vacancy.id,
+          sender_id: user.uid,
+          receiver_id: HERMYX_SYSTEM_ID,
+          stripe_transaction_id: pi.id,
+          transaction_type: transaction_type,
+          amount_paid:
+            (vacancy.monetary_reward - vacancy.amount_paid) * HERMYX_FEE,
+        },
+        client,
+      );
+
+      // Updates vacancy info
+      await missionService.payParticipant(
+        vacancy.id,
+        vacancy.monetary_reward - vacancy.amount_paid,
+        client,
+      );
+
+      // Prepares notifications
+      let message;
+      if (transaction_type === TRANSACTION_TYPE.INITIAL_FUNDING.ID)
+        message = messages.NOTIFICATION.MISSION_STARTED(mission.title);
+      else if (transaction_type === TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID)
+        message = messages.NOTIFICATION.MISSION_NEGOTIATION_EXTRA(
+          mission.title,
+        );
+      else message = messages.NOTIFICATION.MISSION_RESTARTED(mission.title);
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+        const notificationId = await notificationService.createNotification(
+          {
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+            action: NOTIFICATION_ACTION.MISSION_START.ID,
+            status: null,
+            message: message,
+            senderId: user.uid,
+            receiverId: vacancy.adventurer_id,
+            payload: {
+              associated_mission_id: mission.mid,
+            },
+          },
+          client,
+        );
+        notificationsToSend.push({
+          receiverId: vacancy.adventurer_id,
+          eventName: 'mission:started',
+          payload: {
+            notificationId,
+            missionId: mission.mid,
+            vacancyId: vacancy.adventurer_id,
+            missionTitle: mission.title,
+            senderId: user.uid,
+            senderUsername: user.username,
+            receiverId: vacancy.adventurer_id,
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            message: message,
+          },
+        });
+      }
+    }
+
+    // Updates total payment on mission
+    await missionService.updateMissionPayment(
+      mission.mid,
+      occupied_vacancies.reduce(
+        (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+        0,
+      ) * HERMYX_FEE || 0,
+      client,
+    );
+
+    // Mission and participants life cycle is updated
+    await missionService.updateStatusByMid(
+      mid,
+      MISSION_STATUS.IN_PROGRESS.ID,
+      client,
+    );
+    await missionService.startParticipants(mid, client);
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+  // Lastly, notifications are sent
+  for (const notification of notificationsToSend)
+    socketProvider.emitToUser(
+      notification.receiverId,
+      notification.eventName,
+      notification.payload,
+    );
+  return;
+};
+
 // Delete card
 export const deleteCard = async (stripeCustomerId, paymentMethodId) => {
   // Parameter checks
@@ -164,6 +349,11 @@ const checkStripeCustomerId = (stripeCustomerId) => {
 const checkPaymentMethodId = (paymentMethodId) => {
   if (!paymentMethodId)
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment method id'));
+};
+
+const checkPaymentIntentId = (paymentIntentId) => {
+  if (!paymentIntentId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment intent id'));
 };
 
 const checkMid = (mid) => {

@@ -27,7 +27,7 @@ import {
   getUserActiveMissions,
   updateOccupiedVacancies,
   updateMissionPayment,
-  updateStatus,
+  updateStatusByMid,
 } from '../models/mission.model.js';
 import {
   deleteFirebaseUser,
@@ -41,7 +41,7 @@ import {
   rejectAccount,
 } from '../providers/payment.provider.js';
 import {
-  findAllOccupied,
+  findAllOccupiedByMid,
   updatePaymentStatusById,
   refundBannedVacancy,
   unjoinParticipant,
@@ -444,7 +444,7 @@ export const banUser = async (req, res) => {
           );
 
           // Updates total payment on mission
-          const occupied_vacancies = await findAllOccupied(mission.mid);
+          const occupied_vacancies = await findAllOccupiedByMid(mission.mid);
           await updateMissionPayment(
             mission.mid,
             occupied_vacancies.reduce(
@@ -482,7 +482,7 @@ export const banUser = async (req, res) => {
         // If the user is the owner of the mission, it just delete it, using same logic as a delete
         else if (mission.owner_id === uid) {
           // Gets occupied vacancies
-          const occupied_vacancies = await findAllOccupied(mission.mid);
+          const occupied_vacancies = await findAllOccupiedByMid(mission.mid);
           if (MISSION_STATUS[mission.status].CAN_DELETE) {
             // Checks if mission can be deleted by states
             if (
@@ -495,7 +495,7 @@ export const banUser = async (req, res) => {
                 .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
 
             // Then mission status is updated
-            await updateStatus(mission.mid, MISSION_STATUS.DELETED.ID);
+            await updateStatusByMid(mission.mid, MISSION_STATUS.DELETED.ID);
           }
           // If mission has to be cancelled, it will be
           else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
@@ -510,7 +510,7 @@ export const banUser = async (req, res) => {
                 .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
 
             // Then mission status is updated
-            await updateStatus(mission.mid, MISSION_STATUS.CANCELLING.ID);
+            await updateStatusByMid(mission.mid, MISSION_STATUS.CANCELLING.ID);
 
             // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
             for (const vacancy of occupied_vacancies) {
@@ -546,7 +546,7 @@ export const banUser = async (req, res) => {
                 }
               }
             }
-            await updateStatus(mission.mid, MISSION_STATUS.CANCELLED.ID);
+            await updateStatusByMid(mission.mid, MISSION_STATUS.CANCELLED.ID);
           }
           // Otherwise, mission can't be deleted or cancelled
           else

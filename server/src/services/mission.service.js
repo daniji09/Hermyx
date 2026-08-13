@@ -41,11 +41,14 @@ export const getMissionByIdOrThrow = async (mid) => {
 };
 
 // Get mission participation by id
-export const getMissionParticipationById = async (id) => {
+export const getMissionParticipationById = async (id, client) => {
   checkVacancyId(id);
 
   // Find mission participation by id
-  const missionParticipation = await missionParticipationModel.findById(id);
+  const missionParticipation = await missionParticipationModel.findById(
+    id,
+    client,
+  );
   return missionParticipation;
 };
 
@@ -85,6 +88,59 @@ export const getMissionParticipationByMidAndAdventurerIdOrThrow = async (
 export const getMissionPaymentByMid = async (mid) => {
   checkMid(mid);
   return await missionParticipationModel.findMissionPaymentByMid(mid);
+};
+
+// Gets all waiting for payment participants by mission
+export const getAllWaitingForPaymentByMid = async (mid) => {
+  checkMid(mid);
+  return await missionParticipationModel.findAllWaitingForPaymentByMid(mid);
+};
+
+// Create mission payment
+export const createMissionPayment = async (missionPaymentData, client) => {
+  checkMissionPaymentData(missionPaymentData);
+  return await missionPaymentModel.create(missionPaymentData, client);
+};
+
+// Pays a vacancy
+export const payParticipant = async (id, payment, client) => {
+  checkVacancyId(id);
+  checkPayment(payment);
+  return await missionParticipationModel.payParticipant(id, payment, client);
+};
+
+// Get all occupied vacancies of a mission
+export const getAllOccupiedByMid = async (mid) => {
+  checkMid(mid);
+  return await missionParticipationModel.findAllOccupiedByMid(mid);
+};
+
+// Updates mission payment
+export const updateMissionPayment = async (mid, payment, client) => {
+  checkMid(mid);
+  checkPayment(payment);
+  return await missionModel.updateMissionPayment(mid, payment, client);
+};
+
+// Updates status
+export const updateStatusByMid = async (mid, status, client) => {
+  checkMid(mid);
+  checkStatus(status);
+  return await missionModel.updateStatusByMid(mid, status, client);
+};
+
+// Starts participants of a mission
+export const startParticipants = async (mid, client) => {
+  checkMid(mid);
+  return await missionParticipationModel.startParticipants(mid, client);
+};
+
+// Finds a payment by Stripe transaction id
+export const findPaymentByStripeTransactionId = async (stripeTransactionId) => {
+  checkStripeTransactionId(stripeTransactionId);
+  return await missionPaymentModel.findByStripeTransactionId(
+    stripeTransactionId,
+  );
 };
 
 export const getMissionParticipationReviewContext = async (
@@ -168,7 +224,7 @@ export const disputeMissionParticipation = async (mid, adventurerId, client) =>
   missionParticipationModel.disputeParticipation(mid, adventurerId, client);
 
 export const getOccupiedMissionParticipations = async (mid, client) =>
-  missionParticipationModel.findAllOccupied(mid, client);
+  missionParticipationModel.findAllOccupiedByMid(mid, client);
 
 export const updateMissionParticipationStatus = async (
   participationId,
@@ -203,9 +259,6 @@ export const refundMissionParticipation = async (
   amount,
   client,
 ) => missionParticipationModel.refundVacancy(participationId, amount, client);
-
-export const updateMissionPayment = async (mid, payment, client) =>
-  missionModel.updateMissionPayment(mid, payment, client);
 
 // Missions published by uid
 export const getMissionsPublishedByUid = async (uid, pagination) => {
@@ -599,7 +652,7 @@ const closeMissionValidations = async (mid, user) => {
 
   // Checks occupied vacancies
   const occupied_vacancies =
-    await missionParticipationModel.findAllOccupied(mid);
+    await missionParticipationModel.findAllOccupiedByMid(mid);
   if (occupied_vacancies.length === 0)
     throw new AppError(messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS, 409);
 
@@ -671,7 +724,7 @@ const closeMissionInternalUpdates = async (
     await client.query('BEGIN');
 
     // Mission state is updated
-    await missionModel.updateStatus(mid, nextMissionStatus, client);
+    await missionModel.updateStatusByMid(mid, nextMissionStatus, client);
 
     // Vacancies are updated
     for (const vacancy of vacanciesToUpdate)
@@ -1132,7 +1185,7 @@ export const cancelMission = async (mid, user) => {
 
   // Gets occupied vacancies
   const occupied_vacancies =
-    await missionParticipationModel.findAllOccupied(mid);
+    await missionParticipationModel.findAllOccupiedByMid(mid);
 
   // Gets if is delete or cancel action
   const isDeleting = MISSION_STATUS[mission.status].CAN_DELETE;
@@ -1159,7 +1212,7 @@ export const cancelMission = async (mid, user) => {
         409,
       );
 
-    await missionModel.updateStatus(mid, MISSION_STATUS.DELETED.ID);
+    await missionModel.updateStatusByMid(mid, MISSION_STATUS.DELETED.ID);
   }
 
   // Otherwise, reward has to be sent to the adventurers
@@ -1176,7 +1229,7 @@ export const cancelMission = async (mid, user) => {
       );
 
     // Intention is marked, mission is going to be cancel after all money transactions
-    await missionModel.updateStatus(mid, MISSION_STATUS.CANCELLING.ID);
+    await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLING.ID);
 
     // Then, without using any db transaction, reward is sent to each adventurer of every unpaid vacancy
     for (const vacancy of occupied_vacancies) {
@@ -1255,7 +1308,7 @@ export const cancelMission = async (mid, user) => {
     }
 
     // Finally, mission has been updated to cancel status
-    await missionModel.updateStatus(mid, MISSION_STATUS.CANCELLED.ID);
+    await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
   }
 
   // Either way, all adventurers are informed
@@ -1359,7 +1412,7 @@ export const reopenMission = async (mid, user) => {
 
   // Gets adventurers
   const occupied_vacancies =
-    await missionParticipationModel.findAllOccupied(mid);
+    await missionParticipationModel.findAllOccupiedByMid(mid);
 
   // Mission status change and notifications sending need to be in a db transaction
   const notificationsToSend = [];
@@ -1367,7 +1420,11 @@ export const reopenMission = async (mid, user) => {
   try {
     await client.query('BEGIN');
     // Finally, mission is reopened
-    await missionModel.updateStatus(mid, MISSION_STATUS.REOPENED.ID, client);
+    await missionModel.updateStatusByMid(
+      mid,
+      MISSION_STATUS.REOPENED.ID,
+      client,
+    );
 
     // And all adventurers are informed
     for (const vacancy of occupied_vacancies) {
@@ -1466,7 +1523,11 @@ export const finishMission = async (mid, user) => {
   try {
     await client.query('BEGIN');
     // Mission status is changed
-    await missionModel.updateStatus(mid, MISSION_STATUS.FINISHED.ID, client);
+    await missionModel.updateStatusByMid(
+      mid,
+      MISSION_STATUS.FINISHED.ID,
+      client,
+    );
 
     // And conversation is ended
     await conversationService.closeMissionConversationType(mid, client);
@@ -1560,9 +1621,8 @@ const editMissionValidations = async (
   await checkUserMissionWithSameTitle(uid, mission.title, mission.mid);
 
   // Gets current vacancies info
-  const originalVacancies = await missionParticipationModel.findAllOccupied(
-    mission.mid,
-  );
+  const originalVacancies =
+    await missionParticipationModel.findAllOccupiedByMid(mission.mid);
 
   // Updates each vacancy of the mission, first, new and existing vacancies are selected
   const newVacancies = mission.vacanciesData.filter(
@@ -2140,6 +2200,24 @@ const checkAdventurerId = (adventurerId) => {
 
 const checkUser = (user) => {
   if (!user) throw new Error(messages.GENERAL.FIELD_REQUIRED('User'));
+};
+
+const checkMissionPaymentData = (paymentData) => {
+  if (!paymentData)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment data'));
+};
+
+const checkPayment = (payment) => {
+  if (!payment) throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment'));
+};
+
+const checkStatus = (status) => {
+  if (!status) throw new Error(messages.GENERAL.FIELD_REQUIRED('Status'));
+};
+
+const checkStripeTransactionId = (stripeTransactionId) => {
+  if (!stripeTransactionId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Stripe transaction id'));
 };
 
 /// Error builders

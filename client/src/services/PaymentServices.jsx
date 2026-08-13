@@ -2,8 +2,7 @@ import api from '../config/api';
 
 // Finds mission by id
 export const saveNewCard = async (id) => {
-  const { data } = await api.post('/stripe/pay/new', {
-    mid: id.trim(),
+  const { data } = await api.post(`/stripe/missions/${id.trim()}/pay/new`, {
     saveCard: true,
   });
 
@@ -11,7 +10,7 @@ export const saveNewCard = async (id) => {
 };
 
 export const confirmPayment = async (id, result) => {
-  await api.post(`/stripe/missions/${id.trim()}/confirm-payment`, {
+  await api.post(`/stripe/missions/${id.trim()}/confirm`, {
     paymentIntentId: result.paymentIntent.id,
   });
 };

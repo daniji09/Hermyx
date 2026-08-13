@@ -16,7 +16,7 @@ import {
 import {
   getAllMissionsInDraft as _getAllMissionsInDraft,
   findByMid,
-  updateStatus,
+  updateStatusByMid,
   updateOccupiedVacancies,
   emptyMission,
   updateMissionPayment,
@@ -25,7 +25,7 @@ import {
 import { findByUid as getUserById } from '../models/user.model.js';
 import {
   findById,
-  findAllOccupied,
+  findAllOccupiedByMid,
   updatePaymentStatusById,
   cleanMissionParticipation,
   unjoinParticipant,
@@ -292,7 +292,7 @@ export const banMission = async (req, res) => {
       return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
 
     // Participation is got
-    const participation = await findAllOccupied(mid);
+    const participation = await findAllOccupiedByMid(mid);
 
     // Mission state changes logic, if payment has been done it has to be release to adventurers
     if (MISSION_STATUS[mission.status].CAN_DELETE) {
@@ -339,7 +339,7 @@ export const banMission = async (req, res) => {
     }
 
     // Finally, mission is reopened
-    await updateStatus(mid, MISSION_STATUS.REPORTED.ID);
+    await updateStatusByMid(mid, MISSION_STATUS.REPORTED.ID);
 
     // Report is closed
     const reportClosed = await closeReportAndConversation(
@@ -507,7 +507,7 @@ export const kickAdventurerOut = async (req, res) => {
       await refundBannedVacancy(vacancyId, vacancy.monetary_reward);
 
       // Updates total payment on mission
-      const occupied_vacancies = await findAllOccupied(mid);
+      const occupied_vacancies = await findAllOccupiedByMid(mid);
       await updateMissionPayment(
         mission.mid,
         occupied_vacancies.reduce(
@@ -517,7 +517,7 @@ export const kickAdventurerOut = async (req, res) => {
       );
     } else {
       // If not, mission is closed, so it checks if it was the only adventurer
-      const occupied_vacancies = await findAllOccupied(mid);
+      const occupied_vacancies = await findAllOccupiedByMid(mid);
       if (occupied_vacancies.length === 0) await openMission(mid);
     }
 

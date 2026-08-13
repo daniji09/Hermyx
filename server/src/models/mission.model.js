@@ -361,7 +361,7 @@ export const update = async (missionData, client = pool) => {
 };
 
 // Update mission status
-export const updateStatus = async (mid, status, client = pool) => {
+export const updateStatusByMid = async (mid, status, client = pool) => {
   const query = `
     UPDATE mission
     SET status = $1

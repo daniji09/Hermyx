@@ -17,36 +17,14 @@ import {
   findByMid as _getById,
   lockForRelease,
   getParticipantsForRelease,
-  updateStatus,
+  updateStatusByMid,
   updateReleaseStatus,
   lockForRefund,
   finalizeRefund,
-  updateMissionPayment,
 } from '../models/mission.model.js';
 
-import {
-  findAllOccupied,
-  findById,
-  findAllWaitingForPaymentByMid,
-  payVacancy,
-  startParticipants,
-  updateTransferInfo,
-} from '../models/mission-participation.model.js';
-import {
-  messages,
-  MISSION_STATUS,
-  MISSION_PARTICIPATION_STATUS,
-  NOTIFICATION_ACTION,
-  NOTIFICATION_KIND,
-  NOTIFICATION_TYPE,
-  HERMYX_FEE,
-  HERMYX_SYSTEM_ID,
-  TRANSACTION_TYPE,
-  MISSION_PARTICIPATION_PAYMENT_STATUS,
-} from '@hermyx/shared';
-import { createNotification as create } from '../services/notification.service.js';
-import { emitToUser } from '../providers/socket.provider.js';
-import { findByStripeTransactionId as getMissionPaymentsByStripeTransactionId } from '../models/mission-payment.model.js';
+import { updateTransferInfo } from '../models/mission-participation.model.js';
+import { messages } from '@hermyx/shared';
 import { FRONTEND_URL } from '../config/config.js';
 import * as paymentService from '../services/payment.service.js';
 
@@ -93,7 +71,7 @@ export const setDefaultCard = async (req, res, next) => {
 // Charges the mission cost using the user's saved default card.
 export const payDefault = async (req, res, next) => {
   try {
-    const { mid } = req.body;
+    const { mid } = req.params;
     const { pi, defaultPm } = await paymentService.payDefault(mid, req.user);
     return res.status(200).json({
       clientSecret: pi.client_secret,
@@ -105,14 +83,27 @@ export const payDefault = async (req, res, next) => {
   }
 };
 
-//Creates a PaymentIntent for a new card. Can optionally save the card for future use.
+// Creates a PaymentIntent for a new card. Can optionally save the card for future use.
 export async function payNew(req, res, next) {
   try {
-    const { mid, saveCard = true } = req.body;
+    const { mid } = req.params;
+    const { saveCard = true } = req.body;
     const pi = await paymentService.payNew(mid, req.user, saveCard);
     return res
       .status(200)
       .json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// Verifies the payment status in Stripe and changes database
+export async function confirmPayment(req, res, next) {
+  try {
+    const { mid } = req.params;
+    const { paymentIntentId } = req.body;
+    await paymentService.confirmPayment(mid, paymentIntentId, req.user);
+    return res.status(201).json({});
   } catch (error) {
     next(error);
   }
@@ -131,149 +122,6 @@ export const deleteCard = async (req, res, next) => {
 };
 
 // ------
-
-const ensureMissionOwner = (mission, userId, res) => {
-  if (mission.owner_id !== userId) {
-    res.status(403).json({ error: 'You can only pay your own missions.' });
-    return false;
-  }
-
-  return true;
-};
-
-//Verifies the payment status in Stripe
-export async function confirmPayment(req, res) {
-  try {
-    const { missionId } = req.params;
-    const { paymentIntentId } = req.body;
-    const customerId = req.user.stripe_customer_id;
-
-    // Finds waiting for payment vacancies
-    const waitingForPaymentVacancies = await findAllWaitingForPaymentByMid();
-    for (const vacancy of waitingForPaymentVacancies) {
-      let transaction_type;
-      // Each type of payment has different information or actions
-      if (mission.status === MISSION_STATUS.CLOSED.ID) {
-        // If mission is in closed state, is funding payment
-        transaction_type = TRANSACTION_TYPE.INITIAL_FUNDING.ID;
-      } else if (
-        vacancy.payment_status ===
-        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID
-      ) {
-        // If vacancy is partially pay, is a reward negotiation
-        transaction_type = TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID;
-      } else {
-        // Any other option means a new adventurer joined the mission via reopening
-        transaction_type = TRANSACTION_TYPE.NEW_ADVENTURER_FUNDING.ID;
-      }
-
-      // Adds mission payment
-      await create({
-        missionId,
-        vacancy_id: vacancy.id,
-        sender_id: req.user.uid,
-        receiver_id: HERMYX_SYSTEM_ID,
-        stripe_transaction_id: pi.id,
-        transaction_type: transaction_type,
-        amount_paid:
-          (vacancy.monetary_reward - vacancy.amount_paid) * HERMYX_FEE,
-      });
-
-      // Updates vacancy info
-      await payVacancy(
-        vacancy.id,
-        vacancy.monetary_reward - vacancy.amount_paid,
-      );
-    }
-    const mission = await _getById(missionId);
-    if (!mission) return res.status(404).json({ error: 'Mission not found' });
-    if (!ensureMissionOwner(mission, req.user.uid, res)) return;
-
-    const pi = await retrievePI(paymentIntentId);
-
-    if (pi.customer !== customerId) {
-      return res
-        .status(403)
-        .json({ error: 'Payment does not belong to the logged user.' });
-    }
-
-    if (pi.status !== 'succeeded') {
-      return res
-        .status(400)
-        .json({ error: `Payment was not completed (status=${pi.status})` });
-    }
-
-    // Checks if mission can be in progress by states
-    if (
-      mission.status !== MISSION_STATUS.IN_PROGRESS.ID &&
-      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-        MISSION_STATUS.IN_PROGRESS.ID,
-      )
-    )
-      return res.status(400).json({ error: messages.CANNOT_PAY_MISSION_STATE });
-
-    // Updates total payment on mission
-    const occupied_vacancies = await findAllOccupied(mission.mid);
-    await updateMissionPayment(
-      mission.mid,
-      occupied_vacancies.reduce(
-        (sum, vacancy) => sum + Number(vacancy.monetary_reward),
-        0,
-      ) * HERMYX_FEE || 0,
-    );
-
-    // Mission and participants life cycle is updated
-    await updateStatus(missionId, MISSION_STATUS.IN_PROGRESS.ID);
-    await startParticipants(missionId);
-
-    // Gets all operations made in that payment
-    const transactions = await getMissionPaymentsByStripeTransactionId(pi.id);
-
-    // Finally, all participants are notified
-    for (const transaction of transactions) {
-      const vacancy = await findById(transaction.vacancy_id);
-      let message;
-      if (transaction.transaction_type === TRANSACTION_TYPE.INITIAL_FUNDING.ID)
-        message = `Mission ${mission.title} has started! Talk to your team and start working.`;
-      else if (
-        transaction.transaction_type === TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID
-      )
-        message = `Your new monetary reward for ${mission.title} has been funded. Now you can submit your part!`;
-      else
-        message = `Mission ${mission.title} has started for you! Talk to your team and start working.`;
-      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const notificationId = await create({
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-          action: NOTIFICATION_ACTION.MISSION_START.ID,
-          status: null,
-          message: message,
-          senderId: req.user.uid,
-          receiverId: vacancy.adventurer_id,
-          payload: {
-            associated_mission_id: mission.mid,
-          },
-        });
-        emitToUser(vacancy.adventurer_id, 'mission:started', {
-          notificationId,
-          missionId: mission.mid,
-          vacancyId: vacancy.adventurer_id,
-          missionTitle: mission.title,
-          senderId: req.user.uid,
-          senderUsername: req.user.username,
-          receiverId: vacancy.adventurer_id,
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          message: message,
-        });
-      }
-    }
-
-    return res.json({ success: true });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-}
 
 //Initiates Stripe Connect onboarding so the user (adventurer) can receive money.
 export async function connectOnboard(req, res) {
@@ -392,7 +240,7 @@ export async function releaseMissionPayment(req, res) {
   } catch (err) {
     console.error('Error release:', err);
     if (lockedMission) {
-      await updateStatus(missionId, 'accepted');
+      await updateStatusByMid(missionId, 'accepted');
     }
     res.status(500).json({ error: err.message || 'Error releasing funds.' });
   }
@@ -437,7 +285,7 @@ export async function refundMissionPayment(req, res) {
     console.error(err);
 
     if (lockedMission && originalStatus) {
-      await updateStatus(missionId, originalStatus);
+      await updateStatusByMid(missionId, originalStatus);
     }
     res.status(500).json({ error: 'Refund error.' });
   }

@@ -3,11 +3,17 @@ const router = Router();
 
 import * as paymentController from '../controllers/payment.controller.js';
 import { requireStripeCustomerId } from '../middlewares/payment.middleware.js';
-import { validateBodySchema } from '../middlewares/validation.middleware.js';
 import {
+  validateBodySchema,
+  validateParamsSchema,
+} from '../middlewares/validation.middleware.js';
+import {
+  confirmPaymentBodySchema,
+  confirmPaymentParamSchema,
   deleteCardParamSchema,
-  payDefaultBodySchema,
+  payDefaultParamSchema,
   payNewBodySchema,
+  payNewParamSchema,
   setDefaultCardSchema,
 } from '@hermyx/shared';
 
@@ -29,18 +35,28 @@ router.post(
 
 // Pay with a predetermined card
 router.post(
-  '/pay/default',
+  '/missions/:mid/pay/default',
   requireStripeCustomerId,
-  validateBodySchema(payDefaultBodySchema),
+  validateParamsSchema(payDefaultParamSchema),
   paymentController.payDefault,
 );
 
 // Pay with a new card
 router.post(
-  '/pay/new',
+  '/missions/:mid/pay/new',
   requireStripeCustomerId,
+  validateParamsSchema(payNewParamSchema),
   validateBodySchema(payNewBodySchema),
   paymentController.payNew,
+);
+
+// Confirms payment and changes db
+router.post(
+  '/missions/:mid/confirm',
+  requireStripeCustomerId,
+  validateParamsSchema(confirmPaymentParamSchema),
+  validateBodySchema(confirmPaymentBodySchema),
+  paymentController.confirmPayment,
 );
 
 /// DELETES
@@ -53,13 +69,6 @@ router.delete(
 );
 
 // -----
-
-//Route to confirm that we have charged the customer
-router.post(
-  '/missions/:missionId/confirm-payment',
-  requireStripeCustomerId,
-  paymentController.confirmPayment,
-);
 
 //Route to register as a connected account
 router.post('/connect/onboard', paymentController.connectOnboard);
