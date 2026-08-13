@@ -1,5 +1,4 @@
 import {
-  createPaymentIntentNew,
   retrievePI,
   createExpressAccount,
   createAccountLink,
@@ -26,7 +25,6 @@ import {
 } from '../models/mission.model.js';
 
 import {
-  findMissionPaymentByMid,
   findAllOccupied,
   findById,
   findAllWaitingForPaymentByMid,
@@ -107,6 +105,19 @@ export const payDefault = async (req, res, next) => {
   }
 };
 
+//Creates a PaymentIntent for a new card. Can optionally save the card for future use.
+export async function payNew(req, res, next) {
+  try {
+    const { mid, saveCard = true } = req.body;
+    const pi = await paymentService.payNew(mid, req.user, saveCard);
+    return res
+      .status(200)
+      .json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
+  } catch (error) {
+    next(error);
+  }
+}
+
 // Deletes a card. If it was the default, clears the default setting.
 export const deleteCard = async (req, res, next) => {
   try {
@@ -130,67 +141,12 @@ const ensureMissionOwner = (mission, userId, res) => {
   return true;
 };
 
-const getReusablePaymentIntent = async (mission, customerId) => {
-  if (!mission.stripe_pi_id || mission.status === 'refunded') return null;
-
-  const pi = await retrievePI(mission.stripe_pi_id);
-
-  if (pi.customer !== customerId) {
-    const error = new Error('Payment does not belong to the logged user.');
-    error.status = 403;
-    throw error;
-  }
-
-  if (pi.status === 'succeeded') {
-    const error = new Error('This mission is already paid.');
-    error.status = 400;
-    throw error;
-  }
-
-  if (pi.status === 'processing') {
-    const error = new Error('The payment is still being processed.');
-    error.status = 409;
-    throw error;
-  }
-
-  if (pi.status !== 'canceled') return pi;
-
-  return null;
-};
-
-//Creates a PaymentIntent for a new card. Can optionally save the card for future use.
-export async function payNew(req, res, next) {
+//Verifies the payment status in Stripe
+export async function confirmPayment(req, res) {
   try {
+    const { missionId } = req.params;
+    const { paymentIntentId } = req.body;
     const customerId = req.user.stripe_customer_id;
-    const { mid, saveCard = true } = req.body;
-
-    const mission = await _getById(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSION_NOT_FOUND });
-    if (!ensureMissionOwner(mission, req.user.uid, res)) return;
-
-    // Finds how much it has to be payed
-    const paymentAmount = await findMissionPaymentByMid(mid);
-    const reusablePi = await getReusablePaymentIntent(mission, customerId);
-    if (reusablePi) {
-      return res.json({
-        clientSecret: reusablePi.client_secret,
-        paymentIntentId: reusablePi.id,
-      });
-    }
-
-    // Creates payment on Stripe
-    const pi = await createPaymentIntentNew(
-      {
-        amount: Math.round(paymentAmount * 100 * HERMYX_FEE),
-        currency: 'eur',
-        customer: customerId,
-        automatic_payment_methods: { enabled: true },
-        ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
-        metadata: { mid, ownerId: req.user.uid },
-      },
-      `${customerId}_payment_on_${Date.now()}`,
-    );
 
     // Finds waiting for payment vacancies
     const waitingForPaymentVacancies = await findAllWaitingForPaymentByMid();
@@ -213,7 +169,7 @@ export async function payNew(req, res, next) {
 
       // Adds mission payment
       await create({
-        mid,
+        missionId,
         vacancy_id: vacancy.id,
         sender_id: req.user.uid,
         receiver_id: HERMYX_SYSTEM_ID,
@@ -229,20 +185,6 @@ export async function payNew(req, res, next) {
         vacancy.monetary_reward - vacancy.amount_paid,
       );
     }
-
-    return res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
-  } catch (error) {
-    next(error);
-  }
-}
-
-//Verifies the payment status in Stripe
-export async function confirmPayment(req, res) {
-  try {
-    const { missionId } = req.params;
-    const { paymentIntentId } = req.body;
-    const customerId = req.user.stripe_customer_id;
-
     const mission = await _getById(missionId);
     if (!mission) return res.status(404).json({ error: 'Mission not found' });
     if (!ensureMissionOwner(mission, req.user.uid, res)) return;

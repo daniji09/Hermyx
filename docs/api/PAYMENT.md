@@ -103,7 +103,7 @@ Sets a card to be the default one.
 
 ## - Create payment intent with default card: `POST /stripe/pay/default`
 
-Creates a payment intent using the user's default card
+Creates a payment intent using the user's default card.
 
 **Requires authentication:** Yes
 
@@ -115,7 +115,7 @@ Creates a payment intent using the user's default card
 
 **Responses:**
 
-- `200 OK`: card set as default successfully.
+- `200 OK`: payment intent created successfully.
 
   ```json
   {
@@ -166,6 +166,75 @@ Creates a payment intent using the user's default card
   ```
 
   **Workflow:** this endpoints creates a payment intent (PI) for a mission and retrieves to frontend, so it just warns Stripe that there will be a payment from that user of a certain quantity using their default payment. All basic checks are done.
+  <br>
+  <br>
+  <br>
+
+## - Create payment intent with default card: `POST /stripe/pay/new`
+
+Creates a payment intent using a new card.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | int | Yes | Mission identifier. |
+| `saveCard` | boolean | No | User's will to save the card. |
+<br>
+
+**Responses:**
+
+- `200 OK`: payment intent created successfully.
+
+  ```json
+  {
+    "clientSecret": "<client_secret>",
+    "paymentIntentId": "<PI>"
+  }
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["User is not authorized for this action."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+  **Workflow:** this endpoints creates a payment intent (PI) for a mission and retrieves to frontend, so it just warns Stripe that there will be a payment from that user of a certain quantity using a new payment. All basic checks are done.
   <br>
   <br>
   <br>

@@ -100,6 +100,37 @@ export const payDefault = async (mid, user) => {
   return { pi, defaultPm };
 };
 
+// Pay new
+export const payNew = async (mid, user, saveCard) => {
+  // Parameters check
+  checkMid(mid);
+  checkUser(user);
+
+  // Finds mission
+  const mission = await missionService.getMissionByIdOrThrow(mid);
+
+  // Checks if mission belongs to user
+  checkMissionBelongsToUser(mission.owner_id, user.uid);
+
+  // Finds how much it has to be payed
+  const paymentAmount = await missionService.getMissionPaymentByMid(mid);
+
+  // Creates payment on Stripe
+  const pi = await paymentProvider.createPaymentIntentNew(
+    {
+      amount: Math.round(paymentAmount * 100 * HERMYX_FEE),
+      currency: 'eur',
+      customer: user.stripe_customer_id,
+      automatic_payment_methods: { enabled: true },
+      ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
+      metadata: { mid, ownerId: user.uid },
+    },
+    `${user.stripe_customer_id}_payment_on_${Date.now()}`,
+  );
+
+  return pi;
+};
+
 // Delete card
 export const deleteCard = async (stripeCustomerId, paymentMethodId) => {
   // Parameter checks

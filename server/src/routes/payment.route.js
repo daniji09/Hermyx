@@ -35,6 +35,14 @@ router.post(
   paymentController.payDefault,
 );
 
+// Pay with a new card
+router.post(
+  '/pay/new',
+  requireStripeCustomerId,
+  validateBodySchema(payNewBodySchema),
+  paymentController.payNew,
+);
+
 /// DELETES
 // Delete a card
 router.delete(
@@ -45,14 +53,6 @@ router.delete(
 );
 
 // -----
-
-//Pay with a new card
-router.post(
-  '/pay/new',
-  requireStripeCustomerId,
-  validateBodySchema(payNewBodySchema),
-  paymentController.payNew,
-);
 
 //Route to confirm that we have charged the customer
 router.post(
