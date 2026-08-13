@@ -63,6 +63,7 @@ export const hasPendingJoinNotification = async (
   senderId,
   recipientId,
   vacancyId,
+  client = pool,
 ) => {
   const query = `
     SELECT EXISTS (
@@ -76,7 +77,7 @@ export const hasPendingJoinNotification = async (
         AND action IN ($6, $7)
     ) AS "hasPendingJoinNotification"
   `;
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     missionId,
     senderId,
     recipientId,
@@ -92,6 +93,7 @@ export const hasPendingJoinNotification = async (
 export const countParticipationReviewAttempts = async (
   missionId,
   adventurerId,
+  client = pool,
 ) => {
   const query = `
     SELECT COUNT(*)::int AS attempts
@@ -101,7 +103,7 @@ export const countParticipationReviewAttempts = async (
       AND type = $3
       AND action = $4
   `;
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     missionId,
     adventurerId,
     NOTIFICATION_TYPE.MISSION.ID,
@@ -144,28 +146,29 @@ export const update = async (notificationData, client = pool) => {
 
 // ------
 
-export const updateNotificationStatus = async (notificationId, status) => {
+export const updateStatus = async (notificationId, status, client = pool) => {
   const query = 'UPDATE notification SET status = $1 WHERE nid = $2';
-  await pool.query(query, [status, notificationId]);
+  const result = await client.query(query, [status, notificationId]);
+  return result.rowCount;
 };
 
-export const markAsSeen = async (notificationId) => {
+export const markAsSeen = async (notificationId, client = pool) => {
   const query = `
     UPDATE notification
     SET seen = TRUE
     WHERE nid = $1
     RETURNING *
   `;
-  const result = await pool.query(query, [notificationId]);
+  const result = await client.query(query, [notificationId]);
   return result.rows[0];
 };
 
 export const addAssociatedReport = async (
   notificationId,
   reportId,
-  database = pool,
+  client = pool,
 ) => {
-  const result = await database.query(
+  const result = await client.query(
     `UPDATE notification
      SET payload = payload || jsonb_build_object('associated_report_id', $2::int)
      WHERE nid = $1
@@ -175,7 +178,10 @@ export const addAssociatedReport = async (
   return result.rows[0] || null;
 };
 
-export const markAllAsSeenByRecipientId = async (recipientId) => {
+export const markAllAsSeenByRecipientId = async (
+  recipientId,
+  client = pool,
+) => {
   const query = `
     UPDATE notification
     SET seen = TRUE
@@ -183,17 +189,17 @@ export const markAllAsSeenByRecipientId = async (recipientId) => {
       AND seen = FALSE
     RETURNING *
   `;
-  const result = await pool.query(query, [recipientId]);
+  const result = await client.query(query, [recipientId]);
   return result.rows;
 };
 
-export const findById = async (id) => {
+export const findById = async (id, client = pool) => {
   const query = 'SELECT * FROM notification WHERE nid = $1';
-  const result = await pool.query(query, [id]);
+  const result = await client.query(query, [id]);
   return result.rows[0];
 };
 
-export const getByRecipientId = async (recipientId) => {
+export const findByRecipientId = async (recipientId, client = pool) => {
   const query = `
     SELECT
       n.nid,
@@ -220,7 +226,7 @@ export const getByRecipientId = async (recipientId) => {
       CASE WHEN COALESCE(n.status, '') = $2 THEN 0 ELSE 1 END,
       n.date DESC
   `;
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     recipientId,
     NOTIFICATION_STATUS.PENDING.ID,
   ]);
@@ -232,6 +238,7 @@ export const findByActionStatusSenderAndMission = async (
   status,
   associated_mission_id,
   sender_id,
+  client = pool,
 ) => {
   const query = `SELECT * 
   FROM notification 
@@ -239,7 +246,7 @@ export const findByActionStatusSenderAndMission = async (
     AND status = $2 
     AND payload->>'associated_mission_id' = $3::text
     AND sender_id = $4`;
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     action,
     status,
     associated_mission_id,
@@ -248,14 +255,14 @@ export const findByActionStatusSenderAndMission = async (
   return result.rows;
 };
 
-export const findExpiredParticipationReview = async () => {
+export const findExpiredParticipationReviews = async (client = pool) => {
   const query = `
       SELECT * 
       FROM notification
       WHERE action = $1 AND status = $2 
         AND date <= NOW() - INTERVAL '168 hours'
     `; // 7 days
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
     NOTIFICATION_STATUS.PENDING.ID,
   ]);

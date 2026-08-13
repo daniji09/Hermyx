@@ -23,7 +23,7 @@ const decimalQueryNumberSchema = (fieldName) =>
   );
 
 // Mid
-const midBaseSchema = z.coerce
+export const midBaseSchema = z.coerce
   .number({
     invalid_type_error: 'Mission id must be a number.',
   })

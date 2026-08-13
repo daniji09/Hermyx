@@ -24,7 +24,7 @@ import {
   openMission,
 } from '../models/mission.model.js';
 import { findByUid as getUserById } from '../models/user.model.js';
-import { getConversationParticipants } from '../models/conversation-participant.model.js';
+import { findByConversationId as getConversationParticipants } from '../models/conversation-participant.model.js';
 import {
   findById,
   findAllOccupied,
@@ -35,15 +35,15 @@ import {
   updatePaymentStatus,
   refundBannedVacancy,
 } from '../models/mission-participation.model.js';
-import { create } from '../models/notification.model.js';
+import { createNotification as create } from '../services/notification.service.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import { createRefund, createTransfer } from '../providers/payment.provider.js';
 import {
   createMissionPayment,
-  getMissionPaymentsByVacancy,
-  refundFromPayment,
+  findByVacancyId as getMissionPaymentsByVacancy,
+  refund as refundFromPayment,
 } from '../models/mission-payment.model.js';
-import { getReportById } from '../models/report.model.js';
+import { findById as getReportById } from '../models/report.model.js';
 import { closeReportAndConversation } from '../services/report.service.js';
 import * as missionService from '../services/mission.service.js';
 import * as missionParticipationModel from '../models/mission-participation.model.js';

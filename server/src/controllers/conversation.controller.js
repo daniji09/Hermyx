@@ -1,268 +1,91 @@
-import { messages } from '@hermyx/shared';
+import * as conversationService from '../services/conversation.service.js';
 
-import { findByUid } from '../models/user.model.js';
-
-import {
-  getConversationById,
-  getOrCreatePrivateConversation,
-  getConversationsByUserId,
-} from '../models/conversation.model.js';
-import {
-  canSendMessageToConversation,
-  getActiveConversationParticipantIds,
-  getConversationParticipants,
-  isConversationParticipant,
-  markConversationAsReadByUserId,
-} from '../models/conversation-participant.model.js';
-import {
-  createMessage,
-  getMessagesByConversationId,
-  getUnreadMessageCountByUserId,
-} from '../models/conversation-message.model.js';
-
-import {
-  emitToConversation,
-  emitToUser,
-} from '../providers/socket.provider.js';
-import {
-  saveToLocalStorage,
-  uploadToAzureBlob,
-} from '../providers/storage.provider.js';
-
-export const getOrCreatePrivateConversationWithUser = async (req, res) => {
+export const getOrCreatePrivateConversationWithUser = async (
+  req,
+  res,
+  next,
+) => {
   try {
-    const currentUserId = req.user.uid;
-    const { otherUserId } = req.body;
-
-    if (currentUserId === otherUserId) {
-      return res.status(400).json({
-        errors: {
-          general: ['You cannot create a conversation with yourself.'],
-        },
-      });
-    }
-
-    const otherUser = await findByUid(otherUserId);
-
-    if (!otherUser) {
-      return res.status(404).json({
-        errors: { general: [messages.USER_NOT_FOUND] },
-      });
-    }
-
-    const conversation = await getOrCreatePrivateConversation(
-      currentUserId,
-      otherUserId,
-    );
-
+    const conversation =
+      await conversationService.getOrCreatePrivateConversationWithUser(
+        req.user.uid,
+        req.body.otherUserId,
+      );
     return res.status(200).json({ conversation });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const sendMessage = async (req, res) => {
+export const sendMessage = async (req, res, next) => {
   try {
-    const senderId = req.user.uid;
-    const { conversationId } = req.params;
-    const { content } = req.body;
-    const photo = req.file;
-
-    const isParticipant = await isConversationParticipant(
-      conversationId,
-      senderId,
-    );
-
-    if (!isParticipant) {
-      return res.status(403).json({
-        errors: { general: ['You are not part of this conversation.'] },
-      });
-    }
-
-    const canSendMessage = await canSendMessageToConversation(
-      conversationId,
-      senderId,
-    );
-
-    if (!canSendMessage) {
-      return res.status(403).json({
-        errors: { general: ['This conversation is read-only.'] },
-      });
-    }
-
-    if (!content.trim() && !photo) {
-      return res.status(400).json({
-        errors: { general: ['Message cannot be empty.'] },
-      });
-    }
-
-    let attachmentUrl = null;
-    let attachmentType = null;
-
-    if (photo) {
-      const isProduction = process.env.NODE_ENV === 'production';
-      attachmentUrl = isProduction
-        ? await uploadToAzureBlob(photo, 'conversation-photos')
-        : await saveToLocalStorage(photo, 'uploads/conversation-photos');
-      attachmentType = 'image';
-    }
-
-    const message = await createMessage({
-      conversationId,
-      senderId,
-      content,
-      attachmentUrl,
-      attachmentType,
+    const message = await conversationService.sendMessage({
+      conversationId: req.params.conversationId,
+      senderId: req.user.uid,
+      content: req.body.content,
+      photo: req.file,
     });
-
-    emitToConversation(conversationId, 'conversation:message-created', message);
-
-    const participantIds =
-      await getActiveConversationParticipantIds(conversationId);
-
-    participantIds
-      .filter((participantId) => participantId !== senderId)
-      .forEach((participantId) => {
-        emitToUser(participantId, 'conversation:message-received', {
-          conversationId: Number(conversationId),
-          conversationType: message.conversation_type,
-          messageId: message.mid,
-          reportId: message.report_id,
-          senderId,
-        });
-      });
-
     return res.status(201).json({ message });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getConversation = async (req, res) => {
+export const getConversation = async (req, res, next) => {
   try {
-    const userId = req.user.uid;
-    const { conversationId } = req.params;
-
-    const isParticipant = await isConversationParticipant(
-      conversationId,
-      userId,
-    );
-
-    if (!isParticipant) {
-      return res.status(403).json({
-        errors: { general: [messages.UNAUTHORIZED_ERROR] },
-      });
-    }
-
-    const conversation = await getConversationById(conversationId);
-
-    if (!conversation) {
-      return res.status(404).json({
-        errors: { general: ['Conversation not found.'] },
-      });
-    }
-
-    const participants = await getConversationParticipants(
-      conversationId,
-      userId,
-    );
-
+    const { conversation, participants } =
+      await conversationService.getConversation(
+        req.params.conversationId,
+        req.user.uid,
+      );
     return res.status(200).json({ conversation, participants });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getConversationMessages = async (req, res) => {
+export const getConversationMessages = async (req, res, next) => {
   try {
-    const userId = req.user.uid;
-    const { conversationId } = req.params;
-
-    const isParticipant = await isConversationParticipant(
-      conversationId,
-      userId,
+    const messages = await conversationService.getConversationMessages(
+      req.params.conversationId,
+      req.user.uid,
     );
-
-    if (!isParticipant) {
-      return res.status(403).json({
-        errors: { general: [messages.UNAUTHORIZED_ERROR] },
-      });
-    }
-
-    const messagesList = await getMessagesByConversationId(
-      conversationId,
-      userId,
-    );
-
-    return res.status(200).json({ messages: messagesList });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+    return res.status(200).json({ messages });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getMyConversations = async (req, res) => {
+export const getMyConversations = async (req, res, next) => {
   try {
-    const userId = req.user.uid;
-
-    const conversations = await getConversationsByUserId(userId);
-
+    const conversations = await conversationService.getMyConversations(
+      req.user.uid,
+    );
     return res.status(200).json({ conversations });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const getMyUnreadMessageCount = async (req, res) => {
+export const getMyUnreadMessageCount = async (req, res, next) => {
   try {
-    const unreadCount = await getUnreadMessageCountByUserId(
+    const unreadCount = await conversationService.getMyUnreadMessageCount(
       req.user.uid,
-      null,
-      'dispute',
     );
-
     return res.status(200).json({ unreadCount });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+  } catch (error) {
+    next(error);
   }
 };
 
-export const markConversationAsRead = async (req, res) => {
+export const markConversationAsRead = async (req, res, next) => {
   try {
-    const { conversationId } = req.params;
-    const wasMarkedAsRead = await markConversationAsReadByUserId(
-      conversationId,
+    const unreadCount = await conversationService.markConversationAsRead(
+      req.params.conversationId,
       req.user.uid,
     );
-
-    if (!wasMarkedAsRead) {
-      return res.status(403).json({
-        errors: { general: [messages.UNAUTHORIZED_ERROR] },
-      });
-    }
-
-    return res.status(200).json({ unreadCount: 0 });
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
+    return res.status(200).json({ unreadCount });
+  } catch (error) {
+    next(error);
   }
 };

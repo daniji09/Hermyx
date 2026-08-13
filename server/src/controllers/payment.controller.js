@@ -56,11 +56,11 @@ import {
   TRANSACTION_TYPE,
   MISSION_PARTICIPATION_PAYMENT_STATUS,
 } from '@hermyx/shared';
-import { create } from '../models/notification.model.js';
+import { createNotification as create } from '../services/notification.service.js';
 import { emitToUser } from '../providers/socket.provider.js';
 import {
   createMissionPayment,
-  getMissionPaymentsByStripeTransactionId,
+  findByStripeTransactionId as getMissionPaymentsByStripeTransactionId,
 } from '../models/mission-payment.model.js';
 import { FRONTEND_URL } from '../config/config.js';
 

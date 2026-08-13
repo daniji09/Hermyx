@@ -28,7 +28,7 @@ router.get(
   '/',
   verifyAdmin,
   validateQuerySchema(getReportsValidation),
-  await pagination(),
+  pagination(),
   reportController.getReports,
 );
 

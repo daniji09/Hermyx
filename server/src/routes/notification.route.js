@@ -1,13 +1,7 @@
 import { Router } from 'express';
 const router = Router();
 
-import {
-  autoAcceptParticipation,
-  getMyNotifications,
-  markMyNotificationsAsSeen,
-  markMyNotificationAsSeen,
-  respondToNotification,
-} from '../controllers/notification.controller.js';
+import * as notificationController from '../controllers/notification.controller.js';
 import {
   validateBodySchema,
   validateParamsSchema,
@@ -22,10 +16,14 @@ import {
 } from '../middlewares/auth.middleware.js';
 
 // List current user notifications
-router.get('/me', verifyToken, getMyNotifications);
+router.get('/me', verifyToken, notificationController.getMyNotifications);
 
 // Mark all current user notifications as seen
-router.post('/seen', verifyToken, markMyNotificationsAsSeen);
+router.post(
+  '/seen',
+  verifyToken,
+  notificationController.markMyNotificationsAsSeen,
+);
 
 // Respond to a notification
 router.post(
@@ -33,16 +31,20 @@ router.post(
   verifyToken,
   validateParamsSchema(respondToNotificationParamSchema),
   validateBodySchema(respondToNotificationBodySchema),
-  respondToNotification,
+  notificationController.respondToNotification,
 );
 
 router.post(
   '/:notificationId/seen',
   verifyToken,
   validateParamsSchema(respondToNotificationParamSchema),
-  markMyNotificationAsSeen,
+  notificationController.markMyNotificationAsSeen,
 );
 
-router.post('/cron/auto-accept', verifyCronToken, autoAcceptParticipation);
+router.post(
+  '/cron/auto-accept',
+  verifyCronToken,
+  notificationController.autoAcceptParticipation,
+);
 
 export default router;

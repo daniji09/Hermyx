@@ -47,14 +47,14 @@ import {
   unjoinParticipant,
   updatePaymentStatus,
 } from '../models/mission-participation.model.js';
-import { create } from '../models/notification.model.js';
+import { createNotification as create } from '../services/notification.service.js';
 import { emitToUser } from '../providers/socket.provider.js';
-import { getReportById } from '../models/report.model.js';
+import { findById as getReportById } from '../models/report.model.js';
 import { closeReportAndConversation } from '../services/report.service.js';
 import {
   createMissionPayment,
-  getMissionPaymentsByVacancy,
-  refundFromPayment,
+  findByVacancyId as getMissionPaymentsByVacancy,
+  refund as refundFromPayment,
 } from '../models/mission-payment.model.js';
 import * as userService from '../services/user.service.js';
 

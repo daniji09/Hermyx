@@ -164,6 +164,37 @@ export const updateConfiguration = async (uid, configuration) => {
   return result.rows[0];
 };
 
+export const updateAdventurerRating = async (uid, client = pool) => {
+  const result = await client.query(
+    `UPDATE app_user
+     SET rating = COALESCE((
+       SELECT ROUND(AVG(r.rating)::numeric, 2)
+       FROM mission_participation mp
+       JOIN review r ON r.id = mp.owner_review_id
+       WHERE mp.adventurer_id = $1
+     ), 0)
+     WHERE uid = $1 RETURNING rating`,
+    [uid],
+  );
+  return result.rows[0]?.rating;
+};
+
+export const updateOwnerRating = async (uid, client = pool) => {
+  const result = await client.query(
+    `UPDATE app_user
+     SET rating = COALESCE((
+       SELECT ROUND(AVG(r.rating)::numeric, 2)
+       FROM mission_participation mp
+       JOIN mission m ON m.mid = mp.mid
+       JOIN review r ON r.id = mp.adventurer_review_id
+       WHERE m.owner_id = $1
+     ), 0)
+     WHERE uid = $1 RETURNING rating`,
+    [uid],
+  );
+  return result.rows[0]?.rating;
+};
+
 //////// -------------
 
 //Save the Stripe Customer ID in the user table.

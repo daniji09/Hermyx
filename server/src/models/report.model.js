@@ -4,7 +4,7 @@ import pool from '../config/db.config.js';
 // Creates a report
 export const createReport = async (
   { senderId, message, type, payload, conversationId = null },
-  database = pool,
+  client = pool,
 ) => {
   const query = `INSERT INTO report (
       date,
@@ -17,7 +17,7 @@ export const createReport = async (
     )
     VALUES (NOW(), $1, $2, $3, $4, $5, $6)
     RETURNING *`;
-  const result = await database.query(query, [
+  const result = await client.query(query, [
     senderId,
     message,
     REPORT_STATUS.SENT.ID,
@@ -29,7 +29,7 @@ export const createReport = async (
 };
 
 // Get report by id
-export const getReportById = async (id) => {
+export const findById = async (id, client = pool) => {
   const query = `
     SELECT
       r.*,
@@ -42,7 +42,7 @@ export const getReportById = async (id) => {
       ON mp.id = NULLIF(r.payload->>'associated_vacancy_id', '')::int
     WHERE r.rid = $1
   `;
-  const result = await pool.query(query, [id]);
+  const result = await client.query(query, [id]);
   return result.rows[0];
 };
 
@@ -109,7 +109,7 @@ export const getReports = async ({ pagination, filters, userId }) => {
 // Gets all active specified reports of a user
 export const checkActiveReport = async (
   { senderId, type, payload },
-  database = pool,
+  client = pool,
 ) => {
   let query = `
     SELECT rid FROM REPORT 
@@ -126,7 +126,7 @@ export const checkActiveReport = async (
   ) {
     query += `AND payload->>'associated_mission_id' = $4
       AND payload->>'associated_vacancy_id' = $5`;
-    result = await database.query(query, [
+    result = await client.query(query, [
       senderId,
       REPORT_STATUS.SENT.ID,
       type,
@@ -135,7 +135,7 @@ export const checkActiveReport = async (
     ]);
   } else if (type === REPORT_TYPE.REPORT_PROFILE.ID) {
     query += `AND payload->>'associated_user_id' = $4`;
-    result = await database.query(query, [
+    result = await client.query(query, [
       senderId,
       REPORT_STATUS.SENT.ID,
       type,
@@ -143,7 +143,7 @@ export const checkActiveReport = async (
     ]);
   } else if (type === REPORT_TYPE.REPORT_MISSION.ID) {
     query += `AND payload->>'associated_mission_id' = $4`;
-    result = await database.query(query, [
+    result = await client.query(query, [
       senderId,
       REPORT_STATUS.SENT.ID,
       type,
@@ -155,46 +155,24 @@ export const checkActiveReport = async (
 };
 
 // Closes a report
-export const closeReport = async (rid, decision, reason, resolved_by) => {
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-    const result = await client.query(
-      `UPDATE report
+export const closeReport = async (
+  rid,
+  decision,
+  reason,
+  resolvedBy,
+  client = pool,
+) => {
+  const result = await client.query(
+    `UPDATE report
        SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5
        WHERE rid = $2
        RETURNING *`,
-      [REPORT_STATUS.ANSWERED.ID, rid, decision, reason, resolved_by],
-    );
-    const report = result.rows[0];
-
-    if (report?.conversation_id) {
-      await client.query(
-        `UPDATE conversation
-         SET closed_at = CURRENT_TIMESTAMP
-         WHERE cid = $1 AND closed_at IS NULL`,
-        [report.conversation_id],
-      );
-      await client.query(
-        `UPDATE conversation_participant
-         SET can_send = FALSE
-         WHERE conversation_id = $1 AND left_at IS NULL`,
-        [report.conversation_id],
-      );
-    }
-
-    await client.query('COMMIT');
-    return report;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+    [REPORT_STATUS.ANSWERED.ID, rid, decision, reason, resolvedBy],
+  );
+  return result.rows[0];
 };
 
-export const getDisputesByUserId = async (userId) => {
+export const findDisputesByUserId = async (userId) => {
   const result = await pool.query(
     `SELECT
        r.*,

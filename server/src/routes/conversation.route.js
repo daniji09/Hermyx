@@ -6,15 +6,7 @@ import {
   createMessageSchema,
   privateConversationSchema,
 } from '@hermyx/shared';
-import {
-  getOrCreatePrivateConversationWithUser,
-  sendMessage,
-  getConversationMessages,
-  getConversation,
-  getMyConversations,
-  getMyUnreadMessageCount,
-  markConversationAsRead,
-} from '../controllers/conversation.controller.js';
+import * as conversationController from '../controllers/conversation.controller.js';
 import {
   validateBodySchema,
   validateFileSchema,
@@ -27,23 +19,23 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post(
   '/private',
   validateBodySchema(privateConversationSchema),
-  getOrCreatePrivateConversationWithUser,
+  conversationController.getOrCreatePrivateConversationWithUser,
 );
 
-router.get('/', getMyConversations);
+router.get('/', conversationController.getMyConversations);
 
-router.get('/unread-count', getMyUnreadMessageCount);
+router.get('/unread-count', conversationController.getMyUnreadMessageCount);
 
 router.patch(
   '/:conversationId/read',
   validateParamsSchema(conversationIdParamsSchema),
-  markConversationAsRead,
+  conversationController.markConversationAsRead,
 );
 
 router.get(
   '/:conversationId',
   validateParamsSchema(conversationIdParamsSchema),
-  getConversation,
+  conversationController.getConversation,
 );
 
 router.post(
@@ -52,13 +44,13 @@ router.post(
   validateParamsSchema(conversationIdParamsSchema),
   validateBodySchema(createMessageSchema),
   validateFileSchema(createMessageFileSchema),
-  sendMessage,
+  conversationController.sendMessage,
 );
 
 router.get(
   '/:conversationId/messages',
   validateParamsSchema(conversationIdParamsSchema),
-  getConversationMessages,
+  conversationController.getConversationMessages,
 );
 
 export default router;

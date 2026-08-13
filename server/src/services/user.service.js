@@ -77,6 +77,9 @@ export const getUserByFirebaseUid = async (firebaseUid) => {
   return user;
 };
 
+export const getActiveAdmin = async (client) =>
+  userModel.getActiveAdmin(client);
+
 /// Endpoint complex functions
 // Search user by username with partial matches
 export const searchUserByUsername = async (
@@ -392,6 +395,16 @@ export const updateMyConfiguration = async (uid, configuration) => {
   const success = await userModel.updateConfiguration(uid, configuration);
   if (!success) throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
   return success.configuration;
+};
+
+export const updateAdventurerRating = async (uid, client) => {
+  checkUid(uid);
+  return userModel.updateAdventurerRating(uid, client);
+};
+
+export const updateOwnerRating = async (uid, client) => {
+  checkUid(uid);
+  return userModel.updateOwnerRating(uid, client);
 };
 
 // Adds email authentication to current user

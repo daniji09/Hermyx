@@ -1,17 +1,29 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
+import { uidBaseSchema } from './user.validation.js';
+
+/// Base validations, raw logic
+export const conversationIdBaseSchema = z.coerce
+  .number(messages.GENERAL.FIELD_NUMBER('Conversation id'))
+  .int(messages.GENERAL.FIELD_INTEGER('Conversation id'))
+  .positive(messages.GENERAL.FIELD_POSITIVE('Conversation id'));
+
+export const messageContentBaseSchema = z
+  .string()
+  .trim()
+  .max(1000, messages.GENERAL.FIELD_TOO_LONG('Content', 1000));
 
 export const privateConversationSchema = z.object({
-  otherUserId: z.coerce.number().int().positive(),
+  otherUserId: uidBaseSchema,
 });
 
 export const conversationIdParamsSchema = z.object({
-  conversationId: z.coerce.number().int().positive(),
+  conversationId: conversationIdBaseSchema,
 });
 
 export const createMessageSchema = z.object({
-  content: z.string().trim().max(1000).optional().default(''),
+  content: messageContentBaseSchema.optional().default(''),
 });
 
 export const createMessageFileSchema = z.object({

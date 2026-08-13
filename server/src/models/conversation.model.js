@@ -1,5 +1,4 @@
 import pool from '../config/db.config.js';
-import { addPrivateConversationParticipants } from './conversation-participant.model.js';
 
 /// INSERTS
 // Create conversation
@@ -17,7 +16,11 @@ export const create = async (missionId, client = pool) => {
 
 // ----
 
-export const findPrivateConversation = async (userAId, userBId) => {
+export const findPrivateConversation = async (
+  userAId,
+  userBId,
+  client = pool,
+) => {
   const query = `
     SELECT c.*
     FROM conversation c
@@ -34,54 +37,21 @@ export const findPrivateConversation = async (userAId, userBId) => {
     LIMIT 1
   `;
 
-  const result = await pool.query(query, [userAId, userBId]);
+  const result = await client.query(query, [userAId, userBId]);
   return result.rows[0];
 };
 
-export const createPrivateConversation = async (userAId, userBId) => {
-  const client = await pool.connect();
-
-  try {
-    await client.query('BEGIN');
-
-    const conversationQuery = `
+export const createPrivateConversation = async (client = pool) => {
+  const conversationQuery = `
       INSERT INTO conversation (type)
       VALUES ('private')
       RETURNING *
     `;
-
-    const conversationResult = await client.query(conversationQuery);
-    const conversation = conversationResult.rows[0];
-
-    await addPrivateConversationParticipants(
-      conversation.cid,
-      userAId,
-      userBId,
-      client,
-    );
-
-    await client.query('COMMIT');
-
-    return conversation;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
+  const conversationResult = await client.query(conversationQuery);
+  return conversationResult.rows[0];
 };
 
-export const getOrCreatePrivateConversation = async (userAId, userBId) => {
-  const existingConversation = await findPrivateConversation(userAId, userBId);
-
-  if (existingConversation) {
-    return existingConversation;
-  }
-
-  return createPrivateConversation(userAId, userBId);
-};
-
-export const closeMissionConversation = async (missionId, database = pool) => {
+export const closeMissionConversation = async (missionId, client = pool) => {
   const query = `
     UPDATE conversation
     SET closed_at = CURRENT_TIMESTAMP
@@ -91,12 +61,21 @@ export const closeMissionConversation = async (missionId, database = pool) => {
     RETURNING *
   `;
 
-  const result = await database.query(query, [missionId]);
+  const result = await client.query(query, [missionId]);
   return result.rows[0] || null;
 };
 
-export const createDisputeConversation = async (database = pool) => {
-  const result = await database.query(`
+export const closeById = async (conversationId, client = pool) => {
+  const result = await client.query(
+    `UPDATE conversation SET closed_at = CURRENT_TIMESTAMP
+     WHERE cid = $1 AND closed_at IS NULL RETURNING *`,
+    [conversationId],
+  );
+  return result.rows[0] || null;
+};
+
+export const createDisputeConversation = async (client = pool) => {
+  const result = await client.query(`
     INSERT INTO conversation (type)
     VALUES ('dispute')
     RETURNING *
@@ -104,7 +83,7 @@ export const createDisputeConversation = async (database = pool) => {
   return result.rows[0];
 };
 
-export const getConversationById = async (conversationId) => {
+export const findById = async (conversationId, client = pool) => {
   const query = `
     SELECT
       c.*,
@@ -113,11 +92,11 @@ export const getConversationById = async (conversationId) => {
     LEFT JOIN mission m ON m.mid = c.mission_id
     WHERE c.cid = $1
   `;
-  const result = await pool.query(query, [conversationId]);
+  const result = await client.query(query, [conversationId]);
   return result.rows[0];
 };
 
-export const getConversationsByUserId = async (userId) => {
+export const findByUserId = async (userId, client = pool) => {
   const query = `
     SELECT
       c.cid,
@@ -183,6 +162,6 @@ export const getConversationsByUserId = async (userId) => {
     ORDER BY last_message.created_at DESC NULLS LAST, c.created_at DESC
   `;
 
-  const result = await pool.query(query, [userId]);
+  const result = await client.query(query, [userId]);
   return result.rows;
 };

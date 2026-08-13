@@ -1,13 +1,15 @@
 import pool from '../config/db.config.js';
 
-export const createMessage = async ({
-  conversationId,
-  senderId,
-  content,
-  attachmentUrl = null,
-  attachmentType = null,
-  database = pool,
-}) => {
+export const create = async (
+  {
+    conversationId,
+    senderId,
+    content,
+    attachmentUrl = null,
+    attachmentType = null,
+  },
+  client = pool,
+) => {
   const query = `
     WITH inserted_message AS (
       INSERT INTO conversation_message (
@@ -39,7 +41,7 @@ export const createMessage = async ({
     JOIN app_user u ON u.uid = m.sender_id
   `;
 
-  const result = await database.query(query, [
+  const result = await client.query(query, [
     conversationId,
     senderId,
     content,
@@ -49,7 +51,11 @@ export const createMessage = async ({
   return result.rows[0];
 };
 
-export const getMessagesByConversationId = async (conversationId, userId) => {
+export const findByConversationId = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
   const query = `
     SELECT
       m.mid,
@@ -79,14 +85,15 @@ export const getMessagesByConversationId = async (conversationId, userId) => {
     ORDER BY m.created_at ASC
   `;
 
-  const result = await pool.query(query, [conversationId, userId]);
+  const result = await client.query(query, [conversationId, userId]);
   return result.rows;
 };
 
-export const getUnreadMessageCountByUserId = async (
+export const countUnreadByUserId = async (
   userId,
   conversationType = null,
   excludedConversationType = null,
+  client = pool,
 ) => {
   const query = `
     SELECT COUNT(*)::int AS unread_count
@@ -107,7 +114,7 @@ export const getUnreadMessageCountByUserId = async (
       AND ($3::varchar IS NULL OR c.type <> $3)
   `;
 
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     userId,
     conversationType,
     excludedConversationType,

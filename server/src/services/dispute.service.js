@@ -8,31 +8,11 @@ import {
   REPORT_TYPE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { createDisputeConversation } from '../models/conversation.model.js';
-import {
-  isConversationParticipant,
-  markConversationAsReadByUserId,
-} from '../models/conversation-participant.model.js';
-import {
-  createMessage,
-  getUnreadMessageCountByUserId,
-} from '../models/conversation-message.model.js';
-import {
-  addAssociatedReport,
-  markAsSeen,
-  updateNotificationStatus,
-} from '../models/notification.model.js';
-import { createConversationParticipant } from './conversation.service.js';
-import { createNotification } from './notification.service.js';
-import { disputeParticipation } from '../models/mission-participation.model.js';
-import { syncMissionCompletionStatus } from '../models/mission.model.js';
-import {
-  checkActiveReport,
-  createReport,
-  getDisputesByUserId,
-  getReportById,
-} from '../models/report.model.js';
-import { getActiveAdmin } from '../models/user.model.js';
+import * as conversationService from './conversation.service.js';
+import * as notificationService from './notification.service.js';
+import * as missionService from './mission.service.js';
+import * as reportService from './report.service.js';
+import * as userService from './user.service.js';
 import { AppError } from '../utils/error.util.js';
 
 const DISPUTE_TYPES = new Set([
@@ -40,18 +20,19 @@ const DISPUTE_TYPES = new Set([
   REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
 ]);
 
-export const getMyDisputes = async (userId) => getDisputesByUserId(userId);
+export const getMyDisputes = async (userId) =>
+  reportService.getUserDisputes(userId);
 
 export const getMyDisputeUnreadCount = async (userId) =>
-  getUnreadMessageCountByUserId(userId, 'dispute');
+  conversationService.getUnreadMessageCountByUserId(userId, 'dispute');
 
 export const getDispute = async (reportId, userId) => {
-  const dispute = await getReportById(reportId);
+  const dispute = await reportService.getReport(reportId);
   if (!dispute || !DISPUTE_TYPES.has(dispute.type)) {
     throw new AppError(messages.REPORT_NOT_FOUND, 404);
   }
 
-  const isParticipant = await isConversationParticipant(
+  const isParticipant = await conversationService.isConversationParticipant(
     dispute.conversation_id,
     userId,
   );
@@ -78,7 +59,7 @@ export const createDisputeTicket = async ({
   try {
     await client.query('BEGIN');
 
-    const activeReport = await checkActiveReport(
+    const activeReport = await reportService.hasActiveReport(
       {
         senderId,
         type: reportType,
@@ -90,7 +71,7 @@ export const createDisputeTicket = async ({
       throw new AppError(messages.APPLICANT_ALREADY_REPORTED, 409);
     }
 
-    const admin = await getActiveAdmin(client);
+    const admin = await userService.getActiveAdmin(client);
     if (!admin) {
       throw new AppError(
         'An active administrator is required for disputes.',
@@ -98,20 +79,25 @@ export const createDisputeTicket = async ({
       );
     }
 
-    await disputeParticipation(missionId, adventurerId, client);
-    const missionAfterSync = await syncMissionCompletionStatus(
+    await missionService.disputeMissionParticipation(
+      missionId,
+      adventurerId,
+      client,
+    );
+    const missionAfterSync = await missionService.syncMissionCompletionStatus(
       missionId,
       client,
     );
-    await updateNotificationStatus(
+    await notificationService.updateNotificationStatus(
       notificationId,
       NOTIFICATION_STATUS.DISPUTED.ID,
       client,
     );
-    await markAsSeen(notificationId, client);
+    await notificationService.markNotificationAsSeen(notificationId, client);
 
-    const conversation = await createDisputeConversation(client);
-    const report = await createReport(
+    const conversation =
+      await conversationService.createDisputeConversation(client);
+    const report = await reportService.createUserReport(
       {
         senderId,
         message: reason,
@@ -124,39 +110,43 @@ export const createDisputeTicket = async ({
       },
       client,
     );
-    await addAssociatedReport(notificationId, report.rid, client);
+    await notificationService.addAssociatedReport(
+      notificationId,
+      report.rid,
+      client,
+    );
 
     for (const participantId of [senderId, counterpartId, admin.uid]) {
-      await createConversationParticipant(
+      await conversationService.createConversationParticipant(
         conversation.cid,
         participantId,
         client,
       );
     }
 
-    await createMessage({
-      conversationId: conversation.cid,
-      senderId: HERMYX_SYSTEM_ID,
-      content: systemMessage,
-      database: client,
-    });
+    await conversationService.createMessage(
+      {
+        conversationId: conversation.cid,
+        senderId: HERMYX_SYSTEM_ID,
+        content: systemMessage,
+      },
+      client,
+    );
 
     for (const participantId of [senderId, counterpartId, admin.uid]) {
-      await markConversationAsReadByUserId(
+      await conversationService.markConversationAsReadByUserId(
         conversation.cid,
         participantId,
         client,
       );
     }
 
-    const initialMessage = await createMessage({
-      conversationId: conversation.cid,
-      senderId,
-      content: reason,
-      database: client,
-    });
+    const initialMessage = await conversationService.createMessage(
+      { conversationId: conversation.cid, senderId, content: reason },
+      client,
+    );
 
-    const followUpNotificationId = await createNotification(
+    const followUpNotificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.MISSION.ID,
         kind: NOTIFICATION_KIND.INFORMATIONAL.ID,

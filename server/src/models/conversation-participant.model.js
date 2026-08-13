@@ -44,20 +44,20 @@ export const addPrivateConversationParticipants = async (
   conversationId,
   userAId,
   userBId,
-  database = pool,
+  client = pool,
 ) => {
   const query = `
     INSERT INTO conversation_participant (conversation_id, user_id)
     VALUES ($1, $2), ($1, $3)
   `;
 
-  await database.query(query, [conversationId, userAId, userBId]);
+  await client.query(query, [conversationId, userAId, userBId]);
 };
 
 export const addMissionConversationParticipant = async (
   missionId,
   userId,
-  database = pool,
+  client = pool,
 ) => {
   const query = `
     INSERT INTO conversation_participant (conversation_id, user_id)
@@ -69,14 +69,14 @@ export const addMissionConversationParticipant = async (
     RETURNING *
   `;
 
-  const result = await database.query(query, [missionId, userId]);
+  const result = await client.query(query, [missionId, userId]);
   return result.rows[0] || null;
 };
 
 export const freezeMissionConversationHistory = async (
   missionId,
   userId,
-  database = pool,
+  client = pool,
 ) => {
   const query = `
     UPDATE conversation_participant cp
@@ -92,13 +92,14 @@ export const freezeMissionConversationHistory = async (
     RETURNING cp.*
   `;
 
-  const result = await database.query(query, [missionId, userId]);
+  const result = await client.query(query, [missionId, userId]);
   return result.rows[0] || null;
 };
 
-export const getConversationParticipants = async (
+export const findByConversationId = async (
   conversationId,
   userId = null,
+  client = pool,
 ) => {
   const query = `
     SELECT
@@ -135,11 +136,15 @@ export const getConversationParticipants = async (
     ORDER BY cp.joined_at ASC
   `;
 
-  const result = await pool.query(query, [conversationId, userId]);
+  const result = await client.query(query, [conversationId, userId]);
   return result.rows;
 };
 
-export const isConversationParticipant = async (conversationId, userId) => {
+export const isConversationParticipant = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
   const query = `
     SELECT 1
     FROM conversation_participant
@@ -149,11 +154,15 @@ export const isConversationParticipant = async (conversationId, userId) => {
     LIMIT 1
   `;
 
-  const result = await pool.query(query, [conversationId, userId]);
+  const result = await client.query(query, [conversationId, userId]);
   return result.rowCount > 0;
 };
 
-export const canSendMessageToConversation = async (conversationId, userId) => {
+export const canSendMessageToConversation = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
   const query = `
     SELECT 1
     FROM conversation_participant cp
@@ -166,11 +175,14 @@ export const canSendMessageToConversation = async (conversationId, userId) => {
     LIMIT 1
   `;
 
-  const result = await pool.query(query, [conversationId, userId]);
+  const result = await client.query(query, [conversationId, userId]);
   return result.rowCount > 0;
 };
 
-export const getActiveConversationParticipantIds = async (conversationId) => {
+export const findActiveIdsByConversationId = async (
+  conversationId,
+  client = pool,
+) => {
   const query = `
     SELECT user_id
     FROM conversation_participant
@@ -180,14 +192,14 @@ export const getActiveConversationParticipantIds = async (conversationId) => {
       AND history_until IS NULL
   `;
 
-  const result = await pool.query(query, [conversationId]);
+  const result = await client.query(query, [conversationId]);
   return result.rows.map((participant) => participant.user_id);
 };
 
 export const markConversationAsReadByUserId = async (
   conversationId,
   userId,
-  database = pool,
+  client = pool,
 ) => {
   const query = `
     UPDATE conversation_participant
@@ -198,6 +210,18 @@ export const markConversationAsReadByUserId = async (
     RETURNING conversation_id
   `;
 
-  const result = await database.query(query, [conversationId, userId]);
+  const result = await client.query(query, [conversationId, userId]);
   return result.rowCount > 0;
+};
+
+export const disableConversationParticipants = async (
+  conversationId,
+  client = pool,
+) => {
+  const result = await client.query(
+    `UPDATE conversation_participant SET can_send = FALSE
+     WHERE conversation_id = $1 AND left_at IS NULL RETURNING *`,
+    [conversationId],
+  );
+  return result.rows;
 };

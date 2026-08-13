@@ -507,7 +507,7 @@ export const getAllMissionsInDraft = async () => {
   return result.rows;
 };
 
-export const syncMissionCompletionStatus = async (mid) => {
+export const syncMissionCompletionStatus = async (mid, client = pool) => {
   const summaryQuery = `
     SELECT
       COUNT(*)::int AS participant_count,
@@ -518,7 +518,7 @@ export const syncMissionCompletionStatus = async (mid) => {
     FROM mission_participation
     WHERE mid = $1
   `;
-  const summaryResult = await pool.query(summaryQuery, [
+  const summaryResult = await client.query(summaryQuery, [
     mid,
     MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
     MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
@@ -554,7 +554,7 @@ export const syncMissionCompletionStatus = async (mid) => {
       AND status IN ($4, $3)
     RETURNING *
   `;
-  const updateResult = await pool.query(updateQuery, [
+  const updateResult = await client.query(updateQuery, [
     mid,
     nextStatus,
     MISSION_STATUS.IN_PROGRESS.ID,

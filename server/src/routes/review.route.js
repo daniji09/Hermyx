@@ -1,9 +1,5 @@
 import { Router } from 'express';
-import {
-  getUserReviews,
-  reviewAdventurer,
-  reviewOwner,
-} from '../controllers/review.controller.js';
+import * as reviewController from '../controllers/review.controller.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import {
   validateBodySchema,
@@ -26,7 +22,7 @@ router.get(
   validateParamsSchema(reviewUserParamSchema),
   validateQuerySchema(getUserReviewsQuerySchema),
   pagination(),
-  getUserReviews,
+  reviewController.getUserReviews,
 );
 
 // Reviews an adventurer after a completed mission
@@ -34,7 +30,7 @@ router.post(
   '/missions/:mid/adventurers/:adventurerId',
   validateParamsSchema(reviewAdventurerParamSchema),
   validateBodySchema(reviewAdventurerBodySchema),
-  reviewAdventurer,
+  reviewController.reviewAdventurer,
 );
 
 // Reviews a mission owner after a completed participation
@@ -42,7 +38,7 @@ router.post(
   '/missions/:mid/owner',
   validateParamsSchema(reviewOwnerParamSchema),
   validateBodySchema(reviewAdventurerBodySchema),
-  reviewOwner,
+  reviewController.reviewOwner,
 );
 
 export default router;

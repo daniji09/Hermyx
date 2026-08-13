@@ -77,6 +77,126 @@ export const getMissionParticipationByMidAndAdventurerIdOrThrow = async (
   return missionParticipation;
 };
 
+export const getMissionParticipationReviewContext = async (
+  mid,
+  adventurerId,
+  client,
+) => {
+  checkMid(mid);
+  checkAdventurerId(adventurerId);
+  return missionParticipationModel.findReviewContext(mid, adventurerId, client);
+};
+
+export const updateMissionParticipationOwnerReview = async (
+  participationId,
+  reviewId,
+  client,
+) =>
+  missionParticipationModel.updateOwnerReview(
+    participationId,
+    reviewId,
+    client,
+  );
+
+export const updateMissionParticipationAdventurerReview = async (
+  participationId,
+  reviewId,
+  client,
+) =>
+  missionParticipationModel.updateAdventurerReview(
+    participationId,
+    reviewId,
+    client,
+  );
+
+export const approveMissionParticipation = async (
+  mid,
+  adventurerId,
+  client,
+) => {
+  checkMid(mid);
+  checkAdventurerId(adventurerId);
+  return missionParticipationModel.approveParticipation(
+    mid,
+    adventurerId,
+    client,
+  );
+};
+
+export const reopenMissionParticipation = async (mid, adventurerId, client) => {
+  checkMid(mid);
+  checkAdventurerId(adventurerId);
+  return missionParticipationModel.reopenParticipation(
+    mid,
+    adventurerId,
+    client,
+  );
+};
+
+export const markMissionParticipationAsPaidOut = async (
+  participationId,
+  client,
+) => missionParticipationModel.markVacancyAsPaidOut(participationId, client);
+
+export const syncMissionCompletionStatus = async (mid, client) => {
+  checkMid(mid);
+  return missionModel.syncMissionCompletionStatus(mid, client);
+};
+
+export const requestMissionParticipationRevision = async (
+  mid,
+  adventurerId,
+  client,
+) =>
+  missionParticipationModel.requestParticipationRevision(
+    mid,
+    adventurerId,
+    client,
+  );
+
+export const disputeMissionParticipation = async (mid, adventurerId, client) =>
+  missionParticipationModel.disputeParticipation(mid, adventurerId, client);
+
+export const getOccupiedMissionParticipations = async (mid, client) =>
+  missionParticipationModel.findAllOccupied(mid, client);
+
+export const updateMissionParticipationStatus = async (
+  participationId,
+  status,
+  client,
+) => missionParticipationModel.updateStatus(participationId, status, client);
+
+export const updateMissionParticipationPaymentStatus = async (
+  participationId,
+  status,
+  client,
+) =>
+  missionParticipationModel.updatePaymentStatus(
+    participationId,
+    status,
+    client,
+  );
+
+export const updateMissionParticipationReward = async (
+  participationId,
+  monetaryReward,
+  client,
+) =>
+  missionParticipationModel.updateVacancyMonetaryReward(
+    participationId,
+    monetaryReward,
+    client,
+  );
+
+export const refundMissionParticipation = async (
+  participationId,
+  amount,
+  client,
+) => missionParticipationModel.refundVacancy(participationId, amount, client);
+
+export const updateMissionPayment = async (mid, payment, client) =>
+  missionModel.updateMissionPayment(mid, payment, client);
+
 // Missions published by uid
 export const getMissionsPublishedByUid = async (uid, pagination) => {
   checkUid(uid);
@@ -114,6 +234,88 @@ export const getMissionsPublicJoinedByUid = async (uid, pagination) => {
 };
 
 /// Endpoint complex functions
+export const joinMissionVacancy = async (
+  mid,
+  vacancyId,
+  adventurerId,
+  client,
+) => {
+  if (!client) {
+    const transactionClient = await pool.connect();
+    try {
+      await transactionClient.query('BEGIN');
+      const joinedVacancy = await joinMissionVacancy(
+        mid,
+        vacancyId,
+        adventurerId,
+        transactionClient,
+      );
+      await transactionClient.query('COMMIT');
+      return joinedVacancy;
+    } catch (error) {
+      await transactionClient.query('ROLLBACK');
+      throw error;
+    } finally {
+      transactionClient.release();
+    }
+  }
+  const joinedVacancy = await missionParticipationModel.joinVacancy(
+    mid,
+    vacancyId,
+    adventurerId,
+    client,
+  );
+  if (!joinedVacancy) return null;
+  await missionModel.updateOccupiedVacancies(mid, 1, client);
+  await conversationService.createMissionConversationParticipant(
+    mid,
+    adventurerId,
+    client,
+  );
+  return joinedVacancy;
+};
+
+export const releaseMissionParticipation = async (
+  mid,
+  adventurerId,
+  client,
+) => {
+  if (!client) {
+    const transactionClient = await pool.connect();
+    try {
+      await transactionClient.query('BEGIN');
+      const participation = await releaseMissionParticipation(
+        mid,
+        adventurerId,
+        transactionClient,
+      );
+      await transactionClient.query('COMMIT');
+      return participation;
+    } catch (error) {
+      await transactionClient.query('ROLLBACK');
+      throw error;
+    } finally {
+      transactionClient.release();
+    }
+  }
+  checkMid(mid);
+  checkAdventurerId(adventurerId);
+  const participation =
+    await missionParticipationModel.updateStatusByMidAndAdventurer(
+      mid,
+      adventurerId,
+      MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+      client,
+    );
+  if (participation)
+    await conversationService.freezeMissionConversationHistory(
+      mid,
+      adventurerId,
+      client,
+    );
+  return participation;
+};
+
 // Get all missions
 export const getMissions = async (title, pagination) => {
   // Gets all missions filtering what is needed
