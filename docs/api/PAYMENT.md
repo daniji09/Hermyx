@@ -24,3 +24,24 @@ Gets all cards saved by user.
   <br>
   <br>
   <br>
+
+## - Create intent for card addition: `post /stripe/cards`
+
+Creates an intent in Stripe for that user to add a card.
+
+**Requires authentication:** Yes
+
+**Responses:**
+
+- `200 OK`: intent created successfully.
+
+  ```json
+  {
+    "setupIntentClientSecret": "<clientSecret>"
+  }
+  ```
+
+  **Workflow:** the process for a user to save a new card is a bit complex. The frontend sends a request to this endpoint to create an intent in Stripe, notifying that the current user is about to add a card. The backend performs the operation successfully and returns the client secret to the frontend, which uses it to send the card information and add it correctly to the corresponding user. This is required by law, because if the frontend were to send the credit card information to the backend, the backend would be responsible for auditing that information according to PCI-DSS. Furthermore, when the card addition is executed on the frontend, if Stripe detects that a pop-up from the corresponding bank needs to be displayed due to 3D Secure, it will be displayed, something impossible to do on the backend.
+  <br>
+  <br>
+  <br>

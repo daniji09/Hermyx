@@ -14,17 +14,13 @@ import {
 } from '@hermyx/shared';
 
 /// GETS
-//List the cards
+// List user's cards
 router.get('/cards', requireStripeCustomerId, paymentController.listCards);
 
-// -----
+// Add a card to the user
+router.post('/cards', requireStripeCustomerId, paymentController.addCard);
 
-//Add a card
-router.post(
-  '/add-card-to-customer',
-  requireStripeCustomerId,
-  paymentController.addCardToCustomer,
-);
+// -----
 
 //Set a card as default
 router.post(

@@ -28,7 +28,7 @@ export const getSavedCards = async () => {
 };
 
 export const createCardSetupIntent = async () => {
-  const { data } = await api.post('/stripe/add-card-to-customer');
+  const { data } = await api.post('/stripe/cards');
   return data;
 };
 

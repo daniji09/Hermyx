@@ -1,6 +1,4 @@
 import {
-  //CreateCustomer,
-  createSetupIntent,
   retrieveCustomer,
   retrievePaymentMethod,
   setDefaultCard as _setDefaultCard,
@@ -60,6 +58,36 @@ import { findByStripeTransactionId as getMissionPaymentsByStripeTransactionId } 
 import { FRONTEND_URL } from '../config/config.js';
 import * as paymentService from '../services/payment.service.js';
 
+/// Controller functions
+// List the user's saved cards and identifies the default one.
+// A second of courtesy if you change the default card and immediately list the cards again
+export const listCards = async (req, res, next) => {
+  try {
+    const customerId = req.user.stripe_customer_id;
+    const { customer, cards } = await paymentService.listCards(customerId);
+    return res.status(200).json({
+      defaultPaymentMethodId:
+        customer.invoice_settings?.default_payment_method || null,
+      cards: cards.data,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Creates a SetupIntent to save a credit card without charging it yet.
+export async function addCard(req, res, next) {
+  try {
+    const customerId = req.user.stripe_customer_id;
+    const setupIntent = await paymentService.addCard(customerId);
+    return res.status(200).json({ clientSecret: setupIntent.client_secret });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// ------
+
 const ensureMissionOwner = (mission, userId, res) => {
   if (mission.owner_id !== userId) {
     res.status(403).json({ error: 'You can only pay your own missions.' });
@@ -97,14 +125,6 @@ const getReusablePaymentIntent = async (mission, customerId) => {
   return null;
 };
 
-const handlePaymentError = (err, res) => {
-  if (err.status) {
-    return res.status(err.status).json({ error: err.message });
-  }
-
-  return res.status(500).json({ error: err.message });
-};
-
 const getPaymentMethodCustomerId = (paymentMethod) => {
   if (!paymentMethod.customer) return null;
   if (typeof paymentMethod.customer === 'string') return paymentMethod.customer;
@@ -134,38 +154,8 @@ const ensurePaymentMethodOwner = async (paymentMethodId, customerId) => {
   return paymentMethod;
 };
 
-//Creates a SetupIntent to save a credit card without charging it yet.
-export async function addCardToCustomer(req, res) {
-  try {
-    const customerId = req.user.stripe_customer_id;
-    if (!customerId)
-      return res.status(400).json({ error: 'You do not have a Customer ID' });
-
-    const setupIntent = await createSetupIntent(customerId);
-    res.json({ clientSecret: setupIntent.client_secret });
-  } catch (err) {
-    handlePaymentError(err, res);
-  }
-}
-
-// List the user's saved cards and identifies the default one.
-// A second of courtesy if you change the default card and immediately list the cards again
-export const listCards = async (req, res, next) => {
-  try {
-    const customerId = req.user.stripe_customer_id;
-    const { customer, cards } = await paymentService.listCards(customerId);
-    return res.status(200).json({
-      defaultPaymentMethodId:
-        customer.invoice_settings?.default_payment_method || null,
-      cards: cards.data,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 //Updates the customer's default payment method in Stripe.
-export async function setDefaultCard(req, res) {
+export async function setDefaultCard(req, res, next) {
   try {
     const customerId = req.user.stripe_customer_id;
     const { paymentMethodId } = req.body;
@@ -177,13 +167,13 @@ export async function setDefaultCard(req, res) {
       success: true,
       message: 'Card set as default',
     });
-  } catch (err) {
-    handlePaymentError(err, res);
+  } catch (error) {
+    next(error);
   }
 }
 
 //Deletes a card. If it was the default, clears the default setting
-export async function deleteCard(req, res) {
+export async function deleteCard(req, res, next) {
   try {
     const customerId = req.user.stripe_customer_id;
     const { paymentMethodId } = req.params;
@@ -200,13 +190,13 @@ export async function deleteCard(req, res) {
     }
 
     res.json({ success: true, message: 'Card deleted' });
-  } catch (err) {
-    handlePaymentError(err, res);
+  } catch (error) {
+    next(error);
   }
 }
 
 //Charges the mission cost using the user's saved default card.
-export async function payDefault(req, res) {
+export async function payDefault(req, res, next) {
   try {
     const customerId = req.user.stripe_customer_id;
     const { missionId } = req.body;
@@ -249,13 +239,13 @@ export async function payDefault(req, res) {
       paymentIntentId: pi.id,
       paymentMethodId: defaultPm,
     });
-  } catch (err) {
-    handlePaymentError(err, res);
+  } catch (error) {
+    next(error);
   }
 }
 
 //Creates a PaymentIntent for a new card. Can optionally save the card for future use.
-export async function payNew(req, res) {
+export async function payNew(req, res, next) {
   try {
     const customerId = req.user.stripe_customer_id;
     const { mid, saveCard = true } = req.body;
@@ -327,8 +317,8 @@ export async function payNew(req, res) {
     }
 
     return res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id });
-  } catch (err) {
-    handlePaymentError(err, res);
+  } catch (error) {
+    next(error);
   }
 }
 

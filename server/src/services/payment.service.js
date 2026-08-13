@@ -33,6 +33,17 @@ export const listCards = async (stripeCustomerId) => {
   return { customer, cards };
 };
 
+// Add card
+export const addCard = async (stripeCustomerId) => {
+  // Parameter checks
+  checkStripeCustomerId(stripeCustomerId);
+
+  // Creates intent to save card without charging
+  const setupIntent = await paymentProvider.createSetupIntent(stripeCustomerId);
+
+  return setupIntent;
+};
+
 /// Data checks
 const checkStripeCustomerId = (stripeCustomerId) => {
   if (!stripeCustomerId)
