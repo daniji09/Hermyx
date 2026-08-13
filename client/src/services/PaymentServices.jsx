@@ -52,6 +52,6 @@ export const connectOnBoard = async () => {
 };
 
 export const goToDashboard = async () => {
-  const { data } = await api.post(`/stripe/connect/login-link`);
+  const { data } = await api.post(`/stripe/connect/dashboard-link`);
   return data;
 };

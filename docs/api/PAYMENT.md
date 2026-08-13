@@ -25,6 +25,25 @@ Gets all cards saved by user.
   <br>
   <br>
 
+## - User's Stripe connection success: `GET /stripe/connect/success`
+
+Endpoint that confirms the success of the connection to Stripe
+
+**Requires authentication:** Yes
+
+**Responses:**
+
+- `200 Created`: user connected to Stripe successfully.
+
+  ```json
+  {}
+  ```
+
+**Workflow:** just a endpoint that Stripe calls when process has been completed, so it come back to Hermyx.
+<br>
+<br>
+<br>
+
 ## - Create intent for card addition: `POST /stripe/cards`
 
 Creates an intent in Stripe for that user to add a card.
@@ -76,7 +95,7 @@ Sets a card to be the default one.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot set as default a card that does not belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot set as default a card that does not belong to them.
 
   ```json
   {
@@ -135,7 +154,7 @@ Creates a payment intent using the user's default card.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
 
   ```json
   {
@@ -209,7 +228,7 @@ Creates a payment intent using a new card.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
 
   ```json
   {
@@ -280,7 +299,7 @@ Confirms payment and make changes in database
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot confirm payment of a mission that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot confirm payment of a mission that don't belong to them.
 
   ```json
   {
@@ -334,21 +353,31 @@ Creates an account in Stripe for the adventurer.
 <br>
 <br>
 
-## - User's Stripe connection success: `POST /stripe/connect/success`
+## - Links user to Stripe dashboard: `POST /stripe/connect/dashboard-link`
 
-Endpoint that confirms the success of the connection to Stripe
+Returns Stripe dashboard link for registered users
 
 **Requires authentication:** Yes
 
 **Responses:**
 
-- `200 Created`: user connected to Stripe successfully.
+- `200 Created`: user connected to Stripe dashboard successfully.
 
   ```json
-  {}
+  { "url": "<dashboard_url>" }
   ```
 
-**Workflow:** just a endpoint that Stripe calls when process has been completed, so it come back to Hermyx.
+- `403 Forbidden`: user hasn't finished Stripe register.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You have not completed the Stripe onboarding yet."]
+    }
+  }
+  ```
+
+**Workflow:** this endpoints just returns Stripe dashboard URL for the specified user, if it has completed the register form.
 <br>
 <br>
 <br>
@@ -383,7 +412,7 @@ Deletes the specified card.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot delete a card that does not belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot delete a card that does not belong to them.
 
   ```json
   {

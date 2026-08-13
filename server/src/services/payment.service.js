@@ -343,6 +343,26 @@ export const connectOnBoard = async (user) => {
   return accountLink;
 };
 
+// Gets Stripe dashboard link
+export const getDashboardLink = async (user) => {
+  checkUser(user);
+
+  // Checks if user actually completed login form
+  const accountInfo = await paymentProvider.retrieveConnectAccount(
+    user.stripe_connected_id,
+  );
+
+  // If not, is not able to access the dashboard
+  if (!accountInfo.details_submitted)
+    throw new AppError(messages.GENERAL.STRIPE_ONBOARDING_NOT_COMPLETED, 403);
+
+  // Dashboard link
+  const loginLink = await paymentProvider.createLoginLink(
+    user.stripe_connected_id,
+  );
+  return loginLink.url;
+};
+
 // Delete card
 export const deleteCard = async (stripeCustomerId, paymentMethodId) => {
   // Parameter checks

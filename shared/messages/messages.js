@@ -21,6 +21,7 @@ export const messages = {
     NO_IMAGE_PROVIDED: `No image provided`,
     OPERATION_ERROR: `Operation ended abruptly.`,
     STRIPE_CUSTOMER_ERROR: `Error managing Stripe customer account.`,
+    STRIPE_ONBOARDING_NOT_COMPLETED: `You have not completed the Stripe onboarding yet.`,
     TOO_MANY_ATTEMPTS: `Too many attempts. Please, try later.`,
     TOO_MANY_FILES: `You sent too many files for this field, or its name is incorrect.`,
     UNAUTHORIZED_ERROR: `User is not authorized for this action.`,

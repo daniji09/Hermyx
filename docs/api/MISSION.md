@@ -317,7 +317,7 @@ Close a mission after been opened or reopened.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: mission does not belong to him.
+- `403 Forbidden`: user is unauthorized to do this action: mission does not belong to him.
 
   ```json
   {
@@ -381,7 +381,7 @@ Adventurers sends a join request notification to the owner of the mission, linki
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot join their own mission.
+- `403 Forbidden`: user is unauthorized to do this action: cannot join their own mission.
 
   ```json
   {
@@ -456,7 +456,7 @@ Applicant sends an invitation to a user, so they can join a vacancy of a mission
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot join their own mission.
+- `403 Forbidden`: user is unauthorized to do this action: cannot join their own mission.
 
   ```json
   {
@@ -529,7 +529,7 @@ User unjoins a mission they are participating in.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
 
   ```json
   {
@@ -653,7 +653,7 @@ Cancels a mission, if it hadn't been started, then is a deletion.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
 
   ```json
   {
@@ -720,7 +720,7 @@ Reopens a mission after being closed.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
 
   ```json
   {
@@ -787,7 +787,7 @@ Finishes a mission.
   }
   ```
 
-- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
 
   ```json
   {

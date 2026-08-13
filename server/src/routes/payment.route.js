@@ -21,6 +21,9 @@ import {
 // List user's cards
 router.get('/cards', requireStripeCustomerId, paymentController.listCards);
 
+// Successful connected account route
+router.get('/connect/success', paymentController.connectSuccess);
+
 /// POSTS
 // Add a card to the user
 router.post('/cards', requireStripeCustomerId, paymentController.addCard);
@@ -62,8 +65,8 @@ router.post(
 // Route to register as a connected account (for adventurers)
 router.post('/connect/onboard', paymentController.connectOnboard);
 
-// Successful connected account route
-router.get('/connect/success', paymentController.connectSuccess);
+// Route to get the dashboard link for connected accounts
+router.post('/connect/dashboard-link', paymentController.getDashboardLink);
 
 /// DELETES
 // Delete a card
@@ -89,8 +92,5 @@ router.post(
   requireStripeCustomerId,
   paymentController.refundMissionPayment,
 );
-
-//Route to get the dashboard link for connected accounts
-router.post('/connect/login-link', paymentController.getDashboardLink);
 
 export default router;

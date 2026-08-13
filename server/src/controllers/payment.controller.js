@@ -2,12 +2,7 @@ import {
   retrievePI,
   createTransfer,
   createRefund,
-  createLoginLink,
-  retrieveConnectAccount,
 } from '../providers/payment.provider.js';
-
-import { findByUid } from '../models/user.model.js';
-
 import {
   findByMid as _getById,
   lockForRelease,
@@ -17,10 +12,7 @@ import {
   lockForRefund,
   finalizeRefund,
 } from '../models/mission.model.js';
-
 import { updateTransferInfo } from '../models/mission-participation.model.js';
-import { messages } from '@hermyx/shared';
-
 import * as paymentService from '../services/payment.service.js';
 
 /// Controller functions
@@ -114,9 +106,20 @@ export const connectOnboard = async (req, res, next) => {
   }
 };
 
+// Return Stripe Connect to Hermyx
 export const connectSuccess = (req, res) => {
   return res.status(200).send('Onboarding completed');
 };
+
+// Connects to the Stripe dashboard
+export async function getDashboardLink(req, res, next) {
+  try {
+    const url = await paymentService.getDashboardLink(req.user);
+    return res.status(200).json(url);
+  } catch (error) {
+    next(error);
+  }
+}
 
 // Deletes a card. If it was the default, clears the default setting.
 export const deleteCard = async (req, res, next) => {
@@ -261,29 +264,5 @@ export async function refundMissionPayment(req, res) {
       await updateStatusByMid(missionId, originalStatus);
     }
     res.status(500).json({ error: 'Refund error.' });
-  }
-}
-
-export async function getDashboardLink(req, res) {
-  try {
-    const userId = req.user.uid;
-    const user = await findByUid(userId);
-    if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
-
-    // Checks if user actually completed login form
-    const accountInfo = await retrieveConnectAccount(user.stripe_connected_id);
-    if (!accountInfo.details_submitted) {
-      return res.status(403).json({
-        error: {
-          general: [messages.STRIPE_ONBOARDING_NOT_COMPLETED],
-        },
-      });
-    }
-
-    const loginLink = await createLoginLink(user.stripe_connected_id);
-    return res.json({ url: loginLink.url });
-  } catch (err) {
-    console.error('Error Login Link:', err);
-    res.status(500).json({ error: { general: [messages.UNEXPECTED_ERROR] } });
   }
 }
