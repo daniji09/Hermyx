@@ -84,7 +84,7 @@ export async function createExpressAccount(email) {
     email,
     business_type: 'individual',
     business_profile: {
-      url: 'https://hermyx-test.com', // Our app
+      url: 'https://hermyx-test.com', // Hermyx app
       mcc: '8999', // Universal Stripe code for "Diverse professional services"
       product_description:
         'Performing micro-tasks and freelance services through the Hermyx platform.',

@@ -59,6 +59,12 @@ router.post(
   paymentController.confirmPayment,
 );
 
+// Route to register as a connected account (for adventurers)
+router.post('/connect/onboard', paymentController.connectOnboard);
+
+// Successful connected account route
+router.get('/connect/success', paymentController.connectSuccess);
+
 /// DELETES
 // Delete a card
 router.delete(
@@ -69,12 +75,6 @@ router.delete(
 );
 
 // -----
-
-//Route to register as a connected account
-router.post('/connect/onboard', paymentController.connectOnboard);
-
-//Successful connected account route
-router.get('/connect/success', paymentController.connectSuccess);
 
 //Route to release the money
 router.post(

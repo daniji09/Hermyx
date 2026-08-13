@@ -14,9 +14,11 @@ import { AppError } from '../utils/error.util.js';
 import * as missionPaymentModel from '../models/mission-payment.model.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as missionService from '../services/mission.service.js';
+import * as userService from '../services/user.service.js';
 import * as notificationService from '../services/notification.service.js';
 import * as socketProvider from '../providers/socket.provider.js';
 import pool from '../config/db.config.js';
+import { FRONTEND_URL } from '../config/config.js';
 
 /// Model access functions
 // Get mission payments by vacancy id
@@ -314,6 +316,31 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
       notification.payload,
     );
   return;
+};
+
+// Adds account to adventurer
+export const connectOnBoard = async (user) => {
+  checkUser(user);
+
+  // If user don't have a connected id, it creates it with Hermyx data and user's email so then filling the rest is the minimum
+  let accountId = user.stripe_connected_id;
+  if (!accountId) {
+    const account = await paymentProvider.createExpressAccount(user.email);
+    accountId = account.id;
+
+    await userService.updateUserStripeConnectedIdByUid(user.uid, accountId);
+  }
+
+  const refreshUrl = `${FRONTEND_URL}/stripe/connect/onboard`;
+  const returnUrl = `${FRONTEND_URL}/stripe/connect/success`;
+
+  // Then, it accesses Stripe account, if it hadn't been configured, user has to fill minimum data needed by law
+  const accountLink = await paymentProvider.createAccountLink(
+    accountId,
+    refreshUrl,
+    returnUrl,
+  );
+  return accountLink;
 };
 
 // Delete card

@@ -310,10 +310,48 @@ Confirms payment and make changes in database
   }
   ```
 
-  **Workflow:** this endpoint takes the PI created on the previous endpoint, confirms with `Stripe` that the payment has been successful and changes database. This changes add the payments and updates mission and its vacancies.
-  <br>
-  <br>
-  <br>
+**Workflow:** this endpoint takes the PI created on the previous endpoint, confirms with `Stripe` that the payment has been successful and changes database. This changes add the payments and updates mission and its vacancies.
+<br>
+<br>
+<br>
+
+## - Connects user to a Stripe account as an adventurer: `POST /stripe/connect/onboard`
+
+Creates an account in Stripe for the adventurer.
+
+**Requires authentication:** Yes
+
+**Responses:**
+
+- `200 Created`: user connected to Stripe successfully.
+
+  ```json
+  { "url": "<account_url>" }
+  ```
+
+**Workflow:** the goal of this endpoint is very simple because it involves creating a Stripe account for the adventurer so they can receive money. However, Know Your Customer (KYC) regulations require Stripe to use a very long and difficult form with overly specific questions for each user who registers. This would cause most users to abandon the process because they wouldn't know how to answer the questions or found it too lengthy. Therefore, Hermyx creates this account in a express way, providing the user with the necessary data. Specifically, the following information is provided: "business type" set to "individual," meaning the account will belong to a private individual; "url" set to the Hermyx URL, as Stripe always requires the company's URL; "mcc" set to '8999', a code that characterizes the type of business the company operates, with 8999 serving as a wildcard for "Miscellaneous Professional Services", "product description" refers to a description of the Hermyx product; and "capabilities" adds the possibility that the user who creates the account can receive money.
+<br>
+<br>
+<br>
+
+## - User's Stripe connection success: `POST /stripe/connect/success`
+
+Endpoint that confirms the success of the connection to Stripe
+
+**Requires authentication:** Yes
+
+**Responses:**
+
+- `200 Created`: user connected to Stripe successfully.
+
+  ```json
+  {}
+  ```
+
+**Workflow:** just a endpoint that Stripe calls when process has been completed, so it come back to Hermyx.
+<br>
+<br>
+<br>
 
 ## - Delete a card: `DELETE /stripe/cards`
 

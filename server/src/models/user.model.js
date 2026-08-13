@@ -170,6 +170,12 @@ export const updateStripeCustomerIdByUid = async (uid, stripeCustomerId) => {
   await pool.query(query, [stripeCustomerId, uid]);
 };
 
+// Updates user's Stripe connected id
+export const updateStripeConnectedByUid = async (uid, stripeConnectedId) => {
+  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
+  await pool.query(query, [stripeConnectedId, uid]);
+};
+
 export const updateAdventurerRating = async (uid, client = pool) => {
   const result = await client.query(
     `UPDATE app_user
@@ -202,12 +208,6 @@ export const updateOwnerRating = async (uid, client = pool) => {
 };
 
 //////// -------------
-
-//Saves the Stripe Connect Account ID in the user table.
-export const updateStripeConnected = async (uid, stripeConnectedId) => {
-  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
-  await pool.query(query, [stripeConnectedId, uid]);
-};
 
 export const anonymize = async (uid) => {
   const query = `UPDATE app_user SET

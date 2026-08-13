@@ -1,17 +1,12 @@
 import {
   retrievePI,
-  createExpressAccount,
-  createAccountLink,
   createTransfer,
   createRefund,
   createLoginLink,
   retrieveConnectAccount,
 } from '../providers/payment.provider.js';
 
-import {
-  findByUid,
-  updateStripeConnected as updateStripeConnectId,
-} from '../models/user.model.js';
+import { findByUid } from '../models/user.model.js';
 
 import {
   findByMid as _getById,
@@ -25,7 +20,7 @@ import {
 
 import { updateTransferInfo } from '../models/mission-participation.model.js';
 import { messages } from '@hermyx/shared';
-import { FRONTEND_URL } from '../config/config.js';
+
 import * as paymentService from '../services/payment.service.js';
 
 /// Controller functions
@@ -84,7 +79,7 @@ export const payDefault = async (req, res, next) => {
 };
 
 // Creates a PaymentIntent for a new card. Can optionally save the card for future use.
-export async function payNew(req, res, next) {
+export const payNew = async (req, res, next) => {
   try {
     const { mid } = req.params;
     const { saveCard = true } = req.body;
@@ -95,10 +90,10 @@ export async function payNew(req, res, next) {
   } catch (error) {
     next(error);
   }
-}
+};
 
 // Verifies the payment status in Stripe and changes database
-export async function confirmPayment(req, res, next) {
+export const confirmPayment = async (req, res, next) => {
   try {
     const { mid } = req.params;
     const { paymentIntentId } = req.body;
@@ -107,7 +102,21 @@ export async function confirmPayment(req, res, next) {
   } catch (error) {
     next(error);
   }
-}
+};
+
+//Initiates Stripe Connect onboarding so the user (adventurer) can receive money.
+export const connectOnboard = async (req, res, next) => {
+  try {
+    const accountLink = await paymentService.connectOnBoard(req.user);
+    return res.status(200).json({ url: accountLink.url });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const connectSuccess = (req, res) => {
+  return res.status(200).send('Onboarding completed');
+};
 
 // Deletes a card. If it was the default, clears the default setting.
 export const deleteCard = async (req, res, next) => {
@@ -122,42 +131,6 @@ export const deleteCard = async (req, res, next) => {
 };
 
 // ------
-
-//Initiates Stripe Connect onboarding so the user (adventurer) can receive money.
-export async function connectOnboard(req, res) {
-  try {
-    const userId = req.user.uid;
-    const user = await findByUid(userId);
-    if (!user) return res.status(404).json({ error: messages.USER_NOT_FOUND });
-
-    let accountId = user.stripe_connected_id;
-
-    if (!accountId) {
-      const account = await createExpressAccount(user.email);
-      accountId = account.id;
-
-      await updateStripeConnectId(userId, accountId);
-    }
-
-    const refreshUrl = `${FRONTEND_URL}/stripe/connect/onboard`;
-    const returnUrl = `${FRONTEND_URL}/stripe/connect/success`;
-
-    const accountLink = await createAccountLink(
-      accountId,
-      refreshUrl,
-      returnUrl,
-    );
-
-    return res.json({ url: accountLink.url });
-  } catch (err) {
-    console.error('Error Connect Onboard:', err);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-}
-
-export function connectSuccess(req, res) {
-  res.send('Onboarding completed');
-}
 
 //Distributes funds to adventurers. Uses atomic locking to prevent double payments.
 export async function releaseMissionPayment(req, res) {

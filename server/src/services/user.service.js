@@ -89,6 +89,18 @@ export const updateUserStripeCustomerIdByUid = async (
   await userModel.updateStripeCustomerIdByUid(uid, stripeCustomerId);
 };
 
+// Updates user's Stripe customer id
+export const updateUserStripeConnectedIdByUid = async (
+  uid,
+  stripeConnectedId,
+) => {
+  checkUid(uid);
+  checkStripeConnectedId(stripeConnectedId);
+
+  // Updates user's Stripe customer id
+  await userModel.updateStripeConnectedByUid(uid, stripeConnectedId);
+};
+
 export const getActiveAdmin = async (client) =>
   userModel.getActiveAdmin(client);
 
@@ -478,6 +490,11 @@ const checkFirebaseUid = (firebaseUid) => {
 const checkStripeCustomerId = (stripeCustomerId) => {
   if (!stripeCustomerId)
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Stripe customer id'));
+};
+
+const checkStripeConnectedId = (stripeConnectedId) => {
+  if (!stripeConnectedId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Stripe connected id'));
 };
 
 const checkCurrentUser = (currentUser) => {
