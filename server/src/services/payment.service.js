@@ -4,7 +4,7 @@ import * as missionPaymentModel from '../models/mission-payment.model.js';
 export const createMissionPayment = async (paymentData, client) => {
   if (!paymentData)
     throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment data'));
-  return missionPaymentModel.createMissionPayment(paymentData, client);
+  return missionPaymentModel.create(paymentData, client);
 };
 
 export const getMissionPaymentsByVacancyId = async (vacancyId, client) =>

@@ -42,7 +42,7 @@ import {
 } from '../providers/payment.provider.js';
 import {
   findAllOccupied,
-  markVacancyAsPaidOut,
+  updatePaymentStatusById,
   refundBannedVacancy,
   unjoinParticipant,
   updatePaymentStatus,
@@ -52,7 +52,6 @@ import { emitToUser } from '../providers/socket.provider.js';
 import { findById as getReportById } from '../models/report.model.js';
 import { closeReportAndConversation } from '../services/report.service.js';
 import {
-  createMissionPayment,
   findByVacancyId as getMissionPaymentsByVacancy,
   refund as refundFromPayment,
 } from '../models/mission-payment.model.js';
@@ -426,7 +425,7 @@ export const banUser = async (req, res) => {
             await refundFromPayment(paymentRefund, payment.pid);
 
             // And new transaction is added to db
-            await createMissionPayment({
+            await create({
               mid: mission.mid,
               vacancy_id: mission.vacancy_id,
               sender_id: HERMYX_SYSTEM_ID,
@@ -533,7 +532,7 @@ export const banUser = async (req, res) => {
                   );
 
                   // Adds mission payment
-                  await createMissionPayment({
+                  await create({
                     mid: mission.mid,
                     vacancy_id: vacancy.id,
                     sender_id: HERMYX_SYSTEM_ID,
@@ -543,7 +542,7 @@ export const banUser = async (req, res) => {
                     amount_paid: vacancy.monetary_reward,
                   });
 
-                  await markVacancyAsPaidOut(vacancy.id);
+                  await updatePaymentStatusById(vacancy.id);
                 }
               }
             }

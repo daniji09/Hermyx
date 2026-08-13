@@ -623,6 +623,73 @@ Adventurers submits their part for the mission.
 <br>
 <br>
 
+## - Cancel or delete mission: `POST /api/missions/:mid/cancel`
+
+Cancels a mission, if it hadn't been started, then is a deletion.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission deleted successfully.
+
+  ```json
+  { "nid": "<notification_id>" }
+  ```
+
+- `400 Bad Request`: path fields validation error, missing path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Unauthorized`: user is unauthorized to do this action: cannot unjoin participations that don't belong to them.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You can't join your own mission."]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission, vacancy or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Mission/Vacancy/User not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": [<"error">]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** mission deletion and cancellation have a quite simple foundation, if basic checks pass and the status is valid, the status changes to "deleted" or "cancelled," notifying all adventurers who had joined. However, cancelling a mission implies paying the adventurers their monetary reward as compensation. Consequently, the process follows this workflow: the mission changes to an intermediate "cancelling" status indicating the intent; then, each vacancy is processed individually to execute the bank transfer first, and, upon success, save the transaction to the database and update the slot's status, with this last entire operation being atomic thanks to a database transaction. This sequence ensures that if any operation fails, it does not cause subsequent operations to fail; instead, the failure is saved so it can be retried later (using a logging service, which is not currently implemented).
+<br>
+<br>
+<br>
+
 ## - Edit mission: `PUT /api/missions/:mid`
 
 Edits information from a mission that has already been published.

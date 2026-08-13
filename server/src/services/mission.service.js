@@ -1,5 +1,6 @@
 import {
   consts,
+  HERMYX_SYSTEM_ID,
   messages,
   MISSION_PARTICIPATION_PAYMENT_STATUS,
   MISSION_PARTICIPATION_STATUS,
@@ -8,6 +9,7 @@ import {
   NOTIFICATION_KIND,
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
+  TRANSACTION_TYPE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import { AppError } from '../utils/error.util.js';
@@ -16,9 +18,11 @@ import * as notificationService from '../services/notification.service.js';
 import * as userService from '../services/user.service.js';
 import * as storageProvider from '../providers/storage.provider.js';
 import * as socketProvider from '../providers/socket.provider.js';
+import * as paymentProvider from '../providers/payment.provider.js';
 import * as missionModel from '../models/mission.model.js';
 import * as missionParticipationModel from '../models/mission-participation.model.js';
 import * as missionPhotoModel from '../models/mission-photo.model.js';
+import * as missionPaymentModel from '../models/mission-payment.model.js';
 
 /// Model access functions
 // Get mission by id
@@ -136,7 +140,7 @@ export const reopenMissionParticipation = async (mid, adventurerId, client) => {
 export const markMissionParticipationAsPaidOut = async (
   participationId,
   client,
-) => missionParticipationModel.markVacancyAsPaidOut(participationId, client);
+) => missionParticipationModel.updatePaymentStatusById(participationId, client);
 
 export const syncMissionCompletionStatus = async (mid, client) => {
   checkMid(mid);
@@ -399,6 +403,7 @@ export const getOpenedMissions = async (
 
 // Get mission by mid
 export const getMissionByMid = async (mid, uid) => {
+  // Parameter checks
   checkUid(uid);
   checkMid(mid);
 
@@ -447,11 +452,13 @@ export const publishMission = async (
   longitude,
   photos,
 ) => {
+  // Parameter checks
   checkUid(uid);
   checkTitle(title);
   checkDescription(description);
   checkVacancies(vacancies);
   checkVacanciesData(vacanciesData);
+
   // Checks if photo number is correct
   if (photos.length > consts.MISSION.PHOTOS.MAX) throw buildTooManyFilesError();
 
@@ -539,6 +546,7 @@ export const publishMission = async (
 
 // Close mission
 export const closeMission = async (mid, user) => {
+  // Parameter checks
   checkMid(mid);
   checkUser(user);
 
@@ -709,6 +717,7 @@ const closeMissionInternalUpdates = async (
 
 // Join mission
 export const joinMission = async (mid, user, message, vacancyId) => {
+  // Parameter checks
   checkMid(mid);
   checkUser(user);
   checkVacancyId(vacancyId);
@@ -791,6 +800,7 @@ export const inviteToMission = async (
   message,
   user,
 ) => {
+  // Parameter checks
   checkMid(mid);
   checkVacancyId(vacancyId);
   checkSenderId(senderId);
@@ -866,6 +876,11 @@ export const inviteToMission = async (
 
 // Unjoin mission
 export const unjoinMission = async (mid, vacancyId, user) => {
+  // Parameter checks
+  checkMid(mid);
+  checkVacancyId(vacancyId);
+  checkUser(user);
+
   // Mission is searched
   const mission = await getMissionByIdOrThrow(mid);
 
@@ -979,8 +994,10 @@ export const unjoinMission = async (mid, vacancyId, user) => {
 
 // Submit participation
 export const submitMissionParticipation = async (mid, user) => {
+  // Parameter checks
   checkMid(mid);
   checkUser(user);
+
   // Gets mission
   const mission = await getMissionByIdOrThrow(mid);
 
@@ -1083,8 +1100,185 @@ export const submitMissionParticipation = async (mid, user) => {
   return updatedParticipation;
 };
 
+// Cancel mission TODO: probar
+export const cancelMission = async (mid, user) => {
+  // Parameter checks
+  checkMid(mid);
+  checkUser(user);
+
+  // Mission is searched
+  const mission = await getMissionByIdOrThrow(mid);
+
+  // Checks if mission was created by the current user
+  checkMissionBelongsToUser(mission.owner_id, user.uid);
+
+  // Gets occupied vacancies
+  const occupied_vacancies =
+    await missionParticipationModel.findAllOccupied(mid);
+
+  // Gets if is delete or cancel action
+  const isDeleting = MISSION_STATUS[mission.status].CAN_DELETE;
+  const isCancelling = MISSION_STATUS[mission.status].CAN_CANCEL;
+
+  // If its neither, then is an error
+  if (!isDeleting && !isCancelling) {
+    throw new AppError(
+      messages.MISSION.DELETE.CANNOT_DELETE_MISSION_STATE,
+      409,
+    );
+  }
+
+  // If is a delete, it just changes mission status
+  if (isDeleting) {
+    // Checks if mission can be deleted by status
+    if (
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.DELETED.ID,
+      )
+    )
+      throw new AppError(
+        messages.MISSION.DELETE.CANNOT_DELETE_MISSION_STATE,
+        409,
+      );
+
+    await missionModel.updateStatus(mid, MISSION_STATUS.DELETED.ID);
+  }
+
+  // Otherwise, reward has to be sent to the adventurers
+  else if (isCancelling) {
+    // Checks if mission can be cancelled by status
+    if (
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.CANCELLING.ID,
+      )
+    )
+      throw new AppError(
+        messages.MISSION.DELETE.CANNOT_CANCEL_MISSION_STATE,
+        409,
+      );
+
+    // Intention is marked, mission is going to be cancel after all money transactions
+    await missionModel.updateStatus(mid, MISSION_STATUS.CANCELLING.ID);
+
+    // Then, without using any db transaction, reward is sent to each adventurer of every unpaid vacancy
+    for (const vacancy of occupied_vacancies) {
+      if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID) {
+        try {
+          // Gets adventurer
+          const adventurer = await userService.getUserByUidOrThrow(
+            vacancy.adventurer_id,
+          );
+
+          // Creates payment with idempotency key
+          if (adventurer.stripe_connected_id) {
+            const transferData = {
+              amount: Math.round(vacancy.monetary_reward * 100),
+              currency: 'eur',
+              destination: adventurer.stripe_connected_id,
+              description: `mission_cancelled`,
+              transfer_group: `mission_${mid}`,
+            };
+            const idempotencyKey = `cancel_${mid}_vac_${vacancy.id}`;
+
+            // Stripe call, is slow because of this for, but is safe due to the idempotency key
+            const transfer = await paymentProvider.createTransfer(
+              transferData,
+              idempotencyKey,
+            );
+
+            // Lastly, db transaction to create the payment and mark vacancy as paid out
+            const client = await pool.connect();
+            try {
+              await client.query('BEGIN');
+
+              // Creates transaction
+              await missionPaymentModel.create(
+                {
+                  mid: mission.mid,
+                  vacancy_id: vacancy.id,
+                  sender_id: HERMYX_SYSTEM_ID,
+                  receiver_id: adventurer.uid,
+                  stripe_transaction_id: transfer.id,
+                  transaction_type:
+                    TRANSACTION_TYPE.CANCELLATION_COMPENSATION.ID,
+                  amount_paid: vacancy.monetary_reward,
+                },
+                client,
+              );
+
+              // Marks vacancy as paid out
+              await missionParticipationModel.updatePaymentStatusById(
+                vacancy.id,
+                MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
+                client,
+              );
+
+              await client.query('COMMIT');
+            } catch (dbError) {
+              await client.query('ROLLBACK');
+              // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+              console.error(
+                `FATAL DB ERROR: Transfer ${transfer.id} sent to ${adventurer.uid} but DB failed`,
+                dbError,
+              );
+            } finally {
+              client.release();
+            }
+          }
+        } catch (stripeError) {
+          // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
+          console.error(
+            `Stripe Error for Vacancy ${vacancy.id}:`,
+            stripeError.message,
+          );
+        }
+      }
+    }
+
+    // Finally, mission has been updated to cancel status
+    await missionModel.updateStatus(mid, MISSION_STATUS.CANCELLED.ID);
+  }
+
+  // Either way, all adventurers are informed
+  for (const vacancy of occupied_vacancies) {
+    if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+      const message = isDeleting
+        ? messages.NOTIFICATION.DELETE_MISSION(mission.title)
+        : messages.NOTIFICATION.CANCEL_MISSION(mission.title);
+      const action = isDeleting
+        ? NOTIFICATION_ACTION.MISSION_DELETE.ID
+        : NOTIFICATION_ACTION.MISSION_CANCEL.ID;
+
+      const notificationId = await notificationService.createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: action,
+        status: null,
+        message: message,
+        senderId: user.uid,
+        receiverId: vacancy.adventurer_id,
+        payload: { associated_mission_id: mission.mid },
+      });
+
+      const eventName = isDeleting ? 'mission:delete' : 'mission:cancel';
+      socketProvider.emitToUser(vacancy.adventurer_id, eventName, {
+        notificationId,
+        missionId: mission.mid,
+        vacancyId: vacancy.id,
+        missionTitle: mission.title,
+        senderId: user.uid,
+        senderUsername: user.username,
+        receiverId: vacancy.adventurer_id,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        message: message,
+      });
+    }
+  }
+};
+
 // Edit mission
 export const editMission = async (user, mission, newPhotos, existingPhotos) => {
+  // Parameter checks
   checkUid(user.uid);
   checkMission(mission);
 

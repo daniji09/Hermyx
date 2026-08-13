@@ -253,40 +253,6 @@ export const publishMissionFilesSchema = z.object({
   photos: photosBaseSchema,
 });
 
-// Edit mission
-export const editMissionBodySchema = z.object({
-  mid: midBaseSchema,
-  title: titleBaseSchema,
-  description: descriptionBaseSchema,
-  vacancies: vacancyNumBaseSchema,
-  vacanciesData: vacanciesDataSchema,
-  latitude: latitudeBaseSchema,
-  longitude: longitudeBaseSchema,
-  photos: photosBaseSchema,
-  existingPhotos: z
-    .union([z.string(), z.array(z.string())])
-    .optional()
-    .transform((val) => {
-      if (!val) return [];
-      return Array.isArray(val) ? val : [val];
-    }),
-});
-
-export const editMissionParamSchema = z.object({
-  mid: midBaseSchema,
-});
-
-export const editMissionFilesSchema = z.object({
-  photos: photosBaseSchema,
-  existingPhotos: z
-    .union([z.string(), z.array(z.string())])
-    .optional()
-    .transform((val) => {
-      if (!val) return [];
-      return Array.isArray(val) ? val : [val];
-    }),
-});
-
 // Close mission
 export const closeMissionParamSchema = z.object({
   mid: midBaseSchema,
@@ -330,6 +296,48 @@ export const submitMissionParticipationSchema = z.object({
   mid: midBaseSchema,
 });
 
+// Cancel mission
+export const cancelMissionParamSchema = z.object({
+  mid: z.coerce
+    .number(messages.FIELD_NUMBER('Mid'))
+    .int(messages.FIELD_INTEGER('Mid'))
+    .min(0, messages.FIELD_POSITIVE('Mid')),
+});
+
+// Edit mission
+export const editMissionBodySchema = z.object({
+  mid: midBaseSchema,
+  title: titleBaseSchema,
+  description: descriptionBaseSchema,
+  vacancies: vacancyNumBaseSchema,
+  vacanciesData: vacanciesDataSchema,
+  latitude: latitudeBaseSchema,
+  longitude: longitudeBaseSchema,
+  photos: photosBaseSchema,
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
+});
+
+export const editMissionParamSchema = z.object({
+  mid: midBaseSchema,
+});
+
+export const editMissionFilesSchema = z.object({
+  photos: photosBaseSchema,
+  existingPhotos: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((val) => {
+      if (!val) return [];
+      return Array.isArray(val) ? val : [val];
+    }),
+});
+
 // ------
 
 const optionalNumberFromFormSchema = (schema) =>
@@ -338,13 +346,6 @@ const optionalNumberFromFormSchema = (schema) =>
     if (typeof value === 'string' && value.trim() === '') return undefined;
     return value;
   }, schema.optional());
-
-export const cancelMissionParamSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
 
 export const reopenMissionParamSchema = z.object({
   mid: z.coerce

@@ -128,6 +128,11 @@ export const messages = {
       CANNOT_SUBMIT_UNPAID: `Not completely paid adventurer can't submit their part.`,
       CANNOT_IN_CURRENT_STATE: `Cannot submit participation in current mission state`,
     },
+    DELETE: {
+      CANNOT_DELETE_MISSION: `Can't delete mission.`,
+      CANNOT_DELETE_MISSION_STATE: `Can't delete mission on current state.`,
+      CANNOT_CANCEL_MISSION_STATE: `Can't cancel mission on current state.`,
+    },
   },
 
   /// Notification messages
@@ -152,6 +157,10 @@ export const messages = {
       `The participation in "${title}" was submitted by ${username}.`,
     UNJOIN_MISSION: (username, vacancyTitle, missionTitle) =>
       `Adventurer ${username} fled the vacancy ${vacancyTitle} from your mission ${missionTitle}.`,
+    DELETE_MISSION: (title) =>
+      `Mission ${title} has been deleted, so it won't be done, we are sorry.`,
+    CANCEL_MISSION: (title) =>
+      `Mission ${title} has been cancelled, but don't worry, your reward is on your way!.`,
   },
 
   ///// Common messages

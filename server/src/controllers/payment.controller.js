@@ -58,10 +58,7 @@ import {
 } from '@hermyx/shared';
 import { createNotification as create } from '../services/notification.service.js';
 import { emitToUser } from '../providers/socket.provider.js';
-import {
-  createMissionPayment,
-  findByStripeTransactionId as getMissionPaymentsByStripeTransactionId,
-} from '../models/mission-payment.model.js';
+import { findByStripeTransactionId as getMissionPaymentsByStripeTransactionId } from '../models/mission-payment.model.js';
 import { FRONTEND_URL } from '../config/config.js';
 
 //Registers the current user as a Stripe Customer to allow making payments.
@@ -344,7 +341,7 @@ export async function payNew(req, res) {
       }
 
       // Adds mission payment
-      await createMissionPayment({
+      await create({
         mid,
         vacancy_id: vacancy.id,
         sender_id: req.user.uid,

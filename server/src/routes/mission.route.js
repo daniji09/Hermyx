@@ -118,6 +118,13 @@ router.post(
   missionController.submitMissionParticipation,
 );
 
+// Cancels a mission
+router.post(
+  '/:mid/cancel',
+  validateParamsSchema(cancelMissionParamSchema),
+  missionController.cancelMission,
+);
+
 /// PUT
 // Edits mission
 router.put(
@@ -132,13 +139,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// Cancels a mission
-router.post(
-  '/:mid/cancel',
-  validateParamsSchema(cancelMissionParamSchema),
-  missionController.cancelMission,
-);
 
 // Reopens a mission
 router.post(

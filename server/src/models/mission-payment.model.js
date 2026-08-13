@@ -1,10 +1,9 @@
 import { MISSION_PAYMENT_STATUS, TRANSACTION_TYPE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
-export const createMissionPayment = async (
-  missionPaymentData,
-  client = pool,
-) => {
+/// INSERTS
+// Create new mission payment
+export const create = async (missionPaymentData, client = pool) => {
   const {
     mid,
     vacancy_id,
@@ -29,6 +28,8 @@ export const createMissionPayment = async (
   ]);
   return result.rows[0];
 };
+
+// ------
 
 export const findByMissionId = async (mid, client = pool) => {
   const query = `SELECT * FROM mission_payment WHERE mid = $1`;

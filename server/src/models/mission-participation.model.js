@@ -184,6 +184,13 @@ export const updateStatusByMidAndAdventurer = async (
   return result.rows[0] || null;
 };
 
+// Update payment status by id
+export const updatePaymentStatusById = async (id, status, client = pool) => {
+  const query = `UPDATE mission_participation SET payment_status = $2 WHERE id = $1`;
+  const result = await client.query(query, [id, status]);
+  return result.rowCount;
+};
+
 // Unjoin vacancy
 export const updateAdventurerAndStatus = async (
   id,
@@ -431,15 +438,6 @@ export const refundVacancy = async (id, amountRefunded, client = pool) => {
     amountRefunded,
     id,
     MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
-  ]);
-  return result.rowCount;
-};
-
-export const markVacancyAsPaidOut = async (id, client = pool) => {
-  const query = `UPDATE mission_participation SET payment_status = $2 WHERE id = $1`;
-  const result = await client.query(query, [
-    id,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
   ]);
   return result.rowCount;
 };

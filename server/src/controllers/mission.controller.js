@@ -29,7 +29,7 @@ import {
   findById,
   findAllOccupied,
   getEmptyVacancies,
-  markVacancyAsPaidOut,
+  updatePaymentStatusById,
   cleanMissionParticipation,
   unjoinParticipant,
   updatePaymentStatus,
@@ -39,7 +39,6 @@ import { createNotification as create } from '../services/notification.service.j
 import { emitToUser } from '../providers/socket.provider.js';
 import { createRefund, createTransfer } from '../providers/payment.provider.js';
 import {
-  createMissionPayment,
   findByVacancyId as getMissionPaymentsByVacancy,
   refund as refundFromPayment,
 } from '../models/mission-payment.model.js';
@@ -200,6 +199,17 @@ export const submitMissionParticipation = async (req, res, next) => {
   }
 };
 
+// Cancels or deletes mission
+export const cancelMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    await missionService.cancelMission(mid, req.user);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Edits a mission
 export const editMission = async (req, res, next) => {
   try {
@@ -238,138 +248,6 @@ export const getAllMissionsInDraft = async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
-// Cancels or deletes mission
-export const cancelMission = async (req, res) => {
-  const { mid } = req.params;
-  const uid = req.user.uid;
-
-  try {
-    // Mission is searched
-    const mission = await findByMid(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Checks if mission was created by the current user
-    if (mission.owner_id !== uid)
-      return res.status(403).json({ error: messages.CANNOT_DELETE_MISSION });
-
-    // Gets occupied vacancies
-    const occupied_vacancies = await findAllOccupied(mid);
-
-    // If mission has to be "deleted", it will be
-    if (MISSION_STATUS[mission.status].CAN_DELETE) {
-      // Checks if mission can be deleted by states
-      if (
-        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_STATUS.DELETED.ID,
-        )
-      )
-        return res
-          .status(400)
-          .json({ error: messages.CANNOT_DELETE_MISSION_STATE });
-
-      // Then mission status is updated
-      await updateStatus(mid, MISSION_STATUS.DELETED.ID);
-    }
-    // If mission has to be cancelled, it will be
-    else if (MISSION_STATUS[mission.status].CAN_CANCEL) {
-      // Checks if mission can be cancelled by states
-      if (
-        !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-          MISSION_STATUS.CANCELLING.ID,
-        )
-      )
-        return res
-          .status(400)
-          .json({ error: messages.CANNOT_CANCEL_MISSION_STATE });
-
-      // Then mission status is updated
-      await updateStatus(mid, MISSION_STATUS.CANCELLING.ID);
-
-      // And the reward is sent to the adventurers TODO: try-catch individual o transacción?
-      for (const vacancy of occupied_vacancies) {
-        if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID) {
-          const adventurer = await getUserById(vacancy.adventurer_id);
-          if (adventurer.stripe_connected_id) {
-            const transferData = {
-              amount: Math.round(vacancy.monetary_reward * 100),
-              currency: 'eur',
-              destination: adventurer.stripe_connected_id,
-              description: `mission_cancelled`,
-              transfer_group: `mission_${mid}`,
-            };
-
-            const idempotencyKey = `cancel_${mid}_vac_${vacancy.id}`;
-            const transfer = await createTransfer(transferData, idempotencyKey);
-
-            // Adds mission payment
-            await createMissionPayment({
-              mid: mission.mid,
-              vacancy_id: vacancy.id,
-              sender_id: HERMYX_SYSTEM_ID,
-              receiver_id: adventurer.uid,
-              stripe_transaction_id: transfer.id,
-              transaction_type: TRANSACTION_TYPE.CANCELLATION_COMPENSATION.ID,
-              amount_paid: vacancy.monetary_reward,
-            });
-
-            await markVacancyAsPaidOut(vacancy.id);
-          }
-        }
-      }
-      await updateStatus(mid, MISSION_STATUS.CANCELLED.ID);
-    }
-    // Otherwise, mission can't be deleted or cancelled
-    else
-      return res.status(400).json({
-        errors: {
-          general: [messages.CANNOT_DELETE_MISSION_STATE],
-        },
-      });
-
-    // Either way, all adventurers are informed
-    for (const vacancy of occupied_vacancies) {
-      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const message = MISSION_STATUS[mission.status].CAN_DELETE
-          ? `Mission ${mission.title} has been deleted, so it won't be done, we are sorry.`
-          : `Mission ${mission.title} has been cancelled, but don't worry, your reward is on your way!.`;
-        const notificationId = await create({
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-          action: MISSION_STATUS[mission.status].CAN_DELETE
-            ? NOTIFICATION_ACTION.MISSION_DELETE.ID
-            : NOTIFICATION_ACTION.MISSION_CANCEL.ID,
-          status: null,
-          message: message,
-          senderId: uid,
-          receiverId: vacancy.adventurer_id,
-          payload: {
-            associated_mission_id: mission.mid,
-          },
-        });
-        const eventName = MISSION_STATUS[mission.status].CAN_DELETE
-          ? 'mission:delete'
-          : 'mission:cancel';
-        emitToUser(vacancy.adventurer_id, eventName, {
-          notificationId,
-          missionId: mission.mid,
-          vacancyId: vacancy.id,
-          missionTitle: mission.title,
-          senderId: uid,
-          senderUsername: req.user.username,
-          receiverId: vacancy.adventurer_id,
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          message: message,
-        });
-      }
-    }
-    return res.status(200).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };
 
@@ -571,7 +449,7 @@ export const banMission = async (req, res) => {
           const transfer = await createTransfer(transferData, idempotencyKey);
 
           // Adds mission payment
-          await createMissionPayment({
+          await create({
             mid: mission.mid,
             vacancy_id: vacancy.id,
             sender_id: HERMYX_SYSTEM_ID,
@@ -581,7 +459,7 @@ export const banMission = async (req, res) => {
             amount_paid: vacancy.monetary_reward,
           });
 
-          await markVacancyAsPaidOut(vacancy.id);
+          await updatePaymentStatusById(vacancy.id);
         }
       }
     }
@@ -738,7 +616,7 @@ export const kickAdventurerOut = async (req, res) => {
         await refundFromPayment(paymentRefund, payment.pid);
 
         // And new transaction is added to db
-        await createMissionPayment({
+        await create({
           mid: mid,
           vacancy_id: vacancyId,
           sender_id: HERMYX_SYSTEM_ID,
