@@ -281,6 +281,11 @@ const ReportSearchCard = ({ report }) => {
             </h2>
           </CardTitle>
           <CardDescription>{`Status: ${report.status}`}</CardDescription>
+          {report.needs_admin_attention && (
+            <CardDescription className='font-semibold text-destructive'>
+              Needs admin attention
+            </CardDescription>
+          )}
           {report.unread_count > 0 && (
             <CardDescription className='font-semibold text-destructive'>
               {report.unread_count} unread message

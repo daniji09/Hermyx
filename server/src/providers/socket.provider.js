@@ -46,6 +46,7 @@ export const initializeSocketServer = (httpServer) => {
 
   io.on('connection', (socket) => {
     socket.join(`user:${socket.user.uid}`);
+    if (socket.user.role === 'ADMIN') socket.join('admins');
 
     socket.on('disconnect', () => {
       socket.leave(`user:${socket.user.uid}`);
@@ -86,4 +87,10 @@ export const emitToConversation = (conversationId, eventName, payload) => {
   if (!io) return;
 
   io.to(`conversation:${conversationId}`).emit(eventName, payload);
+};
+
+export const emitToAdmins = (eventName, payload) => {
+  if (!io) return;
+
+  io.to('admins').emit(eventName, payload);
 };

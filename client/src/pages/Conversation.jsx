@@ -162,7 +162,7 @@ export const ConversationThread = ({
   }, [selectedPhoto]);
 
   useEffect(() => {
-    if (!conversationData || !conversationId) return;
+    if (!conversationData || !conversationId || !currentParticipant) return;
 
     const markCurrentConversationAsRead = async () => {
       try {
@@ -181,7 +181,7 @@ export const ConversationThread = ({
     };
 
     markCurrentConversationAsRead();
-  }, [conversationData, conversationId, queryClient]);
+  }, [conversationData, conversationId, currentParticipant, queryClient]);
 
   useEffect(() => {
     if (!socket || !conversationId || !canSendMessages) return;
@@ -226,14 +226,33 @@ export const ConversationThread = ({
       socket.emit('conversation:leave', conversationId);
       socket.off('conversation:message-created', handleMessageCreated);
     };
-  }, [socket, conversationId, currentUser?.id, queryClient, canSendMessages]);
+  }, [
+    socket,
+    conversationId,
+    currentUser?.id,
+    currentParticipant,
+    queryClient,
+    canSendMessages,
+  ]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => sendMessage(conversationId, content, selectedPhoto),
-    onSuccess: () => {
+    onSuccess: (message) => {
+      setMessages((currentMessages) =>
+        currentMessages.some(
+          (currentMessage) => currentMessage.mid === message.mid,
+        )
+          ? currentMessages
+          : [...currentMessages, message],
+      );
       setContent('');
       setSelectedPhoto(null);
       setErrorMessage('');
+      void queryClient.invalidateQueries({
+        queryKey: ['getConversation'],
+      });
+      void queryClient.invalidateQueries({ queryKey: ['getReports'] });
+      void queryClient.invalidateQueries({ queryKey: ['getReport'] });
     },
     onError: (error) => {
       setErrorMessage(

@@ -21,7 +21,7 @@ export const sendMessage = async (req, res, next) => {
   try {
     const message = await conversationService.sendMessage({
       conversationId: req.params.conversationId,
-      senderId: req.user.uid,
+      sender: req.user,
       content: req.body.content,
       photo: req.file,
     });
@@ -36,7 +36,7 @@ export const getConversation = async (req, res, next) => {
     const { conversation, participants } =
       await conversationService.getConversation(
         req.params.conversationId,
-        req.user.uid,
+        req.user,
       );
     return res.status(200).json({ conversation, participants });
   } catch (error) {
@@ -48,7 +48,7 @@ export const getConversationMessages = async (req, res, next) => {
   try {
     const messages = await conversationService.getConversationMessages(
       req.params.conversationId,
-      req.user.uid,
+      req.user,
     );
     return res.status(200).json({ messages });
   } catch (error) {

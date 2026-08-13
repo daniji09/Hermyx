@@ -187,34 +187,94 @@ export const getOrCreatePrivateConversationWithUser = async (
 
 export const sendMessage = async ({
   conversationId,
-  senderId,
+  sender,
   content,
   photo,
 }) => {
-  await checkConversationParticipant(conversationId, senderId);
-
-  const canSend =
-    await conversationParticipantModel.canSendMessageToConversation(
-      conversationId,
-      senderId,
-    );
-  if (!canSend) throw new AppError('This conversation is read-only.', 403);
   if (!content && !photo) throw new AppError('Message cannot be empty.', 400);
 
-  const { attachmentUrl, attachmentType } = await saveAttachment(photo);
-  const message = await createMessage({
+  const senderId = sender.uid;
+  const initialConversation = await getConversationByIdOrThrow(conversationId);
+  const initiallyParticipant = await isConversationParticipant(
     conversationId,
     senderId,
-    content,
-    attachmentUrl,
-    attachmentType,
-  });
+  );
+  const canInitiallyJoinAsAdmin =
+    sender.role === 'ADMIN' && initialConversation.type === 'dispute';
+  if (!initiallyParticipant && !canInitiallyJoinAsAdmin) {
+    throw buildUnauthorizedError();
+  }
+  if (initialConversation.closed_at) {
+    throw new AppError('This conversation is read-only.', 403);
+  }
+  if (
+    initiallyParticipant &&
+    !(await conversationParticipantModel.canSendMessageToConversation(
+      conversationId,
+      senderId,
+    ))
+  ) {
+    throw new AppError('This conversation is read-only.', 403);
+  }
+
+  const { attachmentUrl, attachmentType } = await saveAttachment(photo);
+  const client = await pool.connect();
+  let message;
+  try {
+    await client.query('BEGIN');
+    const conversation = await getConversationByIdOrThrow(
+      conversationId,
+      client,
+    );
+    const isParticipant = await isConversationParticipant(
+      conversationId,
+      senderId,
+      client,
+    );
+    const canJoinAsAdmin =
+      sender.role === 'ADMIN' && conversation.type === 'dispute';
+
+    if (!isParticipant && !canJoinAsAdmin) throw buildUnauthorizedError();
+    if (!isParticipant) {
+      await createConversationParticipant(conversationId, senderId, client);
+    }
+
+    const canSend =
+      await conversationParticipantModel.canSendMessageToConversation(
+        conversationId,
+        senderId,
+        client,
+      );
+    if (!canSend) throw new AppError('This conversation is read-only.', 403);
+
+    message = await createMessage(
+      {
+        conversationId,
+        senderId,
+        content,
+        attachmentUrl,
+        attachmentType,
+      },
+      client,
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 
   socketProvider.emitToConversation(
     conversationId,
     'conversation:message-created',
     message,
   );
+  if (sender.role === 'ADMIN' && message.conversation_type === 'dispute') {
+    socketProvider.emitToAdmins('report:updated', {
+      reportId: message.report_id,
+    });
+  }
   const participantIds =
     await getActiveConversationParticipantIds(conversationId);
   for (const participantId of participantIds) {
@@ -235,19 +295,25 @@ export const sendMessage = async ({
   return message;
 };
 
-export const getConversation = async (conversationId, userId) => {
-  await checkConversationParticipant(conversationId, userId);
-  const conversation = await getConversationByIdOrThrow(conversationId);
+export const getConversation = async (conversationId, user) => {
+  const { conversation, isParticipant } = await getConversationAccess(
+    conversationId,
+    user,
+  );
   const participants = await conversationParticipantModel.findByConversationId(
     conversationId,
-    userId,
+    isParticipant ? user.uid : null,
   );
   return { conversation, participants };
 };
 
-export const getConversationMessages = async (conversationId, userId) => {
-  await checkConversationParticipant(conversationId, userId);
-  return conversationMessageModel.findByConversationId(conversationId, userId);
+export const getConversationMessages = async (conversationId, user) => {
+  const { isAdminPreview } = await getConversationAccess(conversationId, user);
+  return conversationMessageModel.findByConversationId(
+    conversationId,
+    user.uid,
+    isAdminPreview,
+  );
 };
 
 export const getMyConversations = async (userId) => {
@@ -267,9 +333,16 @@ export const markConversationAsRead = async (conversationId, userId) => {
   return 0;
 };
 
-const checkConversationParticipant = async (conversationId, userId) => {
-  const isParticipant = await isConversationParticipant(conversationId, userId);
-  if (!isParticipant) throw buildUnauthorizedError();
+const getConversationAccess = async (conversationId, user) => {
+  const conversation = await getConversationByIdOrThrow(conversationId);
+  const isParticipant = await isConversationParticipant(
+    conversationId,
+    user.uid,
+  );
+  const isAdminPreview =
+    !isParticipant && user.role === 'ADMIN' && conversation.type === 'dispute';
+  if (!isParticipant && !isAdminPreview) throw buildUnauthorizedError();
+  return { conversation, isAdminPreview, isParticipant };
 };
 
 const saveAttachment = async (photo) => {

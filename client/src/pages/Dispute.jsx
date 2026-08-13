@@ -7,10 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDisputeQueryOptions } from '../queries/DisputesQueries';
 import { ConversationThread } from './Conversation';
 
-const getTypeLabel = (type) =>
-  type === REPORT_TYPE.REVIEW_DISPUTE.ID
-    ? 'Review dispute'
-    : 'Rejected review dispute';
+const getTypeLabel = (type) => REPORT_TYPE[type]?.LABEL || type;
 
 export const Dispute = () => {
   const { id } = useParams();
@@ -68,7 +65,7 @@ export const Dispute = () => {
         conversationId={dispute.conversation_id}
         showBack={false}
         title='Dispute conversation'
-        description='Requester, adventurer and administration'
+        description='Mission owner, adventurer and administration'
       />
     </main>
   );

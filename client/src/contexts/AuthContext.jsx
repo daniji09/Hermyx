@@ -131,6 +131,15 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getReports'] });
         });
 
+        socketRef.current.on('report:created', () => {
+          queryClient.invalidateQueries({ queryKey: ['getReports'] });
+        });
+
+        socketRef.current.on('report:updated', () => {
+          queryClient.invalidateQueries({ queryKey: ['getReports'] });
+          queryClient.invalidateQueries({ queryKey: ['getReport'] });
+        });
+
         socketRef.current.on('mission:participation-submitted', (payload) => {
           console.log('Participation submitted notification:', payload);
           setLatestNotification(payload);

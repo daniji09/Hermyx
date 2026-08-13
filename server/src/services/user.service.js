@@ -77,9 +77,6 @@ export const getUserByFirebaseUid = async (firebaseUid) => {
   return user;
 };
 
-export const getActiveAdmin = async (client) =>
-  userModel.getActiveAdmin(client);
-
 /// Endpoint complex functions
 // Search user by username with partial matches
 export const searchUserByUsername = async (

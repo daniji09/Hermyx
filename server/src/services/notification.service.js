@@ -290,14 +290,16 @@ const disputeParticipationReview = async ({
     message: disputeMessage,
     reportId: dispute.report.rid,
   });
-  for (const recipientId of [counterpartId, dispute.adminId])
-    socketProvider.emitToUser(recipientId, 'conversation:message-received', {
-      conversationId: dispute.conversation.cid,
-      conversationType: 'dispute',
-      messageId: dispute.initialMessage.mid,
-      reportId: dispute.report.rid,
-      senderId: user.uid,
-    });
+  socketProvider.emitToUser(counterpartId, 'conversation:message-received', {
+    conversationId: dispute.conversation.cid,
+    conversationType: 'dispute',
+    messageId: dispute.initialMessage.mid,
+    reportId: dispute.report.rid,
+    senderId: user.uid,
+  });
+  socketProvider.emitToAdmins('report:created', {
+    reportId: dispute.report.rid,
+  });
   return { message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY };
 };
 

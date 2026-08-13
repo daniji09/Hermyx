@@ -19,7 +19,7 @@ import * as notificationService from './notification.service.js';
 import * as paymentService from './payment.service.js';
 import * as userService from './user.service.js';
 import { createTransfer } from '../providers/payment.provider.js';
-import { emitToUser } from '../providers/socket.provider.js';
+import { emitToAdmins, emitToUser } from '../providers/socket.provider.js';
 import { AppError } from '../utils/error.util.js';
 
 const getReportOrThrow = async (reportId) => {
@@ -120,12 +120,16 @@ export const reportAdventurer = async ({
 
   const vacancy = await getVacancyOrThrow(missionId, vacancyId);
   const adventurer = await getUserOrThrow(vacancy.adventurer_id);
-  const notificationMessage = `You have been reported by the applicant of the ${mission.title} mission.`;
+  const notificationMessage = `You have been reported by the applicant of the ${mission.title} mission. You can respond in the dispute conversation.`;
+  const systemMessage = `A dispute was opened after ${adventurer.username} was reported for the vacancy "${vacancy.title}" in "${mission.title}".`;
   const client = await pool.connect();
+  let conversation;
+  let initialMessage;
   let report;
   let notificationId;
   try {
     await client.query('BEGIN');
+    conversation = await conversationService.createDisputeConversation(client);
     report = await createReportIfNotActive(
       {
         senderId: sender.uid,
@@ -136,10 +140,45 @@ export const reportAdventurer = async ({
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
         },
+        conversationId: conversation.cid,
       },
       messages.ADVENTURER_ALREADY_REPORTED,
       client,
     );
+
+    const participantIds = [sender.uid, adventurer.uid];
+    for (const participantId of participantIds) {
+      await conversationService.createConversationParticipant(
+        conversation.cid,
+        participantId,
+        client,
+      );
+    }
+
+    await conversationService.createMessage(
+      {
+        conversationId: conversation.cid,
+        senderId: HERMYX_SYSTEM_ID,
+        content: systemMessage,
+      },
+      client,
+    );
+    for (const participantId of participantIds) {
+      await conversationService.markConversationAsReadByUserId(
+        conversation.cid,
+        participantId,
+        client,
+      );
+    }
+    initialMessage = await conversationService.createMessage(
+      {
+        conversationId: conversation.cid,
+        senderId: sender.uid,
+        content: message,
+      },
+      client,
+    );
+
     notificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.REPORT.ID,
@@ -164,7 +203,7 @@ export const reportAdventurer = async ({
   } finally {
     client.release();
   }
-  emitToUser(adventurer.uid, 'mission:edited', {
+  emitToUser(adventurer.uid, 'notification:created', {
     notificationId,
     missionId,
     vacancyId,
@@ -175,6 +214,14 @@ export const reportAdventurer = async ({
     type: NOTIFICATION_TYPE.REPORT.ID,
     message: notificationMessage,
   });
+  emitToUser(adventurer.uid, 'conversation:message-received', {
+    conversationId: conversation.cid,
+    conversationType: 'dispute',
+    messageId: initialMessage.mid,
+    reportId: report.rid,
+    senderId: sender.uid,
+  });
+  emitToAdmins('report:created', { reportId: report.rid });
 
   return report;
 };
@@ -234,7 +281,7 @@ const createReportTransaction = async (reportData, activeReportMessage) => {
 };
 
 const createReportIfNotActive = async (
-  { senderId, message, type, lookupPayload, payload },
+  { senderId, message, type, lookupPayload, payload, conversationId },
   activeReportMessage,
   client,
 ) => {
@@ -243,7 +290,10 @@ const createReportIfNotActive = async (
     client,
   );
   if (activeReport > 0) throw new AppError(activeReportMessage, 409);
-  return reportModel.createReport({ senderId, message, type, payload }, client);
+  return reportModel.createReport(
+    { senderId, message, type, payload, conversationId },
+    client,
+  );
 };
 
 const closeReportAndConversationInternal = async (
@@ -571,6 +621,7 @@ const buildResolutionNotification = (
 
 const emitConversationClosed = (participantIds, report) => {
   if (!report?.conversation_id) return;
+  emitToAdmins('report:updated', { reportId: report.rid });
   const closedAt = new Date().toISOString();
   for (const participantId of participantIds) {
     emitToUser(participantId, 'conversation:closed', {
