@@ -47,6 +47,7 @@ import {
 } from '../services/ConversationsServices';
 import { getConversationQueryOptions } from '../queries/ConversationsQueries';
 import { getImageUrl } from '../utils/media';
+import { cn } from '@/lib/utils';
 
 const groupConsecutiveMessages = (messages) =>
   messages.reduce((groups, message) => {
@@ -87,6 +88,56 @@ const MessageBubbleContent = ({ message }) => (
   </BubbleContent>
 );
 
+const formatMessageTimestamp = (timestamp) =>
+  new Intl.DateTimeFormat('en-GB', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(timestamp));
+
+const DisputeMessageCard = ({ message, isOwnMessage }) => (
+  <article className='overflow-hidden rounded-xl border bg-card shadow-xs'>
+    <header className='flex items-center justify-between gap-4 border-b bg-muted/30 px-4 py-3 sm:px-5'>
+      <div className='flex min-w-0 items-center gap-3'>
+        <Avatar className='size-9 shrink-0 border bg-background'>
+          <AvatarImage
+            src={getImageUrl(message.sender_avatar)}
+            alt={`@${message.sender_username}`}
+          />
+          <AvatarFallback>
+            {getInitials(message.sender_username)}
+          </AvatarFallback>
+        </Avatar>
+        <div className='min-w-0'>
+          <p className='truncate text-sm font-semibold'>
+            {message.sender_username}
+            {isOwnMessage && (
+              <span className='ml-1 font-normal text-muted-foreground'>
+                (You)
+              </span>
+            )}
+          </p>
+        </div>
+      </div>
+      <time
+        dateTime={message.created_at}
+        className='shrink-0 text-xs text-muted-foreground'
+      >
+        {formatMessageTimestamp(message.created_at)}
+      </time>
+    </header>
+    <div className='space-y-4 px-4 py-4 text-sm leading-7 whitespace-pre-line sm:px-5'>
+      {message.attachment_type === 'image' && message.attachment_url && (
+        <img
+          src={getImageUrl(message.attachment_url)}
+          alt='Message attachment'
+          className='max-h-96 max-w-full rounded-lg border object-contain'
+        />
+      )}
+      {message.content && <p>{message.content}</p>}
+    </div>
+  </article>
+);
+
 export const ConversationThread = ({
   conversationId: providedConversationId,
   backTo: providedBackTo,
@@ -124,6 +175,7 @@ export const ConversationThread = ({
   );
   const conversation = conversationData?.conversation;
   const isMissionConversation = conversation?.type === 'mission';
+  const isDisputeConversation = conversation?.type === 'dispute';
   const isHistoryOnly = Boolean(currentParticipant?.history_until);
   const isHistoryView = isHistoryOnly || Boolean(conversation?.closed_at);
   const conversationTitle =
@@ -358,7 +410,12 @@ export const ConversationThread = ({
   }
 
   return (
-    <section className='container mx-auto flex max-w-3xl flex-col gap-4 p-4 sm:p-6'>
+    <section
+      className={cn(
+        'container mx-auto flex flex-col gap-4 p-4 sm:p-6',
+        isDisputeConversation ? 'max-w-5xl' : 'max-w-3xl',
+      )}
+    >
       {showBack && (
         <Button asChild variant='ghost' className='w-fit gap-2 px-0'>
           <Link to={backTo}>
@@ -369,7 +426,12 @@ export const ConversationThread = ({
       )}
 
       <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
-        <Card className='mx-auto h-140 w-full max-w-3xl gap-0 py-0'>
+        <Card
+          className={cn(
+            'mx-auto w-full gap-0 py-0',
+            isDisputeConversation ? 'h-[42rem] max-w-5xl' : 'h-140 max-w-3xl',
+          )}
+        >
           <CardHeader className='gap-1 border-b py-5'>
             <CardTitle asChild>
               <h1>{conversationTitle || 'Conversation'}</h1>
@@ -428,57 +490,87 @@ export const ConversationThread = ({
             ) : (
               <MessageScroller>
                 <MessageScrollerViewport>
-                  <MessageScrollerContent aria-busy={isPending} className='p-5'>
-                    {messageGroups.map((group) => {
-                      const firstMessage = group.messages[0];
-                      const isOwnMessage = group.senderId === currentUser?.id;
+                  <MessageScrollerContent
+                    aria-busy={isPending}
+                    className={cn(
+                      'p-5',
+                      isDisputeConversation && 'space-y-4 bg-muted/10',
+                    )}
+                  >
+                    {isDisputeConversation
+                      ? messages.map((message) => (
+                          <MessageScrollerItem
+                            key={message.mid}
+                            messageId={String(message.mid)}
+                            scrollAnchor={message.sender_id === currentUser?.id}
+                          >
+                            <DisputeMessageCard
+                              message={message}
+                              isOwnMessage={
+                                message.sender_id === currentUser?.id
+                              }
+                            />
+                          </MessageScrollerItem>
+                        ))
+                      : messageGroups.map((group) => {
+                          const firstMessage = group.messages[0];
+                          const isOwnMessage =
+                            group.senderId === currentUser?.id;
 
-                      return (
-                        <MessageScrollerItem
-                          key={firstMessage.mid}
-                          messageId={String(firstMessage.mid)}
-                          scrollAnchor={isOwnMessage}
-                        >
-                          <Message align={isOwnMessage ? 'end' : 'start'}>
-                            <MessageAvatar>
-                              <Avatar className='size-8'>
-                                <AvatarImage
-                                  src={getImageUrl(firstMessage.sender_avatar)}
-                                  alt={`@${firstMessage.sender_username}`}
-                                />
-                                <AvatarFallback>
-                                  {getInitials(firstMessage.sender_username)}
-                                </AvatarFallback>
-                              </Avatar>
-                            </MessageAvatar>
-                            <MessageContent>
-                              {group.messages.length === 1 ? (
-                                <Bubble
-                                  variant={isOwnMessage ? 'default' : 'muted'}
-                                >
-                                  <MessageBubbleContent
-                                    message={firstMessage}
-                                  />
-                                </Bubble>
-                              ) : (
-                                <BubbleGroup className='w-full'>
-                                  {group.messages.map((message) => (
+                          return (
+                            <MessageScrollerItem
+                              key={firstMessage.mid}
+                              messageId={String(firstMessage.mid)}
+                              scrollAnchor={isOwnMessage}
+                            >
+                              <Message align={isOwnMessage ? 'end' : 'start'}>
+                                <MessageAvatar>
+                                  <Avatar className='size-8'>
+                                    <AvatarImage
+                                      src={getImageUrl(
+                                        firstMessage.sender_avatar,
+                                      )}
+                                      alt={`@${firstMessage.sender_username}`}
+                                    />
+                                    <AvatarFallback>
+                                      {getInitials(
+                                        firstMessage.sender_username,
+                                      )}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </MessageAvatar>
+                                <MessageContent>
+                                  {group.messages.length === 1 ? (
                                     <Bubble
-                                      key={message.mid}
                                       variant={
                                         isOwnMessage ? 'default' : 'muted'
                                       }
                                     >
-                                      <MessageBubbleContent message={message} />
+                                      <MessageBubbleContent
+                                        message={firstMessage}
+                                      />
                                     </Bubble>
-                                  ))}
-                                </BubbleGroup>
-                              )}
-                            </MessageContent>
-                          </Message>
-                        </MessageScrollerItem>
-                      );
-                    })}
+                                  ) : (
+                                    <BubbleGroup className='w-full'>
+                                      {group.messages.map((message) => (
+                                        <Bubble
+                                          key={message.mid}
+                                          variant={
+                                            isOwnMessage ? 'default' : 'muted'
+                                          }
+                                        >
+                                          <MessageBubbleContent
+                                            message={message}
+                                          />
+                                        </Bubble>
+                                      ))}
+                                    </BubbleGroup>
+                                  )}
+                                </MessageContent>
+                              </Message>
+                            </MessageScrollerItem>
+                          );
+                        })}
                   </MessageScrollerContent>
                 </MessageScrollerViewport>
                 <MessageScrollerButton />
@@ -515,7 +607,14 @@ export const ConversationThread = ({
                     </Button>
                   </div>
                 )}
-                <InputGroup className='h-auto rounded-2xl border-transparent bg-input/50'>
+                <InputGroup
+                  className={cn(
+                    'h-auto bg-input/50',
+                    isDisputeConversation
+                      ? 'rounded-lg border-input bg-background'
+                      : 'rounded-2xl border-transparent',
+                  )}
+                >
                   <input
                     ref={photoInputRef}
                     type='file'
@@ -554,7 +653,10 @@ export const ConversationThread = ({
                       type='submit'
                       variant='default'
                       size='icon-sm'
-                      className='ml-auto rounded-2xl'
+                      className={cn(
+                        'ml-auto',
+                        isDisputeConversation ? 'rounded-lg' : 'rounded-2xl',
+                      )}
                       disabled={isPending}
                     >
                       <ArrowUp className='h-4 w-4' aria-hidden='true' />
