@@ -171,11 +171,19 @@ export const consts = {
     DESCRIPTION_MAX_LENGTH: 1000,
   },
 
+  // Notification consts
   NOTIFICATION: {
     MESSAGE: {
       MAX_LENGTH: 500,
     },
+    // ...
     MESSAGE_MAX_LENGTH: 500,
+  },
+
+  // Report consts
+  REPORT: {
+    MESSAGE: { MAX: 1000 },
+    REASON_MESSAGE: { MAX: 1000 },
   },
 
   // Account update consts
@@ -183,9 +191,4 @@ export const consts = {
   SURNAMES_MAX_LENGTH: 100,
   LOCATION_MAX_LENGTH: 300,
   DESCRIPTION_MAX_LENGTH: 500,
-
-  REPORT: {
-    MESSAGE: { MAX: 1000 },
-    REASON_MESSAGE: { MAX: 1000 },
-  },
 };

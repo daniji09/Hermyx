@@ -3,7 +3,7 @@ import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 
 /// Base validations, raw logic
-export const notificationIdBaseSchema = z.coerce
+export const nidBaseSchema = z.coerce
   .number(messages.GENERAL.FIELD_NUMBER('Notification id'))
   .int(messages.GENERAL.FIELD_INTEGER('Notification id'))
   .min(0, messages.GENERAL.FIELD_POSITIVE('Notification id'));
@@ -20,14 +20,13 @@ export const notificationMessageBaseSchema = z
   .trim()
   .max(
     consts.REPORT.MESSAGE.MAX,
-    messages.GENERAL.FIELD_TOO_LONG(
-      'Message',
-      consts.REPORT.MESSAGE.MAX,
-    ),
+    messages.GENERAL.FIELD_TOO_LONG('Message', consts.REPORT.MESSAGE.MAX),
   );
 
+/// Endpoint complex validations
+// Respond to notification
 export const respondToNotificationParamSchema = z.object({
-  notificationId: notificationIdBaseSchema,
+  nid: nidBaseSchema,
 });
 
 export const respondToNotificationBodySchema = z

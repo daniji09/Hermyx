@@ -15,10 +15,12 @@ import {
   verifyToken,
 } from '../middlewares/auth.middleware.js';
 
+/// GETS
 // List current user notifications
 router.get('/me', verifyToken, notificationController.getMyNotifications);
 
-// Mark all current user notifications as seen
+/// POSTS
+// Mark all current user's unseen notifications as seen
 router.post(
   '/seen',
   verifyToken,
@@ -27,12 +29,14 @@ router.post(
 
 // Respond to a notification
 router.post(
-  '/:notificationId/respond',
+  '/:nid/respond',
   verifyToken,
   validateParamsSchema(respondToNotificationParamSchema),
   validateBodySchema(respondToNotificationBodySchema),
   notificationController.respondToNotification,
 );
+
+// ---
 
 router.post(
   '/:notificationId/seen',

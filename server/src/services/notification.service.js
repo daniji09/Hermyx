@@ -26,8 +26,18 @@ import * as socketProvider from '../providers/socket.provider.js';
 export const createNotification = async (notificationData, client) =>
   notificationModel.create(notificationData, client);
 
-export const getNotificationById = async (notificationId, client) =>
-  notificationModel.findById(notificationId, client);
+// Get notification by nid
+export const getNotificationByNid = async (nid, client) => {
+  checkNid(nid);
+  return await notificationModel.findById(nid, client);
+};
+
+const getNotificationByNidOrThrow = async (nid) => {
+  const notification = await getNotificationByNid(nid);
+  if (!notification)
+    throw new AppError(messages.NOTIFICATION.GENERAL.NOT_FOUND, 404);
+  return notification;
+};
 
 export const getNotificationsByRecipientId = async (recipientId, client) =>
   notificationModel.findByRecipientId(recipientId, client);
@@ -106,71 +116,116 @@ export const countParticipationReviewAttempts = async (
   notificationModel.countParticipationReviewAttempts(mid, adventurerId, client);
 
 /// Endpoint complex functions
-export const getMyNotifications = async (userId) =>
-  getNotificationsByRecipientId(userId);
+// Gets current user's notifications
+export const getMyNotifications = async (uid) => {
+  // Parameter checks
+  checkUid(uid);
 
-export const markMyNotificationAsSeen = async (notificationId, userId) => {
-  const notification = await getNotificationByIdOrThrow(notificationId);
-  checkNotificationRecipient(notification, userId);
-  return markNotificationAsSeen(notificationId);
+  // Gets current user's notifications
+  return await notificationModel.findByRecipientId(uid);
 };
 
-export const markMyNotificationsAsSeen = async (userId) =>
-  markNotificationsAsSeenByRecipientId(userId);
+// Marks all current user's unseen notifications are seen
+export const markMyNotificationsAsSeen = async (uid) => {
+  // Parameter checks
+  checkUid(uid);
 
+  // Marks notifications as seen
+  return await notificationModel.markAllAsSeenByRecipientId(uid);
+};
+
+// Responds to a notification
 export const respondToNotification = async ({
-  notificationId,
+  nid,
   response,
   message,
   user,
 }) => {
-  const notification = await getNotificationByIdOrThrow(notificationId);
-  checkNotificationRecipient(notification, user.uid);
+  // Gets notification
+  const notification = await getNotificationByNidOrThrow(nid);
+
+  // Checks if notification recipient is current user, so is authorized to respond it
+  checkNotificationRecipient(notification.recipient_id, user.uid);
+
+  // Checks if notification is actually pending
   if (notification.status !== NOTIFICATION_STATUS.PENDING.ID)
     throw new AppError(
-      messages.NOTIFICATION_NOT_PENDING(notification.status),
+      messages.NOTIFICATION.GENERAL.NOTIFICATION_NOT_PENDING(
+        notification.status,
+      ),
       400,
     );
 
+  // Prepares response object
   const responseData = { notification, response, message, user };
+
+  // Participation review notification
   if (notification.action === NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID)
     return respondToParticipationReview(responseData);
+
+  // Participation rejection notification
   if (
     notification.action ===
     NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID
   )
     return respondToParticipationRejection(responseData);
+
+  // Mission join notification
   if (
     notification.action === NOTIFICATION_ACTION.JOIN_REQUEST.ID ||
     notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
   )
     return respondToMissionJoinNotification(responseData);
+
+  // Mission monetary reward edit notification
   if (notification.action === NOTIFICATION_ACTION.MISSION_EDIT.ID)
     return respondToVacancyMonetaryRewardEdition(responseData);
-  throw new AppError(messages.INVALID_NOTIFICATION_ACTION, 400);
+
+  // If neither of those, then is incorrect
+  throw new AppError(
+    messages.NOTIFICATION.GENERAL.INVALID_NOTIFICATION_ACTION,
+    400,
+  );
 };
 
+// Respond to participation review notification
 const respondToParticipationReview = async ({
   notification,
   response,
   message: disputeReason,
   user,
 }) => {
-  const missionId = notification.payload.associated_mission_id;
-  const mission = await missionService.getMissionByIdOrThrow(missionId);
-  if (mission.owner_id !== user.uid)
-    throw new AppError(messages.UNAUTHORIZED_ERROR, 403);
-  if (mission.status !== MISSION_STATUS.IN_PROGRESS.ID)
-    throw new AppError(messages.MISSION_NOT_IN_PROGRESS, 409);
+  // Gets mission information
+  const mid = notification.payload.associated_mission_id;
+  const mission = await missionService.getMissionByIdOrThrow(mid);
 
+  // Checks if mission owner is current user, so they can respond
+  if (mission.owner_id !== user.uid)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+
+  // Checks if mission is in a correct status to receive participations
+  if (!MISSION_STATUS[mission.status].CAN_SUBMIT_PARTICIPATION)
+    throw new AppError(
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
+        .CANNOT_SUBMIT_PARTICIPATION,
+      409,
+    );
+
+  // Gets participation
   const participation =
     await missionService.getMissionParticipationByMidAndAdventurerIdOrThrow(
-      missionId,
+      mid,
       notification.sender_id,
     );
-  if (participation.status !== MISSION_PARTICIPATION_STATUS.SUBMITTED.ID)
-    throw new AppError(messages.MISSION_PARTICIPATION_ALREADY_REVIEWED, 409);
 
+  // Checks if that participation has actually been submitted
+  if (participation.status !== MISSION_PARTICIPATION_STATUS.SUBMITTED.ID)
+    throw new AppError(
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION.ALREADY_REVIEWED,
+      409,
+    );
+
+  // If user disputes the participation
   if (response === 'disputed')
     return disputeParticipationReview({
       notification,
@@ -181,8 +236,12 @@ const respondToParticipationReview = async ({
       reportType: REPORT_TYPE.REVIEW_DISPUTE.ID,
       counterpartId: notification.sender_id,
     });
+
+  // If user rejects participation
   if (response === 'rejected')
     return rejectParticipationReview({ notification, mission, user });
+
+  // If user accepts participation
   checkAcceptedResponse(response);
   return acceptParticipationReview({
     notification,
@@ -243,6 +302,7 @@ const respondToParticipationRejection = async ({
   };
 };
 
+// Disputes the participation that is been reviewed or that the applicant has rejected on their review
 const disputeParticipationReview = async ({
   notification,
   participation,
@@ -252,18 +312,22 @@ const disputeParticipationReview = async ({
   reportType,
   counterpartId,
 }) => {
+  // Applicant can only dispute participations that have already been reviewed
   if (
     reportType === REPORT_TYPE.REVIEW_DISPUTE.ID &&
     Number(notification.payload?.attempt || 1) <= 1
   )
     throw new AppError(
-      messages.MISSION_PARTICIPATION_DISPUTE_REQUIRES_RETRY,
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION.REQUIRES_RETRY,
       409,
     );
+
+  // Checks that the participation can bee disputed on current state
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
-    messages.CANNOT_DISPUTE_PARTICIPATION_STATE,
+    messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
+      .CANNOT_DISPUTE_PARTICIPATION_STATE,
   );
   const disputeMessage =
     reportType === REPORT_TYPE.REVIEW_DISPUTE.ID
@@ -290,14 +354,16 @@ const disputeParticipationReview = async ({
     message: disputeMessage,
     reportId: dispute.report.rid,
   });
-  for (const recipientId of [counterpartId, dispute.adminId])
-    socketProvider.emitToUser(recipientId, 'conversation:message-received', {
-      conversationId: dispute.conversation.cid,
-      conversationType: 'dispute',
-      messageId: dispute.initialMessage.mid,
-      reportId: dispute.report.rid,
-      senderId: user.uid,
-    });
+  socketProvider.emitToUser(counterpartId, 'conversation:message-received', {
+    conversationId: dispute.conversation.cid,
+    conversationType: 'dispute',
+    messageId: dispute.initialMessage.mid,
+    reportId: dispute.report.rid,
+    senderId: user.uid,
+  });
+  socketProvider.emitToAdmins('report:created', {
+    reportId: dispute.report.rid,
+  });
   return { message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY };
 };
 
@@ -763,6 +829,12 @@ const persistNegotiationPaymentChanges = async (
   }
 };
 
+export const markMyNotificationAsSeen = async (notificationId, userId) => {
+  const notification = await getNotificationByNidOrThrow(notificationId);
+  checkNotificationRecipient(notification.recipient_id, userId);
+  return markNotificationAsSeen(notificationId);
+};
+
 export const autoAcceptParticipation = async () => {
   const expiredReviews = await findExpiredParticipationReviews();
   if (expiredReviews.length === 0) return 'No notifications expired.';
@@ -898,29 +970,9 @@ const resolveNotification = async (notificationId, status, client) => {
   return markNotificationAsSeen(notificationId, client);
 };
 
-const getNotificationByIdOrThrow = async (notificationId) => {
-  const notification = await getNotificationById(notificationId);
-  if (!notification) throw new AppError(messages.NOTIFICATION_NOT_FOUND, 404);
-  return notification;
-};
-
-const checkNotificationRecipient = (notification, userId) => {
-  if (notification.recipient_id !== userId)
-    throw new AppError(messages.UNAUTHORIZED_ERROR, 403);
-};
-
 const checkAcceptedResponse = (response) => {
   if (response !== 'accepted' && response !== 'accept')
     throw new AppError(messages.INVALID_RESPONSE_ACTION, 400);
-};
-
-const checkParticipationTransition = (participation, status, message) => {
-  if (
-    !MISSION_PARTICIPATION_STATUS[
-      participation.status
-    ].VALID_NEXT_STATES.includes(status)
-  )
-    throw new AppError(message, 400);
 };
 
 const withTransaction = async (operation) => {
@@ -1000,4 +1052,30 @@ const emitNegotiationEvent = (
     adventurerUsername: user.username,
     message,
   });
+};
+
+/// Data checks
+const checkUid = (uid) => {
+  if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
+};
+
+const checkNid = (nid) => {
+  if (!nid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Nid'));
+};
+
+/// Helper functions
+// Checks that the notification recipient is the current user
+const checkNotificationRecipient = (recipientId, userId) => {
+  if (recipientId !== userId)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+};
+
+// Checks that the current participation status includes the determined status as on of its valid next states
+const checkParticipationTransition = (participation, status, message) => {
+  if (
+    !MISSION_PARTICIPATION_STATUS[
+      participation.status
+    ].VALID_NEXT_STATES.includes(status)
+  )
+    throw new AppError(message, 409);
 };

@@ -39,6 +39,40 @@ export const create = async (notificationData, client = pool) => {
 };
 
 /// FINDS
+export const findByRecipientId = async (recipientId, client = pool) => {
+  const query = `
+    SELECT
+      n.nid,
+      n.date,
+      n.seen,
+      n.type,
+      n.kind,
+      n.action,
+      n.payload,
+      n.status,
+      n.message,
+      n.sender_id,
+      n.recipient_id,
+      (n.payload->>'associated_mission_id')::int as associated_mission_id,
+      sender.username AS sender_username,
+      sender.avatar AS sender_avatar,
+      m.title AS mission_title
+    FROM notification n
+    JOIN app_user sender ON sender.uid = n.sender_id
+    JOIN mission m ON m.mid = (n.payload->>'associated_mission_id')::int
+    WHERE n.recipient_id = $1
+    ORDER BY
+      CASE WHEN n.seen = FALSE THEN 0 ELSE 1 END,
+      CASE WHEN COALESCE(n.status, '') = $2 THEN 0 ELSE 1 END,
+      n.date DESC
+  `;
+  const result = await client.query(query, [
+    recipientId,
+    NOTIFICATION_STATUS.PENDING.ID,
+  ]);
+  return result.rows;
+};
+
 export const findByActionStatusAndVacancy = async (
   action,
   status,
@@ -58,6 +92,7 @@ export const findByActionStatusAndVacancy = async (
   return result.rows;
 };
 
+// Finds pending join notifications
 export const hasPendingJoinNotification = async (
   missionId,
   senderId,
@@ -144,6 +179,22 @@ export const update = async (notificationData, client = pool) => {
   return result.rowCount;
 };
 
+// Marks user's unseen notifications as seen
+export const markAllAsSeenByRecipientId = async (
+  recipientId,
+  client = pool,
+) => {
+  const query = `
+    UPDATE notification
+    SET seen = TRUE
+    WHERE recipient_id = $1
+      AND seen = FALSE
+    RETURNING *
+  `;
+  const result = await client.query(query, [recipientId]);
+  return result.rows;
+};
+
 // ------
 
 export const updateStatus = async (notificationId, status, client = pool) => {
@@ -178,59 +229,10 @@ export const addAssociatedReport = async (
   return result.rows[0] || null;
 };
 
-export const markAllAsSeenByRecipientId = async (
-  recipientId,
-  client = pool,
-) => {
-  const query = `
-    UPDATE notification
-    SET seen = TRUE
-    WHERE recipient_id = $1
-      AND seen = FALSE
-    RETURNING *
-  `;
-  const result = await client.query(query, [recipientId]);
-  return result.rows;
-};
-
 export const findById = async (id, client = pool) => {
   const query = 'SELECT * FROM notification WHERE nid = $1';
   const result = await client.query(query, [id]);
   return result.rows[0];
-};
-
-export const findByRecipientId = async (recipientId, client = pool) => {
-  const query = `
-    SELECT
-      n.nid,
-      n.date,
-      n.seen,
-      n.type,
-      n.kind,
-      n.action,
-      n.payload,
-      n.status,
-      n.message,
-      n.sender_id,
-      n.recipient_id,
-      (n.payload->>'associated_mission_id')::int as associated_mission_id,
-      sender.username AS sender_username,
-      sender.avatar AS sender_avatar,
-      m.title AS mission_title
-    FROM notification n
-    JOIN app_user sender ON sender.uid = n.sender_id
-    JOIN mission m ON m.mid = (n.payload->>'associated_mission_id')::int
-    WHERE n.recipient_id = $1
-    ORDER BY
-      CASE WHEN n.seen = FALSE THEN 0 ELSE 1 END,
-      CASE WHEN COALESCE(n.status, '') = $2 THEN 0 ELSE 1 END,
-      n.date DESC
-  `;
-  const result = await client.query(query, [
-    recipientId,
-    NOTIFICATION_STATUS.PENDING.ID,
-  ]);
-  return result.rows;
 };
 
 export const findByActionStatusSenderAndMission = async (
