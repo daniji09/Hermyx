@@ -12,10 +12,10 @@ import * as conversationService from './conversation.service.js';
 import * as notificationService from './notification.service.js';
 import * as missionService from './mission.service.js';
 import * as reportService from './report.service.js';
-import * as userService from './user.service.js';
 import { AppError } from '../utils/error.util.js';
 
 const DISPUTE_TYPES = new Set([
+  REPORT_TYPE.REPORT_ADVENTURER.ID,
   REPORT_TYPE.REVIEW_DISPUTE.ID,
   REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
 ]);
@@ -28,7 +28,11 @@ export const getMyDisputeUnreadCount = async (userId) =>
 
 export const getDispute = async (reportId, userId) => {
   const dispute = await reportService.getReport(reportId);
-  if (!dispute || !DISPUTE_TYPES.has(dispute.type)) {
+  if (
+    !dispute ||
+    !dispute.conversation_id ||
+    !DISPUTE_TYPES.has(dispute.type)
+  ) {
     throw new AppError(messages.REPORT_NOT_FOUND, 404);
   }
 
@@ -71,14 +75,6 @@ export const createDisputeTicket = async ({
       throw new AppError(messages.APPLICANT_ALREADY_REPORTED, 409);
     }
 
-    const admin = await userService.getActiveAdmin(client);
-    if (!admin) {
-      throw new AppError(
-        'An active administrator is required for disputes.',
-        409,
-      );
-    }
-
     await missionService.disputeMissionParticipation(
       missionId,
       adventurerId,
@@ -116,7 +112,7 @@ export const createDisputeTicket = async ({
       client,
     );
 
-    for (const participantId of [senderId, counterpartId, admin.uid]) {
+    for (const participantId of [senderId, counterpartId]) {
       await conversationService.createConversationParticipant(
         conversation.cid,
         participantId,
@@ -133,7 +129,7 @@ export const createDisputeTicket = async ({
       client,
     );
 
-    for (const participantId of [senderId, counterpartId, admin.uid]) {
+    for (const participantId of [senderId, counterpartId]) {
       await conversationService.markConversationAsReadByUserId(
         conversation.cid,
         participantId,
@@ -166,7 +162,6 @@ export const createDisputeTicket = async ({
 
     await client.query('COMMIT');
     return {
-      adminId: admin.uid,
       conversation,
       followUpNotificationId,
       initialMessage,

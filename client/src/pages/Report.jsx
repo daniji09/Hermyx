@@ -114,6 +114,7 @@ const ReportError = ({ isError, children }) => {
 const ReportContent = ({ report }) => {
   if (!report) return null;
   const isDispute =
+    report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ||
     report.type === REPORT_TYPE.REVIEW_DISPUTE.ID ||
     report.type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID;
   return (
@@ -135,6 +136,11 @@ const ReportContent = ({ report }) => {
               </h1>
             </CardTitle>
             <CardDescription>{`Status: ${report.status}`}</CardDescription>
+            {report.needs_admin_attention && (
+              <CardDescription className='font-semibold text-destructive'>
+                Needs admin attention
+              </CardDescription>
+            )}
             <CardAction>
               <p>{timestampToDayMonthYear(report.date)}</p>
             </CardAction>
@@ -194,7 +200,7 @@ const ReportContent = ({ report }) => {
           conversationId={report.conversation_id}
           showBack={false}
           title='Dispute conversation'
-          description='Requester, adventurer and administration'
+          description='Mission owner, adventurer and administration'
         />
       )}
     </section>

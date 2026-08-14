@@ -10,10 +10,7 @@ const getPreview = (dispute) => {
   return 'No messages yet.';
 };
 
-const getTypeLabel = (type) =>
-  type === REPORT_TYPE.REVIEW_DISPUTE.ID
-    ? 'Review dispute'
-    : 'Rejected review dispute';
+const getTypeLabel = (type) => REPORT_TYPE[type]?.LABEL || type;
 
 export const Disputes = () => {
   const {

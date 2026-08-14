@@ -89,6 +89,9 @@ export const updateUserStripeCustomerIdByUid = async (
   await userModel.updateStripeCustomerIdByUid(uid, stripeCustomerId);
 };
 
+export const getActiveAdmin = async (client) =>
+  userModel.getActiveAdmin(client);
+
 // Updates user's Stripe customer id
 export const updateUserStripeConnectedIdByUid = async (
   uid,
@@ -100,9 +103,6 @@ export const updateUserStripeConnectedIdByUid = async (
   // Updates user's Stripe customer id
   await userModel.updateStripeConnectedByUid(uid, stripeConnectedId);
 };
-
-export const getActiveAdmin = async (client) =>
-  userModel.getActiveAdmin(client);
 
 /// Endpoint complex functions
 // Search user by username with partial matches

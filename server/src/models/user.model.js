@@ -19,19 +19,6 @@ export const findByUid = async (uid) => {
   return result.rows[0];
 };
 
-export const getActiveAdmin = async (client = pool) => {
-  const query = `
-    SELECT *
-    FROM app_user
-    WHERE role = 'ADMIN'
-      AND status = 'ACTIVE'
-    ORDER BY uid ASC
-    LIMIT 1
-  `;
-  const result = await client.query(query);
-  return result.rows[0] || null;
-};
-
 // Get user by username
 export const findByUsername = async (username) => {
   const query = 'SELECT * FROM app_user WHERE LOWER(username) = LOWER($1)';

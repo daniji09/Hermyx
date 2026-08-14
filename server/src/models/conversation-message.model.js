@@ -54,6 +54,7 @@ export const create = async (
 export const findByConversationId = async (
   conversationId,
   userId,
+  allowAdminPreview = false,
   client = pool,
 ) => {
   const query = `
@@ -70,7 +71,7 @@ export const findByConversationId = async (
       u.username AS sender_username,
       u.avatar AS sender_avatar
     FROM conversation_message m
-    JOIN conversation_participant cp
+    LEFT JOIN conversation_participant cp
       ON cp.conversation_id = m.conversation_id
       AND cp.user_id = $2
       AND cp.left_at IS NULL
@@ -78,14 +79,21 @@ export const findByConversationId = async (
     LEFT JOIN report r ON r.conversation_id = c.cid
     JOIN app_user u ON u.uid = m.sender_id
     WHERE m.conversation_id = $1
+      AND (cp.user_id IS NOT NULL OR $3 = TRUE)
       AND (
+        $3 = TRUE
+        OR
         cp.history_until IS NULL
         OR m.created_at <= cp.history_until
       )
     ORDER BY m.created_at ASC
   `;
 
-  const result = await client.query(query, [conversationId, userId]);
+  const result = await client.query(query, [
+    conversationId,
+    userId,
+    allowAdminPreview,
+  ]);
   return result.rows;
 };
 

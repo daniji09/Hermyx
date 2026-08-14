@@ -34,7 +34,19 @@ export const findById = async (id, client = pool) => {
     SELECT
       r.*,
       m.title AS mission_title,
-      mp.title AS vacancy_title
+      mp.title AS vacancy_title,
+      (
+        r.status = 'SENT'
+        AND r.conversation_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM conversation_message admin_message
+          JOIN app_user admin_user
+            ON admin_user.uid = admin_message.sender_id
+          WHERE admin_message.conversation_id = r.conversation_id
+            AND admin_user.role = 'ADMIN'
+        )
+      ) AS needs_admin_attention
     FROM report r
     LEFT JOIN mission m
       ON m.mid = NULLIF(r.payload->>'associated_mission_id', '')::int
@@ -62,6 +74,18 @@ export const getReports = async ({ pagination, filters, userId }) => {
           AND cm.sender_id <> $1
           AND cm.created_at > cp.last_read_at
       ), 0)::int AS unread_count,
+      (
+        r.status = 'SENT'
+        AND r.conversation_id IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1
+          FROM conversation_message admin_message
+          JOIN app_user admin_user
+            ON admin_user.uid = admin_message.sender_id
+          WHERE admin_message.conversation_id = r.conversation_id
+            AND admin_user.role = 'ADMIN'
+        )
+      ) AS needs_admin_attention,
       COUNT(*) OVER() AS total_count
     FROM report AS r
     WHERE 1=1`;
@@ -221,10 +245,11 @@ export const findDisputesByUserId = async (userId) => {
          AND cm.sender_id <> $1
          AND cm.created_at > current_participant.last_read_at
      ) unread ON true
-     WHERE r.type IN ($2, $3)
+     WHERE r.type IN ($2, $3, $4)
      ORDER BY last_message.created_at DESC NULLS LAST, r.date DESC`,
     [
       userId,
+      REPORT_TYPE.REPORT_ADVENTURER.ID,
       REPORT_TYPE.REVIEW_DISPUTE.ID,
       REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
     ],
