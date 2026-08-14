@@ -15,6 +15,7 @@ export const create = async (conversationId, userId, client = pool) => {
 };
 
 /// UPDATES
+// Mission conversation left by user
 export const leaveMissionConversation = async (
   missionId,
   userId,
@@ -25,6 +26,30 @@ export const leaveMissionConversation = async (
     SET
       left_at = CURRENT_TIMESTAMP,
       can_send = FALSE
+    FROM conversation c
+    WHERE cp.conversation_id = c.cid
+      AND c.mission_id = $1
+      AND c.type = 'mission'
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
+    RETURNING cp.*
+  `;
+
+  const result = await client.query(query, [missionId, userId]);
+  return result.rows[0] || null;
+};
+
+// Mission conversation freezed for user
+export const freezeMissionConversationHistory = async (
+  missionId,
+  userId,
+  client = pool,
+) => {
+  const query = `
+    UPDATE conversation_participant cp
+    SET
+      can_send = FALSE,
+      history_until = clock_timestamp()
     FROM conversation c
     WHERE cp.conversation_id = c.cid
       AND c.mission_id = $1
@@ -67,29 +92,6 @@ export const addMissionConversationParticipant = async (
       AND type = 'mission'
     ON CONFLICT (conversation_id, user_id) DO NOTHING
     RETURNING *
-  `;
-
-  const result = await client.query(query, [missionId, userId]);
-  return result.rows[0] || null;
-};
-
-export const freezeMissionConversationHistory = async (
-  missionId,
-  userId,
-  client = pool,
-) => {
-  const query = `
-    UPDATE conversation_participant cp
-    SET
-      can_send = FALSE,
-      history_until = clock_timestamp()
-    FROM conversation c
-    WHERE cp.conversation_id = c.cid
-      AND c.mission_id = $1
-      AND c.type = 'mission'
-      AND cp.user_id = $2
-      AND cp.left_at IS NULL
-    RETURNING cp.*
   `;
 
   const result = await client.query(query, [missionId, userId]);

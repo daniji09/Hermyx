@@ -395,7 +395,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
         },
         client,
       );
-      await missionService.markMissionParticipationAsPaidOut(
+      await missionService.updateParticipationPaymentStatusById(
         vacancy.id,
         client,
       );

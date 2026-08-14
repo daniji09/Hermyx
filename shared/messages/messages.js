@@ -167,14 +167,28 @@ export const messages = {
       NOTIFICATION_NOT_PENDING: (status) =>
         `This notification has already been ${status}.`,
       INVALID_NOTIFICATION_ACTION: `Invalid notification action.`,
+      INVALID_RESPONSE_ACTION: `Invalid response action`,
     },
     RESPOND_TO_SUBMIT_PARTICIPATION: {
+      // General
       CANNOT_SUBMIT_PARTICIPATION: `Cannot respond to participation submit on current state.`,
       ALREADY_REVIEWED: `This participation has already been reviewed.`,
+      MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY: `Participation revision requested successfully.`,
+
+      // Dispute
       REQUIRES_RETRY:
         'Participation can only be disputed by the owner after a retry.',
       CANNOT_DISPUTE_PARTICIPATION_STATE: `Can't dispute participation on current state`,
+      MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY: `Participation disputed successfully.`,
+
+      // Reject
+      CANNOT_REJECT_PARTICIPATION_STATE: `Can't reject participation on current state`,
+
+      // Approve
+      MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY: `Participation approved successfully.`,
     },
+
+    // Messages sent to users in a notification
     MISSION_EDIT: {
       MISSION_INFO_CHANGED: (title, changes) =>
         `${title} info has been changed: ${changes.join(', ')}. Check it out!`,
@@ -211,6 +225,14 @@ export const messages = {
       `Your new monetary reward for ${title} has been funded. Now you can submit your part!`,
     MISSION_RESTARTED: (title) =>
       `Mission ${title} has started for you! Talk to your team and start working.`,
+    DISPUTE_PARTICIPATION: (title, username) =>
+      `A dispute was opened for "${title}" by applicant ${username}.`,
+    DISPUTE_REJECTED_PARTICIPATION: (title, username) =>
+      `Adventurer ${username} opened a dispute for "${title}".`,
+    REJECT_PARTICIPATION: (title, username) =>
+      `Your participation in "${title}" was rejected by ${username}. Please accept the revision or open a dispute.`,
+    ACCEPT_PARTICIPATION: (title, username) =>
+      `Your participation in "${title}" was approved by ${username}.`,
   },
 
   ///// Common messages

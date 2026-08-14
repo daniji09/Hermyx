@@ -179,6 +179,13 @@ export const update = async (notificationData, client = pool) => {
   return result.rowCount;
 };
 
+// Updates notification status by nid
+export const updateStatusByNid = async (nid, status, client = pool) => {
+  const query = 'UPDATE notification SET status = $1 WHERE nid = $2';
+  const result = await client.query(query, [status, nid]);
+  return result.rowCount;
+};
+
 // Marks user's unseen notifications as seen
 export const markAllAsSeenByRecipientId = async (
   recipientId,
@@ -195,24 +202,19 @@ export const markAllAsSeenByRecipientId = async (
   return result.rows;
 };
 
-// ------
-
-export const updateStatus = async (notificationId, status, client = pool) => {
-  const query = 'UPDATE notification SET status = $1 WHERE nid = $2';
-  const result = await client.query(query, [status, notificationId]);
-  return result.rowCount;
-};
-
-export const markAsSeen = async (notificationId, client = pool) => {
+// Marks notification as seen
+export const markAsSeenByNid = async (nid, client = pool) => {
   const query = `
     UPDATE notification
     SET seen = TRUE
     WHERE nid = $1
     RETURNING *
   `;
-  const result = await client.query(query, [notificationId]);
+  const result = await client.query(query, [nid]);
   return result.rows[0];
 };
+
+// ------
 
 export const addAssociatedReport = async (
   notificationId,

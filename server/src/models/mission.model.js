@@ -329,6 +329,28 @@ export const findPublicJoinedByUid = async (userId, pagination = null) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
+// Gets mission status summary
+export const getMissionStatusSummary = async (mid, client = pool) => {
+  const summaryQuery = `
+    SELECT
+      COUNT(*)::int AS participant_count,
+      COUNT(*) FILTER (
+        WHERE status IN ($2, $3, $4)
+      )::int AS active_count,
+      COUNT(*) FILTER (WHERE status = $5)::int AS dispute_count
+    FROM mission_participation
+    WHERE mid = $1
+  `;
+  const result = await client.query(summaryQuery, [
+    mid,
+    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
+    MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
+    MISSION_PARTICIPATION_STATUS.REJECTED.ID,
+    MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
+  ]);
+  return result.rows[0];
+};
+
 /// UPDATES
 // Update mission
 export const update = async (missionData, client = pool) => {
@@ -381,6 +403,7 @@ export const updateOccupiedVacancies = async (mid, amount, client = pool) => {
   return result.rowCount;
 };
 
+// Updates mission payment by mid
 export const updateMissionPayment = async (mid, payment, client = pool) => {
   const query = `
     UPDATE mission
@@ -473,62 +496,6 @@ export const getAllMissionsInDraft = async () => {
   const query = "SELECT * FROM mission WHERE status = 'draft'";
   const result = await pool.query(query, []);
   return result.rows;
-};
-
-export const syncMissionCompletionStatus = async (mid, client = pool) => {
-  const summaryQuery = `
-    SELECT
-      COUNT(*)::int AS participant_count,
-      COUNT(*) FILTER (
-        WHERE status IN ($2, $3, $4)
-      )::int AS active_count,
-      COUNT(*) FILTER (WHERE status = $5)::int AS dispute_count
-    FROM mission_participation
-    WHERE mid = $1
-  `;
-  const summaryResult = await client.query(summaryQuery, [
-    mid,
-    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
-    MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
-    MISSION_PARTICIPATION_STATUS.REJECTED.ID,
-    MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
-  ]);
-  const summary = summaryResult.rows[0];
-
-  if (!summary || summary.participant_count === 0) {
-    return null;
-  }
-
-  let nextStatus = null;
-
-  if (
-    summary.active_count > 0 ||
-    (summary.active_count === 0 && summary.dispute_count === 0)
-  ) {
-    nextStatus = MISSION_STATUS.IN_PROGRESS.ID;
-  } else if (summary.dispute_count > 0) {
-    nextStatus = MISSION_STATUS.IN_DISPUTE.ID;
-  }
-
-  if (!nextStatus) {
-    return null;
-  }
-
-  const updateQuery = `
-    UPDATE mission
-    SET
-      status = $2::varchar
-    WHERE mid = $1
-      AND status IN ($4, $3)
-    RETURNING *
-  `;
-  const updateResult = await client.query(updateQuery, [
-    mid,
-    nextStatus,
-    MISSION_STATUS.IN_PROGRESS.ID,
-    MISSION_STATUS.IN_DISPUTE.ID,
-  ]);
-  return updateResult.rows[0] || null;
 };
 
 export const countMissions = async () => {

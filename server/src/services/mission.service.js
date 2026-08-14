@@ -129,6 +129,24 @@ export const updateStatusByMid = async (mid, status, client) => {
   return await missionModel.updateStatusByMid(mid, status, client);
 };
 
+// Updates mission participation status by mid an adventurer
+export const updateParticipationStatusByMidAndAdventurer = async (
+  mid,
+  adventurerId,
+  status,
+  client,
+) => {
+  checkMid(mid);
+  checkAdventurerId(adventurerId);
+  checkStatus(status);
+  return await missionParticipationModel.updateStatusByMidAndAdventurer(
+    mid,
+    adventurerId,
+    status,
+    client,
+  );
+};
+
 // Starts participants of a mission
 export const startParticipants = async (mid, client) => {
   checkMid(mid);
@@ -143,6 +161,34 @@ export const findPaymentByStripeTransactionId = async (stripeTransactionId) => {
   );
 };
 
+// Gets mission status summary
+export const getMissionStatusSummary = async (mid, client) => {
+  checkMid(mid);
+  return await missionModel.getMissionStatusSummary(mid, client);
+};
+
+// Syncs mission status due to a participation status change
+export const syncMissionCompletionStatus = async (mid, client) => {
+  checkMid(mid);
+  return missionModel.syncMissionCompletionStatus(mid, client);
+};
+
+// Updates payment status by id
+export const updateParticipationPaymentStatusById = async (
+  vacancyId,
+  status,
+  client,
+) => {
+  checkVacancyId(vacancyId);
+  checkStatus(status);
+  return await missionParticipationModel.updatePaymentStatusById(
+    vacancyId,
+    status,
+    client,
+  );
+};
+
+//---
 export const getMissionParticipationReviewContext = async (
   mid,
   adventurerId,
@@ -175,20 +221,6 @@ export const updateMissionParticipationAdventurerReview = async (
     client,
   );
 
-export const approveMissionParticipation = async (
-  mid,
-  adventurerId,
-  client,
-) => {
-  checkMid(mid);
-  checkAdventurerId(adventurerId);
-  return missionParticipationModel.approveParticipation(
-    mid,
-    adventurerId,
-    client,
-  );
-};
-
 export const reopenMissionParticipation = async (mid, adventurerId, client) => {
   checkMid(mid);
   checkAdventurerId(adventurerId);
@@ -198,27 +230,6 @@ export const reopenMissionParticipation = async (mid, adventurerId, client) => {
     client,
   );
 };
-
-export const markMissionParticipationAsPaidOut = async (
-  participationId,
-  client,
-) => missionParticipationModel.updatePaymentStatusById(participationId, client);
-
-export const syncMissionCompletionStatus = async (mid, client) => {
-  checkMid(mid);
-  return missionModel.syncMissionCompletionStatus(mid, client);
-};
-
-export const requestMissionParticipationRevision = async (
-  mid,
-  adventurerId,
-  client,
-) =>
-  missionParticipationModel.requestParticipationRevision(
-    mid,
-    adventurerId,
-    client,
-  );
 
 export const disputeMissionParticipation = async (mid, adventurerId, client) =>
   missionParticipationModel.disputeParticipation(mid, adventurerId, client);

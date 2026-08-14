@@ -19,6 +19,7 @@ import * as disputeService from './dispute.service.js';
 import * as missionService from './mission.service.js';
 import * as paymentService from './payment.service.js';
 import * as userService from './user.service.js';
+import * as conversationService from './conversation.service.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as socketProvider from '../providers/socket.provider.js';
 
@@ -80,10 +81,10 @@ export const updateNotificationStatus = async (
   notificationId,
   status,
   client,
-) => notificationModel.updateStatus(notificationId, status, client);
+) => notificationModel.updateStatusByNid(notificationId, status, client);
 
 export const markNotificationAsSeen = async (notificationId, client) =>
-  notificationModel.markAsSeen(notificationId, client);
+  notificationModel.markAsSeenByNid(notificationId, client);
 
 export const markNotificationsAsSeenByRecipientId = async (
   recipientId,
@@ -141,6 +142,11 @@ export const respondToNotification = async ({
   message,
   user,
 }) => {
+  // Parameter checks
+  checkNid(nid);
+  checkResponse(response);
+  checkUser(user);
+
   // Gets notification
   const notification = await getNotificationByNidOrThrow(nid);
 
@@ -239,7 +245,12 @@ const respondToParticipationReview = async ({
 
   // If user rejects participation
   if (response === 'rejected')
-    return rejectParticipationReview({ notification, mission, user });
+    return rejectParticipationReview({
+      notification,
+      mission,
+      user,
+      participation,
+    });
 
   // If user accepts participation
   checkAcceptedResponse(response);
@@ -249,6 +260,159 @@ const respondToParticipationReview = async ({
     mission,
     user,
   });
+};
+
+// Rejects the participation that is been reviewed
+const rejectParticipationReview = async ({
+  notification,
+  mission,
+  user,
+  participation,
+}) => {
+  // Checks that the participation can be disputed on current state
+  checkParticipationTransition(
+    participation,
+    MISSION_PARTICIPATION_STATUS.REJECTED.ID,
+    messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
+      .CANNOT_REJECT_PARTICIPATION_STATE,
+  );
+
+  // Reject a participation needs a database transaction
+  const revisionMessage = messages.NOTIFICATION.REJECT_PARTICIPATION(
+    mission.title,
+    user.username,
+  );
+  const followUpNotificationId = await withTransaction(async (client) => {
+    // Updates participation status to rejected
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      mission.mid,
+      notification.sender_id,
+      MISSION_PARTICIPATION_STATUS.REJECTED.ID,
+      client,
+    );
+
+    // Updates mission status, syncing it using the status of all participations
+    await syncMissionCompletionStatus(mission.mid, client);
+
+    // Updates notification status and marks it as seen
+    await resolveNotification(
+      notification.nid,
+      NOTIFICATION_STATUS.REJECTED.ID,
+      client,
+    );
+
+    // Creates follow up notification
+    return notificationModel.create(
+      buildNotification({
+        action: NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
+        kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+        message: revisionMessage,
+        receiverId: notification.sender_id,
+        senderId: user.uid,
+        status: NOTIFICATION_STATUS.PENDING.ID,
+        missionId: mission.mid,
+      }),
+      client,
+    );
+  });
+
+  // Sends notification to user
+  socketProvider.emitToUser(
+    notification.sender_id,
+    'mission:participation-revision',
+    buildMissionEvent(
+      followUpNotificationId,
+      mission,
+      user,
+      revisionMessage,
+      NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
+    ),
+  );
+  return {
+    message:
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
+        .MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY,
+  };
+};
+
+// Accepts the participation that is been reviewed
+const acceptParticipationReview = async ({
+  notification,
+  participation,
+  mission,
+  user,
+}) => {
+  // Checks that the participation can be disputed on current state
+  checkParticipationTransition(
+    participation,
+    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+    messages.CANNOT_ACCEPT_PARTICIPATION_STATE,
+  );
+
+  // Gets adventurer that sent the notification
+  const adventurer = await userService.getUserByUidOrThrow(
+    notification.sender_id,
+  );
+
+  // Creates participation transfer on Stripe
+  const transfer = await createParticipationTransfer(
+    mission.mid,
+    participation,
+    adventurer,
+  );
+
+  // Accept a participation needs a database transaction
+  const approvedMessage = messages.NOTIFICATION.ACCEPT_PARTICIPATION(
+    mission.title,
+    user.username,
+  );
+  const followUpNotificationId = await withTransaction(async (client) => {
+    // Completes participation approval
+    await completeParticipationApproval({
+      mission,
+      participation,
+      adventurer,
+      transfer,
+      client,
+    });
+
+    // Updates notification status and marks it as read
+    await resolveNotification(
+      notification.nid,
+      NOTIFICATION_STATUS.ACCEPTED.ID,
+      client,
+    );
+
+    // Creates notification
+    return notificationModel.create(
+      buildNotification({
+        action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+        message: approvedMessage,
+        receiverId: adventurer.uid,
+        senderId: user.uid,
+        missionId: mission.mid,
+      }),
+      client,
+    );
+  });
+
+  // Sends notification
+  socketProvider.emitToUser(
+    adventurer.uid,
+    'mission:participation-approved',
+    buildMissionEvent(
+      followUpNotificationId,
+      mission,
+      user,
+      approvedMessage,
+      NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
+    ),
+  );
+  return {
+    message:
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
+        .MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY,
+  };
 };
 
 const respondToParticipationRejection = async ({
@@ -322,17 +486,25 @@ const disputeParticipationReview = async ({
       409,
     );
 
-  // Checks that the participation can bee disputed on current state
+  // Checks that the participation can be disputed on current state
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
     messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
       .CANNOT_DISPUTE_PARTICIPATION_STATE,
   );
+
+  // Creates dispute ticket
   const disputeMessage =
     reportType === REPORT_TYPE.REVIEW_DISPUTE.ID
-      ? `A dispute was opened for "${mission.title}" by ${user.username}.`
-      : `${user.username} opened a dispute for "${mission.title}".`;
+      ? messages.NOTIFICATION.DISPUTE_PARTICIPATION(
+          mission.title,
+          user.username,
+        )
+      : messages.NOTIFICATION.DISPUTE_REJECTED_PARTICIPATION(
+          mission.title,
+          user.username,
+        );
   const dispute = await disputeService.createDisputeTicket({
     senderId: user.uid,
     counterpartId,
@@ -345,6 +517,7 @@ const disputeParticipationReview = async ({
     systemMessage: disputeMessage,
   });
 
+  // Sends notification to the other parts disputed
   socketProvider.emitToUser(counterpartId, 'mission:participation-disputed', {
     notificationId: dispute.followUpNotificationId,
     type: NOTIFICATION_TYPE.MISSION.ID,
@@ -354,6 +527,8 @@ const disputeParticipationReview = async ({
     message: disputeMessage,
     reportId: dispute.report.rid,
   });
+
+  // Sends the initial message of the dispute conversation
   socketProvider.emitToUser(counterpartId, 'conversation:message-received', {
     conversationId: dispute.conversation.cid,
     conversationType: 'dispute',
@@ -364,118 +539,11 @@ const disputeParticipationReview = async ({
   socketProvider.emitToAdmins('report:created', {
     reportId: dispute.report.rid,
   });
-  return { message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY };
-};
-
-const rejectParticipationReview = async ({ notification, mission, user }) => {
-  const participation =
-    await missionService.getMissionParticipationByMidAndAdventurerIdOrThrow(
-      mission.mid,
-      notification.sender_id,
-    );
-  checkParticipationTransition(
-    participation,
-    MISSION_PARTICIPATION_STATUS.REJECTED.ID,
-    messages.CANNOT_REJECT_PARTICIPATION_STATE,
-  );
-  const revisionMessage = `Your participation in "${mission.title}" was rejected by ${user.username}. Please accept the revision or open a dispute.`;
-  const followUpNotificationId = await withTransaction(async (client) => {
-    await missionService.requestMissionParticipationRevision(
-      mission.mid,
-      notification.sender_id,
-      client,
-    );
-    await missionService.syncMissionCompletionStatus(mission.mid, client);
-    await resolveNotification(
-      notification.nid,
-      NOTIFICATION_STATUS.REJECTED.ID,
-      client,
-    );
-    return createNotification(
-      buildNotification({
-        action: NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
-        kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-        message: revisionMessage,
-        receiverId: notification.sender_id,
-        senderId: user.uid,
-        status: NOTIFICATION_STATUS.PENDING.ID,
-        missionId: mission.mid,
-      }),
-      client,
-    );
-  });
-  socketProvider.emitToUser(
-    notification.sender_id,
-    'mission:participation-revision',
-    buildMissionEvent(
-      followUpNotificationId,
-      mission,
-      user,
-      revisionMessage,
-      NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
-    ),
-  );
   return {
-    message: messages.MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY,
+    message:
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
+        .MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY,
   };
-};
-
-const acceptParticipationReview = async ({
-  notification,
-  participation,
-  mission,
-  user,
-}) => {
-  checkParticipationTransition(
-    participation,
-    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-    messages.CANNOT_ACCEPT_PARTICIPATION_STATE,
-  );
-  const adventurer = await userService.getUserByUidOrThrow(
-    notification.sender_id,
-  );
-  const transfer = await createParticipationTransfer(
-    mission.mid,
-    participation,
-    adventurer,
-  );
-  const approvedMessage = `Your participation in "${mission.title}" was approved by ${user.username}.`;
-  const followUpNotificationId = await withTransaction(async (client) => {
-    await completeParticipationApproval({
-      mission,
-      participation,
-      adventurer,
-      transfer,
-      client,
-    });
-    await resolveNotification(
-      notification.nid,
-      NOTIFICATION_STATUS.ACCEPTED.ID,
-      client,
-    );
-    return createNotification(
-      buildNotification({
-        action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
-        message: approvedMessage,
-        receiverId: adventurer.uid,
-        senderId: user.uid,
-        missionId: mission.mid,
-      }),
-      client,
-    );
-  });
-  socketProvider.emitToUser(
-    adventurer.uid,
-    'mission:participation-approved',
-    buildMissionEvent(
-      followUpNotificationId,
-      mission,
-      user,
-      approvedMessage,
-      NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
-    ),
-  );
-  return { message: messages.MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY };
 };
 
 const respondToMissionJoinNotification = async ({ notification, response }) => {
@@ -913,6 +981,7 @@ const autoAcceptParticipationReview = async (notification) => {
   );
 };
 
+// Completes the approval of a participation
 const completeParticipationApproval = async ({
   mission,
   participation,
@@ -920,13 +989,18 @@ const completeParticipationApproval = async ({
   transfer,
   client,
 }) => {
-  await missionService.approveMissionParticipation(
+  // Updates participation status to accepted
+  await missionService.updateParticipationStatusByMidAndAdventurer(
     mission.mid,
     adventurer.uid,
+    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
     client,
   );
+
+  // If a transfer in Stripe was made, it creates the payment on database
   if (transfer) {
-    await paymentService.createMissionPayment(
+    // Creates payment on database
+    await missionService.createMissionPayment(
       {
         mid: mission.mid,
         vacancy_id: participation.id,
@@ -938,97 +1012,24 @@ const completeParticipationApproval = async ({
       },
       client,
     );
-    await missionService.markMissionParticipationAsPaidOut(
+
+    // Marks mission participation as paid out
+    await missionService.updateParticipationPaymentStatusById(
       participation.id,
+      MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
       client,
     );
-    await missionService.releaseMissionParticipation(
+
+    // User stops participating on the mission conversation, but can see the history
+    await conversationService.freezeMissionConversationHistory(
       mission.mid,
       adventurer.uid,
       client,
     );
   }
-  await missionService.syncMissionCompletionStatus(mission.mid, client);
+  // Syncs mission completion status
+  await syncMissionCompletionStatus(mission.mid, client);
 };
-
-const createParticipationTransfer = async (missionId, participation, user) => {
-  if (!user.stripe_connected_id) return null;
-  return paymentProvider.createTransfer(
-    {
-      amount: Math.round(participation.monetary_reward * 100),
-      currency: 'eur',
-      destination: user.stripe_connected_id,
-      description: 'mission_payed',
-      transfer_group: `mission_${missionId}`,
-    },
-    `pay_${missionId}_vac_${participation.id}`,
-  );
-};
-
-const resolveNotification = async (notificationId, status, client) => {
-  await updateNotificationStatus(notificationId, status, client);
-  return markNotificationAsSeen(notificationId, client);
-};
-
-const checkAcceptedResponse = (response) => {
-  if (response !== 'accepted' && response !== 'accept')
-    throw new AppError(messages.INVALID_RESPONSE_ACTION, 400);
-};
-
-const withTransaction = async (operation) => {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await operation(client);
-    await client.query('COMMIT');
-    return result;
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-};
-
-const buildNotification = ({
-  action,
-  kind = NOTIFICATION_KIND.INFORMATIONAL.ID,
-  status = null,
-  message,
-  senderId,
-  receiverId,
-  missionId,
-  vacancyId,
-}) => ({
-  type: NOTIFICATION_TYPE.MISSION.ID,
-  kind,
-  action,
-  status,
-  message,
-  senderId,
-  receiverId,
-  payload: {
-    associated_mission_id: missionId,
-    ...(vacancyId ? { associated_vacancy_id: vacancyId } : {}),
-  },
-});
-
-const buildMissionEvent = (
-  notificationId,
-  mission,
-  sender,
-  message,
-  action,
-) => ({
-  notificationId,
-  type: NOTIFICATION_TYPE.MISSION.ID,
-  action,
-  missionId: mission.mid,
-  missionTitle: mission.title,
-  ownerId: sender.uid,
-  ownerUsername: sender.username,
-  message,
-});
 
 const emitNotificationEvents = (events) => {
   for (const { receiverId, event, payload } of events)
@@ -1063,6 +1064,14 @@ const checkNid = (nid) => {
   if (!nid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Nid'));
 };
 
+const checkResponse = (response) => {
+  if (!response) throw new Error(messages.GENERAL.FIELD_REQUIRED('Response'));
+};
+
+const checkUser = (user) => {
+  if (!user) throw new Error(messages.GENERAL.FIELD_REQUIRED('User'));
+};
+
 /// Helper functions
 // Checks that the notification recipient is the current user
 const checkNotificationRecipient = (recipientId, userId) => {
@@ -1078,4 +1087,120 @@ const checkParticipationTransition = (participation, status, message) => {
     ].VALID_NEXT_STATES.includes(status)
   )
     throw new AppError(message, 409);
+};
+
+// Uses a transaction for the operation received
+const withTransaction = async (operation) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await operation(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+// Sync a mission status after review a participation
+const syncMissionCompletionStatus = async (mid, client) => {
+  // Gets summary
+  const summary = await missionService.getMissionStatusSummary(mid, client);
+
+  // If it was not found, it returns null
+  if (!summary || summary.participant_count === 0) {
+    return null;
+  }
+
+  // Decides next status
+  let nextStatus = null;
+  if (
+    summary.active_count > 0 ||
+    (summary.active_count === 0 && summary.dispute_count === 0)
+  ) {
+    nextStatus = MISSION_STATUS.IN_PROGRESS.ID;
+  } else if (summary.dispute_count > 0) {
+    nextStatus = MISSION_STATUS.IN_DISPUTE.ID;
+  }
+  if (!nextStatus) {
+    return null;
+  }
+
+  // Updates status
+  return await missionService.updateStatusByMid(mid, nextStatus, client);
+};
+
+// Resolves notification updating it and marking it as seen
+const resolveNotification = async (notificationId, status, client) => {
+  await notificationModel.updateStatusByNid(notificationId, status, client);
+  return notificationModel.markAsSeenByNid(notificationId, client);
+};
+
+// Builds notification object
+const buildNotification = ({
+  action,
+  kind = NOTIFICATION_KIND.INFORMATIONAL.ID,
+  status = null,
+  message,
+  senderId,
+  receiverId,
+  missionId,
+  vacancyId,
+}) => ({
+  type: NOTIFICATION_TYPE.MISSION.ID,
+  kind,
+  action,
+  status,
+  message,
+  senderId,
+  receiverId,
+  payload: {
+    associated_mission_id: missionId,
+    ...(vacancyId ? { associated_vacancy_id: vacancyId } : {}),
+  },
+});
+
+// Builds mission event for that type of notification
+const buildMissionEvent = (
+  notificationId,
+  mission,
+  sender,
+  message,
+  action,
+) => ({
+  notificationId,
+  type: NOTIFICATION_TYPE.MISSION.ID,
+  action,
+  missionId: mission.mid,
+  missionTitle: mission.title,
+  ownerId: sender.uid,
+  ownerUsername: sender.username,
+  message,
+});
+
+// Checks response options to be accepted
+const checkAcceptedResponse = (response) => {
+  if (response !== 'accepted' && response !== 'accept')
+    throw new AppError(
+      messages.NOTIFICATION.GENERAL.INVALID_RESPONSE_ACTION,
+      400,
+    );
+};
+
+// Creates the participation transfer on Stripe
+const createParticipationTransfer = async (missionId, participation, user) => {
+  if (!user.stripe_connected_id) return null;
+  return paymentProvider.createTransfer(
+    {
+      amount: Math.round(participation.monetary_reward * 100),
+      currency: 'eur',
+      destination: user.stripe_connected_id,
+      description: 'mission_payed',
+      transfer_group: `mission_${missionId}`,
+    },
+    `pay_${missionId}_vac_${participation.id}`,
+  );
 };
