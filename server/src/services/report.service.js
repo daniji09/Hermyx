@@ -21,6 +21,7 @@ import { createTransfer } from '../providers/payment.provider.js';
 import { emitToAdmins, emitToUser } from '../providers/socket.provider.js';
 import { AppError } from '../utils/error.util.js';
 
+/// Model access functions
 const getReportOrThrow = async (reportId) => {
   const report = await reportModel.findById(reportId);
   if (!report) throw new AppError(messages.REPORT_NOT_FOUND, 404);
@@ -82,28 +83,39 @@ export const hasActiveReport = async (reportData, client) =>
   reportModel.checkActiveReport(reportData, client);
 
 export const createUserReport = async (reportData, client) =>
-  reportModel.createReport(reportData, client);
+  reportModel.create(reportData, client);
 
+/// Complex endpoint functions
+// Get all reports filtered and paginated
 export const getReports = async ({ pagination, filters, userId }) => {
-  const { rows: reports, totalCount } = await reportModel.getReports({
+  // Finds reports paginated and filtered
+  const { rows: reports, totalCount } = await reportModel.findAll({
     pagination,
     filters,
     userId,
   });
   const totalItems = parseInt(totalCount);
   const totalPages = pagination ? Math.ceil(totalItems / pagination.limit) : 1;
-
-  return {
-    reports,
-    pagination: pagination
-      ? {
-          currentPage: pagination.page,
-          totalPages,
-          totalItems,
-          hasMore: pagination.page < totalPages,
-        }
-      : undefined,
-  };
+  if (reports && pagination) {
+    return {
+      reports,
+      pagination: pagination
+        ? {
+            currentPage: pagination.page,
+            totalPages,
+            totalItems,
+            hasMore: pagination.page < totalPages,
+          }
+        : undefined,
+    };
+  } else if (reports && !pagination) {
+    return { reports };
+  } else
+    throw new AppError(
+      messages.REPORT.GENERAL.REPORTS_NOT_FOUND,
+      404,
+      'general',
+    );
 };
 
 export const reportAdventurer = async ({
@@ -289,7 +301,7 @@ const createReportIfNotActive = async (
     client,
   );
   if (activeReport > 0) throw new AppError(activeReportMessage, 409);
-  return reportModel.createReport(
+  return reportModel.create(
     { senderId, message, type, payload, conversationId },
     client,
   );
@@ -302,7 +314,7 @@ const closeReportAndConversationInternal = async (
   adminId,
   client,
 ) => {
-  const report = await reportModel.closeReport(
+  const report = await reportModel.close(
     reportId,
     decision,
     reason,

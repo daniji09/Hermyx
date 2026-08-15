@@ -26,10 +26,7 @@ export const reportReasonBaseSchema = z
   .min(1, messages.GENERAL.FIELD_REQUIRED('Reason'))
   .max(
     consts.REPORT.REASON_MESSAGE.MAX,
-    messages.GENERAL.FIELD_TOO_LONG(
-      'Reason',
-      consts.REPORT.REASON_MESSAGE.MAX,
-    ),
+    messages.GENERAL.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
   );
 
 export const vacancyIdBaseSchema = z.coerce
@@ -37,6 +34,7 @@ export const vacancyIdBaseSchema = z.coerce
   .int(messages.GENERAL.FIELD_INTEGER('Vacancy id'))
   .min(0, messages.GENERAL.FIELD_POSITIVE('Vacancy id'));
 
+/// Endpoint complex validations
 export const getReportsValidation = z.object({
   sortByDate: z.coerce.string().trim().optional(),
   type: z.coerce.string().trim().optional(),

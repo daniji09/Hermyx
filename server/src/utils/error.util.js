@@ -13,7 +13,6 @@ export class AppError extends Error {
 }
 
 export const checkRequired = (value, fieldName) => {
-  console.log(value, fieldName);
   if (!value)
     throw new AppError(messages.GENERAL.FIELD_REQUIRED(fieldName), 400);
 };

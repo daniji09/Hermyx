@@ -289,6 +289,13 @@ export const messages = {
     },
   },
 
+  /// Report messages
+  REPORT: {
+    GENERAL: {
+      REPORTS_NOT_FOUND: `Reports not found.`,
+    },
+  },
+
   ///// Common messages
   //// Error
   FIELD_NUMBER: (field) => `${field} must be a number.`,

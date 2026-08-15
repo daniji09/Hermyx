@@ -1,8 +1,9 @@
 import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
+/// INSERTS
 // Creates a report
-export const createReport = async (
+export const create = async (
   { senderId, message, type, payload, conversationId = null },
   client = pool,
 ) => {
@@ -28,6 +29,7 @@ export const createReport = async (
   return result.rows[0];
 };
 
+/// FINDS
 // Get report by id
 export const findById = async (id, client = pool) => {
   const query = `
@@ -59,7 +61,7 @@ export const findById = async (id, client = pool) => {
 };
 
 // Gets all reports paginated
-export const getReports = async ({ pagination, filters, userId }) => {
+export const findAll = async ({ pagination, filters, userId }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT
       r.*,
@@ -178,24 +180,7 @@ export const checkActiveReport = async (
   return result.rowCount;
 };
 
-// Closes a report
-export const closeReport = async (
-  rid,
-  decision,
-  reason,
-  resolvedBy,
-  client = pool,
-) => {
-  const result = await client.query(
-    `UPDATE report
-       SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5
-       WHERE rid = $2
-       RETURNING *`,
-    [REPORT_STATUS.ANSWERED.ID, rid, decision, reason, resolvedBy],
-  );
-  return result.rows[0];
-};
-
+// Find disputes by user id
 export const findDisputesByUserId = async (userId) => {
   const result = await pool.query(
     `SELECT
@@ -255,4 +240,23 @@ export const findDisputesByUserId = async (userId) => {
     ],
   );
   return result.rows;
+};
+
+/// UPDATES
+// Closes a report
+export const close = async (
+  rid,
+  decision,
+  reason,
+  resolvedBy,
+  client = pool,
+) => {
+  const result = await client.query(
+    `UPDATE report
+       SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5
+       WHERE rid = $2
+       RETURNING *`,
+    [REPORT_STATUS.ANSWERED.ID, rid, decision, reason, resolvedBy],
+  );
+  return result.rows[0];
 };
