@@ -78,6 +78,25 @@ export const freezeMissionConversationHistory = async (
   return result.rows[0] || null;
 };
 
+// Marks conversation as read by user id
+export const markConversationAsReadByUserId = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
+  const query = `
+    UPDATE conversation_participant
+    SET last_read_at = clock_timestamp()
+    WHERE conversation_id = $1
+      AND user_id = $2
+      AND left_at IS NULL
+    RETURNING conversation_id
+  `;
+
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rowCount > 0;
+};
+
 // ------
 
 export const addPrivateConversationParticipants = async (
@@ -192,24 +211,6 @@ export const findActiveIdsByConversationId = async (
 
   const result = await client.query(query, [conversationId]);
   return result.rows.map((participant) => participant.user_id);
-};
-
-export const markConversationAsReadByUserId = async (
-  conversationId,
-  userId,
-  client = pool,
-) => {
-  const query = `
-    UPDATE conversation_participant
-    SET last_read_at = clock_timestamp()
-    WHERE conversation_id = $1
-      AND user_id = $2
-      AND left_at IS NULL
-    RETURNING conversation_id
-  `;
-
-  const result = await client.query(query, [conversationId, userId]);
-  return result.rowCount > 0;
 };
 
 export const disableConversationParticipants = async (

@@ -1,6 +1,6 @@
 import { messages } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { AppError } from '../utils/error.util.js';
+import { AppError, checkRequired } from '../utils/error.util.js';
 import * as conversationModel from '../models/conversation.model.js';
 import * as conversationParticipantModel from '../models/conversation-participant.model.js';
 import * as conversationMessageModel from '../models/conversation-message.model.js';
@@ -9,18 +9,16 @@ import * as socketProvider from '../providers/socket.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
 
 /// Model access functions
-export const createConversation = async (mid, client) => {
-  checkMid(mid);
-  return conversationModel.create(mid, client);
+export const createConversation = async (type, mid, client) => {
+  checkRequired(type, 'Conversation type');
+  return conversationModel.create(type, mid, client);
 };
 
-export const createDisputeConversation = async (client) =>
-  conversationModel.createDisputeConversation(client);
-
-export const createConversationParticipant = async (cid, userId, client) => {
-  checkCid(cid);
-  checkUid(userId);
-  return conversationParticipantModel.create(cid, userId, client);
+// Creates conversation participant
+export const createConversationParticipant = async (cid, uid, client) => {
+  checkRequired(cid, 'Conversation id');
+  checkRequired(uid, 'User id');
+  return conversationParticipantModel.create(cid, uid, client);
 };
 
 // Creates a mission conversation participant
@@ -29,14 +27,34 @@ export const createMissionConversationParticipant = async (
   userId,
   client,
 ) => {
-  checkMid(mid);
-  checkUid(userId);
+  checkRequired(mid, 'Mission id');
+  checkRequired(userId, 'User id');
   return conversationParticipantModel.createMissionType(mid, userId, client);
 };
 
+// Creates message
+export const createMessage = async (message, client) => {
+  checkRequired(message, 'Conversation message');
+  return conversationMessageModel.create(message, client);
+};
+
+export const markConversationAsReadByUserId = async (
+  conversationId,
+  userId,
+  client,
+) => {
+  checkRequired(conversationId, 'Conversation id');
+  checkRequired(userId, 'User id');
+  return conversationParticipantModel.markConversationAsReadByUserId(
+    conversationId,
+    userId,
+    client,
+  );
+};
+
 export const leaveMissionConversation = async (mid, uid, client) => {
-  checkMid(mid);
-  checkUid(uid);
+  checkRequired(mid, 'Mission id');
+  checkRequired(uid, 'User id');
   return conversationParticipantModel.leaveMissionConversation(
     mid,
     uid,
@@ -45,7 +63,7 @@ export const leaveMissionConversation = async (mid, uid, client) => {
 };
 
 export const getConversationById = async (conversationId, client) => {
-  checkCid(conversationId);
+  checkRequired(conversationId, 'Conversation id');
   return conversationModel.findById(conversationId, client);
 };
 
@@ -53,7 +71,7 @@ export const getActiveConversationParticipantIds = async (
   conversationId,
   client,
 ) => {
-  checkCid(conversationId);
+  checkRequired(conversationId, 'Conversation id');
   return conversationParticipantModel.findActiveIdsByConversationId(
     conversationId,
     client,
@@ -65,23 +83,9 @@ export const isConversationParticipant = async (
   userId,
   client,
 ) => {
-  checkCid(conversationId);
-  checkUid(userId);
+  checkRequired(conversationId, 'Conversation id');
+  checkRequired(userId, 'User id');
   return conversationParticipantModel.isConversationParticipant(
-    conversationId,
-    userId,
-    client,
-  );
-};
-
-export const markConversationAsReadByUserId = async (
-  conversationId,
-  userId,
-  client,
-) => {
-  checkCid(conversationId);
-  checkUid(userId);
-  return conversationParticipantModel.markConversationAsReadByUserId(
     conversationId,
     userId,
     client,
@@ -93,18 +97,13 @@ export const freezeMissionConversationHistory = async (
   userId,
   client,
 ) => {
-  checkMid(missionId);
-  checkUid(userId);
+  checkRequired(missionId, 'Mission id');
+  checkRequired(userId, 'User id');
   return conversationParticipantModel.freezeMissionConversationHistory(
     missionId,
     userId,
     client,
   );
-};
-
-export const createMessage = async (message, client) => {
-  checkMessage(message);
-  return conversationMessageModel.create(message, client);
 };
 
 export const getUnreadMessageCountByUserId = async (
@@ -113,7 +112,7 @@ export const getUnreadMessageCountByUserId = async (
   excludedConversationType = null,
   client,
 ) => {
-  checkUid(userId);
+  checkRequired(userId, 'User id');
   return conversationMessageModel.countUnreadByUserId(
     userId,
     conversationType,
@@ -123,7 +122,7 @@ export const getUnreadMessageCountByUserId = async (
 };
 
 export const closeMissionConversationType = async (mid, client) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
 
   // Closes mission conversation type
   return await conversationModel.closeMissionType(mid, client);
@@ -137,7 +136,7 @@ export const getConversationByIdOrThrow = async (conversationId, client) => {
 };
 
 export const closeConversation = async (conversationId, client) => {
-  checkCid(conversationId);
+  checkRequired(conversationId, 'Conversation id');
   const conversation = await conversationModel.closeById(
     conversationId,
     client,
@@ -153,8 +152,8 @@ export const getOrCreatePrivateConversationWithUser = async (
   currentUserId,
   otherUserId,
 ) => {
-  checkUid(currentUserId);
-  checkUid(otherUserId);
+  checkRequired(currentUserId, 'Current user id');
+  checkRequired(otherUserId, 'Other user id');
 
   if (currentUserId === otherUserId) {
     throw new AppError('You cannot create a conversation with yourself.', 400);
@@ -321,7 +320,7 @@ export const getConversationMessages = async (conversationId, user) => {
 };
 
 export const getMyConversations = async (userId) => {
-  checkUid(userId);
+  checkRequired(userId, 'User id');
   return conversationModel.findByUserId(userId);
 };
 
@@ -361,19 +360,6 @@ const saveAttachment = async (photo) => {
   return { attachmentUrl, attachmentType: 'image' };
 };
 
-const checkMid = (mid) => {
-  if (!mid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Mid'));
-};
-const checkUid = (uid) => {
-  if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
-};
-const checkCid = (cid) => {
-  if (!cid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Conversation id'));
-};
-const checkMessage = (message) => {
-  if (!message)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Message data'));
-};
 const buildUnauthorizedError = () =>
   new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 const buildConversationNotFoundError = () =>

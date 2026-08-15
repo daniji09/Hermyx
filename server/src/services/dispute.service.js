@@ -92,8 +92,11 @@ export const createDisputeTicket = async ({
     );
     await notificationService.markNotificationAsSeen(notificationId, client);
 
-    const conversation =
-      await conversationService.createDisputeConversation(client);
+    const conversation = await conversationService.createConversation(
+      'dispute',
+      null,
+      client,
+    );
     const report = await reportService.createUserReport(
       {
         senderId,

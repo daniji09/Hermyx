@@ -1,5 +1,7 @@
 import pool from '../config/db.config.js';
 
+/// INSERTS
+// Create message
 export const create = async (
   {
     conversationId,

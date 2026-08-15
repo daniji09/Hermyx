@@ -1,16 +1,28 @@
 import pool from '../config/db.config.js';
 
 /// INSERTS
-// Create conversation
-export const create = async (missionId, client = pool) => {
+// // Creates a new conversation
+export const create = async (type, missionId = null, client = pool) => {
+  // Mission case
+  if (type === 'mission') {
+    const query = `
+      INSERT INTO conversation (type, mission_id)
+      VALUES ($1, $2)
+      ON CONFLICT (mission_id) DO UPDATE
+        SET mission_id = EXCLUDED.mission_id
+      RETURNING *
+    `;
+    const result = await client.query(query, [type, missionId]);
+    return result.rows[0];
+  }
+
+  // Rest
   const query = `
-    INSERT INTO conversation (type, mission_id)
-    VALUES ('mission', $1)
-    ON CONFLICT (mission_id) DO UPDATE
-      SET mission_id = EXCLUDED.mission_id
+    INSERT INTO conversation (type)
+    VALUES ($1)
     RETURNING *
   `;
-  const result = await client.query(query, [missionId]);
+  const result = await client.query(query, [type]);
   return result.rows[0];
 };
 
@@ -57,16 +69,6 @@ export const findPrivateConversation = async (
   return result.rows[0];
 };
 
-export const createPrivateConversation = async (client = pool) => {
-  const conversationQuery = `
-      INSERT INTO conversation (type)
-      VALUES ('private')
-      RETURNING *
-    `;
-  const conversationResult = await client.query(conversationQuery);
-  return conversationResult.rows[0];
-};
-
 export const closeById = async (conversationId, client = pool) => {
   const result = await client.query(
     `UPDATE conversation SET closed_at = CURRENT_TIMESTAMP
@@ -74,15 +76,6 @@ export const closeById = async (conversationId, client = pool) => {
     [conversationId],
   );
   return result.rows[0] || null;
-};
-
-export const createDisputeConversation = async (client = pool) => {
-  const result = await client.query(`
-    INSERT INTO conversation (type)
-    VALUES ('dispute')
-    RETURNING *
-  `);
-  return result.rows[0];
 };
 
 export const findById = async (conversationId, client = pool) => {

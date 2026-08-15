@@ -68,7 +68,7 @@ Gets the report specified by its identifier, rid.
 
   ```json
   {
-    "mission": "<report>"
+    "report": "<report>"
   }
   ```
 
@@ -90,9 +90,68 @@ Gets the report specified by its identifier, rid.
     }
   }
   ```
-    <br>
+  <br>
 
 **Workflow:** application report is searched by its identifier, it retrieves all report information.
+<br>
+<br>
+<br>
+
+## - Report adventurer: `GET /api/reports/adventurer`
+
+Applicant reports an adventurer of their mission
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+| `adventurerId` | integer | Yes | Adventurer user identifier. |
+| `message` | integer | Yes | Report message. |
+<br>
+
+**Responses:**
+
+- `201 OK`: report created successfully.
+
+  ```json
+  {
+    "report": "<report>"
+  }
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: cannot report an adventurer from a mission that not belongs to current user.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report not found, report with that rid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Report not found."]
+    }
+  }
+  ```
+  <br>
+
+**Workflow:** when reporting an adventurer, report is created over that adventurer, but dispute and conversation is also created.
 <br>
 <br>
 <br>

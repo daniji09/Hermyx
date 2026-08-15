@@ -125,29 +125,51 @@ export const getReports = async ({ pagination, filters, userId }) => {
     );
 };
 
+// Reports adventurer
 export const reportAdventurer = async ({
   message,
   missionId,
   sender,
   vacancyId,
 }) => {
+  // Gets mission info
   const mission = await getMissionOrThrow(missionId);
+
+  // Checks if report sender is mission owner
   if (mission.owner_id !== sender.uid) {
-    throw new AppError(messages.UNAUTHORIZED_ERROR, 403);
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
 
+  // Gets vacancy info
   const vacancy = await getVacancyOrThrow(missionId, vacancyId);
+
+  // Gets adventurer reported info
   const adventurer = await getUserOrThrow(vacancy.adventurer_id);
-  const notificationMessage = `You have been reported by the applicant of the ${mission.title} mission. You can respond in the dispute conversation.`;
-  const systemMessage = `A dispute was opened after ${adventurer.username} was reported for the vacancy "${vacancy.title}" in "${mission.title}".`;
+  const notificationMessage = messages.NOTIFICATION.REPORT_ADVENTURER(
+    mission.title,
+  );
+  const systemMessage = messages.CONVERSATION.REPORT_ADVENTURER(
+    adventurer.username,
+    vacancy.title,
+    mission.title,
+  );
   const client = await pool.connect();
   let conversation;
   let initialMessage;
   let report;
   let notificationId;
+
+  // All report operations need a transaction
   try {
     await client.query('BEGIN');
-    conversation = await conversationService.createDisputeConversation(client);
+    // Creates dispute conversation
+    conversation = await conversationService.createConversation(
+      'dispute',
+      null,
+      client,
+    );
+
+    // Creates report
     report = await createReportIfNotActive(
       {
         senderId: sender.uid,
@@ -164,6 +186,7 @@ export const reportAdventurer = async ({
       client,
     );
 
+    // Creates conversation between reporter and reported
     const participantIds = [sender.uid, adventurer.uid];
     for (const participantId of participantIds) {
       await conversationService.createConversationParticipant(
@@ -173,6 +196,7 @@ export const reportAdventurer = async ({
       );
     }
 
+    // Creates initial message on conversation (system)
     await conversationService.createMessage(
       {
         conversationId: conversation.cid,
@@ -181,6 +205,8 @@ export const reportAdventurer = async ({
       },
       client,
     );
+
+    // Marks conversation as read for both participants (so only one notification appears at first)
     for (const participantId of participantIds) {
       await conversationService.markConversationAsReadByUserId(
         conversation.cid,
@@ -188,6 +214,8 @@ export const reportAdventurer = async ({
         client,
       );
     }
+
+    // Creates report message on conversation (actual report)
     initialMessage = await conversationService.createMessage(
       {
         conversationId: conversation.cid,
@@ -197,6 +225,7 @@ export const reportAdventurer = async ({
       client,
     );
 
+    // Creates notification to adventurer
     notificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.REPORT.ID,
@@ -221,6 +250,7 @@ export const reportAdventurer = async ({
   } finally {
     client.release();
   }
+  // Send notification to adventurer
   emitToUser(adventurer.uid, 'notification:created', {
     notificationId,
     missionId,
@@ -232,6 +262,8 @@ export const reportAdventurer = async ({
     type: NOTIFICATION_TYPE.REPORT.ID,
     message: notificationMessage,
   });
+
+  // Creates immediately the dispute conversation to the adventurer
   emitToUser(adventurer.uid, 'conversation:message-received', {
     conversationId: conversation.cid,
     conversationType: 'dispute',
@@ -239,6 +271,8 @@ export const reportAdventurer = async ({
     reportId: report.rid,
     senderId: sender.uid,
   });
+
+  // Creates immediately the report to the admins
   emitToAdmins('report:created', { reportId: report.rid });
 
   return report;
@@ -298,16 +332,21 @@ const createReportTransaction = async (reportData, activeReportMessage) => {
   }
 };
 
+// Creates report if not active
 const createReportIfNotActive = async (
   { senderId, message, type, lookupPayload, payload, conversationId },
   activeReportMessage,
   client,
 ) => {
+  // Check active report
   const activeReport = await reportModel.checkActiveReport(
     { senderId, type, payload: lookupPayload },
     client,
   );
-  if (activeReport > 0) throw new AppError(activeReportMessage, 409);
+  if (activeReport > 0)
+    throw new AppError(messages.REPORT.REPORT_ADVENTURER.ACTIVE_REPORT, 409);
+
+  // And, if theres no other, creates it
   return reportModel.create(
     { senderId, message, type, payload, conversationId },
     client,

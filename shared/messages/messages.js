@@ -279,6 +279,8 @@ export const messages = {
           `${username} accepted your new monetary reward offer for "${title}": ${current} -> ${offer}.  We had an issue transferring your refund. Please contact support.`,
       },
     },
+    REPORT_ADVENTURER: (title) =>
+      `You have been reported by the applicant of the ${title} mission. You can respond in the dispute conversation.`,
   },
 
   /// Review messages
@@ -294,6 +296,16 @@ export const messages = {
     GENERAL: {
       REPORTS_NOT_FOUND: `Reports not found.`,
     },
+    REPORT_ADVENTURER: {
+      ACTIVE_REPORT: `There is already an active report for this adventurer.`,
+    },
+  },
+
+  /// Conversation messages
+  CONVERSATION: {
+    // Conversation messages shown in a conversation
+    REPORT_ADVENTURER: (username, vacancyTitle, missionTitle) =>
+      `A dispute was opened after ${username} was reported for the vacancy "${vacancyTitle}" in "${missionTitle}".`,
   },
 
   ///// Common messages

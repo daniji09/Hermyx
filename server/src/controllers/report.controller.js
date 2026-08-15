@@ -28,6 +28,7 @@ export const getReports = async (req, res, next) => {
   }
 };
 
+// Report adventurer
 export const reportAdventurer = async (req, res, next) => {
   try {
     const report = await reportService.reportAdventurer({
@@ -36,7 +37,7 @@ export const reportAdventurer = async (req, res, next) => {
       sender: req.user,
       vacancyId: req.body.vacancyId,
     });
-    return res.status(200).json({ report });
+    return res.status(201).json({ report });
   } catch (error) {
     next(error);
   }

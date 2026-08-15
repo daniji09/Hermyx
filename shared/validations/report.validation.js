@@ -49,6 +49,7 @@ export const getReportByIdValidation = z.object({
   rid: reportIdBaseSchema,
 });
 
+// Report adventurer
 export const reportAdventurerValidation = z.object({
   mid: midBaseSchema,
   vacancyId: vacancyIdBaseSchema,

@@ -603,6 +603,7 @@ export const publishMission = async (
 
     // Creates conversation
     const conversation = await conversationService.createConversation(
+      'mission',
       newMission.mid,
       client,
     );
