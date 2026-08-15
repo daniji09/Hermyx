@@ -406,7 +406,7 @@ Adventurers sends a join request notification to the owner of the mission, linki
   ```json
   {
     "errors": {
-      "general": [<"error">]
+      "general": ["<error>"]
     }
   }
   ```
@@ -481,7 +481,7 @@ Applicant sends an invitation to a user, so they can join a vacancy of a mission
   ```json
   {
     "errors": {
-      "general": [<"error">]
+      "general": ["<error>"]
     }
   }
   ```
@@ -554,7 +554,7 @@ User unjoins a mission they are participating in.
   ```json
   {
     "errors": {
-      "general": [<"error">]
+      "general": ["<error>"]
     }
   }
   ```
@@ -611,7 +611,7 @@ Adventurers submits their part for the mission.
   ```json
   {
     "errors": {
-      "general": [<"error">]
+      "general": ["<error>"]
     }
   }
   ```
@@ -678,7 +678,7 @@ Cancels a mission, if it hadn't been started, then is a deletion.
   ```json
   {
     "errors": {
-      "general": [<"error">]
+      "general": ["<error>"]
     }
   }
   ```
@@ -745,7 +745,7 @@ Reopens a mission after being closed.
   ```json
   {
     "errors": {
-      "general": [<"error">]
+      "general": ["<error>"]
     }
   }
   ```
@@ -812,7 +812,7 @@ Finishes a mission.
   ```json
   {
     "errors": {
-      "general": [<"error">]
+      "general": ["<error>"]
     }
   }
   ```

@@ -165,7 +165,7 @@ export const messages = {
     GENERAL: {
       NOT_FOUND: `Notification not found.`,
       NOTIFICATION_NOT_PENDING: (status) =>
-        `This notification has already been ${status}.`,
+        `This notification has already been ${status.toLowerCase()}.`,
       INVALID_NOTIFICATION_ACTION: `Invalid notification action.`,
       INVALID_RESPONSE_ACTION: `Invalid response action`,
     },
@@ -231,8 +231,12 @@ export const messages = {
       `Adventurer ${username} opened a dispute for "${title}".`,
     REJECT_PARTICIPATION: (title, username) =>
       `Your participation in "${title}" was rejected by ${username}. Please accept the revision or open a dispute.`,
-    ACCEPT_PARTICIPATION: (title, username) =>
-      `Your participation in "${title}" was approved by ${username}.`,
+    ACCEPT_PARTICIPATION: {
+      SUCCESSFUL: (title, username) =>
+        `Your participation in "${title}" was approved by ${username}.`,
+      ISSUED: (title, username) =>
+        `Your participation in "${title}" was approved by ${username}. We had an issue transferring your compensation. Please contact support.`,
+    },
   },
 
   ///// Common messages

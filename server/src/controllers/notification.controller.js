@@ -29,7 +29,7 @@ export const markMyNotificationsAsSeen = async (req, res, next) => {
 export const respondToNotification = async (req, res, next) => {
   try {
     const result = await notificationService.respondToNotification({
-      notificationId: req.params.notificationId,
+      nid: req.params.nid,
       response: req.body.response,
       message: req.body.message,
       user: req.user,

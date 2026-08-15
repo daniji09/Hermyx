@@ -342,6 +342,15 @@ const acceptParticipationReview = async ({
   mission,
   user,
 }) => {
+  // Gets adventurer that sent the notification
+  const adventurer = await userService.getUserByUidOrThrow(
+    notification.sender_id,
+  );
+
+  // Checks that the adventurer has configured their account
+  if (!adventurer.stripe_connected_id)
+    throw new AppError(messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED, 403);
+
   // Checks that the participation can be disputed on current state
   checkParticipationTransition(
     participation,
@@ -349,42 +358,84 @@ const acceptParticipationReview = async ({
     messages.CANNOT_ACCEPT_PARTICIPATION_STATE,
   );
 
-  // Gets adventurer that sent the notification
-  const adventurer = await userService.getUserByUidOrThrow(
-    notification.sender_id,
-  );
-
-  // Creates participation transfer on Stripe
-  const transfer = await createParticipationTransfer(
-    mission.mid,
-    participation,
-    adventurer,
-  );
-
-  // Accept a participation needs a database transaction
-  const approvedMessage = messages.NOTIFICATION.ACCEPT_PARTICIPATION(
-    mission.title,
-    user.username,
-  );
-  const followUpNotificationId = await withTransaction(async (client) => {
-    // Completes participation approval
-    await completeParticipationApproval({
-      mission,
+  // Creates payment and modifies database
+  let successfulPayment = false;
+  try {
+    // Updates participation status to accepted
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      mission.mid,
+      adventurer.uid,
+      MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+    );
+    console.log('aceptoo');
+    // Creates participation transfer on Stripe outside of database transaction but in its own try
+    const transfer = await createParticipationTransfer(
+      mission.mid,
       participation,
       adventurer,
-      transfer,
-      client,
-    });
-
-    // Updates notification status and marks it as read
-    await resolveNotification(
-      notification.nid,
-      NOTIFICATION_STATUS.ACCEPTED.ID,
-      client,
     );
+    console.log('pago', transfer);
+    // Accept a participation needs a database transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Completes participation approval
+      await completeParticipationApproval({
+        mission,
+        participation,
+        adventurer,
+        transfer,
+        client,
+      });
+      console.log('completo en db');
+      // Updates notification status and marks it as read
+      await resolveNotification(
+        notification.nid,
+        NOTIFICATION_STATUS.ACCEPTED.ID,
+        client,
+      );
+      console.log('resuelvo notificacion');
+      // If everything is ok, marks participation as released
+      // Updates participation status to accepted
+      await missionService.updateParticipationStatusByMidAndAdventurer(
+        mission.mid,
+        adventurer.uid,
+        MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+        client,
+      );
+      console.log('released!!!');
+      await client.query('COMMIT');
+      successfulPayment = true;
+    } catch (dbError) {
+      await client.query('ROLLBACK');
+      // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+      console.error(
+        `FATAL DB ERROR: Transfer ${transfer.id} sent to ${adventurer.uid} after participation accepted but DB failed`,
+        dbError,
+      );
+    } finally {
+      client.release();
+    }
+  } catch (stripeError) {
+    // If a Stripe payment fails error should be saved in a log to fix it as soon as possible
+    console.error(
+      `Stripe Error when paying out vacancy ${participation.id} due to participation accepted:`,
+      stripeError.message,
+    );
+  }
 
-    // Creates notification
-    return notificationModel.create(
+  // Notification is created outside the main transaction, because it always has to been send, even if monetary transaction fails
+  const approvedMessage = successfulPayment
+    ? messages.NOTIFICATION.ACCEPT_PARTICIPATION.SUCCESSFUL(
+        mission.title,
+        user.username,
+      )
+    : messages.NOTIFICATION.ACCEPT_PARTICIPATION.ISSUED(
+        mission.title,
+        user.username,
+      );
+  const followUpNotificationId = await withTransaction(async (client) => {
+    notificationModel.create(
       buildNotification({
         action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
         message: approvedMessage,
@@ -395,7 +446,6 @@ const acceptParticipationReview = async ({
       client,
     );
   });
-
   // Sends notification
   socketProvider.emitToUser(
     adventurer.uid,
@@ -989,14 +1039,6 @@ const completeParticipationApproval = async ({
   transfer,
   client,
 }) => {
-  // Updates participation status to accepted
-  await missionService.updateParticipationStatusByMidAndAdventurer(
-    mission.mid,
-    adventurer.uid,
-    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-    client,
-  );
-
   // If a transfer in Stripe was made, it creates the payment on database
   if (transfer) {
     // Creates payment on database

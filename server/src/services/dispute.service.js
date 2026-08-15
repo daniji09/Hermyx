@@ -1,6 +1,7 @@
 import {
   HERMYX_SYSTEM_ID,
   messages,
+  MISSION_STATUS,
   NOTIFICATION_ACTION,
   NOTIFICATION_KIND,
   NOTIFICATION_STATUS,
@@ -80,7 +81,7 @@ export const createDisputeTicket = async ({
       adventurerId,
       client,
     );
-    const missionAfterSync = await missionService.syncMissionCompletionStatus(
+    const missionAfterSync = await syncMissionCompletionStatus(
       missionId,
       client,
     );
@@ -174,4 +175,33 @@ export const createDisputeTicket = async ({
   } finally {
     client.release();
   }
+};
+
+// Helpers
+// Sync a mission status after review a participation
+const syncMissionCompletionStatus = async (mid, client) => {
+  // Gets summary
+  const summary = await missionService.getMissionStatusSummary(mid, client);
+
+  // If it was not found, it returns null
+  if (!summary || summary.participant_count === 0) {
+    return null;
+  }
+
+  // Decides next status
+  let nextStatus = null;
+  if (
+    summary.active_count > 0 ||
+    (summary.active_count === 0 && summary.dispute_count === 0)
+  ) {
+    nextStatus = MISSION_STATUS.IN_PROGRESS.ID;
+  } else if (summary.dispute_count > 0) {
+    nextStatus = MISSION_STATUS.IN_DISPUTE.ID;
+  }
+  if (!nextStatus) {
+    return null;
+  }
+
+  // Updates status
+  return await missionService.updateStatusByMid(mid, nextStatus, client);
 };

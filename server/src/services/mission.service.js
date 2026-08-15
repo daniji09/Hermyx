@@ -1301,7 +1301,7 @@ export const cancelMission = async (mid, user) => {
               await client.query('ROLLBACK');
               // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
               console.error(
-                `FATAL DB ERROR: Transfer ${transfer.id} sent to ${adventurer.uid} but DB failed`,
+                `FATAL DB ERROR: Transfer ${transfer.id} sent to ${adventurer.uid} after mission cancellation but DB failed`,
                 dbError,
               );
             } finally {
@@ -1311,7 +1311,7 @@ export const cancelMission = async (mid, user) => {
         } catch (stripeError) {
           // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
           console.error(
-            `Stripe Error for Vacancy ${vacancy.id}:`,
+            `Stripe Error while paying out vacancy ${vacancy.id} due to cancellation compensation:`,
             stripeError.message,
           );
         }
@@ -1319,7 +1319,8 @@ export const cancelMission = async (mid, user) => {
     }
 
     // Finally, mission has been updated to cancel status
-    await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
+    if (occupied_vacancies.length === successfulPayments.length)
+      await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
   }
 
   // Either way, all adventurers are informed
