@@ -7,24 +7,27 @@ import {
   validateQuerySchema,
 } from '../middlewares/validation.middleware.js';
 import {
+  getUserReviewsParamSchema,
   getUserReviewsQuerySchema,
   reviewAdventurerBodySchema,
   reviewAdventurerParamSchema,
+  reviewOwnerBodySchema,
   reviewOwnerParamSchema,
-  reviewUserParamSchema,
 } from '@hermyx/shared';
 
 const router = Router();
 
-// Get user reviews by username
+/// GET
+// Get reviews by username
 router.get(
-  '/users/:username',
-  validateParamsSchema(reviewUserParamSchema),
+  '/users/:uid',
+  validateParamsSchema(getUserReviewsParamSchema),
   validateQuerySchema(getUserReviewsQuerySchema),
   pagination(),
   reviewController.getUserReviews,
 );
 
+/// POST
 // Reviews an adventurer after a completed mission
 router.post(
   '/missions/:mid/adventurers/:adventurerId',
@@ -33,11 +36,11 @@ router.post(
   reviewController.reviewAdventurer,
 );
 
-// Reviews a mission owner after a completed participation
+// Reviews an applicant after a completed participation
 router.post(
   '/missions/:mid/owner',
   validateParamsSchema(reviewOwnerParamSchema),
-  validateBodySchema(reviewAdventurerBodySchema),
+  validateBodySchema(reviewOwnerBodySchema),
   reviewController.reviewOwner,
 );
 

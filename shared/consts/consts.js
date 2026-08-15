@@ -150,12 +150,7 @@ export const consts = {
       ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
       MAX: 5,
     },
-    REVIEW: {
-      RATING_MIN: 1,
-      RATING_MAX: 5,
-      RATING_STEP: 0.5,
-      COMMENT_MAX_LENGTH: 500,
-    },
+
     VACANCIES: {
       MIN: 1,
       STEP: 1,
@@ -166,9 +161,6 @@ export const consts = {
     },
     REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
     REPORT_MESSAGE: { MAX: 1000 },
-    //....
-    TITLE_MAX_LENGTH: 100,
-    DESCRIPTION_MAX_LENGTH: 1000,
   },
 
   // Notification consts
@@ -176,8 +168,14 @@ export const consts = {
     MESSAGE: {
       MAX_LENGTH: 500,
     },
-    // ...
-    MESSAGE_MAX_LENGTH: 500,
+  },
+
+  // Review consts
+  REVIEW: {
+    RATING_MIN: 1,
+    RATING_MAX: 5,
+    RATING_STEP: 0.5,
+    COMMENT_MAX_LENGTH: 500,
   },
 
   // Report consts
@@ -185,10 +183,4 @@ export const consts = {
     MESSAGE: { MAX: 1000 },
     REASON_MESSAGE: { MAX: 1000 },
   },
-
-  // Account update consts
-  NAME_MAX_LENGTH: 50,
-  SURNAMES_MAX_LENGTH: 100,
-  LOCATION_MAX_LENGTH: 300,
-  DESCRIPTION_MAX_LENGTH: 500,
 };

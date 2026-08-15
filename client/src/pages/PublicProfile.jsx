@@ -80,7 +80,7 @@ export const PublicProfile = () => {
       },
     ),
   );
-
+  const user = profileData?.user;
   const {
     data: reviewsPagesData,
     hasNextPage: hasNextReviewsPage,
@@ -88,13 +88,12 @@ export const PublicProfile = () => {
     fetchNextPage: fetchNextReviewsPage,
     isLoading: isReviewsLoading,
   } = useInfiniteQuery(
-    getUserReviewsInfiniteQueryOptions(username, PAGINATION_LIMIT.REVIEWS, {
+    getUserReviewsInfiniteQueryOptions(user.uid, PAGINATION_LIMIT.REVIEWS, {
       retry: retryOption,
       enabled: !!username && !isOwnProfile && !!profileData?.missionsVisible,
     }),
   );
 
-  const user = profileData?.user;
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);

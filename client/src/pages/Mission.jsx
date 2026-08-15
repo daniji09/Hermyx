@@ -108,7 +108,6 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
-  console.log(mission);
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
@@ -336,23 +335,14 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   );
 };
 
-const canReviewParticipant = (participant) => {
-  return (
-    !!participant.adventurer_id &&
-    [
-      MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
-      MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-    ].includes(participant.status)
-  );
-};
-
 const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
   const isAssigned = !!vacancy.adventurer_id;
   const [reviewDialogType, setReviewDialogType] = useState(null);
   const isAssignedToUser = vacancy.adventurer_id === currentUser?.id;
-  const canReviewAdventurer = isCreator && canReviewParticipant(vacancy);
-  const canReviewOwner = isAssignedToUser && canReviewParticipant(vacancy);
+  const canReviewAdventurer =
+    isCreator && MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_REVIEW;
+  const canReviewOwner =
+    isAssignedToUser && MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_REVIEW;
   const hasOwnerReview = !!vacancy.owner_review_id;
   const hasAdventurerReview = !!vacancy.adventurer_review_id;
 
@@ -714,9 +704,9 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
       return;
     }
 
-    if (comment.length > consts.MISSION.REVIEW.COMMENT_MAX_LENGTH) {
+    if (comment.length > consts.REVIEW.COMMENT_MAX_LENGTH) {
       setErrorMessage(
-        `Comment must be shorter than ${consts.MISSION.REVIEW.COMMENT_MAX_LENGTH} characters.`,
+        `Comment must be shorter than ${consts.REVIEW.COMMENT_MAX_LENGTH} characters.`,
       );
       return;
     }
@@ -739,7 +729,7 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
           </DialogDescription>
         </DialogHeader>
 
-        <form id='reviewAdventurerForm' onSubmit={handleSubmit}>
+        <form id='reviewAdventurerForm' onSubmit={handleSubmit} noValidate>
           <div className='space-y-4'>
             <div className='space-y-2'>
               <label htmlFor='adventurerRating' className='text-sm font-medium'>
@@ -748,9 +738,9 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
               <Input
                 id='adventurerRating'
                 type='number'
-                min={consts.MISSION.REVIEW.RATING_MIN}
-                max={consts.MISSION.REVIEW.RATING_MAX}
-                step={consts.MISSION.REVIEW.RATING_STEP}
+                min={consts.REVIEW.RATING_MIN}
+                max={consts.REVIEW.RATING_MAX}
+                step={consts.REVIEW.RATING_STEP}
                 value={rating}
                 onChange={(event) => setRating(Number(event.target.value))}
               />
@@ -763,12 +753,12 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
               <Textarea
                 id='adventurerReview'
                 value={comment}
-                maxLength={consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                maxLength={consts.REVIEW.COMMENT_MAX_LENGTH}
                 onChange={(event) => setComment(event.target.value)}
                 rows={5}
               />
               <p className='text-xs text-muted-foreground'>
-                {comment.length}/{consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                {comment.length}/{consts.REVIEW.COMMENT_MAX_LENGTH}
               </p>
             </div>
 
@@ -847,9 +837,9 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
       return;
     }
 
-    if (comment.length > consts.MISSION.REVIEW.COMMENT_MAX_LENGTH) {
+    if (comment.length > consts.REVIEW.COMMENT_MAX_LENGTH) {
       setErrorMessage(
-        `Comment must be shorter than ${consts.MISSION.REVIEW.COMMENT_MAX_LENGTH} characters.`,
+        `Comment must be shorter than ${consts.REVIEW.COMMENT_MAX_LENGTH} characters.`,
       );
       return;
     }
@@ -872,7 +862,7 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
           </DialogDescription>
         </DialogHeader>
 
-        <form id='reviewOwnerForm' onSubmit={handleSubmit}>
+        <form id='reviewOwnerForm' onSubmit={handleSubmit} noValidate>
           <div className='space-y-4'>
             <div className='space-y-2'>
               <label htmlFor='ownerRating' className='text-sm font-medium'>
@@ -881,9 +871,9 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
               <Input
                 id='ownerRating'
                 type='number'
-                min={consts.MISSION.REVIEW.RATING_MIN}
-                max={consts.MISSION.REVIEW.RATING_MAX}
-                step={consts.MISSION.REVIEW.RATING_STEP}
+                min={consts.RATING_MIN}
+                max={consts.REVIEW.RATING_MAX}
+                step={consts.REVIEW.RATING_STEP}
                 value={rating}
                 onChange={(event) => setRating(Number(event.target.value))}
               />
@@ -896,12 +886,12 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
               <Textarea
                 id='ownerReview'
                 value={comment}
-                maxLength={consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                maxLength={consts.REVIEW.COMMENT_MAX_LENGTH}
                 onChange={(event) => setComment(event.target.value)}
                 rows={5}
               />
               <p className='text-xs text-muted-foreground'>
-                {comment.length}/{consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                {comment.length}/{consts.REVIEW.COMMENT_MAX_LENGTH}
               </p>
             </div>
 
@@ -1021,7 +1011,11 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
 
         <div className='min-w-0'>
           {!selectedUser ? (
-            <form onSubmit={handleSearch} className='flex flex-col gap-4'>
+            <form
+              onSubmit={handleSearch}
+              className='flex flex-col gap-4'
+              noValidate
+            >
               <label
                 htmlFor='searchAdventurerByUsername'
                 className='text-sm font-medium text-slate-900'

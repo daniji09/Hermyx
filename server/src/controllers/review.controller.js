@@ -1,10 +1,11 @@
 import { messages } from '@hermyx/shared';
 import * as reviewService from '../services/review.service.js';
 
+// Gets users reviews
 export const getUserReviews = async (req, res, next) => {
   try {
     const result = await reviewService.getUserReviews(
-      req.params.username,
+      req.params.uid,
       req.pagination,
     );
     return res.status(200).json(result);

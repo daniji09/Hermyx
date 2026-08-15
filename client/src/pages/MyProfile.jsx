@@ -100,6 +100,7 @@ export const MyProfile = () => {
     }),
   );
   const profileUser = data?.user;
+
   const reviewsEnabled =
     !!profileUser?.username &&
     profileUser.configuration?.show_missions_to_others !== false;
@@ -111,7 +112,7 @@ export const MyProfile = () => {
     isLoading: isReviewsLoading,
   } = useInfiniteQuery(
     getUserReviewsInfiniteQueryOptions(
-      profileUser?.username,
+      profileUser?.uid,
       PAGINATION_LIMIT.REVIEWS,
       {
         enabled: reviewsEnabled,

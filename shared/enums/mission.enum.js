@@ -127,6 +127,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'Empty',
     CAN_EDIT: true,
     CAN_INTERACT: false,
+    CAN_REVIEW: false,
     VALID_NEXT_STATES: ['JOINED'],
   },
   JOINED: {
@@ -134,6 +135,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'Joined',
     CAN_EDIT: true,
     CAN_INTERACT: true,
+    CAN_REVIEW: false,
     VALID_NEXT_STATES: ['EMPTY', 'PENDING_PAYMENT'],
   },
   PENDING_PAYMENT: {
@@ -141,6 +143,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'Pending payment',
     CAN_EDIT: true,
     CAN_INTERACT: true,
+    CAN_REVIEW: false,
     VALID_NEXT_STATES: ['IN_PROGRESS'],
   },
   IN_PROGRESS: {
@@ -155,6 +158,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'Submitted',
     CAN_EDIT: true,
     CAN_INTERACT: true,
+    CAN_REVIEW: false,
     VALID_NEXT_STATES: ['ACCEPTED', 'REJECTED', 'IN_DISPUTE'],
   },
   ACCEPTED: {
@@ -162,6 +166,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'Accepted',
     CAN_EDIT: false,
     CAN_INTERACT: false,
+    CAN_REVIEW: false,
     VALID_NEXT_STATES: ['RELEASED'],
   },
   REJECTED: {
@@ -169,6 +174,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'Rejected',
     CAN_EDIT: true,
     CAN_INTERACT: true,
+    CAN_REVIEW: false,
     VALID_NEXT_STATES: ['IN_PROGRESS', 'IN_DISPUTE'],
   },
   IN_DISPUTE: {
@@ -176,6 +182,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'In dispute',
     CAN_EDIT: false,
     CAN_INTERACT: true,
+    CAN_REVIEW: false,
     VALID_NEXT_STATES: ['IN_PROGRESS', 'ACCEPTED', 'REOPENED'],
   },
   RELEASED: {
@@ -183,6 +190,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'Released',
     CAN_EDIT: false,
     CAN_INTERACT: false,
+    CAN_REVIEW: true,
     VALID_NEXT_STATES: [],
   },
 };

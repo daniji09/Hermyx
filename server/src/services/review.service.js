@@ -5,21 +5,21 @@ import * as reviewModel from '../models/review.model.js';
 import * as missionService from './mission.service.js';
 import * as userService from './user.service.js';
 
-const REVIEWABLE_PARTICIPATION_STATUSES = [
-  MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-  MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
-  MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-];
-
-export const getUserReviews = async (username, pagination) => {
-  const normalizedUsername = username.toLowerCase().trim();
+/// Endpoint complex functions
+// Get user reviews
+export const getUserReviews = async (uid, pagination) => {
+  // Treats pagination
   const pageData = pagination || {
     page: consts.PAGINATION.DEFAULT_PAGE,
     limit: consts.PAGINATION.DEFAULT_LIMIT,
     offset:
       (consts.PAGINATION.DEFAULT_PAGE - 1) * consts.PAGINATION.DEFAULT_LIMIT,
   };
-  const user = await userService.getUserByUsernameOrThrow(normalizedUsername);
+
+  // Gets user by uid
+  const user = await userService.getUserByUidOrThrow(uid);
+
+  // Checks if reviews are visible
   const reviewsVisible = user.configuration?.show_missions_to_others !== false;
   if (!reviewsVisible) {
     return {
@@ -31,7 +31,8 @@ export const getUserReviews = async (username, pagination) => {
     };
   }
 
-  const result = await reviewModel.findByUsername(normalizedUsername, pageData);
+  // Then returns all reviews
+  const result = await reviewModel.findByUserUid(uid, pageData);
   return {
     ...result,
     reviewsVisible,
@@ -121,9 +122,7 @@ const validateReview = (participation, reviewerId, reviewerRole) => {
   if (reviewerRole === 'owner' && participation.owner_id !== reviewerId)
     throw new AppError(messages.MISSION_REVIEW_NOT_ALLOWED, 403);
   if (
-    !REVIEWABLE_PARTICIPATION_STATUSES.includes(
-      participation.participation_status,
-    )
+    !MISSION_PARTICIPATION_STATUS[participation.participation_status].CAN_REVIEW
   )
     throw new AppError(messages.MISSION_REVIEW_COMPLETED_REQUIRED, 409);
   const reviewId =

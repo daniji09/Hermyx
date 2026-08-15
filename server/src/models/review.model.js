@@ -1,5 +1,7 @@
 import pool from '../config/db.config.js';
 
+/// INSERT
+// Create
 export const create = async ({ rating, comment }, client = pool) => {
   const result = await client.query(
     `INSERT INTO review (rating, comment)
@@ -10,11 +12,13 @@ export const create = async ({ rating, comment }, client = pool) => {
   return result.rows[0];
 };
 
-export const findByUsername = async (username, pagination) => {
+/// FIND
+// Find by user uid
+export const findByUserUid = async (uid, pagination) => {
   const paginationClause = pagination ? 'LIMIT $2 OFFSET $3' : '';
   const values = pagination
-    ? [username, pagination.limit, pagination.offset]
-    : [username];
+    ? [uid, pagination.limit, pagination.offset]
+    : [uid];
   const result = await pool.query(
     `WITH received_reviews AS (
        SELECT r.id, r.rating, r.comment, r.created_at,
@@ -26,7 +30,7 @@ export const findByUsername = async (username, pagination) => {
        JOIN review r ON r.id = mp.owner_review_id
        JOIN mission m ON m.mid = mp.mid
        JOIN app_user owner_user ON owner_user.uid = m.owner_id
-       WHERE adventurer.username = $1
+       WHERE adventurer.uid = $1
        UNION ALL
        SELECT r.id, r.rating, r.comment, r.created_at,
          m.mid AS mission_id, m.title AS mission_title,
@@ -37,7 +41,7 @@ export const findByUsername = async (username, pagination) => {
        JOIN mission_participation mp ON mp.mid = m.mid
        JOIN review r ON r.id = mp.adventurer_review_id
        JOIN app_user adventurer ON adventurer.uid = mp.adventurer_id
-       WHERE owner_user.username = $1
+       WHERE owner_user.uid = $1
      )
      SELECT *, COUNT(*) OVER()::int AS total_reviews,
        ROUND(AVG(rating) OVER()::numeric, 2) AS average_rating

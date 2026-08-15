@@ -1,8 +1,8 @@
 import api from '../config/api';
 
 // Get user reviews by username
-export const getUserReviews = async (username, page, limit) => {
-  const { data } = await api.get(`/reviews/users/${username}`, {
+export const getUserReviews = async (uid, page, limit) => {
+  const { data } = await api.get(`/reviews/users/${uid}`, {
     params: { page, limit },
   });
   return data;

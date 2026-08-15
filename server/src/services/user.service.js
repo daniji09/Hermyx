@@ -153,6 +153,7 @@ export const getMyProfile = async (user) => {
 
   // Builds object that will be sent to frontend
   const profile = {
+    uid: user.uid,
     username: user.username,
     email: user.email,
     name: user.name,
