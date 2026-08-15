@@ -97,7 +97,7 @@ Gets the report specified by its identifier, rid.
 <br>
 <br>
 
-## - Report adventurer: `GET /api/reports/adventurer`
+## - Report adventurer: `POST /api/reports/adventurer`
 
 Applicant reports an adventurer of their mission
 
@@ -108,7 +108,7 @@ Applicant reports an adventurer of their mission
 | :--- | :--- | :--- | :--- |
 | `mid` | integer | Yes | Mission identifier. |
 | `adventurerId` | integer | Yes | Adventurer user identifier. |
-| `message` | integer | Yes | Report message. |
+| `message` | string | Yes | Report message. |
 <br>
 
 **Responses:**
@@ -152,6 +152,54 @@ Applicant reports an adventurer of their mission
   <br>
 
 **Workflow:** when reporting an adventurer, report is created over that adventurer, but dispute and conversation is also created.
+<br>
+<br>
+<br>
+
+## - Report user: `POST /api/reports/user`
+
+Reporting a user on the application
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `uid` | integer | Yes | User identifier. |
+| `message` | string | Yes | Report message. |
+<br>
+
+**Responses:**
+
+- `201 OK`: report created successfully.
+
+  ```json
+  {
+    "report": "<report>"
+  }
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report not found, report with that rid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Report not found."]
+    }
+  }
+  ```
+  <br>
+
+**Workflow:** when reporting a user, report is created over that user.
 <br>
 <br>
 <br>

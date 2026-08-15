@@ -81,6 +81,7 @@ export const PublicProfile = () => {
     ),
   );
   const user = profileData?.user;
+
   const {
     data: reviewsPagesData,
     hasNextPage: hasNextReviewsPage,
@@ -88,9 +89,9 @@ export const PublicProfile = () => {
     fetchNextPage: fetchNextReviewsPage,
     isLoading: isReviewsLoading,
   } = useInfiniteQuery(
-    getUserReviewsInfiniteQueryOptions(user.uid, PAGINATION_LIMIT.REVIEWS, {
+    getUserReviewsInfiniteQueryOptions(user?.uid, PAGINATION_LIMIT.REVIEWS, {
       retry: retryOption,
-      enabled: !!username && !isOwnProfile && !!profileData?.missionsVisible,
+      enabled: !!user?.uid && !isOwnProfile && !!profileData?.missionsVisible,
     }),
   );
 

@@ -56,9 +56,7 @@ export const reportAdventurerValidation = z.object({
   message: reportMessageBaseSchema,
 });
 
-// Backwards-compatible alias while older clients are migrated.
-export const disputeValidation = reportAdventurerValidation;
-
+// Report user
 export const reportUserValidation = z.object({
   uid: uidBaseSchema,
   message: reportMessageBaseSchema,
@@ -88,3 +86,6 @@ export const dismissParamValidation = acceptAdventurersWorkParamsValidation;
 export const dismissBodyValidation = acceptAdventurersWorkBodyValidation;
 
 export const answerReportValidation = acceptAdventurersWorkBodyValidation;
+
+// Backwards-compatible alias while older clients are migrated.
+export const disputeValidation = reportAdventurerValidation;

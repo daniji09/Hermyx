@@ -182,7 +182,7 @@ export const reportAdventurer = async ({
         },
         conversationId: conversation.cid,
       },
-      messages.ADVENTURER_ALREADY_REPORTED,
+      messages.REPORT.REPORT_ADVENTURER.ACTIVE_REPORT,
       client,
     );
 
@@ -278,9 +278,12 @@ export const reportAdventurer = async ({
   return report;
 };
 
+// Report user
 export const reportUser = async ({ message, senderId, userId }) => {
+  // Checks if user exists
   await getUserOrThrow(userId);
-  return createReportTransaction(
+  // Creates user report with transaction
+  return await createReportTransaction(
     {
       senderId,
       message,
@@ -288,7 +291,7 @@ export const reportUser = async ({ message, senderId, userId }) => {
       lookupPayload: { userId },
       payload: { associated_user_id: userId },
     },
-    messages.USER_ALREADY_REPORTED,
+    messages.REPORT.REPORT_USER.ACTIVE_REPORT,
   );
 };
 
@@ -317,6 +320,7 @@ const createReportTransaction = async (reportData, activeReportMessage) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Creates report if not active
     const report = await createReportIfNotActive(
       reportData,
       activeReportMessage,
@@ -343,8 +347,7 @@ const createReportIfNotActive = async (
     { senderId, type, payload: lookupPayload },
     client,
   );
-  if (activeReport > 0)
-    throw new AppError(messages.REPORT.REPORT_ADVENTURER.ACTIVE_REPORT, 409);
+  if (activeReport > 0) throw new AppError(activeReportMessage, 409);
 
   // And, if theres no other, creates it
   return reportModel.create(

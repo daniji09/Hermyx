@@ -43,6 +43,7 @@ export const reportAdventurer = async (req, res, next) => {
   }
 };
 
+// Report user
 export const reportUser = async (req, res, next) => {
   try {
     const report = await reportService.reportUser({
@@ -50,7 +51,7 @@ export const reportUser = async (req, res, next) => {
       senderId: req.user.uid,
       userId: req.body.uid,
     });
-    return res.status(200).json({ report });
+    return res.status(201).json({ report });
   } catch (error) {
     next(error);
   }

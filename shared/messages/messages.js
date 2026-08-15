@@ -297,7 +297,10 @@ export const messages = {
       REPORTS_NOT_FOUND: `Reports not found.`,
     },
     REPORT_ADVENTURER: {
-      ACTIVE_REPORT: `There is already an active report for this adventurer.`,
+      ACTIVE_REPORT: `You already have an active report for this adventurer. Our team is checking it.`,
+    },
+    REPORT_USER: {
+      ACTIVE_REPORT: `You already have an active report for this user. Our team is checking it.`,
     },
   },
 
