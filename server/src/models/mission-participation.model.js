@@ -124,6 +124,7 @@ export const findAllJoined = async (mid) => {
   return result.rows;
 };
 
+// Gets mission participation when reviewing
 export const findReviewContext = async (mid, adventurerId, client = pool) => {
   const result = await client.query(
     `SELECT mp.id, mp.status AS participation_status,

@@ -281,6 +281,14 @@ export const messages = {
     },
   },
 
+  /// Review messages
+  REVIEW: {
+    GENERAL: {
+      MISSION_REVIEW_NOT_ALLOWED: `Only the mission owner can review adventurers from a completed mission.`,
+      MISSION_REVIEW_ALREADY_EXISTS: `This adventurer has already been reviewed for this mission.`,
+    },
+  },
+
   ///// Common messages
   //// Error
   FIELD_NUMBER: (field) => `${field} must be a number.`,

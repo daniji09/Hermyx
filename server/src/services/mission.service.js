@@ -108,6 +108,17 @@ export const getMissionPaymentsByVacancyId = async (vacancyId, client) => {
   return await missionPaymentModel.findByVacancyId(vacancyId, client);
 };
 
+// Gets mission participation
+export const getMissionParticipationReviewContext = async (
+  mid,
+  adventurerId,
+  client,
+) => {
+  checkRequired(mid, 'Mission id');
+  checkRequired(adventurerId, 'Adventurer user id');
+  return missionParticipationModel.findReviewContext(mid, adventurerId, client);
+};
+
 // Pays a vacancy
 export const payParticipant = async (id, payment, client) => {
   checkRequired(id, 'Mission id');
@@ -274,38 +285,38 @@ export const refundMissionParticipation = async (
   );
 };
 
-//---
-export const getMissionParticipationReviewContext = async (
-  mid,
-  adventurerId,
-  client,
-) => {
-  checkRequired(mid, 'Mission id');
-  checkRequired(adventurerId, 'Adventurer user id');
-  return missionParticipationModel.findReviewContext(mid, adventurerId, client);
-};
-
+// Updates mission participation with owner review to an adventurer
 export const updateMissionParticipationOwnerReview = async (
   participationId,
-  reviewId,
+  rid,
   client,
-) =>
-  missionParticipationModel.updateOwnerReview(
+) => {
+  checkRequired(participationId, 'Mission participation id');
+  checkRequired(rid, 'Review id');
+  return await missionParticipationModel.updateOwnerReview(
     participationId,
-    reviewId,
+    rid,
     client,
   );
+};
 
+// Updates mission participation with adventurer review to a owner
 export const updateMissionParticipationAdventurerReview = async (
   participationId,
-  reviewId,
+  rid,
   client,
-) =>
-  missionParticipationModel.updateAdventurerReview(
+) => {
+  checkRequired(participationId, 'Mission participation id');
+  checkRequired(rid, 'Review id');
+  return await missionParticipationModel.updateAdventurerReview(
     participationId,
-    reviewId,
+    rid,
     client,
   );
+};
+
+//---
+
 export const disputeMissionParticipation = async (mid, adventurerId, client) =>
   missionParticipationModel.disputeParticipation(mid, adventurerId, client);
 

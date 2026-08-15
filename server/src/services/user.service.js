@@ -422,14 +422,10 @@ export const updateMyConfiguration = async (uid, configuration) => {
   return success.configuration;
 };
 
-export const updateAdventurerRating = async (uid, client) => {
+// Updates user's rating
+export const updateRating = async (uid, client) => {
   checkRequired(uid, 'User id');
-  return userModel.updateAdventurerRating(uid, client);
-};
-
-export const updateOwnerRating = async (uid, client) => {
-  checkRequired(uid, 'User id');
-  return userModel.updateOwnerRating(uid, client);
+  return userModel.updateRating(uid, client);
 };
 
 // Adds email authentication to current user
