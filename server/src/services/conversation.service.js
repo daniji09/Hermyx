@@ -23,6 +23,7 @@ export const createConversationParticipant = async (cid, userId, client) => {
   return conversationParticipantModel.create(cid, userId, client);
 };
 
+// Creates a mission conversation participant
 export const createMissionConversationParticipant = async (
   mid,
   userId,
@@ -30,11 +31,7 @@ export const createMissionConversationParticipant = async (
 ) => {
   checkMid(mid);
   checkUid(userId);
-  return conversationParticipantModel.addMissionConversationParticipant(
-    mid,
-    userId,
-    client,
-  );
+  return conversationParticipantModel.createMissionType(mid, userId, client);
 };
 
 export const leaveMissionConversation = async (mid, uid, client) => {

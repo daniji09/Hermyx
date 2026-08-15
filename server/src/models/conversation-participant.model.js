@@ -14,6 +14,21 @@ export const create = async (conversationId, userId, client = pool) => {
   return result.rows[0];
 };
 
+export const createMissionType = async (missionId, userId, client = pool) => {
+  const query = `
+    INSERT INTO conversation_participant (conversation_id, user_id)
+    SELECT cid, $2
+    FROM conversation
+    WHERE mission_id = $1
+      AND type = 'mission'
+    ON CONFLICT (conversation_id, user_id) DO NOTHING
+    RETURNING *
+  `;
+
+  const result = await client.query(query, [missionId, userId]);
+  return result.rows[0] || null;
+};
+
 /// UPDATES
 // Mission conversation left by user
 export const leaveMissionConversation = async (
@@ -77,25 +92,6 @@ export const addPrivateConversationParticipants = async (
   `;
 
   await client.query(query, [conversationId, userAId, userBId]);
-};
-
-export const addMissionConversationParticipant = async (
-  missionId,
-  userId,
-  client = pool,
-) => {
-  const query = `
-    INSERT INTO conversation_participant (conversation_id, user_id)
-    SELECT cid, $2
-    FROM conversation
-    WHERE mission_id = $1
-      AND type = 'mission'
-    ON CONFLICT (conversation_id, user_id) DO NOTHING
-    RETURNING *
-  `;
-
-  const result = await client.query(query, [missionId, userId]);
-  return result.rows[0] || null;
 };
 
 export const findByConversationId = async (

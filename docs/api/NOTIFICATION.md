@@ -113,7 +113,7 @@ Responds to a notification which type is actionable.
   ```
 
 **Workflow:** this endpoint is quite complex due to the different type of notifications that exists on the platform.
-First type are mission join notifications
+First type are mission join notifications, been slightly different for invitations and requests. Either way, after basic checks, the join notification can be accepted, entering the mission, or rejected.
 Second type are mission participation submits, which, after basic checks, can be: accepted, finishing that participation and sending the money to the adventurer; rejected, sending a follow-up notification to the adventurer so they can respond to the rejection; or disputed, only if the same participation had been reviewed before, which opens a dispute for that participation, that admins will resolve. Since there is a payment, it works as same as the rest of the payments: first, intermediate status is set ('accepted' in this case), then, outside of a database transaction, Stripe payment is made and, finally, in a database transaction, database updates are made. The Stripe payment is done inside an own try-catch, so, if it fails, is saved in a log for its future retry (not implemented); in a similar way, if Stripe payment is done but database updates fail, this state is saved in a log for its future fix. If this last case occurs and user tries to accept participation again, Stripe won't pay again thanks to the idempotency key.
 Third type are mission participation rejections, which, after basic checks, can be: accepted, turning the participation into progress again; or disputed, which opens a dispute for that participation, that admins will resolve.
 <br>

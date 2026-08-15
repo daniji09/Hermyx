@@ -147,6 +147,31 @@ export const updateParticipationStatusByMidAndAdventurer = async (
   );
 };
 
+// Updates mission participation status by id an adventurer
+export const updateParticipationAdventurerAndStatus = async (
+  id,
+  adventurerId,
+  status,
+  client,
+) => {
+  checkVacancyId(id);
+  checkAdventurerId(adventurerId);
+  checkStatus(status);
+  return await missionParticipationModel.updateAdventurerAndStatus(
+    id,
+    adventurerId,
+    status,
+    client,
+  );
+};
+
+// Updates occupied vacancies
+export const updateOccupiedVacancies = async (mid, amount, client) => {
+  checkMid(mid);
+  checkAmount(amount);
+  return await missionModel.updateOccupiedVacancies(mid, amount, client);
+};
+
 // Starts participants of a mission
 export const startParticipants = async (mid, client) => {
   checkMid(mid);
@@ -296,48 +321,7 @@ export const getMissionsPublicJoinedByUid = async (uid, pagination) => {
   return result;
 };
 
-/// Endpoint complex functions
-export const joinMissionVacancy = async (
-  mid,
-  vacancyId,
-  adventurerId,
-  client,
-) => {
-  if (!client) {
-    const transactionClient = await pool.connect();
-    try {
-      await transactionClient.query('BEGIN');
-      const joinedVacancy = await joinMissionVacancy(
-        mid,
-        vacancyId,
-        adventurerId,
-        transactionClient,
-      );
-      await transactionClient.query('COMMIT');
-      return joinedVacancy;
-    } catch (error) {
-      await transactionClient.query('ROLLBACK');
-      throw error;
-    } finally {
-      transactionClient.release();
-    }
-  }
-  const joinedVacancy = await missionParticipationModel.joinVacancy(
-    mid,
-    vacancyId,
-    adventurerId,
-    client,
-  );
-  if (!joinedVacancy) return null;
-  await missionModel.updateOccupiedVacancies(mid, 1, client);
-  await conversationService.createMissionConversationParticipant(
-    mid,
-    adventurerId,
-    client,
-  );
-  return joinedVacancy;
-};
-
+/// Endpoint complex function
 export const releaseMissionParticipation = async (
   mid,
   adventurerId,
@@ -913,7 +897,7 @@ export const inviteToMission = async (
     type: NOTIFICATION_TYPE.INVITATION.ID,
     kind: NOTIFICATION_KIND.ACTIONABLE.ID,
     status: NOTIFICATION_STATUS.PENDING.ID,
-    action: NOTIFICATION_ACTION.JOIN_REQUEST.ID,
+    action: NOTIFICATION_ACTION.MISSION_INVITE.ID,
     message,
     senderId,
     receiverId,
@@ -2214,6 +2198,10 @@ const checkPayment = (payment) => {
 
 const checkStatus = (status) => {
   if (!status) throw new Error(messages.GENERAL.FIELD_REQUIRED('Status'));
+};
+
+const checkAmount = (amount) => {
+  if (!amount) throw new Error(messages.GENERAL.FIELD_REQUIRED('Amount'));
 };
 
 const checkStripeTransactionId = (stripeTransactionId) => {

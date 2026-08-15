@@ -114,6 +114,7 @@ export const messages = {
       ALREADY_JOINED: `You have already joined this mission`,
       REQUEST_ALREADY_SENT: `You have already sent a join request for this vacancy.`,
       ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
+      FAILED: `Couldn't join vacancy.`,
     },
     INVITE: {
       CANNOT_INVITE_YOURSELF: `You can't invite yourself.`,
@@ -168,6 +169,7 @@ export const messages = {
         `This notification has already been ${status.toLowerCase()}.`,
       INVALID_NOTIFICATION_ACTION: `Invalid notification action.`,
       INVALID_RESPONSE_ACTION: `Invalid response action`,
+      NOT_ASSOCIATED_WITH_VACANCY: `This notification is not associated with a mission vacancy.`,
     },
     RESPOND_TO_SUBMIT_PARTICIPATION: {
       // General
@@ -244,6 +246,20 @@ export const messages = {
         `Your participation in "${title}" was approved by ${username}.`,
       ISSUED: (title, username) =>
         `Your participation in "${title}" was approved by ${username}. We had an issue transferring your compensation. Please contact support.`,
+    },
+    JOIN_MISSION_DECISION: {
+      REQUEST: {
+        ACCEPTED: (title) =>
+          `Your request to join "${title}" was accepted. You are now part of the team!`,
+        REJECTED: (title) =>
+          `Your request to join "${title}" was rejected. Don't let your self down, some other team is searching for you!`,
+      },
+      INVITATION: {
+        ACCEPTED: (title) =>
+          `Your invitation to join "${title}" was accepted. Welcome your new adventurer!`,
+        REJECTED: (title) =>
+          `Your invitation to join "${title}" was rejected. Keep searching for others!`,
+      },
     },
   },
 

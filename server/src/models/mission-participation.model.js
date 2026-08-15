@@ -326,19 +326,6 @@ export const disputeParticipation = async (
   return result.rows[0] || null;
 };
 
-export const joinVacancy = async (mid, vacancyId, uid, client = pool) => {
-  const result = await client.query(
-    `
-        UPDATE mission_participation
-        SET adventurer_id = $1, status = $4
-        WHERE mid = $2 AND id = $3 AND adventurer_id IS NULL
-        RETURNING *
-      `,
-    [uid, mid, vacancyId, MISSION_PARTICIPATION_STATUS.JOINED.ID],
-  );
-  return result.rows[0] || null;
-};
-
 export const insertVacancies = async (mid, vacancies) => {
   const insertPromises = vacancies.map((vacancy) => {
     const insertQuery = `

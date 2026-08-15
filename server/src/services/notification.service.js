@@ -167,25 +167,25 @@ export const respondToNotification = async ({
 
   // Participation review notification
   if (notification.action === NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID)
-    return respondToParticipationReview(responseData);
+    return await respondToParticipationReview(responseData);
 
   // Participation rejection notification
   if (
     notification.action ===
     NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID
   )
-    return respondToParticipationRejection(responseData);
+    return await respondToParticipationRejection(responseData);
 
   // Mission join notification
   if (
     notification.action === NOTIFICATION_ACTION.JOIN_REQUEST.ID ||
     notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
   )
-    return respondToMissionJoinNotification(responseData);
+    return await respondToMissionJoinNotification(responseData);
 
   // Mission monetary reward edit notification
   if (notification.action === NOTIFICATION_ACTION.MISSION_EDIT.ID)
-    return respondToVacancyMonetaryRewardEdition(responseData);
+    return await respondToVacancyMonetaryRewardEdition(responseData);
 
   // If neither of those, then is incorrect
   throw new AppError(
@@ -233,7 +233,7 @@ const respondToParticipationReview = async ({
 
   // If user disputes the participation
   if (response === 'disputed')
-    return disputeParticipationReview({
+    return await disputeParticipationReview({
       notification,
       participation,
       mission,
@@ -245,7 +245,7 @@ const respondToParticipationReview = async ({
 
   // If user rejects participation
   if (response === 'rejected')
-    return rejectParticipationReview({
+    return await rejectParticipationReview({
       notification,
       mission,
       user,
@@ -254,7 +254,7 @@ const respondToParticipationReview = async ({
 
   // If user accepts participation
   checkAcceptedResponse(response);
-  return acceptParticipationReview({
+  return await acceptParticipationReview({
     notification,
     participation,
     mission,
@@ -302,7 +302,7 @@ const rejectParticipationReview = async ({
     );
 
     // Creates follow up notification
-    return notificationModel.create(
+    return await notificationModel.create(
       buildNotification({
         action: NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID,
         kind: NOTIFICATION_KIND.ACTIONABLE.ID,
@@ -433,7 +433,7 @@ const acceptParticipationReview = async ({
         user.username,
       );
   const followUpNotificationId = await withTransaction(async (client) => {
-    notificationModel.create(
+    await notificationModel.create(
       buildNotification({
         action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
         message: approvedMessage,
@@ -463,6 +463,7 @@ const acceptParticipationReview = async ({
   };
 };
 
+// Responds to participation rejection by applicant
 const respondToParticipationRejection = async ({
   notification,
   response,
@@ -487,7 +488,7 @@ const respondToParticipationRejection = async ({
 
   // If user disputes the rejection
   if (response === 'disputed')
-    return disputeParticipationReview({
+    return await disputeParticipationReview({
       notification,
       participation,
       mission,
@@ -614,65 +615,116 @@ const disputeParticipationReview = async ({
   };
 };
 
+// Responds to mission join notification, can be done by adventurer or applicant
 const respondToMissionJoinNotification = async ({ notification, response }) => {
-  const missionId = notification.payload.associated_mission_id;
-  const mission = await missionService.getMissionByIdOrThrow(missionId);
+  // Gets mission info
+  const mid = notification.payload.associated_mission_id;
+  const mission = await missionService.getMissionByIdOrThrow(mid);
+
+  // If join is rejected
   if (response === 'rejected')
-    return rejectMissionJoinNotification(notification, mission);
+    return await rejectMissionJoinNotification(notification, mission);
+
+  // If join is accepted
   checkAcceptedResponse(response);
 
+  // Gets participation info
   const vacancyId = notification.payload.associated_vacancy_id;
   if (!vacancyId)
-    throw new AppError(messages.NOTIFICATION_NOT_ASSOCIATED_WITH_VACANCY, 409);
+    throw new AppError(
+      messages.NOTIFICATION.GENERAL.NOT_ASSOCIATED_WITH_VACANCY,
+      409,
+    );
   const vacancy =
     await missionService.getMissionParticipationByIdOrThrow(vacancyId);
+
+  // Checks if vacancy can be joined
   checkParticipationTransition(
     vacancy,
     MISSION_PARTICIPATION_STATUS.JOINED.ID,
     messages.CANNOT_JOIN_PARTICIPATION_STATE,
   );
+
+  // Check if adventurer has already joined the mission
   const adventurerId =
     mission.owner_id === notification.sender_id
       ? notification.recipient_id
       : notification.sender_id;
   const alreadyJoined =
     await missionService.getMissionParticipationByMidAndAdventurerId(
-      missionId,
+      mid,
       adventurerId,
     );
-  if (alreadyJoined) throw new AppError(messages.MISSION_ALREADY_JOINED, 409);
+  if (alreadyJoined)
+    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+
+  // Gets adventurer info
   const adventurer = await userService.getUserByUidOrThrow(adventurerId);
   if (!adventurer.stripe_connected_id)
-    throw new AppError(messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED, 403);
+    throw new AppError(
+      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+      403,
+    );
 
+  // Finally, joins mission in a transaction
   const events = await withTransaction(async (client) => {
-    const joinedVacancy = await missionService.joinMissionVacancy(
-      missionId,
-      vacancyId,
+    // Updates participation to joined
+    const joinedVacancy =
+      await missionService.updateParticipationAdventurerAndStatus(
+        vacancyId,
+        adventurerId,
+        MISSION_PARTICIPATION_STATUS.JOINED.ID,
+        client,
+      );
+    if (!joinedVacancy) throw new AppError(messages.MISSION.JOIN.FAILED, 409);
+
+    // Updates mission occupied vacancies
+    await missionService.updateOccupiedVacancies(mid, 1, client);
+
+    // Adds participant into mission conversation
+    await conversationService.createMissionConversationParticipant(
+      mid,
       adventurerId,
       client,
     );
-    if (!joinedVacancy) throw new AppError(messages.VACANCY_NOT_JOINED, 409);
+
+    // Marks notification as accepted and seen
     await resolveNotification(
       notification.nid,
       NOTIFICATION_STATUS.ACCEPTED.ID,
       client,
     );
-    return createJoinResolutionNotifications(notification, mission, client);
+
+    // Sends follow-up notification
+    return await createJoinResolutionNotifications(
+      notification,
+      mission,
+      client,
+    );
   });
+
+  // Sends follow up notification
   emitNotificationEvents(events);
   return { message: 'Adventurer successfully added' };
 };
 
+// Rejects join mission request
 const rejectMissionJoinNotification = async (notification, mission) => {
+  // Rejects join notification and sends follow-up notification, so database transaction is needed
   const event = await withTransaction(async (client) => {
     await resolveNotification(
       notification.nid,
       NOTIFICATION_STATUS.REJECTED.ID,
       client,
     );
-    return createJoinNotificationEvent(notification, mission, false, client);
+    return await createJoinNotificationEvent(
+      notification,
+      mission,
+      false,
+      client,
+    );
   });
+  // Sends notification
   emitNotificationEvents([event]);
   return { message: 'Notification rejected' };
 };
@@ -719,20 +771,32 @@ const createJoinResolutionNotifications = async (
   return events;
 };
 
+// Creates join request follow-up notification
 const createJoinNotificationEvent = async (
   notification,
   mission,
   accepted,
   client,
 ) => {
+  // Chooses correct message
   const message = accepted
     ? notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
-      ? `Your invitation to join "${mission.title}" was accepted.`
-      : `Your request to join "${mission.title}" was accepted. You are now part of the team.`
+      ? messages.NOTIFICATION.JOIN_MISSION_DECISION.INVITATION.ACCEPTED(
+          mission.title,
+        )
+      : messages.NOTIFICATION.JOIN_MISSION_DECISION.REQUEST.ACCEPTED(
+          mission.title,
+        )
     : notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
-      ? `Your invitation to join "${mission.title}" was rejected.`
-      : `Your request to join "${mission.title}" was rejected.`;
-  const notificationId = await createNotification(
+      ? messages.NOTIFICATION.JOIN_MISSION_DECISION.INVITATION.REJECTED(
+          mission.title,
+        )
+      : messages.NOTIFICATION.JOIN_MISSION_DECISION.REQUEST.REJECTED(
+          mission.title,
+        );
+
+  // Creates notification
+  const notificationId = await notificationModel.create(
     buildNotification({
       action: notification.action,
       message,
@@ -1091,6 +1155,7 @@ const completeParticipationApproval = async ({
   await syncMissionCompletionStatus(mission.mid, client);
 };
 
+// Emits notifications
 const emitNotificationEvents = (events) => {
   for (const { receiverId, event, payload } of events)
     socketProvider.emitToUser(receiverId, event, payload);
