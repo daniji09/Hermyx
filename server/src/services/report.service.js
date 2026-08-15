@@ -19,10 +19,10 @@ import * as notificationService from './notification.service.js';
 import * as userService from './user.service.js';
 import { createTransfer } from '../providers/payment.provider.js';
 import { emitToAdmins, emitToUser } from '../providers/socket.provider.js';
-import { AppError } from '../utils/error.util.js';
+import { AppError, checkRequired } from '../utils/error.util.js';
 
 /// Model access functions
-const getReportOrThrow = async (reportId) => {
+const getReportByRidOrThrow = async (reportId) => {
   const report = await reportModel.findById(reportId);
   if (!report) throw new AppError(messages.REPORT_NOT_FOUND, 404);
   return report;
@@ -55,7 +55,7 @@ const assertReportCanBeResolved = (report) => {
 };
 
 const getDisputeResolutionContext = async (reportId) => {
-  const report = await getReportOrThrow(reportId);
+  const report = await getReportByRidOrThrow(reportId);
   assertReportCanBeResolved(report);
 
   const missionId = report.payload.associated_mission_id;
@@ -74,8 +74,6 @@ const getDisputeResolutionContext = async (reportId) => {
   return { adventurer, mission, report, vacancy };
 };
 
-export const getReport = async (reportId) => getReportOrThrow(reportId);
-
 export const getUserDisputes = async (userId) =>
   reportModel.findDisputesByUserId(userId);
 
@@ -86,8 +84,17 @@ export const createUserReport = async (reportData, client) =>
   reportModel.create(reportData, client);
 
 /// Complex endpoint functions
+// Get report by rid
+export const getReport = async (rid) => {
+  checkRequired(rid, 'Report id');
+  return await getReportByRidOrThrow(rid);
+};
+
 // Get all reports filtered and paginated
 export const getReports = async ({ pagination, filters, userId }) => {
+  // Parameter checks
+  checkRequired(userId, 'User id');
+
   // Finds reports paginated and filtered
   const { rows: reports, totalCount } = await reportModel.findAll({
     pagination,
@@ -540,7 +547,7 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
 };
 
 export const dismiss = async ({ adminId, reason, reportId }) => {
-  const report = await getReportOrThrow(reportId);
+  const report = await getReportByRidOrThrow(reportId);
   if (report.status === REPORT_STATUS.ANSWERED.ID) {
     throw new AppError(messages.REPORT_ALREADY_ANSWERED, 409);
   }

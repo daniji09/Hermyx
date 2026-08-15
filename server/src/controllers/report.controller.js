@@ -1,14 +1,16 @@
 import * as reportService from '../services/report.service.js';
 
+// Get report by rid
 export const getReport = async (req, res, next) => {
   try {
-    const report = await reportService.getReport(req.params.id);
+    const report = await reportService.getReport(req.params.rid);
     return res.status(200).json({ report });
   } catch (error) {
     next(error);
   }
 };
 
+// Get reports
 export const getReports = async (req, res, next) => {
   try {
     const { reports, pagination } = await reportService.getReports({

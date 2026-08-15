@@ -34,7 +34,7 @@ router.get(
 
 // Get report by id
 router.get(
-  '/:id',
+  '/:rid',
   verifyAdmin,
   validateParamsSchema(getReportByIdValidation),
   reportController.getReport,

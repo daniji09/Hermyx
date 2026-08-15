@@ -35,6 +35,7 @@ export const vacancyIdBaseSchema = z.coerce
   .min(0, messages.GENERAL.FIELD_POSITIVE('Vacancy id'));
 
 /// Endpoint complex validations
+// Get reports
 export const getReportsValidation = z.object({
   sortByDate: z.coerce.string().trim().optional(),
   type: z.coerce.string().trim().optional(),
@@ -43,8 +44,9 @@ export const getReportsValidation = z.object({
   limit: limitBaseSchema,
 });
 
+// Get report by id
 export const getReportByIdValidation = z.object({
-  id: reportIdBaseSchema,
+  rid: reportIdBaseSchema,
 });
 
 export const reportAdventurerValidation = z.object({
