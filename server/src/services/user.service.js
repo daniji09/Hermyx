@@ -1,5 +1,5 @@
 import { consts, messages } from '@hermyx/shared';
-import { AppError } from '../utils/error.util.js';
+import { AppError, checkRequired } from '../utils/error.util.js';
 import * as missionService from './mission.service.js';
 import * as userModel from '../models/user.model.js';
 import * as authProvider from '../providers/auth.provider.js';
@@ -9,9 +9,9 @@ import * as storageProvider from '../providers/storage.provider.js';
 /// Model access functions
 // Create user
 export const createUser = async (email, username, firebaseUid) => {
-  checkEmail(email);
-  checkUsername(username);
-  checkFirebaseUid(firebaseUid);
+  checkRequired(email, 'User email');
+  checkRequired(username, 'Username');
+  checkRequired(firebaseUid, 'User Firebase uid');
 
   // Creates user
   const user = await userModel.create(email, username, firebaseUid);
@@ -20,7 +20,7 @@ export const createUser = async (email, username, firebaseUid) => {
 
 // Gets user by uid
 export const getUserByUid = async (uid) => {
-  checkUid(uid);
+  checkRequired(uid, 'User id');
 
   // Gets user by uid
   const user = await userModel.findByUid(uid);
@@ -35,7 +35,7 @@ export const getUserByUidOrThrow = async (uid) => {
 
 // Gets user by username
 export const getUserByUsername = async (username) => {
-  checkUsername(username);
+  checkRequired(username, 'Username');
 
   // Gets user by username
   const user = await userModel.findByUsername(username);
@@ -54,7 +54,7 @@ export const getUserByUsernameOrThrow = async (username) => {
 
 // Gets user by email
 export const getUserByEmail = async (email) => {
-  checkEmail(email);
+  checkRequired(email, 'User email');
 
   // Gets user by email
   const user = await userModel.findByEmail(email);
@@ -70,7 +70,7 @@ export const getUserByEmailOrThrow = async (email) => {
 
 // Gets user by firebaseUid
 export const getUserByFirebaseUid = async (firebaseUid) => {
-  checkFirebaseUid(firebaseUid);
+  checkRequired(firebaseUid, 'User Firebase uid');
 
   // Gets user by firebaseUid
   const user = await userModel.findByFirebaseUid(firebaseUid);
@@ -82,8 +82,8 @@ export const updateUserStripeCustomerIdByUid = async (
   uid,
   stripeCustomerId,
 ) => {
-  checkUid(uid);
-  checkStripeCustomerId(stripeCustomerId);
+  checkRequired(uid, 'User id');
+  checkRequired(stripeCustomerId, 'Stripe customer id');
 
   // Updates user's Stripe customer id
   await userModel.updateStripeCustomerIdByUid(uid, stripeCustomerId);
@@ -97,8 +97,8 @@ export const updateUserStripeConnectedIdByUid = async (
   uid,
   stripeConnectedId,
 ) => {
-  checkUid(uid);
-  checkStripeConnectedId(stripeConnectedId);
+  checkRequired(uid, 'User id');
+  checkRequired(stripeConnectedId, 'Stripe connected id');
 
   // Updates user's Stripe customer id
   await userModel.updateStripeConnectedByUid(uid, stripeConnectedId);
@@ -111,8 +111,8 @@ export const searchUserByUsername = async (
   currentUser,
   pagination,
 ) => {
-  checkUsername(username);
-  checkCurrentUser(currentUser);
+  checkRequired(username, 'Username');
+  checkRequired(currentUser, 'Current users');
 
   // Searches user by username
   const { rows: users, totalCount } = await userModel.searchByUsername({
@@ -170,8 +170,8 @@ export const getMyProfile = async (user) => {
 
 // Gets the missions from the user, joined or published
 export const getUserMissions = async (uid, type, pagination) => {
-  checkUid(uid);
-  checkType(type);
+  checkRequired(uid, 'User id');
+  checkRequired(type, 'Mission type');
 
   let result;
 
@@ -212,7 +212,7 @@ export const getUserMissions = async (uid, type, pagination) => {
 
 // Get user public profile
 export const getUserPublicProfile = async (username) => {
-  checkUsername(username);
+  checkRequired(username, 'Username');
   // Gets user
   const user = await getUserByUsernameOrThrow(username);
 
@@ -234,8 +234,8 @@ export const getUserPublicProfile = async (username) => {
 
 // Gets the missions from the user public profile, joined or published
 export const getUserPublicMissions = async (username, type, pagination) => {
-  checkUsername(username);
-  checkType(type);
+  checkRequired(username, 'Username');
+  checkRequired(type, 'Mission type');
 
   // Gets user
   const user = await getUserByUsernameOrThrow(username);
@@ -422,12 +422,12 @@ export const updateMyConfiguration = async (uid, configuration) => {
 };
 
 export const updateAdventurerRating = async (uid, client) => {
-  checkUid(uid);
+  checkRequired(uid, 'User id');
   return userModel.updateAdventurerRating(uid, client);
 };
 
 export const updateOwnerRating = async (uid, client) => {
-  checkUid(uid);
+  checkRequired(uid, 'User id');
   return userModel.updateOwnerRating(uid, client);
 };
 
@@ -467,43 +467,6 @@ export const addEmailAuthentication = async (user, email, password) => {
       await authProvider.unlinkFirebaseProvider(user.firebase_uid);
     throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
   }
-};
-
-/// Data checks
-const checkUid = (uid) => {
-  if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
-};
-
-const checkEmail = (email) => {
-  if (!email) throw new Error(messages.GENERAL.FIELD_REQUIRED('Email'));
-};
-
-const checkUsername = (username) => {
-  if (!username) throw new Error(messages.GENERAL.FIELD_REQUIRED('Username'));
-};
-
-const checkFirebaseUid = (firebaseUid) => {
-  if (!firebaseUid)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Firebase UID'));
-};
-
-const checkStripeCustomerId = (stripeCustomerId) => {
-  if (!stripeCustomerId)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Stripe customer id'));
-};
-
-const checkStripeConnectedId = (stripeConnectedId) => {
-  if (!stripeConnectedId)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Stripe connected id'));
-};
-
-const checkCurrentUser = (currentUser) => {
-  if (!currentUser)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Current user'));
-};
-
-const checkType = (type) => {
-  if (!type) throw new Error(messages.GENERAL.FIELD_REQUIRED('Type'));
 };
 
 /// Error builders

@@ -12,7 +12,7 @@ import {
   TRANSACTION_TYPE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { AppError } from '../utils/error.util.js';
+import { AppError, checkRequired } from '../utils/error.util.js';
 import * as conversationService from '../services/conversation.service.js';
 import * as notificationService from '../services/notification.service.js';
 import * as userService from '../services/user.service.js';
@@ -27,7 +27,7 @@ import * as missionPaymentModel from '../models/mission-payment.model.js';
 /// Model access functions
 // Get mission by id
 export const getMissionById = async (mid) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
 
   // Find mission by id
   const mission = await missionModel.findByMid(mid);
@@ -42,7 +42,7 @@ export const getMissionByIdOrThrow = async (mid) => {
 
 // Get mission participation by id
 export const getMissionParticipationById = async (id, client) => {
-  checkVacancyId(id);
+  checkRequired(id, 'Mission participation id');
 
   // Find mission participation by id
   const missionParticipation = await missionParticipationModel.findById(
@@ -64,8 +64,8 @@ export const getMissionParticipationByMidAndAdventurerId = async (
   mid,
   adventurerId,
 ) => {
-  checkVacancyId(mid);
-  checkAdventurerId(adventurerId);
+  checkRequired(mid, 'Mission id');
+  checkRequired(adventurerId, 'Adventurer user id');
 
   // Find mission participation by id
   const missionParticipation =
@@ -86,52 +86,52 @@ export const getMissionParticipationByMidAndAdventurerIdOrThrow = async (
 
 // Gets mission current payment
 export const getMissionPaymentByMid = async (mid) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
   return await missionParticipationModel.findMissionPaymentByMid(mid);
 };
 
 // Gets all waiting for payment participants by mission
 export const getAllWaitingForPaymentByMid = async (mid) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
   return await missionParticipationModel.findAllWaitingForPaymentByMid(mid);
 };
 
 // Create mission payment
 export const createMissionPayment = async (missionPaymentData, client) => {
-  checkMissionPaymentData(missionPaymentData);
+  checkRequired(missionPaymentData, 'Mission payment data');
   return await missionPaymentModel.create(missionPaymentData, client);
 };
 
 // Get mission payments by vacancy id
 export const getMissionPaymentsByVacancyId = async (vacancyId, client) => {
-  checkVacancyId(vacancyId);
+  checkRequired(vacancyId, 'Mission participation id');
   return await missionPaymentModel.findByVacancyId(vacancyId, client);
 };
 
 // Pays a vacancy
 export const payParticipant = async (id, payment, client) => {
-  checkVacancyId(id);
-  checkPayment(payment);
+  checkRequired(id, 'Mission id');
+  checkRequired(payment, 'Mission payment');
   return await missionParticipationModel.payParticipant(id, payment, client);
 };
 
 // Get all occupied vacancies of a mission
 export const getAllOccupiedByMid = async (mid) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
   return await missionParticipationModel.findAllOccupiedByMid(mid);
 };
 
 // Updates mission payment
 export const updateMissionPayment = async (mid, payment, client) => {
-  checkMid(mid);
-  checkPayment(payment);
+  checkRequired(mid, 'Mission id');
+  checkRequired(payment, 'Mission payment');
   return await missionModel.updateMissionPayment(mid, payment, client);
 };
 
 // Updates status
 export const updateStatusByMid = async (mid, status, client) => {
-  checkMid(mid);
-  checkStatus(status);
+  checkRequired(mid, 'Mission id');
+  checkRequired(status, 'Mission status');
   return await missionModel.updateStatusByMid(mid, status, client);
 };
 
@@ -142,9 +142,9 @@ export const updateParticipationStatusByMidAndAdventurer = async (
   status,
   client,
 ) => {
-  checkMid(mid);
-  checkAdventurerId(adventurerId);
-  checkStatus(status);
+  checkRequired(mid, 'Mission id');
+  checkRequired(adventurerId, 'Adventurer user id');
+  checkRequired(status, 'Mission status');
   return await missionParticipationModel.updateStatusByMidAndAdventurer(
     mid,
     adventurerId,
@@ -160,9 +160,9 @@ export const updateParticipationAdventurerAndStatus = async (
   status,
   client,
 ) => {
-  checkVacancyId(id);
-  checkAdventurerId(adventurerId);
-  checkStatus(status);
+  checkRequired(id, 'Mission participation id');
+  checkRequired(adventurerId, 'Adventurer user id');
+  checkRequired(status, 'Mission participation status id');
   return await missionParticipationModel.updateAdventurerAndStatus(
     id,
     adventurerId,
@@ -173,20 +173,23 @@ export const updateParticipationAdventurerAndStatus = async (
 
 // Updates occupied vacancies
 export const updateOccupiedVacancies = async (mid, amount, client) => {
-  checkMid(mid);
-  checkAmount(amount);
+  checkRequired(mid, 'Mission id');
+  checkRequired(amount, 'Monetary amount');
   return await missionModel.updateOccupiedVacancies(mid, amount, client);
 };
 
 // Starts participants of a mission
 export const startParticipants = async (mid, client) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
   return await missionParticipationModel.startParticipants(mid, client);
 };
 
 // Finds a payment by Stripe transaction id
 export const findPaymentByStripeTransactionId = async (stripeTransactionId) => {
-  checkStripeTransactionId(stripeTransactionId);
+  checkRequired(
+    stripeTransactionId,
+    'Mission transaction Stripe transaction id',
+  );
   return await missionPaymentModel.findByStripeTransactionId(
     stripeTransactionId,
   );
@@ -194,13 +197,13 @@ export const findPaymentByStripeTransactionId = async (stripeTransactionId) => {
 
 // Gets mission status summary
 export const getMissionStatusSummary = async (mid, client) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
   return await missionModel.getMissionStatusSummary(mid, client);
 };
 
 // Syncs mission status due to a participation status change
 export const syncMissionCompletionStatus = async (mid, client) => {
-  checkMid(mid);
+  checkRequired(mid, 'Mission id');
   return missionModel.syncMissionCompletionStatus(mid, client);
 };
 
@@ -210,8 +213,8 @@ export const updateParticipationPaymentStatusById = async (
   status,
   client,
 ) => {
-  checkVacancyId(vacancyId);
-  checkStatus(status);
+  checkRequired(vacancyId, 'Mission participation id');
+  checkRequired(status, 'Mission status');
   return await missionParticipationModel.updatePaymentStatusById(
     vacancyId,
     status,
@@ -225,8 +228,8 @@ export const updateMissionParticipationPaymentStatus = async (
   status,
   client,
 ) => {
-  checkVacancyId(participationId);
-  checkStatus(status);
+  checkRequired(participationId, 'Mission participation id');
+  checkRequired(status, 'Mission status');
   return await missionParticipationModel.updatePaymentStatus(
     participationId,
     status,
@@ -240,8 +243,8 @@ export const updateMissionParticipationReward = async (
   monetaryReward,
   client,
 ) => {
-  checkVacancyId(participationId);
-  checkReward(monetaryReward);
+  checkRequired(participationId, 'Mission participation id');
+  checkRequired(monetaryReward, 'Monetary amount');
   return await missionParticipationModel.updateMonetaryReward(
     participationId,
     monetaryReward,
@@ -251,8 +254,8 @@ export const updateMissionParticipationReward = async (
 
 // Refund mission payment
 export const refundMissionPayment = async (amount, paymentId, client) => {
-  checkAmount(amount);
-  checkPaymentId(paymentId);
+  checkRequired(amount, 'Monetary amount');
+  checkRequired(paymentId, 'Mission payment id');
   return await missionPaymentModel.refund(amount, paymentId, client);
 };
 
@@ -262,8 +265,8 @@ export const refundMissionParticipation = async (
   amount,
   client,
 ) => {
-  checkVacancyId(participationId);
-  checkAmount(amount);
+  checkRequired(participationId, 'Mission participation id');
+  checkRequired(amount, 'Monetary amount');
   return await missionParticipationModel.refundVacancy(
     participationId,
     amount,
@@ -277,8 +280,8 @@ export const getMissionParticipationReviewContext = async (
   adventurerId,
   client,
 ) => {
-  checkMid(mid);
-  checkAdventurerId(adventurerId);
+  checkRequired(mid, 'Mission id');
+  checkRequired(adventurerId, 'Adventurer user id');
   return missionParticipationModel.findReviewContext(mid, adventurerId, client);
 };
 
@@ -317,7 +320,7 @@ export const updateMissionParticipationStatus = async (
 
 // Missions published by uid
 export const getMissionsPublishedByUid = async (uid, pagination) => {
-  checkUid(uid);
+  checkRequired(uid, 'User id');
 
   // Finds missions created by uid
   const result = await missionModel.findPublishedByUid(uid, pagination);
@@ -326,7 +329,7 @@ export const getMissionsPublishedByUid = async (uid, pagination) => {
 
 // Missions joined by uid
 export const getMissionsJoinedByUid = async (uid, pagination) => {
-  checkUid(uid);
+  checkRequired(uid, 'User id');
 
   // Finds missions joined by uid
   const result = await missionModel.findJoinedByUid(uid, pagination);
@@ -335,7 +338,7 @@ export const getMissionsJoinedByUid = async (uid, pagination) => {
 
 // Public missions published by uid
 export const getMissionsPublicPublishedByUid = async (uid, pagination) => {
-  checkUid(uid);
+  checkRequired(uid, 'User id');
 
   // Finds public missions created by uid
   const result = await missionModel.findPublicPublishedByUid(uid, pagination);
@@ -344,7 +347,7 @@ export const getMissionsPublicPublishedByUid = async (uid, pagination) => {
 
 // Public missions joined by uid
 export const getMissionsPublicJoinedByUid = async (uid, pagination) => {
-  checkUid(uid);
+  checkRequired(uid, 'User id');
 
   // Finds public missions joined by uid
   const result = await missionModel.findPublicJoinedByUid(uid, pagination);
@@ -375,8 +378,8 @@ export const releaseMissionParticipation = async (
       transactionClient.release();
     }
   }
-  checkMid(mid);
-  checkAdventurerId(adventurerId);
+  checkRequired(mid, 'Mission id');
+  checkRequired(adventurerId, 'Adventurer user id');
   const participation =
     await missionParticipationModel.updateStatusByMidAndAdventurer(
       mid,
@@ -477,8 +480,8 @@ export const getOpenedMissions = async (
 // Get mission by mid
 export const getMissionByMid = async (mid, uid) => {
   // Parameter checks
-  checkUid(uid);
-  checkMid(mid);
+  checkRequired(uid, 'Current user id');
+  checkRequired(mid, 'Mission id');
 
   // Searches mission by id
   const [mission, participants, waitingForPaymentVacancies, photos] =
@@ -526,11 +529,11 @@ export const publishMission = async (
   photos,
 ) => {
   // Parameter checks
-  checkUid(uid);
-  checkTitle(title);
-  checkDescription(description);
-  checkVacancies(vacancies);
-  checkVacanciesData(vacanciesData);
+  checkRequired(uid, 'Current user id');
+  checkRequired(title, 'Mission title');
+  checkRequired(description, 'Mission description');
+  checkRequired(vacancies, 'Mission number of vacancies');
+  checkRequired(vacanciesData, 'Mission vacancies data');
 
   // Checks if photo number is correct
   if (photos.length > consts.MISSION.PHOTOS.MAX) throw buildTooManyFilesError();
@@ -620,8 +623,8 @@ export const publishMission = async (
 // Close mission
 export const closeMission = async (mid, user) => {
   // Parameter checks
-  checkMid(mid);
-  checkUser(user);
+  checkRequired(mid, 'Mission id');
+  checkRequired(user, 'Current user');
 
   // First of all, data is read and validations are made
   const {
@@ -794,9 +797,9 @@ const closeMissionInternalUpdates = async (
 // Join mission
 export const joinMission = async (mid, user, message, vacancyId) => {
   // Parameter checks
-  checkMid(mid);
-  checkUser(user);
-  checkVacancyId(vacancyId);
+  checkRequired(mid, 'Mission id');
+  checkRequired(user, 'Current user');
+  checkRequired(vacancyId, 'Mission participation id');
 
   // Mission is searched
   const mission = await getMissionByIdOrThrow(mid);
@@ -879,10 +882,10 @@ export const inviteToMission = async (
   user,
 ) => {
   // Parameter checks
-  checkMid(mid);
-  checkVacancyId(vacancyId);
-  checkSenderId(senderId);
-  checkReceiverId(receiverId);
+  checkRequired(mid, 'Mission id');
+  checkRequired(vacancyId, 'Mission participation id');
+  checkRequired(senderId, 'Notification sender user id');
+  checkRequired(receiverId, 'Notification receiver user id');
 
   // Cannot send a invitation to itself
   if (senderId === receiverId)
@@ -957,9 +960,9 @@ export const inviteToMission = async (
 // Unjoin mission
 export const unjoinMission = async (mid, vacancyId, user) => {
   // Parameter checks
-  checkMid(mid);
-  checkVacancyId(vacancyId);
-  checkUser(user);
+  checkRequired(mid, 'Mission id');
+  checkRequired(vacancyId, 'Mission participation id');
+  checkRequired(user, 'Current user');
 
   // Mission is searched
   const mission = await getMissionByIdOrThrow(mid);
@@ -1077,8 +1080,8 @@ export const unjoinMission = async (mid, vacancyId, user) => {
 // Submit participation
 export const submitMissionParticipation = async (mid, user) => {
   // Parameter checks
-  checkMid(mid);
-  checkUser(user);
+  checkRequired(mid, 'Mission id');
+  checkRequired(user, 'Current user');
 
   // Gets mission
   const mission = await getMissionByIdOrThrow(mid);
@@ -1185,8 +1188,8 @@ export const submitMissionParticipation = async (mid, user) => {
 // Cancel mission TODO: probar
 export const cancelMission = async (mid, user) => {
   // Parameter checks
-  checkMid(mid);
-  checkUser(user);
+  checkRequired(mid, 'Mission id');
+  checkRequired(user, 'Current user');
 
   // To save successful payments
   const successfulPayments = [];
@@ -1399,8 +1402,8 @@ export const cancelMission = async (mid, user) => {
 // Reopen mission
 export const reopenMission = async (mid, user) => {
   // Parameters check
-  checkMid(mid);
-  checkUser(user);
+  checkRequired(mid, 'Mission id');
+  checkRequired(user, 'Current user');
 
   // Mission is searched
   const mission = await getMissionByIdOrThrow(mid);
@@ -1500,8 +1503,8 @@ export const reopenMission = async (mid, user) => {
 // Finish mission
 export const finishMission = async (mid, user) => {
   // Parameters check
-  checkMid(mid);
-  checkUser(user);
+  checkRequired(mid, 'Mission id');
+  checkRequired(user, 'Current user');
 
   // Mission is searched
   const mission = await getMissionByIdOrThrow(mid);
@@ -1559,8 +1562,8 @@ export const finishMission = async (mid, user) => {
 // Edit mission
 export const editMission = async (user, mission, newPhotos, existingPhotos) => {
   // Parameter checks
-  checkUid(user.uid);
-  checkMission(mission);
+  checkRequired(user, 'Current user');
+  checkRequired(mission, 'Mission');
 
   // First, all fields validations are done
   const {
@@ -2161,91 +2164,6 @@ const editMissionExternalUpdates = async (
       notification.payload,
     );
   }
-};
-
-/// Data checks
-const checkMission = (mission) => {
-  if (!mission) throw new Error(messages.GENERAL.FIELD_REQUIRED('Mission'));
-};
-
-const checkMid = (mid) => {
-  if (!mid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Mid'));
-};
-
-const checkTitle = (title) => {
-  if (!title) throw new Error(messages.GENERAL.FIELD_REQUIRED('Title'));
-};
-
-const checkDescription = (description) => {
-  if (!description)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Description'));
-};
-
-const checkVacancies = (vacancies) => {
-  if (!vacancies) throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancies'));
-};
-
-const checkVacanciesData = (vacanciesData) => {
-  if (!vacanciesData)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancies data'));
-};
-
-const checkVacancyId = (vacancyId) => {
-  if (!vacancyId)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Vacancy id'));
-};
-
-const checkUid = (uid) => {
-  if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
-};
-
-const checkSenderId = (senderId) => {
-  if (!senderId) throw new Error(messages.GENERAL.FIELD_REQUIRED('Sender id'));
-};
-
-const checkReceiverId = (receiverId) => {
-  if (!receiverId)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Receiver id'));
-};
-
-const checkAdventurerId = (adventurerId) => {
-  if (!adventurerId)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Adventurer id'));
-};
-
-const checkUser = (user) => {
-  if (!user) throw new Error(messages.GENERAL.FIELD_REQUIRED('User'));
-};
-
-const checkMissionPaymentData = (paymentData) => {
-  if (!paymentData)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment data'));
-};
-
-const checkPayment = (payment) => {
-  if (!payment) throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment'));
-};
-
-const checkPaymentId = (paymentId) => {
-  if (!paymentId)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment id'));
-};
-
-const checkStatus = (status) => {
-  if (!status) throw new Error(messages.GENERAL.FIELD_REQUIRED('Status'));
-};
-
-const checkAmount = (amount) => {
-  if (!amount) throw new Error(messages.GENERAL.FIELD_REQUIRED('Amount'));
-};
-
-const checkReward = (reward) => {
-  if (!reward) throw new Error(messages.GENERAL.FIELD_REQUIRED('Reward'));
-};
-
-const checkStripeTransactionId = (stripeTransactionId) => {
-  if (!stripeTransactionId)
-    throw new Error(messages.GENERAL.FIELD_REQUIRED('Stripe transaction id'));
 };
 
 /// Error builders
