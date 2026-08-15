@@ -184,8 +184,16 @@ export const messages = {
       // Reject
       CANNOT_REJECT_PARTICIPATION_STATE: `Can't reject participation on current state`,
 
-      // Approve
-      MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY: `Participation approved successfully.`,
+      // Accepted
+      ACCEPTED_SUCCESSFULLY: `Participation accepted successfully.`,
+    },
+    RESPOND_TO_PARTICIPATION_REJECTION: {
+      // General
+      ALREADY_REVIEWED: `This participation rejection has already been reviewed.`,
+
+      // Accepted
+      ACCEPTED_SUCCESSFULLY:
+        'Participation rejection revision accepted successfully.',
     },
 
     // Messages sent to users in a notification

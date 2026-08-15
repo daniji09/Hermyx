@@ -220,17 +220,6 @@ export const updateMissionParticipationAdventurerReview = async (
     reviewId,
     client,
   );
-
-export const reopenMissionParticipation = async (mid, adventurerId, client) => {
-  checkMid(mid);
-  checkAdventurerId(adventurerId);
-  return missionParticipationModel.reopenParticipation(
-    mid,
-    adventurerId,
-    client,
-  );
-};
-
 export const disputeMissionParticipation = async (mid, adventurerId, client) =>
   missionParticipationModel.disputeParticipation(mid, adventurerId, client);
 

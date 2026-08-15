@@ -367,14 +367,13 @@ const acceptParticipationReview = async ({
       adventurer.uid,
       MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
     );
-    console.log('aceptoo');
+
     // Creates participation transfer on Stripe outside of database transaction but in its own try
     const transfer = await createParticipationTransfer(
       mission.mid,
       participation,
       adventurer,
     );
-    console.log('pago', transfer);
     // Accept a participation needs a database transaction
     const client = await pool.connect();
     try {
@@ -387,14 +386,14 @@ const acceptParticipationReview = async ({
         transfer,
         client,
       });
-      console.log('completo en db');
+
       // Updates notification status and marks it as read
       await resolveNotification(
         notification.nid,
         NOTIFICATION_STATUS.ACCEPTED.ID,
         client,
       );
-      console.log('resuelvo notificacion');
+
       // If everything is ok, marks participation as released
       // Updates participation status to accepted
       await missionService.updateParticipationStatusByMidAndAdventurer(
@@ -403,7 +402,6 @@ const acceptParticipationReview = async ({
         MISSION_PARTICIPATION_STATUS.RELEASED.ID,
         client,
       );
-      console.log('released!!!');
       await client.query('COMMIT');
       successfulPayment = true;
     } catch (dbError) {
@@ -461,7 +459,7 @@ const acceptParticipationReview = async ({
   return {
     message:
       messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
-        .MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY,
+        .ACCEPTED_SUCCESSFULLY,
   };
 };
 
@@ -471,16 +469,23 @@ const respondToParticipationRejection = async ({
   message: disputeReason,
   user,
 }) => {
-  const missionId = notification.payload.associated_mission_id;
-  const mission = await missionService.getMissionByIdOrThrow(missionId);
+  // Gets mission information
+  const mid = notification.payload.associated_mission_id;
+  const mission = await missionService.getMissionByIdOrThrow(mid);
+
+  // Gets participation
   const participation =
     await missionService.getMissionParticipationByMidAndAdventurerIdOrThrow(
-      missionId,
+      mid,
       user.uid,
     );
   if (participation.status !== MISSION_PARTICIPATION_STATUS.REJECTED.ID)
-    throw new AppError(messages.MISSION_PARTICIPATION_ALREADY_REVIEWED, 409);
+    throw new AppError(
+      messages.NOTIFICATION.RESPOND_TO_PARTICIPATION_REJECTION.ALREADY_REVIEWED,
+      409,
+    );
 
+  // If user disputes the rejection
   if (response === 'disputed')
     return disputeParticipationReview({
       notification,
@@ -491,20 +496,31 @@ const respondToParticipationRejection = async ({
       reportType: REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
       counterpartId: mission.owner_id,
     });
+
+  // If user accepts the rejection
   checkAcceptedResponse(response);
+
+  // Checks if mission can be in progress by status again
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
     messages.CANNOT_REOPEN_PARTICIPATION_STATE,
   );
 
+  // Reopens participation, syncs mission and responds to notification, all in a database transaction
   await withTransaction(async (client) => {
-    await missionService.reopenMissionParticipation(
-      missionId,
+    // Participation is in progress again
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      mid,
       user.uid,
+      MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
       client,
     );
-    await missionService.syncMissionCompletionStatus(missionId, client);
+
+    // Syncs mission state
+    await syncMissionCompletionStatus(mid, client);
+
+    // Resolves notification
     await resolveNotification(
       notification.nid,
       NOTIFICATION_STATUS.ACCEPTED.ID,
@@ -512,7 +528,9 @@ const respondToParticipationRejection = async ({
     );
   });
   return {
-    message: messages.MISSION_PARTICIPATION_REVISION_ACCEPTED_SUCCESSFULLY,
+    message:
+      messages.NOTIFICATION.RESPOND_TO_PARTICIPATION_REJECTION
+        .ACCEPTED_SUCCESSFULLY,
   };
 };
 

@@ -307,21 +307,6 @@ export const releaseParticipation = async (mid, adventurerId, client = pool) =>
     client,
   );
 
-export const reopenParticipation = async (mid, adventurerId, client = pool) => {
-  const query = `
-    UPDATE mission_participation
-    SET status = $3
-    WHERE mid = $1 AND adventurer_id = $2
-    RETURNING *
-  `;
-  const result = await client.query(query, [
-    mid,
-    adventurerId,
-    MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
-  ]);
-  return result.rows[0] || null;
-};
-
 export const disputeParticipation = async (
   mid,
   adventurerId,
