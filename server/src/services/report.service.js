@@ -280,6 +280,11 @@ export const reportAdventurer = async ({
 
 // Report user
 export const reportUser = async ({ message, senderId, userId }) => {
+  // Parameter check
+  checkRequired(userId, 'User id');
+  checkRequired(senderId, 'Sender id');
+  checkRequired(message, 'Message');
+
   // Checks if user exists
   await getUserOrThrow(userId);
   // Creates user report with transaction
@@ -295,27 +300,38 @@ export const reportUser = async ({ message, senderId, userId }) => {
   );
 };
 
-export const reportMission = async ({ message, missionId, senderId }) => {
-  const mission = await getMissionOrThrow(missionId);
+export const reportMission = async ({ message, mid, senderId }) => {
+  // Check parameter
+  checkRequired(mid, 'Mission id');
+  checkRequired(senderId, 'Sender id');
+  checkRequired(message, 'Message');
+
+  // Get mission information
+  const mission = await getMissionOrThrow(mid);
+  // Check if sender is not mission owner
   if (mission.owner_id === senderId) {
-    throw new AppError(messages.UNAUTHORIZED_ERROR, 403);
-  }
-  if (mission.status === MISSION_STATUS.REPORTED.ID) {
-    throw new AppError(messages.MISSION_CLOSED_BY_REPORT, 409);
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
 
-  return createReportTransaction(
+  // Checks if mission has already been reported
+  if (mission.status === MISSION_STATUS.REPORTED.ID) {
+    throw new AppError(messages.REPORT.REPORT_MISSION.CLOSED_BY_REPORT, 409);
+  }
+
+  // Creates report with transaction
+  return await createReportTransaction(
     {
       senderId,
       message,
       type: REPORT_TYPE.REPORT_MISSION.ID,
-      lookupPayload: { missionId },
-      payload: { associated_mission_id: missionId },
+      lookupPayload: { mid },
+      payload: { associated_mission_id: mid },
     },
-    messages.MISSION_ALREADY_REPORTED,
+    messages.REPORT.REPORT_MISSION.ACTIVE_REPORT,
   );
 };
 
+// Creates a standard report (user or mission) with a transaction
 const createReportTransaction = async (reportData, activeReportMessage) => {
   const client = await pool.connect();
   try {

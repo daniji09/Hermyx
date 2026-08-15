@@ -302,6 +302,10 @@ export const messages = {
     REPORT_USER: {
       ACTIVE_REPORT: `You already have an active report for this user. Our team is checking it.`,
     },
+    REPORT_MISSION: {
+      ACTIVE_REPORT: `You already have an active report for this mission. Our team is checking it.`,
+      CLOSED_BY_REPORT: `This mission has already been close by a report.`,
+    },
   },
 
   /// Conversation messages

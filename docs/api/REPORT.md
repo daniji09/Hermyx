@@ -203,3 +203,61 @@ Reporting a user on the application
 <br>
 <br>
 <br>
+
+## - Report mission: `POST /api/reports/mission`
+
+Reporting a mission on the application
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+| `message` | string | Yes | Report message. |
+<br>
+
+**Responses:**
+
+- `201 OK`: report created successfully.
+
+  ```json
+  {
+    "report": "<report>"
+  }
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: cannot report its own mission.
+
+  ```json
+  {
+    "errors": {
+      "general": ["You can't report your own mission."]
+    }
+  }
+  ```
+
+- `404 Not Found`: report not found, report with that rid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Report not found."]
+    }
+  }
+  ```
+  <br>
+
+**Workflow:** when reporting a mission, report is created over that user.
+<br>
+<br>
+<br>

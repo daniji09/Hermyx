@@ -62,6 +62,7 @@ export const reportUserValidation = z.object({
   message: reportMessageBaseSchema,
 });
 
+// Report mission
 export const reportMissionValidation = z.object({
   mid: midBaseSchema,
   message: reportMessageBaseSchema,
