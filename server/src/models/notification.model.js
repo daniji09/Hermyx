@@ -39,6 +39,14 @@ export const create = async (notificationData, client = pool) => {
 };
 
 /// FINDS
+// Finds by nid
+export const findByNid = async (nid, client = pool) => {
+  const query = 'SELECT * FROM notification WHERE nid = $1';
+  const result = await client.query(query, [nid]);
+  return result.rows[0];
+};
+
+// Finds by recipient id
 export const findByRecipientId = async (recipientId, client = pool) => {
   const query = `
     SELECT
@@ -73,7 +81,8 @@ export const findByRecipientId = async (recipientId, client = pool) => {
   return result.rows;
 };
 
-export const findByActionStatusAndVacancy = async (
+// Finds by action status and vacancy
+export const findByActionStatusAndMissionParticipationId = async (
   action,
   status,
   associated_vacancy_id,
@@ -147,6 +156,21 @@ export const countParticipationReviewAttempts = async (
   return result.rows[0].attempts;
 };
 
+// Finds all expired participation reviews: participations that have been send more than 7 days ago and haven't been responded
+export const findExpiredParticipationReviews = async () => {
+  const query = `
+      SELECT * 
+      FROM notification
+      WHERE action = $1 AND status = $2 
+        AND date <= NOW() - INTERVAL '168 hours'
+    `; // 7 days
+  const result = await pool.query(query, [
+    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+  ]);
+  return result.rows;
+};
+
 /// UPDATES
 // Update notification
 export const update = async (notificationData, client = pool) => {
@@ -202,7 +226,7 @@ export const markAllAsSeenByRecipientId = async (
   return result.rows;
 };
 
-// Marks notification as seen
+// Marks notification as seen by nid
 export const markAsSeenByNid = async (nid, client = pool) => {
   const query = `
     UPDATE notification
@@ -231,12 +255,6 @@ export const addAssociatedReport = async (
   return result.rows[0] || null;
 };
 
-export const findById = async (id, client = pool) => {
-  const query = 'SELECT * FROM notification WHERE nid = $1';
-  const result = await client.query(query, [id]);
-  return result.rows[0];
-};
-
 export const findByActionStatusSenderAndMission = async (
   action,
   status,
@@ -255,20 +273,6 @@ export const findByActionStatusSenderAndMission = async (
     status,
     associated_mission_id,
     sender_id,
-  ]);
-  return result.rows;
-};
-
-export const findExpiredParticipationReviews = async (client = pool) => {
-  const query = `
-      SELECT * 
-      FROM notification
-      WHERE action = $1 AND status = $2 
-        AND date <= NOW() - INTERVAL '168 hours'
-    `; // 7 days
-  const result = await client.query(query, [
-    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
-    NOTIFICATION_STATUS.PENDING.ID,
   ]);
   return result.rows;
 };

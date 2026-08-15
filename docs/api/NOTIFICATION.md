@@ -45,6 +45,62 @@ Marks all notifications that the current user hadn't seen as seen.
 <br>
 <br>
 
+## - Marks notification as seen: `POST /api/notifications/:nid/seen`
+
+Marks all notifications that the current user hadn't seen as seen.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `nid` | integer | Yes | Notification identifier. |
+
+**Responses:**
+
+- `200 OK`: search done successfully (could retrieve no notifications).
+
+  ```json
+  {
+    "notification": ["<notification_marked_as_seen>"]
+  }
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: cannot respond a notification which they have not received.
+
+```json
+{
+  "errors": {
+    "general": ["<error>"]
+  }
+}
+```
+
+- `404 Not Found`: notification not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Notification not found."]
+    }
+  }
+  ```
+
+**Workflow:** this endpoint is fairly easy: searches notification, checks if actually belongs to current user and marks it as seen.
+<br>
+<br>
+<br>
+
 ## - Marks current user's unseen notifications as seen: `POST /api/notifications/:nid/respond`
 
 Responds to a notification which type is actionable.

@@ -10,45 +10,28 @@ import {
   respondToNotificationBodySchema,
   respondToNotificationParamSchema,
 } from '@hermyx/shared';
-import {
-  verifyCronToken,
-  verifyToken,
-} from '../middlewares/auth.middleware.js';
 
 /// GETS
 // List current user notifications
-router.get('/me', verifyToken, notificationController.getMyNotifications);
+router.get('/me', notificationController.getMyNotifications);
 
 /// POSTS
 // Mark all current user's unseen notifications as seen
+router.post('/seen', notificationController.markMyNotificationsAsSeen);
+
 router.post(
-  '/seen',
-  verifyToken,
-  notificationController.markMyNotificationsAsSeen,
+  '/:nid/seen',
+  validateParamsSchema(respondToNotificationParamSchema),
+  notificationController.markMyNotificationAsSeen,
 );
 
 // Respond to a notification
 router.post(
   '/:nid/respond',
-  verifyToken,
+
   validateParamsSchema(respondToNotificationParamSchema),
   validateBodySchema(respondToNotificationBodySchema),
   notificationController.respondToNotification,
-);
-
-// ---
-
-router.post(
-  '/:notificationId/seen',
-  verifyToken,
-  validateParamsSchema(respondToNotificationParamSchema),
-  notificationController.markMyNotificationAsSeen,
-);
-
-router.post(
-  '/cron/auto-accept',
-  verifyCronToken,
-  notificationController.autoAcceptParticipation,
 );
 
 export default router;

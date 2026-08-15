@@ -1,7 +1,6 @@
 import { messages, USER_ROLE, USER_STATUS } from '@hermyx/shared';
 import { verifyIdToken } from '../providers/auth.provider.js';
 import * as userService from '../services/user.service.js';
-import { CRON_SECRET_TOKEN } from '../config/config.js';
 
 export const verifyToken = async (req, res, next) => {
   try {
@@ -56,17 +55,4 @@ export const verifyAdmin = async (req, res, next) => {
   return res
     .status(403)
     .json({ error: 'Access denied. Admin role is needed.' });
-};
-
-export const verifyCronToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const expectedToken = `Bearer ${CRON_SECRET_TOKEN}`;
-
-  if (!authHeader || authHeader !== expectedToken) {
-    return res.status(403).json({
-      error: messages.SYSTEM_FORBIDDEN,
-    });
-  }
-
-  next();
 };

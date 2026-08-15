@@ -13,7 +13,7 @@ import {
   TRANSACTION_TYPE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { AppError } from '../utils/error.util.js';
+import { AppError, checkRequired } from '../utils/error.util.js';
 import * as notificationModel from '../models/notification.model.js';
 import * as disputeService from './dispute.service.js';
 import * as missionService from './mission.service.js';
@@ -28,8 +28,8 @@ export const createNotification = async (notificationData, client) =>
 
 // Get notification by nid
 export const getNotificationByNid = async (nid, client) => {
-  checkNid(nid);
-  return await notificationModel.findById(nid, client);
+  checkRequired(nid, 'Notification id');
+  return await notificationModel.findByNid(nid, client);
 };
 
 const getNotificationByNidOrThrow = async (nid) => {
@@ -39,87 +39,96 @@ const getNotificationByNidOrThrow = async (nid) => {
   return notification;
 };
 
-export const getNotificationsByRecipientId = async (recipientId, client) =>
-  notificationModel.findByRecipientId(recipientId, client);
-
+// Get notification by action status and vacancy id
 export const findNotificationByActionStatusAndVacancyId = async (
   action,
   status,
   vacancyId,
   client,
-) =>
-  notificationModel.findByActionStatusAndVacancy(
+) => {
+  // Parameter checks
+  checkRequired(action, 'Notification action');
+  checkRequired(status, 'Notification status');
+  checkRequired(vacancyId, 'Mission participation id');
+  return await notificationModel.findByActionStatusAndMissionParticipationId(
     action,
     status,
     vacancyId,
     client,
   );
+};
 
-export const findNotificationsByActionStatusSenderAndMissionId = async (
-  action,
-  status,
-  missionId,
-  senderId,
-  client,
-) =>
-  notificationModel.findByActionStatusSenderAndMission(
-    action,
-    status,
-    missionId,
-    senderId,
-    client,
-  );
+// Updates notification
+export const updateNotification = async (notificationData, client) => {
+  // Parameter checks
+  checkRequired(notificationData, 'Notification data');
+  return await notificationModel.update(notificationData, client);
+};
 
-export const findExpiredParticipationReviews = async (client) =>
-  notificationModel.findExpiredParticipationReviews(client);
+// Updates notification status
+export const updateNotificationStatus = async (nid, status, client) => {
+  // Parameter checks
+  checkRequired(nid, 'Notification id');
+  checkRequired(status, 'Notification status');
+  return await notificationModel.updateStatusByNid(nid, status, client);
+};
 
-export const updateNotification = async (notificationData, client) =>
-  notificationModel.update(notificationData, client);
+// Marks notifications as seen
+export const markNotificationAsSeen = async (nid, client) => {
+  // Parameter checks
+  checkRequired(nid, 'Notification id');
+  return await notificationModel.markAsSeenByNid(nid, client);
+};
 
-export const updateNotificationStatus = async (
-  notificationId,
-  status,
-  client,
-) => notificationModel.updateStatusByNid(notificationId, status, client);
+// Adds associated report
+export const addAssociatedReport = async (nid, rid, client) => {
+  // Parameter checks
+  checkRequired(nid, 'Notification id');
+  checkRequired(rid, 'Report id');
+  return await notificationModel.addAssociatedReport(nid, rid, client);
+};
 
-export const markNotificationAsSeen = async (notificationId, client) =>
-  notificationModel.markAsSeenByNid(notificationId, client);
-
-export const markNotificationsAsSeenByRecipientId = async (
-  recipientId,
-  client,
-) => notificationModel.markAllAsSeenByRecipientId(recipientId, client);
-
-export const addAssociatedReport = async (notificationId, reportId, client) =>
-  notificationModel.addAssociatedReport(notificationId, reportId, client);
-
+// Searches if user has pending join notifications on a vacancy
 export const hasPendingJoinNotification = async (
   mid,
   uid,
-  ownerId,
+  recipientId,
   vacancyId,
   client,
-) =>
-  notificationModel.hasPendingJoinNotification(
+) => {
+  checkRequired(mid, 'Mission id');
+  checkRequired(uid, 'User id');
+  checkRequired(recipientId, 'Notification recipient user id');
+  checkRequired(vacancyId, 'Mission participation id');
+  return await notificationModel.hasPendingJoinNotification(
     mid,
     uid,
-    ownerId,
+    recipientId,
     vacancyId,
     client,
   );
+};
 
+// Counts participation review attempts
 export const countParticipationReviewAttempts = async (
   mid,
   adventurerId,
   client,
-) =>
-  notificationModel.countParticipationReviewAttempts(mid, adventurerId, client);
+) => {
+  (checkRequired(mid, 'Mission id'),
+    checkRequired(adventurerId, 'Adventurer user id'));
+  return await notificationModel.countParticipationReviewAttempts(
+    mid,
+    adventurerId,
+    client,
+  );
+};
 
 /// Endpoint complex functions
 // Gets current user's notifications
 export const getMyNotifications = async (uid) => {
   // Parameter checks
-  checkUid(uid);
+  checkRequired(uid, 'User id');
 
   // Gets current user's notifications
   return await notificationModel.findByRecipientId(uid);
@@ -128,7 +137,7 @@ export const getMyNotifications = async (uid) => {
 // Marks all current user's unseen notifications are seen
 export const markMyNotificationsAsSeen = async (uid) => {
   // Parameter checks
-  checkUid(uid);
+  checkRequired(uid, 'User id');
 
   // Marks notifications as seen
   return await notificationModel.markAllAsSeenByRecipientId(uid);
@@ -142,9 +151,9 @@ export const respondToNotification = async ({
   user,
 }) => {
   // Parameter checks
-  checkNid(nid);
-  checkResponse(response);
-  checkUser(user);
+  checkRequired(nid, 'Notification id');
+  checkRequired(response, 'Notification response');
+  checkRequired(user, 'Current user');
 
   // Gets notification
   const notification = await getNotificationByNidOrThrow(nid);
@@ -340,6 +349,7 @@ const acceptParticipationReview = async ({
   participation,
   mission,
   user,
+  isAutomatic = false,
 }) => {
   // Gets adventurer that sent the notification
   const adventurer = await userService.getUserByUidOrThrow(
@@ -422,22 +432,24 @@ const acceptParticipationReview = async ({
   }
 
   // Notification is created outside the main transaction, because it always has to been send, even if monetary transaction fails
-  const approvedMessage = successfulPayment
-    ? messages.NOTIFICATION.ACCEPT_PARTICIPATION.SUCCESSFUL(
-        mission.title,
-        user.username,
-      )
-    : messages.NOTIFICATION.ACCEPT_PARTICIPATION.ISSUED(
-        mission.title,
-        user.username,
-      );
+  const approvedMessage = isAutomatic
+    ? messages.NOTIFICATION.ACCEPT_PARTICIPATION.AUTOMATIC(mission.title)
+    : successfulPayment
+      ? messages.NOTIFICATION.ACCEPT_PARTICIPATION.SUCCESSFUL(
+          mission.title,
+          user.username,
+        )
+      : messages.NOTIFICATION.ACCEPT_PARTICIPATION.ISSUED(
+          mission.title,
+          user.username,
+        );
   const followUpNotificationId = await withTransaction(async (client) => {
     await notificationModel.create(
       buildNotification({
         action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
         message: approvedMessage,
         receiverId: adventurer.uid,
-        senderId: user.uid,
+        senderId: isAutomatic ? HERMYX_SYSTEM_ID : user.uid,
         missionId: mission.mid,
       }),
       client,
@@ -460,6 +472,48 @@ const acceptParticipationReview = async ({
       messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
         .ACCEPTED_SUCCESSFULLY,
   };
+};
+
+// Completes the approval of a participation
+const completeParticipationApproval = async ({
+  mission,
+  participation,
+  adventurer,
+  transfer,
+  client,
+}) => {
+  // If a transfer in Stripe was made, it creates the payment on database
+  if (transfer) {
+    // Creates payment on database
+    await missionService.createMissionPayment(
+      {
+        mid: mission.mid,
+        vacancy_id: participation.id,
+        sender_id: HERMYX_SYSTEM_ID,
+        receiver_id: adventurer.uid,
+        stripe_transaction_id: transfer.id,
+        transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
+        amount_paid: participation.monetary_reward,
+      },
+      client,
+    );
+
+    // Marks mission participation as paid out
+    await missionService.updateParticipationPaymentStatusById(
+      participation.id,
+      MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
+      client,
+    );
+
+    // User stops participating on the mission conversation, but can see the history
+    await conversationService.freezeMissionConversationHistory(
+      mission.mid,
+      adventurer.uid,
+      client,
+    );
+  }
+  // Syncs mission completion status
+  await syncMissionCompletionStatus(mission.mid, client);
 };
 
 // Responds to participation rejection by applicant
@@ -735,13 +789,13 @@ const createJoinResolutionNotifications = async (
 ) => {
   const vacancyId = notification.payload.associated_vacancy_id;
   const [vacancyNotifications, adventurerNotifications] = await Promise.all([
-    findNotificationByActionStatusAndVacancyId(
+    notificationModel.findByActionStatusAndMissionParticipationId(
       NOTIFICATION_ACTION.JOIN_REQUEST.ID,
       NOTIFICATION_STATUS.PENDING.ID,
       vacancyId,
       client,
     ),
-    findNotificationsByActionStatusSenderAndMissionId(
+    notificationModel.findByActionStatusSenderAndMission(
       NOTIFICATION_ACTION.JOIN_REQUEST.ID,
       NOTIFICATION_STATUS.PENDING.ID,
       mission.mid,
@@ -1155,147 +1209,55 @@ const persistNegotiationPaymentChanges = async (
   }
 };
 
-export const markMyNotificationAsSeen = async (notificationId, userId) => {
-  const notification = await getNotificationByNidOrThrow(notificationId);
+// Marks notification as seem
+export const markMyNotificationAsSeen = async (nid, userId) => {
+  // Gets notifications
+  const notification = await getNotificationByNidOrThrow(nid);
+
+  // Checks if notification recipient is current user, so is authorized to respond it
   checkNotificationRecipient(notification.recipient_id, userId);
-  return markNotificationAsSeen(notificationId);
+
+  // Marks it as seen
+  return await notificationModel.markAsSeenByNid(nid);
 };
 
 export const autoAcceptParticipation = async () => {
-  const expiredReviews = await findExpiredParticipationReviews();
+  // Gets expired participations
+  const expiredReviews =
+    await notificationModel.findExpiredParticipationReviews();
   if (expiredReviews.length === 0) return 'No notifications expired.';
+
+  // Accepts them all
   const errors = [];
   const successes = [];
   for (const notification of expiredReviews) {
     try {
-      await autoAcceptParticipationReview(notification);
+      // Gets notification info
+      const mission = await missionService.getMissionByIdOrThrow(
+        notification.payload.associated_mission_id,
+      );
+      const participation =
+        await missionService.getMissionParticipationByMidAndAdventurerIdOrThrow(
+          mission.mid,
+          notification.sender_id,
+        );
+      const user = await userService.getUserByUidOrThrow(HERMYX_SYSTEM_ID);
+      // Accepts notification
+      await acceptParticipationReview({
+        notification,
+        participation,
+        mission,
+        user,
+        isAutomatic: true,
+      });
       successes.push(
-        `${messages.MISSION_PARTICIPATION_APPROVED_SUCCESSFULLY}. Notification: ${notification.nid}.`,
+        `${messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION.ACCEPTED_SUCCESSFULLY}. Notification: ${notification.nid}.`,
       );
     } catch (error) {
       errors.push(`${error.message}. Notification: ${notification.nid}.`);
     }
   }
   return { errors, successes };
-};
-
-const autoAcceptParticipationReview = async (notification) => {
-  const mission = await missionService.getMissionByIdOrThrow(
-    notification.payload.associated_mission_id,
-  );
-  const participation =
-    await missionService.getMissionParticipationByMidAndAdventurerIdOrThrow(
-      mission.mid,
-      notification.sender_id,
-    );
-  checkParticipationTransition(
-    participation,
-    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-    messages.CANNOT_ACCEPT_PARTICIPATION_STATE,
-  );
-  const adventurer = await userService.getUserByUidOrThrow(
-    notification.sender_id,
-  );
-  const transfer = await createParticipationTransfer(
-    mission.mid,
-    participation,
-    adventurer,
-  );
-  const approvedMessage = `Your participation in "${mission.title}" was approved automatically by the system after it wasn't reviewed on time (one week).`;
-  const followUpNotificationId = await withTransaction(async (client) => {
-    await completeParticipationApproval({
-      mission,
-      participation,
-      adventurer,
-      transfer,
-      client,
-    });
-    await resolveNotification(
-      notification.nid,
-      NOTIFICATION_STATUS.ACCEPTED.ID,
-      client,
-    );
-    return createNotification(
-      buildNotification({
-        action: NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
-        message: approvedMessage,
-        receiverId: adventurer.uid,
-        senderId: HERMYX_SYSTEM_ID,
-        missionId: mission.mid,
-      }),
-      client,
-    );
-  });
-  socketProvider.emitToUser(
-    adventurer.uid,
-    'mission:participation-approved',
-    buildMissionEvent(
-      followUpNotificationId,
-      mission,
-      { uid: HERMYX_SYSTEM_ID, username: 'SYSTEM' },
-      approvedMessage,
-      NOTIFICATION_ACTION.PARTICIPATION_APPROVED.ID,
-    ),
-  );
-};
-
-// Completes the approval of a participation
-const completeParticipationApproval = async ({
-  mission,
-  participation,
-  adventurer,
-  transfer,
-  client,
-}) => {
-  // If a transfer in Stripe was made, it creates the payment on database
-  if (transfer) {
-    // Creates payment on database
-    await missionService.createMissionPayment(
-      {
-        mid: mission.mid,
-        vacancy_id: participation.id,
-        sender_id: HERMYX_SYSTEM_ID,
-        receiver_id: adventurer.uid,
-        stripe_transaction_id: transfer.id,
-        transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
-        amount_paid: participation.monetary_reward,
-      },
-      client,
-    );
-
-    // Marks mission participation as paid out
-    await missionService.updateParticipationPaymentStatusById(
-      participation.id,
-      MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
-      client,
-    );
-
-    // User stops participating on the mission conversation, but can see the history
-    await conversationService.freezeMissionConversationHistory(
-      mission.mid,
-      adventurer.uid,
-      client,
-    );
-  }
-  // Syncs mission completion status
-  await syncMissionCompletionStatus(mission.mid, client);
-};
-
-/// Data checks
-const checkUid = (uid) => {
-  if (!uid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Uid'));
-};
-
-const checkNid = (nid) => {
-  if (!nid) throw new Error(messages.GENERAL.FIELD_REQUIRED('Nid'));
-};
-
-const checkResponse = (response) => {
-  if (!response) throw new Error(messages.GENERAL.FIELD_REQUIRED('Response'));
-};
-
-const checkUser = (user) => {
-  if (!user) throw new Error(messages.GENERAL.FIELD_REQUIRED('User'));
 };
 
 /// Helper functions
@@ -1313,6 +1275,15 @@ const checkParticipationTransition = (participation, status, message) => {
     ].VALID_NEXT_STATES.includes(status)
   )
     throw new AppError(message, 409);
+};
+
+// Checks response options to be accepted
+const checkAcceptedResponse = (response) => {
+  if (response !== 'accepted' && response !== 'accept')
+    throw new AppError(
+      messages.NOTIFICATION.GENERAL.INVALID_RESPONSE_ACTION,
+      400,
+    );
 };
 
 // Uses a transaction for the operation received
@@ -1357,6 +1328,21 @@ const syncMissionCompletionStatus = async (mid, client) => {
 
   // Updates status
   return await missionService.updateStatusByMid(mid, nextStatus, client);
+};
+
+// Creates the participation transfer on Stripe
+const createParticipationTransfer = async (missionId, participation, user) => {
+  if (!user.stripe_connected_id) return null;
+  return paymentProvider.createTransfer(
+    {
+      amount: Math.round(participation.monetary_reward * 100),
+      currency: 'eur',
+      destination: user.stripe_connected_id,
+      description: 'mission_payed',
+      transfer_group: `mission_${missionId}`,
+    },
+    `pay_${missionId}_vac_${participation.id}`,
+  );
 };
 
 // Resolves notification updating it and marking it as seen
@@ -1406,30 +1392,6 @@ const buildMissionEvent = (
   ownerUsername: sender.username,
   message,
 });
-
-// Checks response options to be accepted
-const checkAcceptedResponse = (response) => {
-  if (response !== 'accepted' && response !== 'accept')
-    throw new AppError(
-      messages.NOTIFICATION.GENERAL.INVALID_RESPONSE_ACTION,
-      400,
-    );
-};
-
-// Creates the participation transfer on Stripe
-const createParticipationTransfer = async (missionId, participation, user) => {
-  if (!user.stripe_connected_id) return null;
-  return paymentProvider.createTransfer(
-    {
-      amount: Math.round(participation.monetary_reward * 100),
-      currency: 'eur',
-      destination: user.stripe_connected_id,
-      description: 'mission_payed',
-      transfer_group: `mission_${missionId}`,
-    },
-    `pay_${missionId}_vac_${participation.id}`,
-  );
-};
 
 // Emits notifications
 const emitNotificationEvents = (events) => {

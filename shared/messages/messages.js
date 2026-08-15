@@ -248,6 +248,8 @@ export const messages = {
     REJECT_PARTICIPATION: (title, username) =>
       `Your participation in "${title}" was rejected by ${username}. Please accept the revision or open a dispute.`,
     ACCEPT_PARTICIPATION: {
+      AUTOMATIC: (title) =>
+        `Your participation in "${title}" was approved automatically by the system after it wasn't reviewed on time (one week).`,
       SUCCESSFUL: (title, username) =>
         `Your participation in "${title}" was approved by ${username}.`,
       ISSUED: (title, username) =>

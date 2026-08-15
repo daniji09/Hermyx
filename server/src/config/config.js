@@ -15,4 +15,3 @@ export const ADMIN_FIREBASE_UID = process.env.ADMIN_FIREBASE_UID;
 export const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY;
 export const FRONTEND_URL = process.env.FRONTEND_URL;
 export const BACKEND_URL = process.env.BACKEND_URL;
-export const CRON_SECRET_TOKEN = process.env.CRON_SECRET_TOKEN;
