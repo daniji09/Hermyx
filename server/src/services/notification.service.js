@@ -17,7 +17,6 @@ import { AppError } from '../utils/error.util.js';
 import * as notificationModel from '../models/notification.model.js';
 import * as disputeService from './dispute.service.js';
 import * as missionService from './mission.service.js';
-import * as paymentService from './payment.service.js';
 import * as userService from './user.service.js';
 import * as conversationService from './conversation.service.js';
 import * as paymentProvider from '../providers/payment.provider.js';
@@ -823,41 +822,73 @@ const createJoinNotificationEvent = async (
   };
 };
 
+// Responds to vacancy monetary reward edition
 const respondToVacancyMonetaryRewardEdition = async ({
   notification,
   response,
   user,
 }) => {
+  // Gets mission information
   const mission = await missionService.getMissionByIdOrThrow(
     notification.payload.associated_mission_id,
   );
+
+  // Gets participation information
   const participation =
     await missionService.getMissionParticipationByMidAndAdventurerIdOrThrow(
       mission.mid,
       user.uid,
     );
+
+  // Checks if mission can actually be edited by status
   if (!MISSION_STATUS[mission.status].CAN_EDIT)
-    throw new AppError(messages.CANNOT_EDIT_MISSION, 400);
+    throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_MISSION, 409);
+
+  // Rejects the new monetary reward offer
   if (response === 'rejected')
-    return rejectRewardEdition({ notification, mission, participation, user });
+    return await rejectRewardEdition({
+      notification,
+      mission,
+      participation,
+      user,
+    });
+
+  // Accepts the new monetary reward offer
   checkAcceptedResponse(response);
-  return acceptRewardEdition({ notification, mission, participation, user });
+  return await acceptRewardEdition({
+    notification,
+    mission,
+    participation,
+    user,
+  });
 };
 
+// Rejects new monetary reward offer
 const rejectRewardEdition = async ({
   notification,
   mission,
   participation,
   user,
 }) => {
-  const rejectionMessage = `${user.username} rejected your new monetary reward offer for "${mission.title}": ${participation.monetary_reward} -> ${notification.payload.new_offer}`;
+  const rejectionMessage =
+    messages.NOTIFICATION.MONETARY_REWARD_EDITION.REJECTED(
+      user.username,
+      mission.title,
+      participation.monetary_reward,
+      notification.payload.new_offer,
+    );
+
+  // Database transaction for rejection
   const notificationId = await withTransaction(async (client) => {
+    // Rejects notification and marks it as seen
     await resolveNotification(
       notification.nid,
       NOTIFICATION_STATUS.REJECTED.ID,
       client,
     );
-    return createNotification(
+
+    // Creates follow up notification
+    return await notificationModel.create(
       buildNotification({
         action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
         message: rejectionMessage,
@@ -870,6 +901,8 @@ const rejectRewardEdition = async ({
       client,
     );
   });
+
+  // Sends follow up notification
   emitNegotiationEvent(
     mission,
     user,
@@ -877,41 +910,101 @@ const rejectRewardEdition = async ({
     rejectionMessage,
     'mission:participation-negotiation-rejected',
   );
-  return { message: messages.MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY };
+  return {
+    message:
+      messages.NOTIFICATION.RESPOND_TO_NEW_MONETARY_REWARD_OFFER
+        .REJECTED_SUCCESSFULLY,
+  };
 };
 
+// Accepts new monetary reward offer
 const acceptRewardEdition = async ({
   notification,
   mission,
   participation,
   user,
 }) => {
+  // Prepares refunds if necessary
   const newOffer = notification.payload.new_offer;
-  const refundData = await prepareNegotiationRefunds(
-    mission,
-    participation,
-    newOffer,
-  );
-  const acceptMessage = `${user.username} accepted your new monetary reward offer for "${mission.title}": ${participation.monetary_reward} -> ${newOffer}`;
-  const notificationId = await withTransaction(async (client) => {
-    await missionService.updateMissionParticipationReward(
-      participation.id,
-      newOffer,
-      client,
-    );
-    await resolveNotification(
-      notification.nid,
-      NOTIFICATION_STATUS.ACCEPTED.ID,
-      client,
-    );
-    await persistNegotiationPaymentChanges(
+
+  // Creates payment and modifies database
+  let successfulRefund = false;
+  try {
+    // If the new offer is lower than the reward, a refund is needed
+    if (participation.monetary_reward > newOffer)
+      // Updates participation payment status to partially refunded
+      await missionService.updateMissionParticipationPaymentStatus(
+        participation.id,
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+      );
+
+    const refundData = await prepareNegotiationRefunds(
       mission,
       participation,
       newOffer,
-      refundData,
-      client,
     );
-    return createNotification(
+
+    // Accept a participation needs a database transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      // Updates participation reward
+      await missionService.updateMissionParticipationReward(
+        participation.id,
+        newOffer,
+        client,
+      );
+
+      // Accepts notification and marks it as seen
+      await resolveNotification(
+        notification.nid,
+        NOTIFICATION_STATUS.ACCEPTED.ID,
+        client,
+      );
+
+      // Ends reward edition process
+      await persistNegotiationPaymentChanges(
+        mission,
+        participation,
+        newOffer,
+        refundData,
+        client,
+      );
+      await client.query('COMMIT');
+      successfulRefund = true;
+    } catch (dbError) {
+      await client.query('ROLLBACK');
+      // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+      console.error(
+        `FATAL DB ERROR: a refund from ${participation.adventurer} after monetary reward lowered but DB failed`,
+        dbError,
+      );
+    } finally {
+      client.release();
+    }
+  } catch (stripeError) {
+    // If a Stripe payment fails error should be saved in a log to fix it as soon as possible
+    console.error(
+      `Stripe Error when paying out vacancy ${participation.id} due to monetary reward lowered:`,
+      stripeError.message,
+    );
+  }
+  const acceptMessage = successfulRefund
+    ? messages.NOTIFICATION.MONETARY_REWARD_EDITION.ACCEPTED.SUCCESSFUL(
+        user.username,
+        mission.title,
+        participation.monetary_reward,
+        newOffer,
+      )
+    : messages.NOTIFICATION.MONETARY_REWARD_EDITION.ACCEPTED.ISSUED(
+        user.username,
+        mission.title,
+        participation.monetary_reward,
+        newOffer,
+      );
+  // Creates follow up notification
+  const followUpNotificationId = await withTransaction(async (client) => {
+    await notificationModel.create(
       buildNotification({
         action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
         message: acceptMessage,
@@ -924,31 +1017,44 @@ const acceptRewardEdition = async ({
       client,
     );
   });
+
+  // Sends follow-up notification
   emitNegotiationEvent(
     mission,
     user,
-    notificationId,
+    followUpNotificationId,
     acceptMessage,
     'mission:participation-negotiation-accepted',
   );
   return {
-    message: messages.MISSION_PARTICIPATION_REVISION_ACCEPTED_SUCCESSFULLY,
+    message:
+      messages.NOTIFICATION.RESPOND_TO_NEW_MONETARY_REWARD_OFFER
+        .ACCEPTED_SUCCESSFULLY,
   };
 };
 
+// Prepares negotiation refunds on Stripe if necessary
 const prepareNegotiationRefunds = async (mission, participation, newOffer) => {
   if (participation.monetary_reward <= newOffer) return [];
-  const payments = await paymentService.getMissionPaymentsByVacancyId(
+
+  // Gets mission payments
+  const payments = await missionService.getMissionPaymentsByVacancyId(
     participation.id,
   );
-  let amountToRefund = (participation.monetary_reward - newOffer) * HERMYX_FEE;
+
+  // Amount to refund
+  let amountToRefund = participation.monetary_reward - newOffer;
   const refunds = [];
+
+  // Makes refunds of every necessary payment
   for (const payment of payments) {
     if (amountToRefund <= 0) break;
     const amount = Math.min(
       amountToRefund,
       payment.amount_paid - payment.amount_refunded,
     );
+
+    // Creates refund on Stripe
     const refund = await paymentProvider.createRefund(
       {
         payment_intent: payment.stripe_transaction_id,
@@ -959,7 +1065,7 @@ const prepareNegotiationRefunds = async (mission, participation, newOffer) => {
           reason: 'negotiation_refund',
         },
       },
-      `negotiation_refund_${mission.mid}_${participation.id}_${payment.pid}`,
+      `negotiation_refund_${mission.mid}_${participation.id}_${Date.now()}`,
     );
     refunds.push({ amount, payment, refund });
     amountToRefund -= amount;
@@ -974,15 +1080,22 @@ const persistNegotiationPaymentChanges = async (
   refunds,
   client,
 ) => {
+  // If the new offer is lower than the reward, a refund is needed
   if (participation.monetary_reward > newOffer) {
+    // Updates participation payment status to partially refunded
     await missionService.updateMissionParticipationPaymentStatus(
       participation.id,
       MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
       client,
     );
+
+    // For every Stripe refund
     for (const { amount, payment, refund } of refunds) {
-      await paymentService.refundMissionPayment(amount, payment.pid, client);
-      await paymentService.createMissionPayment(
+      // Updates payment refunded amount
+      await missionService.refundMissionPayment(amount, payment.pid, client);
+
+      // Creates refund payment
+      await missionService.createMissionPayment(
         {
           mid: mission.mid,
           vacancy_id: participation.id,
@@ -995,15 +1108,21 @@ const persistNegotiationPaymentChanges = async (
         client,
       );
     }
+
+    // Updates participation status and amount paid
     await missionService.refundMissionParticipation(
       participation.id,
       participation.monetary_reward - newOffer,
       client,
     );
+
+    // Gets all occupied participations
     const occupied = await missionService.getOccupiedMissionParticipations(
       mission.mid,
       client,
     );
+
+    // So mission payment can be correctly updated
     await missionService.updateMissionPayment(
       mission.mid,
       occupied.reduce(
@@ -1012,15 +1131,22 @@ const persistNegotiationPaymentChanges = async (
       ) * HERMYX_FEE || 0,
       client,
     );
-  } else if (
+  }
+
+  // If the new offer is higher than the reward
+  else if (
     participation.payment_status ===
     MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID
   ) {
-    await missionService.updateMissionParticipationStatus(
-      participation.id,
+    // Updates participation status to rejected
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      mission.mid,
+      participation.adventurer_id,
       MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
       client,
     );
+
+    // Updates participant payment status
     await missionService.updateMissionParticipationPaymentStatus(
       participation.id,
       MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
@@ -1153,31 +1279,6 @@ const completeParticipationApproval = async ({
   }
   // Syncs mission completion status
   await syncMissionCompletionStatus(mission.mid, client);
-};
-
-// Emits notifications
-const emitNotificationEvents = (events) => {
-  for (const { receiverId, event, payload } of events)
-    socketProvider.emitToUser(receiverId, event, payload);
-};
-
-const emitNegotiationEvent = (
-  mission,
-  user,
-  notificationId,
-  message,
-  event,
-) => {
-  socketProvider.emitToUser(mission.owner_id, event, {
-    notificationId,
-    type: NOTIFICATION_TYPE.MISSION.ID,
-    action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
-    missionId: mission.mid,
-    missionTitle: mission.title,
-    adventurerId: user.uid,
-    adventurerUsername: user.username,
-    message,
-  });
 };
 
 /// Data checks
@@ -1328,4 +1429,29 @@ const createParticipationTransfer = async (missionId, participation, user) => {
     },
     `pay_${missionId}_vac_${participation.id}`,
   );
+};
+
+// Emits notifications
+const emitNotificationEvents = (events) => {
+  for (const { receiverId, event, payload } of events)
+    socketProvider.emitToUser(receiverId, event, payload);
+};
+
+const emitNegotiationEvent = (
+  mission,
+  user,
+  notificationId,
+  message,
+  event,
+) => {
+  socketProvider.emitToUser(mission.owner_id, event, {
+    notificationId,
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+    missionId: mission.mid,
+    missionTitle: mission.title,
+    adventurerId: user.uid,
+    adventurerUsername: user.username,
+    message,
+  });
 };

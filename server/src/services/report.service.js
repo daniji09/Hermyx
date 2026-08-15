@@ -16,7 +16,6 @@ import * as reportModel from '../models/report.model.js';
 import * as conversationService from './conversation.service.js';
 import * as missionService from './mission.service.js';
 import * as notificationService from './notification.service.js';
-import * as paymentService from './payment.service.js';
 import * as userService from './user.service.js';
 import { createTransfer } from '../providers/payment.provider.js';
 import { emitToAdmins, emitToUser } from '../providers/socket.provider.js';
@@ -383,7 +382,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
       client,
     );
     if (transfer) {
-      await paymentService.createMissionPayment(
+      await missionService.createMissionPayment(
         {
           mid: mission.mid,
           vacancy_id: vacancy.id,

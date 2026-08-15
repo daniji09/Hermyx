@@ -41,6 +41,21 @@ export const findByStripeTransactionId = async (
   return result.rows;
 };
 
+/// UPDATES
+export const refund = async (amount, paymentId, client = pool) => {
+  const query = `
+    UPDATE MISSION_PAYMENT 
+    SET amount_refunded = amount_refunded + $1,
+      status = 
+        CASE 
+          WHEN (amount_refunded + $1) >= amount_paid THEN 'REFUNDED' 
+          ELSE 'PARTIALLY_REFUNDED' 
+        END
+    WHERE pid = $2`;
+  const result = await client.query(query, [amount, paymentId]);
+  return result.rowCount;
+};
+
 // ------
 
 export const findByMissionId = async (mid, client = pool) => {
@@ -61,17 +76,4 @@ export const findByVacancyId = async (vacancyId, client = pool) => {
     TRANSACTION_TYPE.NEW_ADVENTURER_FUNDING.ID,
   ]);
   return result.rows;
-};
-
-export const refund = async (amount, paymentId, client = pool) => {
-  const query = `
-        UPDATE MISSION_PAYMENT 
-        SET amount_refunded = amount_refunded + $1,
-            status = CASE 
-                       WHEN (amount_refunded + $1) >= amount_paid THEN 'REFUNDED' 
-                       ELSE 'PARTIALLY_REFUNDED' 
-                     END
-        WHERE pid = $2`;
-  const result = await client.query(query, [amount, paymentId]);
-  return result.rowCount;
 };

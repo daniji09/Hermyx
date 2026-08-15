@@ -177,25 +177,31 @@ export const messages = {
       ALREADY_REVIEWED: `This participation has already been reviewed.`,
       MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY: `Participation revision requested successfully.`,
 
-      // Dispute
+      // Disputed
       REQUIRES_RETRY:
         'Participation can only be disputed by the owner after a retry.',
       CANNOT_DISPUTE_PARTICIPATION_STATE: `Can't dispute participation on current state`,
       MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY: `Participation disputed successfully.`,
 
-      // Reject
-      CANNOT_REJECT_PARTICIPATION_STATE: `Can't reject participation on current state`,
-
       // Accepted
       ACCEPTED_SUCCESSFULLY: `Participation accepted successfully.`,
+
+      // Rejected
+      CANNOT_REJECT_PARTICIPATION_STATE: `Can't reject participation on current state`,
     },
     RESPOND_TO_PARTICIPATION_REJECTION: {
       // General
       ALREADY_REVIEWED: `This participation rejection has already been reviewed.`,
 
       // Accepted
-      ACCEPTED_SUCCESSFULLY:
-        'Participation rejection revision accepted successfully.',
+      ACCEPTED_SUCCESSFULLY: `Participation rejection revision accepted successfully.`,
+    },
+    RESPOND_TO_NEW_MONETARY_REWARD_OFFER: {
+      // Accepted
+      ACCEPTED_SUCCESSFULLY: `New monetary reward offer was accepted successfully.`,
+
+      // Rejected
+      REJECTED_SUCCESSFULLY: `New monetary reward offer was rejected successfully.`,
     },
 
     // Messages sent to users in a notification
@@ -245,7 +251,7 @@ export const messages = {
       SUCCESSFUL: (title, username) =>
         `Your participation in "${title}" was approved by ${username}.`,
       ISSUED: (title, username) =>
-        `Your participation in "${title}" was approved by ${username}. We had an issue transferring your compensation. Please contact support.`,
+        `Your participation in "${title}" was approved by ${username}. We had an issue transferring your payment. Please contact support.`,
     },
     JOIN_MISSION_DECISION: {
       REQUEST: {
@@ -259,6 +265,16 @@ export const messages = {
           `Your invitation to join "${title}" was accepted. Welcome your new adventurer!`,
         REJECTED: (title) =>
           `Your invitation to join "${title}" was rejected. Keep searching for others!`,
+      },
+    },
+    MONETARY_REWARD_EDITION: {
+      REJECTED: (username, title, current, offer) =>
+        `${username} rejected your new monetary reward offer for "${title}": ${current} -> ${offer}`,
+      ACCEPTED: {
+        SUCCESSFUL: (username, title, current, offer) =>
+          `${username} accepted your new monetary reward offer for "${title}": ${current} -> ${offer}`,
+        ISSUED: (username, title, current, offer) =>
+          `${username} accepted your new monetary reward offer for "${title}": ${current} -> ${offer}.  We had an issue transferring your refund. Please contact support.`,
       },
     },
   },

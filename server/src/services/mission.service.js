@@ -102,6 +102,12 @@ export const createMissionPayment = async (missionPaymentData, client) => {
   return await missionPaymentModel.create(missionPaymentData, client);
 };
 
+// Get mission payments by vacancy id
+export const getMissionPaymentsByVacancyId = async (vacancyId, client) => {
+  checkVacancyId(vacancyId);
+  return await missionPaymentModel.findByVacancyId(vacancyId, client);
+};
+
 // Pays a vacancy
 export const payParticipant = async (id, payment, client) => {
   checkVacancyId(id);
@@ -213,6 +219,58 @@ export const updateParticipationPaymentStatusById = async (
   );
 };
 
+// Updates participant payment status
+export const updateMissionParticipationPaymentStatus = async (
+  participationId,
+  status,
+  client,
+) => {
+  checkVacancyId(participationId);
+  checkStatus(status);
+  return await missionParticipationModel.updatePaymentStatus(
+    participationId,
+    status,
+    client,
+  );
+};
+
+// Updates participation reward
+export const updateMissionParticipationReward = async (
+  participationId,
+  monetaryReward,
+  client,
+) => {
+  checkVacancyId(participationId);
+  checkReward(monetaryReward);
+  return await missionParticipationModel.updateMonetaryReward(
+    participationId,
+    monetaryReward,
+    client,
+  );
+};
+
+// Refund mission payment
+export const refundMissionPayment = async (amount, paymentId, client) => {
+  checkAmount(amount);
+  checkPaymentId(paymentId);
+  return await missionPaymentModel.refund(amount, paymentId, client);
+};
+
+// Refunds mission participation
+export const refundMissionParticipation = async (
+  participationId,
+  amount,
+  client,
+) => {
+  checkVacancyId(participationId);
+  checkAmount(amount);
+  return await missionParticipationModel.refundVacancy(
+    participationId,
+    amount,
+    client,
+  );
+};
+
 //---
 export const getMissionParticipationReviewContext = async (
   mid,
@@ -256,34 +314,6 @@ export const updateMissionParticipationStatus = async (
   status,
   client,
 ) => missionParticipationModel.updateStatus(participationId, status, client);
-
-export const updateMissionParticipationPaymentStatus = async (
-  participationId,
-  status,
-  client,
-) =>
-  missionParticipationModel.updatePaymentStatus(
-    participationId,
-    status,
-    client,
-  );
-
-export const updateMissionParticipationReward = async (
-  participationId,
-  monetaryReward,
-  client,
-) =>
-  missionParticipationModel.updateVacancyMonetaryReward(
-    participationId,
-    monetaryReward,
-    client,
-  );
-
-export const refundMissionParticipation = async (
-  participationId,
-  amount,
-  client,
-) => missionParticipationModel.refundVacancy(participationId, amount, client);
 
 // Missions published by uid
 export const getMissionsPublishedByUid = async (uid, pagination) => {
@@ -2196,12 +2226,21 @@ const checkPayment = (payment) => {
   if (!payment) throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment'));
 };
 
+const checkPaymentId = (paymentId) => {
+  if (!paymentId)
+    throw new Error(messages.GENERAL.FIELD_REQUIRED('Payment id'));
+};
+
 const checkStatus = (status) => {
   if (!status) throw new Error(messages.GENERAL.FIELD_REQUIRED('Status'));
 };
 
 const checkAmount = (amount) => {
   if (!amount) throw new Error(messages.GENERAL.FIELD_REQUIRED('Amount'));
+};
+
+const checkReward = (reward) => {
+  if (!reward) throw new Error(messages.GENERAL.FIELD_REQUIRED('Reward'));
 };
 
 const checkStripeTransactionId = (stripeTransactionId) => {
