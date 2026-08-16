@@ -291,6 +291,12 @@ export const messages = {
       TO_APPLICANT: (vacancyTitle, username, missionTitle) =>
         `Participation ${vacancyTitle} disputed by ${username} in mission ${missionTitle} was accepted by the administration. Reward is being payed to the adventurer.`,
     },
+    ADVENTURER_WORK_REJECTED: {
+      TO_ADVENTURER: (title) =>
+        `Your participation in "${title}" was rejected by the administration after resolving the dispute. The vacancy is in progress again.`,
+      TO_APPLICANT: (vacancyTitle, username, missionTitle) =>
+        `Participation ${vacancyTitle} disputed by ${username} in mission ${missionTitle} was rejected by the administration. The vacancy is in progress again.`,
+    },
   },
 
   /// Review messages

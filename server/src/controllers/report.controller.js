@@ -71,7 +71,7 @@ export const reportMission = async (req, res, next) => {
   }
 };
 
-// Accepts adventurer work
+// Accepts adventurer's work
 export const acceptAdventurersWork = async (req, res, next) => {
   try {
     await reportService.acceptAdventurersWork({
@@ -85,6 +85,7 @@ export const acceptAdventurersWork = async (req, res, next) => {
   }
 };
 
+// Rejects adventurer's work
 export const rejectAdventurersWork = async (req, res, next) => {
   try {
     await reportService.rejectAdventurersWork({

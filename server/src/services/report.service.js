@@ -575,24 +575,40 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   return { report: closedReport, previousReport: report };
 };
 
+// Rejects adventurer work
 export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
+  // Gets adventurer, mission, vacancy and report info and basic checks
   const { adventurer, mission, vacancy } =
     await getDisputeResolutionContext(reportId);
-  const adventurerMessage = `Your participation in "${mission.title}" was rejected by the administration after resolving the dispute. The vacancy is in progress again.`;
-  const applicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was rejected by the administration. The vacancy is in progress again.`;
+
+  // All changes are made in a database transaction
   const client = await pool.connect();
   let closedReport;
   let participantIds;
   let adventurerNotificationId;
   let applicantNotificationId;
+  const adventurerMessage =
+    messages.NOTIFICATION.ADVENTURER_WORK_REJECTED.TO_ADVENTURER(mission.title);
+  const applicantMessage =
+    messages.NOTIFICATION.ADVENTURER_WORK_REJECTED.TO_APPLICANT(
+      vacancy.title,
+      adventurer.username,
+      mission.title,
+    );
   try {
     await client.query('BEGIN');
-    await missionService.reopenMissionParticipation(
+    // First, status is changed to in progress again
+    await missionService.updateParticipationStatusByMidAndAdventurer(
       mission.mid,
       adventurer.uid,
+      MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
       client,
     );
+
+    // Mission status is synced
     await missionService.syncMissionCompletionStatus(mission.mid, client);
+
+    // Report and associated conversation is closed
     ({ report: closedReport, participantIds } =
       await closeReportAndConversationInternal(
         reportId,
@@ -601,6 +617,8 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
         adminId,
         client,
       ));
+
+    // Adventurer follow-up notification is created
     adventurerNotificationId = await notificationService.createNotification(
       buildResolutionNotification(
         adventurer.uid,
@@ -610,6 +628,8 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
       ),
       client,
     );
+
+    // Applicant follow-up notification is created
     applicantNotificationId = await notificationService.createNotification(
       buildResolutionNotification(
         mission.owner_id,
@@ -627,6 +647,7 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
     client.release();
   }
 
+  // Notifications are sent and conversation is closed
   emitConversationClosed(participantIds, closedReport);
   emitToUser(adventurer.uid, 'mission:participation-rejected-dispute', {
     notificationId: adventurerNotificationId,

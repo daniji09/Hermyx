@@ -68,7 +68,7 @@ export const reportMissionValidation = z.object({
   message: reportMessageBaseSchema,
 });
 
-// Accept adventurers work
+// Accept adventurer's work
 export const acceptAdventurersWorkParamsValidation = z.object({
   rid: reportIdBaseSchema,
 });
@@ -77,11 +77,14 @@ export const acceptAdventurersWorkBodyValidation = z.object({
   reason: reportReasonBaseSchema,
 });
 
-export const rejectAdventurersWorkParamValidation =
-  acceptAdventurersWorkParamsValidation;
+// Reject adventurer's work
+export const rejectAdventurersWorkParamValidation = z.object({
+  rid: reportIdBaseSchema,
+});
 
-export const rejectAdventurersWorkBodyValidation =
-  acceptAdventurersWorkBodyValidation;
+export const rejectAdventurersWorkBodyValidation = z.object({
+  reason: reportReasonBaseSchema,
+});
 
 export const dismissParamValidation = acceptAdventurersWorkParamsValidation;
 

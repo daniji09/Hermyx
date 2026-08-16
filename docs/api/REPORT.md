@@ -332,3 +332,74 @@ Decision to accept adventurer's work is taken, closing report
 <br>
 <br>
 <br>
+
+## - Reject adventurer's work: `POST /api/reports/:rid/reject`
+
+Decision to reject adventurer's work is taken, closing report
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rid` | integer | Yes | Report identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `reason` | string | Yes | Reason message. |
+<br>
+
+**Responses:**
+
+- `200 OK`: report closed successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: body or path fields validation error, missing body or path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: only admins can close reports.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report, mission, vacancy or adventurer not found, report with that rid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Report/Mission/Vacancy/Adventurer not found."]
+    }
+  }
+  ```
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** when admins are checking participation reports, one possible decision is to reject's the adventurer's work, changing participation to be in progress again and closing report and associated conversation.
+<br>
+<br>
+<br>
