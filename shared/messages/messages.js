@@ -297,6 +297,10 @@ export const messages = {
       TO_APPLICANT: (vacancyTitle, username, missionTitle) =>
         `Participation ${vacancyTitle} disputed by ${username} in mission ${missionTitle} was rejected by the administration. The vacancy is in progress again.`,
     },
+    DISMISS: {
+      REPORT_ADVENTURER: (username, title) =>
+        `Your report on adventurer ${username} from mission ${title} has been dismissed, so they will not be kicked out.`,
+    },
   },
 
   /// Review messages
@@ -312,8 +316,8 @@ export const messages = {
     GENERAL: {
       REPORT_NOT_FOUND: `Report not found.`,
       REPORTS_NOT_FOUND: `Reports not found.`,
-      INCORRECT_ANSWER_FOR_REPORT: `This type of report can't be answered like this.`,
-      REPORT_ALREADY_ANSWERED: `Can't answer a report that has been already answered.`,
+      INCORRECT_ANSWER: `This type of report can't be answered like this.`,
+      ALREADY_ANSWERED: `Can't answer a report that has been already answered.`,
       VACANCY_NOT_DISPUTED: `This vacancy is not disputed currently.`,
     },
     REPORT_ADVENTURER: {

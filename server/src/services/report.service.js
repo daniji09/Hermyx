@@ -519,7 +519,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
       );
   const applicantMessage =
     messages.NOTIFICATION.ADVENTURER_WORK_ACCEPTED.TO_APPLICANT(
-      vacancy.title,
+      vacancy.title || vacancy.id,
       adventurer.username,
       mission.title,
     );
@@ -591,7 +591,7 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
     messages.NOTIFICATION.ADVENTURER_WORK_REJECTED.TO_ADVENTURER(mission.title);
   const applicantMessage =
     messages.NOTIFICATION.ADVENTURER_WORK_REJECTED.TO_APPLICANT(
-      vacancy.title,
+      vacancy.title || vacancy.id,
       adventurer.username,
       mission.title,
     );
@@ -666,27 +666,43 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
   return closedReport;
 };
 
+// Dismisses report
 export const dismiss = async ({ adminId, reason, reportId }) => {
+  // Gets report info
   const report = await getReportByRidOrThrow(reportId);
+
+  // Checks if report has already been answered
   if (report.status === REPORT_STATUS.ANSWERED.ID) {
-    throw new AppError(messages.REPORT_ALREADY_ANSWERED, 409);
+    throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
   }
+
+  // Checks if this type of report can be dismissed
   if (!REPORT_TYPE[report.type].CAN_BE_DISMISSED) {
-    throw new AppError(messages.INCORRECT_ANSWER_FOR_REPORT, 409);
+    throw new AppError(messages.REPORT.GENERAL.INCORRECT_ANSWER, 409);
   }
 
   let notificationData;
   let notificationEvent;
   if (report.type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
+    // Gets mission info
     const mission = await getMissionOrThrow(
       report.payload.associated_mission_id,
     );
+
+    // Gets vacancy info
     const vacancy = await getVacancyOrThrow(
       mission.mid,
       report.payload.associated_vacancy_id,
     );
+
+    // Gets adventurer info
     const adventurer = await getUserOrThrow(vacancy.adventurer_id);
-    const message = `Your report on adventurer ${adventurer.username} from mission ${mission.title} has been dismissed, so they will not be kicked out.`;
+
+    // Creates notification data
+    const message = messages.NOTIFICATION.DISMISS.REPORT_ADVENTURER(
+      adventurer.username,
+      mission.title,
+    );
     notificationData = {
       type: NOTIFICATION_TYPE.MISSION.ID,
       kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
@@ -704,12 +720,14 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     };
   }
 
+  // Closes report and sends notification in a transaction
   const client = await pool.connect();
   let closedReport;
   let participantIds;
   let notificationId;
   try {
     await client.query('BEGIN');
+    // Closes report and associated conversation on db
     ({ report: closedReport, participantIds } =
       await closeReportAndConversationInternal(
         reportId,
@@ -718,6 +736,8 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
         adminId,
         client,
       ));
+
+    // Sends follow-up notification to applicant if necessary
     if (notificationData)
       notificationId = await notificationService.createNotification(
         notificationData,
@@ -731,6 +751,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     client.release();
   }
 
+  // Sends conversation closed and notification if necessary
   emitConversationClosed(participantIds, closedReport);
   if (notificationEvent)
     emitToUser(report.sender_id, 'dispute:dismissed', {
@@ -741,30 +762,14 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
   return closedReport;
 };
 
-const emitConversationClosed = (participantIds, report) => {
-  if (!report?.conversation_id) return;
-  emitToAdmins('report:updated', { reportId: report.rid });
-  const closedAt = new Date().toISOString();
-  for (const participantId of participantIds) {
-    emitToUser(participantId, 'conversation:closed', {
-      conversationId: report.conversation_id,
-      closedAt,
-      reportId: report.rid,
-    });
-  }
-};
-
 /// Helper functions
 // Asserts if a report can be resolved
 const assertReportCanBeResolved = (report) => {
   if (report.status === REPORT_STATUS.ANSWERED.ID) {
-    throw new AppError(messages.REPORT.GENERAL.REPORT_ALREADY_ANSWERED, 409);
+    throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
   }
   if (!REPORT_TYPE[report.type].CAN_BE_REJECTED_ACCEPTED) {
-    throw new AppError(
-      messages.REPORT.GENERAL.INCORRECT_ANSWER_FOR_REPORT,
-      409,
-    );
+    throw new AppError(messages.REPORT.GENERAL.INCORRECT_ANSWER, 409);
   }
 };
 
@@ -807,3 +812,18 @@ const buildResolutionNotification = (
   receiverId,
   payload: { associated_mission_id: missionId },
 });
+
+// Emits conversation closed
+
+const emitConversationClosed = (participantIds, report) => {
+  if (!report?.conversation_id) return;
+  emitToAdmins('report:updated', { reportId: report.rid });
+  const closedAt = new Date().toISOString();
+  for (const participantId of participantIds) {
+    emitToUser(participantId, 'conversation:closed', {
+      conversationId: report.conversation_id,
+      closedAt,
+      reportId: report.rid,
+    });
+  }
+};

@@ -99,6 +99,7 @@ export const rejectAdventurersWork = async (req, res, next) => {
   }
 };
 
+// Dismisses report, taking no action
 export const dismiss = async (req, res, next) => {
   try {
     await reportService.dismiss({

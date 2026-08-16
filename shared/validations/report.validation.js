@@ -86,11 +86,15 @@ export const rejectAdventurersWorkBodyValidation = z.object({
   reason: reportReasonBaseSchema,
 });
 
-export const dismissParamValidation = acceptAdventurersWorkParamsValidation;
+// Dismiss report
+export const dismissParamValidation = z.object({
+  rid: reportIdBaseSchema,
+});
 
-export const dismissBodyValidation = acceptAdventurersWorkBodyValidation;
-
-export const answerReportValidation = acceptAdventurersWorkBodyValidation;
-
-// Backwards-compatible alias while older clients are migrated.
-export const disputeValidation = reportAdventurerValidation;
+export const dismissBodyValidation = z.object({
+  reason: reportReasonBaseSchema,
+});
+// Frontend reason validation
+export const answerReportValidation = z.object({
+  reason: reportReasonBaseSchema,
+});
