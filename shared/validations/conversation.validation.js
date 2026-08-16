@@ -24,6 +24,11 @@ export const conversationIdParamsSchema = z.object({
   cid: conversationIdBaseSchema,
 });
 
+// Get conversation messages
+export const conversationIdMessagesParamsSchema = z.object({
+  cid: conversationIdBaseSchema,
+});
+
 export const createMessageSchema = z.object({
   content: messageContentBaseSchema.optional().default(''),
 });

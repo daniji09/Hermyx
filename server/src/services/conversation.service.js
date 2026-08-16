@@ -160,6 +160,10 @@ export const getMyUnreadMessageCount = async (userId) => {
 
 // Get conversation by id
 export const getConversation = async (conversationId, user) => {
+  // Parameter checks
+  checkRequired(conversationId, 'Conversation id');
+  checkRequired(user, 'Current user');
+
   // Gets conversation by id and checks it
   const { conversation, isParticipant } = await getConversationAccess(
     conversationId,
@@ -172,6 +176,23 @@ export const getConversation = async (conversationId, user) => {
     isParticipant ? user.uid : null,
   );
   return { conversation, participants };
+};
+
+// Get conversation by id messages
+export const getConversationMessages = async (conversationId, user) => {
+  // Parameter checks
+  checkRequired(conversationId, 'Conversation id');
+  checkRequired(user, 'Current user');
+
+  // Gets and checks conversation
+  const { isAdminPreview } = await getConversationAccess(conversationId, user);
+
+  // Get messages by conversation id
+  return conversationMessageModel.findByConversationId(
+    conversationId,
+    user.uid,
+    isAdminPreview,
+  );
 };
 
 export const getOrCreatePrivateConversationWithUser = async (
@@ -323,15 +344,6 @@ export const sendMessage = async ({
     }
   }
   return message;
-};
-
-export const getConversationMessages = async (conversationId, user) => {
-  const { isAdminPreview } = await getConversationAccess(conversationId, user);
-  return conversationMessageModel.findByConversationId(
-    conversationId,
-    user.uid,
-    isAdminPreview,
-  );
 };
 
 export const markConversationAsRead = async (conversationId, userId) => {

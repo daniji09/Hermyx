@@ -66,7 +66,7 @@ Gets current user's conversations unread count.
 <br>
 <br>
 
-## - Get conversation: `GET /api/disputes/:cid`
+## - Get conversation: `GET /api/conversations/:cid`
 
 Gets conversation by its id
 
@@ -84,7 +84,10 @@ Gets conversation by its id
 
   ```json
   {
-    "conversation": ["<conversation>"]
+    "conversation": {
+      "conversation": "<conversation>",
+      "participants": "<participants>"
+    }
   }
   ```
 
@@ -119,5 +122,61 @@ Gets conversation by its id
   <br>
 
 **Workflow:** gets application conversation.
+<br>
+<br>
+
+## - Get conversation: `GET /api/conversations/:cid/messages`
+
+Gets conversation's messages by its id
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `cid` | integer | Yes | Conversation identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: search done successfully.
+
+  ```json
+  {
+    "messages": "<messages>"
+  }
+  ```
+
+- `400 Bad Request`: path fields validation error, missing path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: cannot get conversation's messages if current user is not in it.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: conversation not found, conversation with that rid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Dispute not found."]
+    }
+  }
+  ```
+  <br>
+
+**Workflow:** gets application conversation's messages (TODO: paginación especial).
 <br>
 <br>

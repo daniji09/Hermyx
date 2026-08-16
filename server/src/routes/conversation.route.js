@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import {
+  conversationIdMessagesParamsSchema,
   conversationIdParamsSchema,
   createMessageFileSchema,
   createMessageSchema,
@@ -30,6 +31,13 @@ router.get(
   conversationController.getConversation,
 );
 
+// Get conversation's messages
+router.get(
+  '/:cid/messages',
+  validateParamsSchema(conversationIdMessagesParamsSchema),
+  conversationController.getConversationMessages,
+);
+
 // ...
 router.patch(
   '/:conversationId/read',
@@ -46,11 +54,6 @@ router.post(
   conversationController.sendMessage,
 );
 
-router.get(
-  '/:conversationId/messages',
-  validateParamsSchema(conversationIdParamsSchema),
-  conversationController.getConversationMessages,
-);
 router.post(
   '/private',
   validateBodySchema(privateConversationSchema),

@@ -25,6 +25,30 @@ export const getMyUnreadMessageCount = async (req, res, next) => {
   }
 };
 
+// Get conversation by id
+export const getConversation = async (req, res, next) => {
+  try {
+    const { conversation, participants } =
+      await conversationService.getConversation(req.params.cid, req.user);
+    return res.status(200).json({ conversation, participants });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get conversation by id messages
+export const getConversationMessages = async (req, res, next) => {
+  try {
+    const messages = await conversationService.getConversationMessages(
+      req.params.cid,
+      req.user,
+    );
+    return res.status(200).json({ messages });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getOrCreatePrivateConversationWithUser = async (
   req,
   res,
@@ -51,28 +75,6 @@ export const sendMessage = async (req, res, next) => {
       photo: req.file,
     });
     return res.status(201).json({ message });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getConversation = async (req, res, next) => {
-  try {
-    const { conversation, participants } =
-      await conversationService.getConversation(req.params.cid, req.user);
-    return res.status(200).json({ conversation, participants });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getConversationMessages = async (req, res, next) => {
-  try {
-    const messages = await conversationService.getConversationMessages(
-      req.params.conversationId,
-      req.user,
-    );
-    return res.status(200).json({ messages });
   } catch (error) {
     next(error);
   }
