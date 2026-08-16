@@ -27,14 +27,14 @@ export const getConversationByIdOrThrow = async (conversationId, client) => {
 
 export const createConversation = async (type, mid, client) => {
   checkRequired(type, 'Conversation type');
-  return conversationModel.create(type, mid, client);
+  return await conversationModel.create(type, mid, client);
 };
 
 // Creates conversation participant
 export const createConversationParticipant = async (cid, uid, client) => {
   checkRequired(cid, 'Conversation id');
   checkRequired(uid, 'User id');
-  return conversationParticipantModel.create(cid, uid, client);
+  return await conversationParticipantModel.create(cid, uid, client);
 };
 
 // Creates a mission conversation participant
@@ -45,13 +45,17 @@ export const createMissionConversationParticipant = async (
 ) => {
   checkRequired(mid, 'Mission id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.createMissionType(mid, userId, client);
+  return await conversationParticipantModel.createMissionType(
+    mid,
+    userId,
+    client,
+  );
 };
 
 // Creates message
 export const createMessage = async (message, client) => {
   checkRequired(message, 'Conversation message');
-  return conversationMessageModel.create(message, client);
+  return await conversationMessageModel.create(message, client);
 };
 
 // Gets unread message counter by user id
@@ -62,7 +66,7 @@ export const getUnreadMessageCountByUserId = async (
   client,
 ) => {
   checkRequired(userId, 'User id');
-  return conversationMessageModel.countUnreadByUserId(
+  return await conversationMessageModel.countUnreadByUserId(
     userId,
     conversationType,
     excludedConversationType,
@@ -78,7 +82,7 @@ export const isConversationParticipant = async (
 ) => {
   checkRequired(conversationId, 'Conversation id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.isConversationParticipant(
+  return await conversationParticipantModel.isConversationParticipant(
     conversationId,
     userId,
     client,
@@ -92,7 +96,7 @@ export const markConversationAsReadByUserId = async (
 ) => {
   checkRequired(conversationId, 'Conversation id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.markConversationAsReadByUserId(
+  return await conversationParticipantModel.markConversationAsReadByUserId(
     conversationId,
     userId,
     client,
@@ -102,7 +106,7 @@ export const markConversationAsReadByUserId = async (
 export const leaveMissionConversation = async (mid, uid, client) => {
   checkRequired(mid, 'Mission id');
   checkRequired(uid, 'User id');
-  return conversationParticipantModel.leaveMissionConversation(
+  return await conversationParticipantModel.leaveMissionConversation(
     mid,
     uid,
     client,
@@ -114,7 +118,7 @@ export const getActiveConversationParticipantIds = async (
   client,
 ) => {
   checkRequired(conversationId, 'Conversation id');
-  return conversationParticipantModel.findActiveIdsByConversationId(
+  return await conversationParticipantModel.findActiveIdsByConversationId(
     conversationId,
     client,
   );
@@ -127,7 +131,7 @@ export const freezeMissionConversationHistory = async (
 ) => {
   checkRequired(missionId, 'Mission id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.freezeMissionConversationHistory(
+  return await conversationParticipantModel.freezeMissionConversationHistory(
     missionId,
     userId,
     client,
@@ -363,10 +367,20 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
 };
 
 export const markConversationAsRead = async (conversationId, userId) => {
-  const wasMarkedAsRead = await markConversationAsReadByUserId(
-    conversationId,
-    userId,
-  );
+  // Parameter checks
+  checkRequired(conversationId, 'Conversation id');
+  checkRequired(userId, 'User id');
+
+  // Checks that conversation and user exists
+  await getConversationByIdOrThrow(conversationId);
+  await userService.getUserByUidOrThrow(userId);
+
+  // Marks conversation as read if it wasn't already
+  const wasMarkedAsRead =
+    await conversationParticipantModel.markConversationAsReadByUserId(
+      conversationId,
+      userId,
+    );
   if (!wasMarkedAsRead)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   return 0;

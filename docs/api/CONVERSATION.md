@@ -181,6 +181,64 @@ Gets conversation's messages by its id
 <br>
 <br>
 
+## - Marks conversation as read: `PATCH /api/conversations/:cid/read`
+
+Marks a conversation as read
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `cid` | integer | Yes | Conversation identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: conversation marked as read successfully.
+
+  ```json
+  {
+    "unreadCount": 0
+  }
+  ```
+
+- `400 Bad Request`: path fields validation error, missing path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: conversation or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Conversation/User not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** marks all conversation new messages as read, so the conversation now has 0 unread messages.
+<br>
+<br>
+
 ## - Create private conversation: `POST /api/conversations/private`
 
 Creates private conversation between two users
