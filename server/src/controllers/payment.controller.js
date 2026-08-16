@@ -125,7 +125,7 @@ export async function getDashboardLink(req, res, next) {
 export const deleteCard = async (req, res, next) => {
   try {
     const customerId = req.user.stripe_customer_id;
-    const { paymentMethodId } = req.params;
+    const { paymentMethodId } = req.body;
     await paymentService.deleteCard(customerId, paymentMethodId);
     return res.status(200).json({});
   } catch (error) {
