@@ -1,251 +1,408 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { consts, messages } from '@hermyx/shared';
+import { AppError } from '../src/utils/error.util.js';
+
+const currentUser = vi.hoisted(() => ({
+  uid: 21,
+  username: 'mission_owner',
+}));
+
+const missionService = vi.hoisted(() => ({
+  getMissions: vi.fn(),
+  getOpenedMissions: vi.fn(),
+  getMissionByMid: vi.fn(),
+  publishMission: vi.fn(),
+  closeMission: vi.fn(),
+  joinMission: vi.fn(),
+  inviteToMission: vi.fn(),
+  unjoinMission: vi.fn(),
+  submitMissionParticipation: vi.fn(),
+  reopenMission: vi.fn(),
+  finishMission: vi.fn(),
+  editMission: vi.fn(),
+}));
+
+vi.mock('../src/services/mission.service.js', () => missionService);
+vi.mock('../src/middlewares/auth.middleware.js', () => ({
+  verifyToken: (req, _res, next) => {
+    req.user = { ...currentUser };
+    next();
+  },
+  verifyAdmin: (_req, _res, next) => next(),
+}));
+
 import app from '../src/app.js';
-import pool from '../src/config/db.config.js';
-import { messages } from '@hermyx/shared';
 
-// Test fake data
-const test_mission = vi.hoisted(() => {
-  return {
-    title: 'Test mission',
-    description: 'This is a test mission.',
-    total_vacancies: 5,
-    occupied_vacancies: 0,
-    monetary_reward: 1000,
-    difficulty: 3,
-    status: 'funded',
-    first_page: 1,
-    second_page: 2,
-  };
+const vacancy = {
+  id: 'temporary-1',
+  reward: 50,
+  title: 'Adventurer',
+  description: 'Complete the mission',
+};
+
+const missionPayload = {
+  title: 'Deliver the relic',
+  description: 'Carry the relic safely to its destination.',
+  vacancies: 1,
+  vacanciesData: JSON.stringify([vacancy]),
+  latitude: 40.4168,
+  longitude: -3.7038,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 
-const test_user = vi.hoisted(() => {
-  return {
-    email: 'email@email.com',
-    username: 'testUsername',
-    password: 'testPassword123_',
-    firebaseUid: 'test-firebase-uid-123',
-  };
-});
+describe('Mission API', () => {
+  it('lists missions with title and pagination', async () => {
+    const missions = [{ mid: 1, title: missionPayload.title }];
+    const paginationData = {
+      currentPage: 1,
+      totalPages: 1,
+      totalItems: 1,
+      hasMore: false,
+    };
+    missionService.getMissions.mockResolvedValue({ missions, paginationData });
 
-// Mock for authentication middleware
-vi.mock('../src/middlewares/auth.middleware.js', () => {
-  return {
-    verifyToken: (req, res, next) => {
-      next();
+    const response = await request(app)
+      .get('/api/missions')
+      .query({ title: 'relic', page: 1, limit: 10 });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ missions, pagination: paginationData });
+    expect(missionService.getMissions).toHaveBeenCalledWith(
+      'relic',
+      expect.objectContaining({ page: 1, limit: 10 }),
+    );
+  });
+
+  it.each([
+    ['page', 'not-a-number'],
+    ['limit', -1],
+  ])('rejects invalid %s pagination values', async (field, value) => {
+    const response = await request(app)
+      .get('/api/missions')
+      .query({ page: 1, limit: 10, [field]: value });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors[field]).toBeDefined();
+    expect(missionService.getMissions).not.toHaveBeenCalled();
+  });
+
+  it('lists opened missions with filters and excludes the current owner', async () => {
+    missionService.getOpenedMissions.mockResolvedValue({
+      missions: [],
+      paginationData: { currentPage: 1 },
+    });
+
+    const response = await request(app).get('/api/missions/opened').query({
+      title: 'relic',
+      minPayment: '10,5',
+      maxPayment: 100,
+      maxDistanceKm: 20,
+      page: 1,
+      limit: 10,
+    });
+
+    expect(response.status).toBe(200);
+    expect(missionService.getOpenedMissions).toHaveBeenCalledWith(
+      'relic',
+      10.5,
+      100,
+      20,
+      expect.objectContaining({ page: 1, limit: 10 }),
+      currentUser.uid,
+      currentUser,
+    );
+  });
+
+  it('rejects an inverted payment range', async () => {
+    const response = await request(app)
+      .get('/api/missions/opened')
+      .query({ minPayment: 100, maxPayment: 10 });
+
+    expect(response.status).toBe(400);
+    expect(missionService.getOpenedMissions).not.toHaveBeenCalled();
+  });
+
+  it('gets one mission for the current user', async () => {
+    const mission = {
+      mission: {
+        mid: 5,
+        is_joined: false,
+        has_pending_join_request: false,
+      },
+      isOwner: false,
+    };
+    missionService.getMissionByMid.mockResolvedValue(mission);
+
+    const response = await request(app).get('/api/missions/5');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(mission);
+    expect(missionService.getMissionByMid).toHaveBeenCalledWith(
+      5,
+      currentUser.uid,
+    );
+  });
+
+  it('returns whether the current user joined the mission', async () => {
+    missionService.getMissionByMid.mockResolvedValue({
+      mission: { mid: 5, is_joined: true },
+      isOwner: false,
+    });
+
+    const response = await request(app).get('/api/missions/5');
+
+    expect(response.status).toBe(200);
+    expect(response.body.mission.is_joined).toBe(true);
+  });
+
+  it('returns whether the current user has a pending join request', async () => {
+    missionService.getMissionByMid.mockResolvedValue({
+      mission: { mid: 5, has_pending_join_request: true },
+      isOwner: false,
+    });
+
+    const response = await request(app).get('/api/missions/5');
+
+    expect(response.status).toBe(200);
+    expect(response.body.mission.has_pending_join_request).toBe(true);
+  });
+
+  it.each(['not-a-number', '1.5', '-1'])(
+    'rejects the invalid mission identifier %s',
+    async (missionId) => {
+      const response = await request(app).get(`/api/missions/${missionId}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors.mid).toBeDefined();
+      expect(missionService.getMissionByMid).not.toHaveBeenCalled();
     },
-  };
-});
+  );
 
-// Before each test, test db data is cleansed
-beforeEach(async () => {
-  await pool.query('TRUNCATE TABLE mission CASCADE');
-  await pool.query('TRUNCATE TABLE app_user CASCADE');
-});
+  it('publishes a validated mission', async () => {
+    const mission = { mid: 6, title: missionPayload.title };
+    missionService.publishMission.mockResolvedValue(mission);
 
-// After all tests pool is ended
-afterAll(async () => {
-  await pool.end();
-});
+    const response = await request(app)
+      .post('/api/missions')
+      .send(missionPayload);
 
-// Tests
-describe('GET /api/missions with pagination', () => {
-  // Happy paths
-  it('should get the first page with all missions matching the page limit (2 missions)', async () => {
-    // First, a user is created and then the missions are created
-    const insertResult = await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3) RETURNING uid',
-      [test_user.email, test_user.username, test_user.firebaseUid],
+    expect(response.status).toBe(201);
+    expect(response.body).toEqual({ mission });
+    expect(missionService.publishMission).toHaveBeenCalledWith(
+      currentUser.uid,
+      missionPayload.title,
+      missionPayload.description,
+      missionPayload.vacancies,
+      [expect.objectContaining(vacancy)],
+      missionPayload.latitude,
+      missionPayload.longitude,
+      [],
     );
-
-    const owner_id = insertResult.rows[0].uid;
-
-    const mids = [];
-    for (let i = 0; i < 2; i++) {
-      mids.push(
-        await pool.query(
-          'INSERT INTO mission (publication_date, title, description, difficulty, total_vacancies, occupied_vacancies, monetary_reward, status, owner_id)' +
-            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid',
-          [
-            test_mission.title,
-            test_mission.description,
-            test_mission.difficulty,
-            test_mission.total_vacancies,
-            test_mission.occupied_vacancies,
-            test_mission.monetary_reward,
-            test_mission.status,
-            owner_id,
-          ],
-        ),
-      );
-    }
-
-    // Then is it searched
-    const response = await request(app).get('/api/missions').query({
-      page: test_mission.first_page,
-      limit: 2,
-    });
-
-    // Checks response
-    expect(response.status).toBe(200); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.missions.length).toBe(2);
-    expect(response.body.missions[0].mid).toBe(mids[1].rows[0].mid);
-    expect(response.body.missions[1].mid).toBe(mids[0].rows[0].mid);
-    expect(response.body.pagination.currentPage).toBe(1);
-    expect(response.body.pagination.totalPages).toBe(1);
-    expect(response.body.pagination.totalItems).toBe(2);
-    expect(response.body.pagination.hasMore).toBe(false);
   });
 
-  it('should get the second page with less missions than the limit', async () => {
-    // First, a user is created and then the missions are created
-    const insertResult = await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3) RETURNING uid',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
+  it('rejects a mission with malformed vacancy data', async () => {
+    const response = await request(app)
+      .post('/api/missions')
+      .send({ ...missionPayload, vacanciesData: '{invalid-json' });
 
-    const owner_id = insertResult.rows[0].uid;
-
-    const mids = [];
-    for (let i = 0; i < 3; i++) {
-      mids.push(
-        await pool.query(
-          'INSERT INTO mission (publication_date, title, description, difficulty, total_vacancies, occupied_vacancies, monetary_reward, status, owner_id)' +
-            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid',
-          [
-            test_mission.title,
-            test_mission.description,
-            test_mission.difficulty,
-            test_mission.total_vacancies,
-            test_mission.occupied_vacancies,
-            test_mission.monetary_reward,
-            test_mission.status,
-            owner_id,
-          ],
-        ),
-      );
-    }
-
-    // Then is it searched
-    const response = await request(app).get('/api/missions').query({
-      page: test_mission.second_page,
-      limit: 2,
-    });
-
-    // Checks response
-    expect(response.status).toBe(200); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.missions.length).toBe(1);
-    expect(response.body.missions[0].mid).toBe(mids[0].rows[0].mid);
-    expect(response.body.pagination.currentPage).toBe(2);
-    expect(response.body.pagination.totalPages).toBe(2);
-    expect(response.body.pagination.totalItems).toBe(3);
-    expect(response.body.pagination.hasMore).toBe(false);
+    expect(response.status).toBe(400);
+    expect(response.body.errors.vacanciesData).toBeDefined();
+    expect(missionService.publishMission).not.toHaveBeenCalled();
   });
 
-  it('should get the first page with more pages to load', async () => {
-    // First, a user is created and then the missions are created
-    const insertResult = await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3) RETURNING uid',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
+  it.each([
+    ['title', ''],
+    ['description', ''],
+    ['vacancies', undefined],
+    ['vacanciesData', undefined],
+  ])('rejects a published mission without valid %s', async (field, value) => {
+    const response = await request(app)
+      .post('/api/missions')
+      .send({ ...missionPayload, [field]: value });
 
-    const owner_id = insertResult.rows[0].uid;
-
-    const mids = [];
-    for (let i = 0; i < 3; i++) {
-      mids.push(
-        await pool.query(
-          'INSERT INTO mission (publication_date, title, description, difficulty, total_vacancies, occupied_vacancies, monetary_reward, status, owner_id)' +
-            'VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8) RETURNING mid',
-          [
-            test_mission.title,
-            test_mission.description,
-            test_mission.difficulty,
-            test_mission.total_vacancies,
-            test_mission.occupied_vacancies,
-            test_mission.monetary_reward,
-            test_mission.status,
-            owner_id,
-          ],
-        ),
-      );
-    }
-
-    // Then is it searched
-    const response = await request(app).get('/api/missions').query({
-      page: test_mission.first_page,
-      limit: 2,
-    });
-
-    // Checks response
-    expect(response.status).toBe(200); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.missions.length).toBe(2);
-    expect(response.body.missions[0].mid).toBe(mids[2].rows[0].mid);
-    expect(response.body.missions[1].mid).toBe(mids[1].rows[0].mid);
-    expect(response.body.pagination.currentPage).toBe(1);
-    expect(response.body.pagination.totalPages).toBe(2);
-    expect(response.body.pagination.totalItems).toBe(3);
-    expect(response.body.pagination.hasMore).toBe(true);
+    expect(response.status).toBe(400);
+    expect(response.body.errors[field]).toBeDefined();
+    expect(missionService.publishMission).not.toHaveBeenCalled();
   });
 
-  // Corner cases
-  it('should return an empty list when there are no missions to load', async () => {
-    // Search is made with no data loaded
-    const response = await request(app).get('/api/missions').query({
-      page: test_mission.first_page,
-      limit: 2,
-    });
+  it.each([
+    ['title', 'a'.repeat(consts.MISSION.TITLE.MAX_LENGTH + 1)],
+    ['description', 'a'.repeat(consts.MISSION.DESCRIPTION.MAX_LENGTH + 1)],
+    ['vacancies', consts.MISSION.VACANCIES.MIN - 1],
+    ['vacancies', consts.MISSION.VACANCIES.MAX + 1],
+    ['vacancies', 1.5],
+  ])(
+    'rejects a published mission when %s is outside its current contract',
+    async (field, value) => {
+      const response = await request(app)
+        .post('/api/missions')
+        .send({ ...missionPayload, [field]: value });
 
-    // Checks response
-    expect(response.status).toBe(200); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
+      expect(response.status).toBe(400);
+      expect(response.body.errors[field]).toBeDefined();
+      expect(missionService.publishMission).not.toHaveBeenCalled();
+    },
+  );
+
+  it('forwards a duplicate mission title error', async () => {
+    missionService.publishMission.mockRejectedValue(
+      new AppError(messages.MISSION_SAME_TITLE, 400),
     );
-    expect(response.body.missions).toEqual([]);
-    expect(response.body.pagination.currentPage).toBe(1);
-    expect(response.body.pagination.totalPages).toBe(0);
-    expect(response.body.pagination.totalItems).toBe(0);
-    expect(response.body.pagination.hasMore).toBe(false);
+
+    const response = await request(app)
+      .post('/api/missions')
+      .send(missionPayload);
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors.general).toEqual([messages.MISSION_SAME_TITLE]);
   });
 
-  it('should return a 400 status because the page value is not valid', async () => {
-    // Search is made with no data loaded
-    const response = await request(app).get('/api/missions').query({
-      page: '2as',
-      limit: 2,
-    });
+  it('closes a mission', async () => {
+    const result = { status: 'in_progress', participants: [{ id: 1 }] };
+    missionService.closeMission.mockResolvedValue(result);
 
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.page[0]).toBe(messages.FIELD_NUMBER('Page'));
+    const response = await request(app).post('/api/missions/6/close');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(result);
+    expect(missionService.closeMission).toHaveBeenCalledWith(6, currentUser);
   });
 
-  it('should return a 400 status because the limit value is not valid', async () => {
-    // Search is made with no data loaded
-    const response = await request(app).get('/api/missions').query({
-      page: 0,
-      limit: -2,
+  it('rejects closing a mission by a non-owner', async () => {
+    missionService.closeMission.mockRejectedValue(
+      new AppError(messages.UNAUTHORIZED_ERROR, 403),
+    );
+
+    const response = await request(app).post('/api/missions/6/close');
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.UNAUTHORIZED_ERROR]);
+  });
+
+  it('returns not found when closing a missing mission', async () => {
+    missionService.closeMission.mockRejectedValue(
+      new AppError(messages.MISSION_NOT_FOUND, 404),
+    );
+
+    const response = await request(app).post('/api/missions/999/close');
+
+    expect(response.status).toBe(404);
+    expect(response.body.errors.general).toEqual([messages.MISSION_NOT_FOUND]);
+  });
+
+  it('sends a join request', async () => {
+    const response = await request(app).post('/api/missions/6/join').send({
+      vacancyId: 9,
+      message: 'I can help.',
     });
 
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
+    expect(response.status).toBe(200);
+    expect(missionService.joinMission).toHaveBeenCalledWith(
+      6,
+      currentUser,
+      'I can help.',
+      9,
     );
-    expect(response.body.errors.limit[0]).toBe(
-      messages.FIELD_POSITIVE('Limit'),
+  });
+
+  it('invites a user to a vacancy', async () => {
+    missionService.inviteToMission.mockResolvedValue(41);
+
+    const response = await request(app).post('/api/missions/6/invite').send({
+      receiverId: 22,
+      vacancyId: 9,
+      message: 'Join us.',
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toBe(41);
+    expect(missionService.inviteToMission).toHaveBeenCalledWith(
+      6,
+      9,
+      currentUser.uid,
+      22,
+      'Join us.',
+      currentUser,
     );
+  });
+
+  it('unjoins a vacancy', async () => {
+    const response = await request(app)
+      .post('/api/missions/6/unjoin')
+      .send({ vacancyId: 9 });
+
+    expect(response.status).toBe(200);
+    expect(missionService.unjoinMission).toHaveBeenCalledWith(
+      6,
+      9,
+      currentUser,
+    );
+  });
+
+  it('submits the current participation for review', async () => {
+    const participation = { id: 9, status: 'submitted' };
+    missionService.submitMissionParticipation.mockResolvedValue(participation);
+
+    const response = await request(app).post('/api/missions/6/submit');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
+      participation,
+    });
+    expect(missionService.submitMissionParticipation).toHaveBeenCalledWith(
+      6,
+      currentUser,
+    );
+  });
+
+  it('finishes a mission', async () => {
+    const response = await request(app).post('/api/missions/6/finish');
+
+    expect(response.status).toBe(200);
+    expect(missionService.finishMission).toHaveBeenCalledWith(6, currentUser);
+  });
+
+  it('reopens a mission', async () => {
+    const response = await request(app).post('/api/missions/6/reopen');
+
+    expect(response.status).toBe(200);
+    expect(missionService.reopenMission).toHaveBeenCalledWith(6, currentUser);
+  });
+
+  it('edits a mission and keeps existing photo URLs', async () => {
+    const payload = {
+      ...missionPayload,
+      mid: 6,
+      existingPhotos: ['/uploads/mission-photos/existing.png'],
+    };
+    const mission = { mid: 6, title: payload.title };
+    missionService.editMission.mockResolvedValue(mission);
+
+    const response = await request(app).put('/api/missions/6').send(payload);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ mission });
+    expect(missionService.editMission).toHaveBeenCalledWith(
+      currentUser,
+      expect.objectContaining({ mid: 6, vacanciesData: [vacancy] }),
+      [],
+      payload.existingPhotos,
+    );
+  });
+
+  it('forwards mission service errors through the API error contract', async () => {
+    missionService.getMissionByMid.mockRejectedValue(
+      new AppError(messages.MISSION_NOT_FOUND, 404),
+    );
+
+    const response = await request(app).get('/api/missions/999');
+
+    expect(response.status).toBe(404);
+    expect(response.body.errors.general).toEqual([messages.MISSION_NOT_FOUND]);
   });
 });

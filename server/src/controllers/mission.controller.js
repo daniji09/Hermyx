@@ -105,7 +105,6 @@ export const publishMission = async (req, res, next) => {
       latitude,
       longitude,
     } = req.body;
-    console.log(req.body);
     const photos = req.files.photos || [];
     const mission = await missionService.publishMission(
       uid,
