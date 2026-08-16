@@ -71,6 +71,7 @@ export const reportMission = async (req, res, next) => {
   }
 };
 
+// Accepts adventurer work
 export const acceptAdventurersWork = async (req, res, next) => {
   try {
     await reportService.acceptAdventurersWork({

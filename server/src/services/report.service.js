@@ -17,7 +17,7 @@ import * as conversationService from './conversation.service.js';
 import * as missionService from './mission.service.js';
 import * as notificationService from './notification.service.js';
 import * as userService from './user.service.js';
-import { createTransfer } from '../providers/payment.provider.js';
+import * as paymentProvider from '../providers/payment.provider.js';
 import { emitToAdmins, emitToUser } from '../providers/socket.provider.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
 
@@ -43,35 +43,6 @@ const getVacancyOrThrow = async (missionId, vacancyId) => {
 
 const getUserOrThrow = async (userId) => {
   return userService.getUserByUidOrThrow(userId);
-};
-
-const assertReportCanBeResolved = (report) => {
-  if (report.status === REPORT_STATUS.ANSWERED.ID) {
-    throw new AppError(messages.REPORT_ALREADY_ANSWERED, 409);
-  }
-  if (!REPORT_TYPE[report.type].CAN_BE_REJECTED_ACCEPTED) {
-    throw new AppError(messages.INCORRECT_ANSWER_FOR_REPORT, 409);
-  }
-};
-
-const getDisputeResolutionContext = async (reportId) => {
-  const report = await getReportByRidOrThrow(reportId);
-  assertReportCanBeResolved(report);
-
-  const missionId = report.payload.associated_mission_id;
-  const vacancyId = report.payload.associated_vacancy_id;
-  const mission = await getMissionOrThrow(missionId);
-  if (mission.status === MISSION_STATUS.REPORTED.ID) {
-    throw new AppError(messages.MISSION_CLOSED_BY_REPORT, 409);
-  }
-
-  const vacancy = await getVacancyOrThrow(missionId, vacancyId);
-  if (vacancy.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID) {
-    throw new AppError(messages.VACANCY_NOT_DISPUTED, 409);
-  }
-
-  const adventurer = await getUserOrThrow(vacancy.adventurer_id);
-  return { adventurer, mission, report, vacancy };
 };
 
 export const getUserDisputes = async (userId) =>
@@ -428,68 +399,94 @@ export const closeReportAndConversation = async (
   return result.report;
 };
 
+// Accepts adventurer work
 export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
+  // Gets adventurer, mission, vacancy and report info and basic checks
   const { adventurer, mission, report, vacancy } =
     await getDisputeResolutionContext(reportId);
-  let transfer;
-  if (adventurer.stripe_connected_id) {
-    transfer = await createTransfer(
-      {
-        amount: Math.round(vacancy.monetary_reward * 100),
-        currency: 'eur',
-        destination: adventurer.stripe_connected_id,
-        description: 'mission_payed',
-        transfer_group: `mission_${mission.mid}`,
-      },
-      `pay_${mission.mid}_vac_${vacancy.id}`,
-    );
-  }
-  const adventurerMessage = `Your participation in "${mission.title}" was approved by the administration after resolving the dispute. Reward is being payed to you!`;
-  const applicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was accepted by the administration. Reward is being payed to the adventurer.`;
-  const client = await pool.connect();
-  let adventurerNotificationId;
-  let applicantNotificationId;
   let closedReport;
   let participantIds;
+  // Creates Stripe transfer in its own try and with idempotency key
   try {
-    await client.query('BEGIN');
-    await missionService.approveMissionParticipation(
-      mission.mid,
-      adventurer.uid,
-      client,
-    );
-    if (transfer) {
-      await missionService.createMissionPayment(
+    let transfer;
+    if (adventurer.stripe_connected_id) {
+      transfer = await paymentProvider.createTransfer(
         {
-          mid: mission.mid,
-          vacancy_id: vacancy.id,
-          sender_id: HERMYX_SYSTEM_ID,
-          receiver_id: adventurer.uid,
-          stripe_transaction_id: transfer.id,
-          transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
-          amount_paid: vacancy.monetary_reward,
+          amount: Math.round(vacancy.monetary_reward * 100),
+          currency: 'eur',
+          destination: adventurer.stripe_connected_id,
+          description: 'mission_payed',
+          transfer_group: `mission_${mission.mid}`,
         },
-        client,
+        `pay_${mission.mid}_vac_${vacancy.id}`,
       );
-      await missionService.updateParticipationPaymentStatusById(
-        vacancy.id,
-        client,
-      );
-      await missionService.releaseMissionParticipation(
+    }
+
+    // Then makes database changes on its own database transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await missionService.approveMissionParticipation(
         mission.mid,
         adventurer.uid,
         client,
       );
+      if (transfer) {
+        await missionService.createMissionPayment(
+          {
+            mid: mission.mid,
+            vacancy_id: vacancy.id,
+            sender_id: HERMYX_SYSTEM_ID,
+            receiver_id: adventurer.uid,
+            stripe_transaction_id: transfer.id,
+            transaction_type: TRANSACTION_TYPE.PAYOUT.ID,
+            amount_paid: vacancy.monetary_reward,
+          },
+          client,
+        );
+        await missionService.updateParticipationPaymentStatusById(
+          vacancy.id,
+          client,
+        );
+        await missionService.releaseMissionParticipation(
+          mission.mid,
+          adventurer.uid,
+          client,
+        );
+      }
+      await missionService.syncMissionCompletionStatus(mission.mid, client);
+      ({ report: closedReport, participantIds } =
+        await closeReportAndConversationInternal(
+          reportId,
+          REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID,
+          reason,
+          adminId,
+          client,
+        ));
+      await client.query('COMMIT');
+    } catch (dbError) {
+      await client.query('ROLLBACK');
+      // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+      console.error(
+        `FATAL DB ERROR: Transfer ${transfer.id} sent to ${adventurer.uid} after an admin accepted adventurer's work but DB failed`,
+        dbError,
+      );
+    } finally {
+      client.release();
     }
-    await missionService.syncMissionCompletionStatus(mission.mid, client);
-    ({ report: closedReport, participantIds } =
-      await closeReportAndConversationInternal(
-        reportId,
-        REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID,
-        reason,
-        adminId,
-        client,
-      ));
+  } catch (stripeError) {
+    // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
+    console.error(
+      `Stripe Error while paying out vacancy ${vacancy.id}  after an admin accepted adventurer's:`,
+      stripeError.message,
+    );
+  }
+  const client = await pool.connect();
+  const adventurerMessage = `Your participation in "${mission.title}" was approved by the administration after resolving the dispute. Reward is being payed to you!`;
+  const applicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was accepted by the administration. Reward is being payed to the adventurer.`;
+  let adventurerNotificationId, applicantNotificationId;
+  try {
+    await client.query('BEGIN');
     adventurerNotificationId = await notificationService.createNotification(
       buildResolutionNotification(
         adventurer.uid,
@@ -706,4 +703,41 @@ const emitConversationClosed = (participantIds, report) => {
       reportId: report.rid,
     });
   }
+};
+
+/// Helper functions
+// Asserts if a report can be resolved
+const assertReportCanBeResolved = (report) => {
+  if (report.status === REPORT_STATUS.ANSWERED.ID) {
+    throw new AppError(messages.REPORT.GENERAL.REPORT_ALREADY_ANSWERED, 409);
+  }
+  if (!REPORT_TYPE[report.type].CAN_BE_REJECTED_ACCEPTED) {
+    throw new AppError(
+      messages.REPORT.GENERAL.INCORRECT_ANSWER_FOR_REPORT,
+      409,
+    );
+  }
+};
+
+// Gets dispute resolution context
+const getDisputeResolutionContext = async (reportId) => {
+  // Gets context and checks if it can be resolved
+  const report = await getReportByRidOrThrow(reportId);
+  assertReportCanBeResolved(report);
+
+  // Gets mission, vacancy and adventurer info
+  const missionId = report.payload.associated_mission_id;
+  const vacancyId = report.payload.associated_vacancy_id;
+  const mission = await getMissionOrThrow(missionId);
+  if (mission.status === MISSION_STATUS.REPORTED.ID) {
+    throw new AppError(messages.REPORT.REPORT_MISSION.CLOSED_BY_REPORT, 409);
+  }
+
+  const vacancy = await getVacancyOrThrow(missionId, vacancyId);
+  if (vacancy.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID) {
+    throw new AppError(messages.REPORT.GENERAL.VACANCY_NOT_DISPUTED, 409);
+  }
+
+  const adventurer = await getUserOrThrow(vacancy.adventurer_id);
+  return { adventurer, mission, report, vacancy };
 };

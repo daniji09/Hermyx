@@ -295,6 +295,9 @@ export const messages = {
   REPORT: {
     GENERAL: {
       REPORTS_NOT_FOUND: `Reports not found.`,
+      INCORRECT_ANSWER_FOR_REPORT: `This type of report can't be answered like this.`,
+      REPORT_ALREADY_ANSWERED: `Can't answer a report that has been already answered.`,
+      VACANCY_NOT_DISPUTED: `This vacancy is not disputed currently.`,
     },
     REPORT_ADVENTURER: {
       ACTIVE_REPORT: `You already have an active report for this adventurer. Our team is checking it.`,

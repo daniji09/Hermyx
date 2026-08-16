@@ -68,6 +68,7 @@ export const reportMissionValidation = z.object({
   message: reportMessageBaseSchema,
 });
 
+// Accept adventurers work
 export const acceptAdventurersWorkParamsValidation = z.object({
   rid: reportIdBaseSchema,
 });
