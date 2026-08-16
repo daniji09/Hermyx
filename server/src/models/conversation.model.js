@@ -1,7 +1,7 @@
 import pool from '../config/db.config.js';
 
 /// INSERTS
-// // Creates a new conversation
+// Creates a new conversation
 export const create = async (type, missionId = null, client = pool) => {
   // Mission case
   if (type === 'mission') {
@@ -26,73 +26,9 @@ export const create = async (type, missionId = null, client = pool) => {
   return result.rows[0];
 };
 
-// UPDATES
-// Closes conversation by id
-export const closeById = async (conversationId, client = pool) => {
-  const result = await client.query(
-    `UPDATE conversation SET closed_at = CURRENT_TIMESTAMP
-     WHERE cid = $1 AND closed_at IS NULL RETURNING *`,
-    [conversationId],
-  );
-  return result.rows[0] || null;
-};
-
-// Closes conversation by mid
-export const closeByMid = async (missionId, client = pool) => {
-  const query = `
-    UPDATE conversation
-    SET closed_at = CURRENT_TIMESTAMP
-    WHERE mission_id = $1
-      AND type = 'mission'
-      AND closed_at IS NULL
-    RETURNING *
-  `;
-
-  const result = await client.query(query, [missionId]);
-  return result.rows[0] || null;
-};
-
-// ----
-
-export const findPrivateConversation = async (
-  userAId,
-  userBId,
-  client = pool,
-) => {
-  const query = `
-    SELECT c.*
-    FROM conversation c
-    JOIN conversation_participant cp1
-      ON cp1.conversation_id = c.cid
-    JOIN conversation_participant cp2
-      ON cp2.conversation_id = c.cid
-    WHERE c.type = 'private'
-      AND c.closed_at IS NULL
-      AND cp1.user_id = $1
-      AND cp1.left_at IS NULL
-      AND cp2.user_id = $2
-      AND cp2.left_at IS NULL
-    LIMIT 1
-  `;
-
-  const result = await client.query(query, [userAId, userBId]);
-  return result.rows[0];
-};
-
-export const findById = async (conversationId, client = pool) => {
-  const query = `
-    SELECT
-      c.*,
-      m.title AS mission_title
-    FROM conversation c
-    LEFT JOIN mission m ON m.mid = c.mission_id
-    WHERE c.cid = $1
-  `;
-  const result = await client.query(query, [conversationId]);
-  return result.rows[0];
-};
-
-export const findByUserId = async (userId, client = pool) => {
+/// SELECTS
+// Find conversation by uid
+export const findAllByUid = async (userId, client = pool) => {
   const query = `
     SELECT
       c.cid,
@@ -160,4 +96,70 @@ export const findByUserId = async (userId, client = pool) => {
 
   const result = await client.query(query, [userId]);
   return result.rows;
+};
+
+/// UPDATES
+// Closes conversation by id
+export const closeById = async (conversationId, client = pool) => {
+  const result = await client.query(
+    `UPDATE conversation SET closed_at = CURRENT_TIMESTAMP
+     WHERE cid = $1 AND closed_at IS NULL RETURNING *`,
+    [conversationId],
+  );
+  return result.rows[0] || null;
+};
+
+// Closes conversation by mid
+export const closeByMid = async (missionId, client = pool) => {
+  const query = `
+    UPDATE conversation
+    SET closed_at = CURRENT_TIMESTAMP
+    WHERE mission_id = $1
+      AND type = 'mission'
+      AND closed_at IS NULL
+    RETURNING *
+  `;
+
+  const result = await client.query(query, [missionId]);
+  return result.rows[0] || null;
+};
+
+// ----
+
+export const findPrivateConversation = async (
+  userAId,
+  userBId,
+  client = pool,
+) => {
+  const query = `
+    SELECT c.*
+    FROM conversation c
+    JOIN conversation_participant cp1
+      ON cp1.conversation_id = c.cid
+    JOIN conversation_participant cp2
+      ON cp2.conversation_id = c.cid
+    WHERE c.type = 'private'
+      AND c.closed_at IS NULL
+      AND cp1.user_id = $1
+      AND cp1.left_at IS NULL
+      AND cp2.user_id = $2
+      AND cp2.left_at IS NULL
+    LIMIT 1
+  `;
+
+  const result = await client.query(query, [userAId, userBId]);
+  return result.rows[0];
+};
+
+export const findById = async (conversationId, client = pool) => {
+  const query = `
+    SELECT
+      c.*,
+      m.title AS mission_title
+    FROM conversation c
+    LEFT JOIN mission m ON m.mid = c.mission_id
+    WHERE c.cid = $1
+  `;
+  const result = await client.query(query, [conversationId]);
+  return result.rows[0];
 };

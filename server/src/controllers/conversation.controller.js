@@ -1,5 +1,18 @@
 import * as conversationService from '../services/conversation.service.js';
 
+/// Controller functions
+// Get all current user's conversations
+export const getMyConversations = async (req, res, next) => {
+  try {
+    const conversations = await conversationService.getMyConversations(
+      req.user.uid,
+    );
+    return res.status(200).json({ conversations });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getOrCreatePrivateConversationWithUser = async (
   req,
   res,
@@ -51,17 +64,6 @@ export const getConversationMessages = async (req, res, next) => {
       req.user,
     );
     return res.status(200).json({ messages });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getMyConversations = async (req, res, next) => {
-  try {
-    const conversations = await conversationService.getMyConversations(
-      req.user.uid,
-    );
-    return res.status(200).json({ conversations });
   } catch (error) {
     next(error);
   }

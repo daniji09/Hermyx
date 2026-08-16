@@ -1,6 +1,6 @@
-# API - Authentication documentation
+# API - Disputes documentation
 
-Manages users authentication into the platform
+Manages users disputes into the platform
 <br><br>
 
 ## - Get all user's disputes: `GET /api/disputes`

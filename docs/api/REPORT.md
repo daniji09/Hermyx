@@ -1,6 +1,6 @@
-# API - Authentication documentation
+# API - Reports documentation
 
-Manages users authentication into the platform
+Manages users reports into the platform
 <br><br>
 
 ## - Get all reports: `GET /api/reports`

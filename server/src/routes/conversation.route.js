@@ -16,12 +16,8 @@ import {
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-router.post(
-  '/private',
-  validateBodySchema(privateConversationSchema),
-  conversationController.getOrCreatePrivateConversationWithUser,
-);
-
+/// GET
+// Get all current user's conversations
 router.get('/', conversationController.getMyConversations);
 
 router.get('/unread-count', conversationController.getMyUnreadMessageCount);
@@ -51,6 +47,11 @@ router.get(
   '/:conversationId/messages',
   validateParamsSchema(conversationIdParamsSchema),
   conversationController.getConversationMessages,
+);
+router.post(
+  '/private',
+  validateBodySchema(privateConversationSchema),
+  conversationController.getOrCreatePrivateConversationWithUser,
 );
 
 export default router;

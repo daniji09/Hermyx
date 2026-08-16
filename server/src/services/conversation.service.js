@@ -131,6 +131,12 @@ export const closeMissionConversationType = async (mid, client) => {
 };
 
 /// Endpoint complex functions
+// Get all current user's conversations
+export const getMyConversations = async (userId) => {
+  checkRequired(userId, 'User id');
+  return conversationModel.findAllByUid(userId);
+};
+
 export const getConversationByIdOrThrow = async (conversationId, client) => {
   const conversation = await getConversationById(conversationId, client);
   if (!conversation) throw buildConversationNotFoundError();
@@ -306,11 +312,6 @@ export const getConversationMessages = async (conversationId, user) => {
     user.uid,
     isAdminPreview,
   );
-};
-
-export const getMyConversations = async (userId) => {
-  checkRequired(userId, 'User id');
-  return conversationModel.findByUserId(userId);
 };
 
 export const getMyUnreadMessageCount = async (userId) =>
