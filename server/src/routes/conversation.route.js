@@ -59,7 +59,7 @@ router.post(
 
 // ...
 router.patch(
-  '/:conversationId/read',
+  '/:cid/read',
   validateParamsSchema(conversationIdParamsSchema),
   conversationController.markConversationAsRead,
 );

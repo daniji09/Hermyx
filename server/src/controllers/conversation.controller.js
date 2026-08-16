@@ -80,7 +80,7 @@ export const sendMessage = async (req, res, next) => {
 export const markConversationAsRead = async (req, res, next) => {
   try {
     const unreadCount = await conversationService.markConversationAsRead(
-      req.params.conversationId,
+      req.params.cid,
       req.user.uid,
     );
     return res.status(200).json({ unreadCount });
