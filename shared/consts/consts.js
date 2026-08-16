@@ -183,4 +183,13 @@ export const consts = {
     MESSAGE: { MAX: 1000 },
     REASON_MESSAGE: { MAX: 1000 },
   },
+
+  // Conversation consts
+  CONVERSATION: {
+    PHOTOS: {
+      MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
+      ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
+      MAX: 5,
+    },
+  },
 };

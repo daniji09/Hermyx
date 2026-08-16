@@ -339,6 +339,12 @@ export const messages = {
       CONVERSATION_NOT_FOUND: `Conversation not found`,
       CONVERSATION_WITH_YOURSELF: `You cannot create a conversation with yourself.`,
     },
+    CREATE_MESSAGE: {
+      EMPTY: `Message cannot be empty.`,
+      READ_ONLY: `This conversation is read-only.`,
+      PHOTO_TOO_BIG: `Each photo must weight less than 5MB`,
+      PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
+    },
     // Conversation messages shown in a conversation
     REPORT_ADVENTURER: (username, vacancyTitle, missionTitle) =>
       `A dispute was opened after ${username} was reported for the vacancy "${vacancyTitle}" in "${missionTitle}".`,

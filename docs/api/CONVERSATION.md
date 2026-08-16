@@ -238,3 +238,83 @@ Creates private conversation between two users
 **Workflow:** creates a conversation between current user and the one specified via request body. A database transaction is needed to create the conversation and add the participants.
 <br>
 <br>
+
+## - Send message: `POST /api/conversations/:cid/message`
+
+Sends a message to the conversation, it can be an image
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `cid` | integer | Yes | Conversation identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `message` | string | No | Written message. |
+<br>
+
+**File parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `photo` | file | No | Image message. |
+<br>
+
+**Responses:**
+
+- `201 Created`: message created successfully.
+
+  ```json
+  {
+    "message": "<message>"
+  }
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: cannot send messages if current user is not in the conversation.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: conversation or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Conversation/User not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** creates a message conversation and sends it, being message or image. Images are handled by the `multer` (Azure TODO:)library.
+<br>
+<br>

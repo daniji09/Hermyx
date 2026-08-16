@@ -30,7 +30,12 @@ export const privateConversationSchema = z.object({
   otherUserId: uidBaseSchema,
 });
 
-export const createMessageSchema = z.object({
+// Create message
+export const createMessageParamsSchema = z.object({
+  cid: conversationIdBaseSchema,
+});
+
+export const createMessageBodySchema = z.object({
   content: messageContentBaseSchema.optional().default(''),
 });
 
@@ -40,12 +45,13 @@ export const createMessageFileSchema = z.object({
       size: z
         .number()
         .max(
-          consts.MISSION.PHOTOS.MAX_FILE_SIZE,
-          messages.MISSION_PHOTO_TOO_BIG,
+          consts.CONVERSATION.PHOTOS.MAX_FILE_SIZE,
+          messages.CONVERSATION.CREATE_MESSAGE.PHOTO_TOO_BIG,
         ),
       mimetype: z.refine(
-        (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
-        messages.MISSION_PHOTO_INVALID_TYPE,
+        (type) =>
+          consts.CONVERSATION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+        messages.CONVERSATION.CREATE_MESSAGE.PHOTO_INVALID_TYPE,
       ),
     })
     .passthrough()

@@ -27,6 +27,20 @@ export const create = async (type, missionId = null, client = pool) => {
 };
 
 /// SELECTS
+// Find conversation by id
+export const findById = async (conversationId, client = pool) => {
+  const query = `
+    SELECT
+      c.*,
+      m.title AS mission_title
+    FROM conversation c
+    LEFT JOIN mission m ON m.mid = c.mission_id
+    WHERE c.cid = $1
+  `;
+  const result = await client.query(query, [conversationId]);
+  return result.rows[0];
+};
+
 // Find conversation by uid
 export const findAllByUid = async (userId, client = pool) => {
   const query = `
@@ -148,18 +162,5 @@ export const findPrivateConversation = async (
   `;
 
   const result = await client.query(query, [userAId, userBId]);
-  return result.rows[0];
-};
-
-export const findById = async (conversationId, client = pool) => {
-  const query = `
-    SELECT
-      c.*,
-      m.title AS mission_title
-    FROM conversation c
-    LEFT JOIN mission m ON m.mid = c.mission_id
-    WHERE c.cid = $1
-  `;
-  const result = await client.query(query, [conversationId]);
   return result.rows[0];
 };

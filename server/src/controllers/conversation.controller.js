@@ -62,10 +62,11 @@ export const createPrivateConversation = async (req, res, next) => {
   }
 };
 
+// Creates a message
 export const sendMessage = async (req, res, next) => {
   try {
     const message = await conversationService.sendMessage({
-      conversationId: req.params.conversationId,
+      cid: req.params.cid,
       sender: req.user,
       content: req.body.content,
       photo: req.file,

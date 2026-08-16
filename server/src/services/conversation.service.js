@@ -246,72 +246,76 @@ export const createPrivateConversation = async (currentUserId, otherUserId) => {
   }
 };
 
-export const sendMessage = async ({
-  conversationId,
-  sender,
-  content,
-  photo,
-}) => {
-  if (!content && !photo) throw new AppError('Message cannot be empty.', 400);
+// Creates a message
+export const sendMessage = async ({ cid, sender, content, photo }) => {
+  // Parameter checks
+  checkRequired(cid, 'Conversation id');
+  checkRequired(sender, 'Sender user id');
 
+  // Checks if message is empty
+  if (!content && !photo)
+    throw new AppError(messages.CONVERSATION.CREATE_MESSAGE.EMPTY, 400);
+
+  // Get conversation and check if its participant or if its not a read only conversation
   const senderId = sender.uid;
-  const initialConversation = await getConversationByIdOrThrow(conversationId);
-  const initiallyParticipant = await isConversationParticipant(
-    conversationId,
-    senderId,
-  );
+  const initialConversation = await getConversationByIdOrThrow(cid);
+  const isParticipant =
+    await conversationParticipantModel.isConversationParticipant(cid, senderId);
   const canInitiallyJoinAsAdmin =
     sender.role === 'ADMIN' && initialConversation.type === 'dispute';
-  if (!initiallyParticipant && !canInitiallyJoinAsAdmin) {
+  if (!isParticipant && !canInitiallyJoinAsAdmin) {
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
   if (initialConversation.closed_at) {
-    throw new AppError('This conversation is read-only.', 403);
+    throw new AppError(messages.CONVERSATION.CREATE_MESSAGE.READ_ONLY, 403);
   }
   if (
-    initiallyParticipant &&
+    isParticipant &&
     !(await conversationParticipantModel.canSendMessageToConversation(
-      conversationId,
+      cid,
       senderId,
     ))
   ) {
-    throw new AppError('This conversation is read-only.', 403);
+    throw new AppError(messages.CONVERSATION.CREATE_MESSAGE.READ_ONLY, 403);
   }
 
+  // First of all, attachment is saved and message creation needs a database transaction
   const { attachmentUrl, attachmentType } = await saveAttachment(photo);
   const client = await pool.connect();
   let message;
   try {
     await client.query('BEGIN');
-    const conversation = await getConversationByIdOrThrow(
-      conversationId,
-      client,
-    );
+    // Gets conversation and checks if its participant
+    const conversation = await getConversationByIdOrThrow(cid, client);
     const isParticipant = await isConversationParticipant(
-      conversationId,
+      cid,
       senderId,
       client,
     );
     const canJoinAsAdmin =
       sender.role === 'ADMIN' && conversation.type === 'dispute';
 
+    // If its not participant, but is admin, it adds it to conversation
     if (!isParticipant && !canJoinAsAdmin)
       throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
     if (!isParticipant) {
-      await createConversationParticipant(conversationId, senderId, client);
+      await conversationParticipantModel.create(cid, senderId, client);
     }
 
+    // Checks if conversation is not read-only
     const canSend =
       await conversationParticipantModel.canSendMessageToConversation(
-        conversationId,
+        cid,
         senderId,
         client,
       );
-    if (!canSend) throw new AppError('This conversation is read-only.', 403);
+    if (!canSend)
+      throw new AppError(messages.CONVERSATION.CREATE_MESSAGE.READ_ONLY, 403);
 
-    message = await createMessage(
+    // Lastly, creates message
+    message = await conversationMessageModel.create(
       {
-        conversationId,
+        conversationId: cid,
         senderId,
         content,
         attachmentUrl,
@@ -327,8 +331,9 @@ export const sendMessage = async ({
     client.release();
   }
 
+  // Emits message to conversation and participants
   socketProvider.emitToConversation(
-    conversationId,
+    cid,
     'conversation:message-created',
     message,
   );
@@ -338,14 +343,14 @@ export const sendMessage = async ({
     });
   }
   const participantIds =
-    await getActiveConversationParticipantIds(conversationId);
+    await conversationParticipantModel.findActiveIdsByConversationId(cid);
   for (const participantId of participantIds) {
     if (participantId !== senderId) {
       socketProvider.emitToUser(
         participantId,
         'conversation:message-received',
         {
-          conversationId: Number(conversationId),
+          conversationId: Number(cid),
           conversationType: message.conversation_type,
           messageId: message.mid,
           reportId: message.report_id,
@@ -365,18 +370,6 @@ export const markConversationAsRead = async (conversationId, userId) => {
   if (!wasMarkedAsRead)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   return 0;
-};
-
-const saveAttachment = async (photo) => {
-  if (!photo) return { attachmentUrl: null, attachmentType: null };
-  const isProduction = process.env.NODE_ENV === 'production';
-  const attachmentUrl = isProduction
-    ? await storageProvider.uploadToAzureBlob(photo, 'conversation-photos')
-    : await storageProvider.saveToLocalStorage(
-        photo,
-        'uploads/conversation-photos',
-      );
-  return { attachmentUrl, attachmentType: 'image' };
 };
 
 /// Helper functions
@@ -409,4 +402,17 @@ const getConversationAccess = async (conversationId, user) => {
   if (!isParticipant && !isAdminPreview)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   return { conversation, isAdminPreview, isParticipant };
+};
+
+// Saves attachment
+const saveAttachment = async (photo) => {
+  if (!photo) return { attachmentUrl: null, attachmentType: null };
+  const isProduction = process.env.NODE_ENV === 'production';
+  const attachmentUrl = isProduction
+    ? await storageProvider.uploadToAzureBlob(photo, 'conversation-photos')
+    : await storageProvider.saveToLocalStorage(
+        photo,
+        'uploads/conversation-photos',
+      );
+  return { attachmentUrl, attachmentType: 'image' };
 };

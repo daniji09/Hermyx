@@ -4,7 +4,8 @@ import {
   conversationIdMessagesParamsSchema,
   conversationIdParamsSchema,
   createMessageFileSchema,
-  createMessageSchema,
+  createMessageParamsSchema,
+  createMessageBodySchema,
   privateConversationSchema,
 } from '@hermyx/shared';
 import * as conversationController from '../controllers/conversation.controller.js';
@@ -46,20 +47,21 @@ router.post(
   conversationController.createPrivateConversation,
 );
 
+// Create a message on a conversation, it can be a photo
+router.post(
+  '/:cid/messages',
+  upload.single('photo'),
+  validateParamsSchema(createMessageParamsSchema),
+  validateBodySchema(createMessageBodySchema),
+  validateFileSchema(createMessageFileSchema),
+  conversationController.sendMessage,
+);
+
 // ...
 router.patch(
   '/:conversationId/read',
   validateParamsSchema(conversationIdParamsSchema),
   conversationController.markConversationAsRead,
-);
-
-router.post(
-  '/:conversationId/messages',
-  upload.single('photo'),
-  validateParamsSchema(conversationIdParamsSchema),
-  validateBodySchema(createMessageSchema),
-  validateFileSchema(createMessageFileSchema),
-  conversationController.sendMessage,
 );
 
 export default router;
