@@ -343,7 +343,8 @@ export const getDashboardLink = async (user) => {
   const loginLink = await paymentProvider.createLoginLink(
     user.stripe_connected_id,
   );
-  return loginLink.url;
+
+  return loginLink;
 };
 
 // Delete card

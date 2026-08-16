@@ -17,8 +17,6 @@ import {
 import {
   findByEmail,
   findByUsername,
-  anonymize as _anonymize,
-  deanonymize,
   findByUid,
   ban,
   unban,
@@ -30,7 +28,6 @@ import {
   updateStatusByMid,
 } from '../models/mission.model.js';
 import {
-  deleteFirebaseUser,
   disableUser,
   enableUser,
   revokeTokens,
@@ -218,6 +215,16 @@ export const addEmailAuthentication = async (req, res, next) => {
   }
 };
 
+// Deletes (anonymize) current user
+export const deleteMe = async (req, res, next) => {
+  try {
+    await userService.deleteMe(req.user);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ------------
 export const getUser = async (req, res) => {
   try {
@@ -249,44 +256,6 @@ export const getUser = async (req, res) => {
     }
   } catch (e) {
     console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-  }
-};
-
-// Deletes (anonymize) current user TODO: reports should be deleted?, notifications should be seen?
-export const deleteUser = async (req, res) => {
-  const user = req.user;
-  let anonymize;
-  try {
-    // First of all, checks if user has active missions, published or joined
-    const activeMissions = await getUserActiveMissions(user.uid);
-    if (activeMissions.total_active > 0)
-      return res.status(409).json({
-        missions: activeMissions,
-        errors: {
-          general: [
-            `You cant delete your account while you have active missions.`,
-          ],
-        },
-      });
-
-    // Anonymize user in db
-    anonymize = await _anonymize(user.uid);
-    if (anonymize < 1)
-      return res
-        .status(500)
-        .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
-
-    // Deletes user from Firebase
-    await deleteFirebaseUser(user.firebase_uid);
-    return res.status(200).json({});
-  } catch (e) {
-    console.error(e);
-
-    // If email was changed on Firebase but not in Hermyx, it should rollback
-    if (anonymize > 0) await deanonymize(user);
     return res
       .status(500)
       .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });

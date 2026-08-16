@@ -238,6 +238,13 @@ export const markAsSeenByNid = async (nid, client = pool) => {
   return result.rows[0];
 };
 
+/// DELETE
+export const deleteAllByUid = async (uid, client = pool) => {
+  const query = `DELETE FROM notification WHERE recipient_id = $1`;
+  const result = await client.query(query, [uid]);
+  return result.rowCount;
+};
+
 // ------
 
 export const addAssociatedReport = async (

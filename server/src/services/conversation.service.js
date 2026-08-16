@@ -151,6 +151,12 @@ export const closeMissionConversationType = async (mid, client) => {
   return await conversationModel.closeByMid(mid, client);
 };
 
+// Removes a user from all chats
+export const removeUserFromAllConversations = async (uid, client) => {
+  checkRequired(uid, 'User id');
+  return await conversationParticipantModel.removeUserFromAll(uid, client);
+};
+
 /// Endpoint complex functions
 // Get all current user's conversations
 export const getMyConversations = async (userId) => {

@@ -70,6 +70,10 @@ export const messages = {
       NUMBER: 'Password must include at least one number.',
       SYMBOL: 'Password must include at least one symbol (e.g., !@#$%_-).',
     },
+    DELETE_ME: {
+      ACTIVE_MISSIONS: `You cant delete your account while you have active missions.`,
+      ACTIVE_DISPUTES: `You cant delete your account while you have active disputes.`,
+    },
   },
 
   /// Mission messages

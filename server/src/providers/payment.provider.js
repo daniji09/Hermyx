@@ -4,80 +4,80 @@ const _stripe = stripe;
 export { _stripe as stripe };
 
 // Creates a new Stripe Customer entity to track payments and save cards.
-export async function checkStripeCustomer(user) {
+export const checkStripeCustomer = async (user) => {
   const customer = await stripe.customers.create({
     email: user.email,
     name: `${user.username}`,
   });
   return customer.id;
-}
+};
 
 // Retrieves the details of a specific customer from Stripe.
-export async function retrieveCustomer(customerId) {
+export const retrieveCustomer = async (customerId) => {
   return await stripe.customers.retrieve(customerId);
-}
+};
 
 // Retrieves the details of a Connect Express account
-export async function retrieveConnectAccount(accountId) {
+export const retrieveConnectAccount = async (accountId) => {
   return await stripe.accounts.retrieve(accountId);
-}
+};
 
 // Creates a SetupIntent. This is used to save a card for future use without charging it immediately.
-export async function createSetupIntent(customerId) {
+export const createSetupIntent = async (customerId) => {
   return await stripe.setupIntents.create({
     customer: customerId,
     payment_method_types: ['card'],
     usage: 'off_session',
   });
-}
+};
 
 // Lists all credit cards associated with a customer.
-export async function listCards(customerId) {
+export const listCards = async (customerId) => {
   return await stripe.paymentMethods.list({
     customer: customerId,
     type: 'card',
   });
-}
+};
 
 // Retrieves a payment method by ID.
-export async function retrievePaymentMethod(paymentMethodId) {
+export const retrievePaymentMethod = async (paymentMethodId) => {
   return await stripe.paymentMethods.retrieve(paymentMethodId);
-}
+};
 
 // Remove a payment method from a customer
-export async function detachCard(paymentMethodId) {
+export const detachCard = async (paymentMethodId) => {
   return await stripe.paymentMethods.detach(paymentMethodId);
-}
+};
 
 // Set a specific card as the default
-export async function setDefaultCard(customerId, paymentMethodId) {
+export const setDefaultCard = async (customerId, paymentMethodId) => {
   return await stripe.customers.update(customerId, {
     invoice_settings: { default_payment_method: paymentMethodId },
   });
-}
+};
 
 // Creates a payment charge using a saved card. Requires idempotencyKey to avoid double charges.
-export async function createPaymentIntentDefault(data, idempotencyKey) {
+export const createPaymentIntentDefault = async (data, idempotencyKey) => {
   return await stripe.paymentIntents.create(data, { idempotencyKey });
-}
+};
 
 // Creates a payment charge for a new card
-export async function createPaymentIntentNew(data, idempotencyKey) {
+export const createPaymentIntentNew = async (data, idempotencyKey) => {
   return await stripe.paymentIntents.create(data, { idempotencyKey });
-}
+};
 
 // Retrieves the current status of a PaymentIntent
-export async function retrievePI(piId) {
+export const retrievePI = async (piId) => {
   return await stripe.paymentIntents.retrieve(piId);
-}
+};
 
 // Refunds a payment back to the customer.
-export async function createRefund(data, idempotencyKey) {
+export const createRefund = async (data, idempotencyKey) => {
   return await stripe.refunds.create(data, { idempotencyKey });
-}
+};
 
 // Creates a "Connect Express" account for the adventurer so they can receive money.
-export async function createExpressAccount(email) {
+export const createExpressAccount = async (email) => {
   return await stripe.accounts.create({
     type: 'express',
     country: 'ES',
@@ -91,30 +91,36 @@ export async function createExpressAccount(email) {
     },
     capabilities: { transfers: { requested: true } },
   });
-}
+};
 
 // Generates the link to the Stripe-hosted onboarding form.
-export async function createAccountLink(accountId, refreshUrl, returnUrl) {
+export const createAccountLink = async (accountId, refreshUrl, returnUrl) => {
   return await stripe.accountLinks.create({
     account: accountId,
     refresh_url: refreshUrl,
     return_url: returnUrl,
     type: 'account_onboarding',
   });
-}
+};
 
 // Generates a link to the Stripe Dashboard so the adventurer can see their balance.
-export async function createLoginLink(accountId) {
+export const createLoginLink = async (accountId) => {
   return await stripe.accounts.createLoginLink(accountId);
-}
+};
 
 // Transfers funds from your platform to the adventurer's connected account.
-export async function createTransfer(data, idempotencyKey) {
+export const createTransfer = async (data, idempotencyKey) => {
   return await stripe.transfers.create(data, { idempotencyKey });
-}
+};
 
-export async function rejectAccount(stripe_connected_id) {
+// Deletes account
+export const deleteConnectAccount = async (stripeAccountId) => {
+  return await stripe.accounts.del(stripeAccountId);
+};
+
+// Deletes account and warns about it to Stripe
+export const rejectAccount = async (stripe_connected_id) => {
   return await stripe.accounts.reject(stripe_connected_id, {
     reason: 'terms_of_service',
   });
-}
+};

@@ -77,7 +77,6 @@ export const findAllByUid = async (userId, client = pool) => {
       JOIN app_user u ON u.uid = other_participant.user_id
       WHERE other_participant.conversation_id = c.cid
         AND other_participant.user_id <> $1
-        AND other_participant.left_at IS NULL
       ORDER BY other_participant.joined_at ASC
       LIMIT 1
     ) other_user ON c.type = 'private'

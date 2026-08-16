@@ -242,6 +242,68 @@ export const findDisputesByUserId = async (userId) => {
   return result.rows;
 };
 
+export const findAllActiveDisputesByUid = async (uid, client = pool) => {
+  const result = await client.query(
+    `SELECT
+       r.*,
+       c.closed_at,
+       m.title AS mission_title,
+       mp.title AS vacancy_title,
+       counterpart.uid AS counterpart_id,
+       counterpart.username AS counterpart_username,
+       counterpart.avatar AS counterpart_avatar,
+       last_message.content AS last_message_content,
+       last_message.attachment_type AS last_message_attachment_type,
+       last_message.created_at AS last_message_created_at,
+       COALESCE(unread.unread_count, 0)::int AS unread_count
+     FROM report r
+     JOIN conversation c ON c.cid = r.conversation_id
+     JOIN conversation_participant current_participant
+       ON current_participant.conversation_id = c.cid
+      AND current_participant.user_id = $1
+      AND current_participant.left_at IS NULL
+     LEFT JOIN mission m
+       ON m.mid = NULLIF(r.payload->>'associated_mission_id', '')::int
+     LEFT JOIN mission_participation mp
+       ON mp.id = NULLIF(r.payload->>'associated_vacancy_id', '')::int
+     LEFT JOIN LATERAL (
+       SELECT u.uid, u.username, u.avatar
+       FROM conversation_participant cp
+       JOIN app_user u ON u.uid = cp.user_id
+       WHERE cp.conversation_id = c.cid
+         AND cp.user_id <> $1
+         AND u.role = 'USER'
+         AND cp.left_at IS NULL
+       ORDER BY cp.joined_at ASC
+       LIMIT 1
+     ) counterpart ON true
+     LEFT JOIN LATERAL (
+       SELECT cm.content, cm.attachment_type, cm.created_at
+       FROM conversation_message cm
+       WHERE cm.conversation_id = c.cid
+       ORDER BY cm.created_at DESC
+       LIMIT 1
+     ) last_message ON true
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS unread_count
+       FROM conversation_message cm
+       WHERE cm.conversation_id = c.cid
+         AND cm.sender_id <> $1
+         AND cm.created_at > current_participant.last_read_at
+     ) unread ON true
+     WHERE r.type IN ($2, $3, $4) AND r.status = $5
+     ORDER BY last_message.created_at DESC NULLS LAST, r.date DESC`,
+    [
+      uid,
+      REPORT_TYPE.REPORT_ADVENTURER.ID,
+      REPORT_TYPE.REVIEW_DISPUTE.ID,
+      REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
+      REPORT_STATUS.SENT.ID,
+    ],
+  );
+  return result.rows;
+};
+
 /// UPDATES
 // Closes a report
 export const close = async (

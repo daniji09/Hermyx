@@ -1,10 +1,14 @@
 import { consts, messages } from '@hermyx/shared';
 import { AppError, checkRequired } from '../utils/error.util.js';
 import * as missionService from './mission.service.js';
+import * as reportService from './report.service.js';
+import * as conversationService from './conversation.service.js';
+import * as notificationService from './notification.service.js';
 import * as userModel from '../models/user.model.js';
 import * as authProvider from '../providers/auth.provider.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
+import pool from '../config/db.config.js';
 
 /// Model access functions
 // Create user
@@ -463,6 +467,96 @@ export const addEmailAuthentication = async (user, email, password) => {
     if (firebaseChange)
       await authProvider.unlinkFirebaseProvider(user.firebase_uid);
     throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+};
+
+// Deletes current user
+export const deleteMe = async (user) => {
+  // Parameter checks
+  checkRequired(user, 'User');
+
+  // First of all, checks if user has active missions, published or joined
+  const activeMissions = await missionService.getUserActiveMissions(user.uid);
+  if (activeMissions.length > 0)
+    throw new AppError(messages.USER.DELETE_ME.ACTIVE_MISSIONS, 409);
+
+  // Then, checks if it has active disputes
+  const activeDisputes = await reportService.getActiveDisputesByUid(user.uid);
+
+  if (activeDisputes.length > 0)
+    throw new AppError(messages.USER.DELETE_ME.ACTIVE_DISPUTES, 409);
+
+  // Deletes user from Stripe
+  if (user.stripe_connected_id) {
+    try {
+      await paymentProvider.deleteConnectAccount(user.stripe_connected_id);
+    } catch (e) {
+      console.error(`Error deleting Stripe account for ${user.uid}:`, e);
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+
+  // Deletes user from Firebase
+  try {
+    await authProvider.deleteFirebaseUser(user.firebase_uid);
+  } catch (e) {
+    console.error(`Error deleting Firebase account for ${user.uid}:`, e);
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+
+  // Deletes avatar
+  if (user.avatar) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    try {
+      if (isProduction) {
+        await storageProvider.deleteFromAzureBlob(user.avatar, 'avatars');
+      } else {
+        await storageProvider.deleteFromLocalStorage(user.avatar);
+      }
+    } catch (e) {
+      console.error(`Error deleting avatar for ${user.uid}:`, e);
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+
+  // Then, deletions are made inside a transaction
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    // First, removes user from all chats, setting its left_at attribute
+    const conversations =
+      await conversationService.removeUserFromAllConversations(
+        user.uid,
+        client,
+      );
+
+    // Then, closes those conversations
+    for (const conversationParticipant of conversations) {
+      const conversation = await conversationService.getConversationById(
+        conversationParticipant.conversation_id,
+        client,
+      );
+      console.log(conversation);
+      if (conversation.type === 'private')
+        await conversationService.closeConversation(conversation.cid, client);
+    }
+
+    // Then deletes every notification that this user has ever received
+    await notificationService.deleteAllUserNotifications(user.uid, client);
+
+    // Finally, Anonymize user in db
+    const anonymize = await userModel.anonymize(user.uid, client);
+    if (anonymize < 1)
+      throw new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500);
+
+    await client.query('COMMIT');
+    return;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
 };
 

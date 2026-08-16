@@ -102,10 +102,10 @@ router.post(
   userController.addEmailAuthentication,
 );
 
-// ----------
-
 /// DELETE
-router.delete('/me', userController.deleteUser);
+router.delete('/me', userController.deleteMe);
+
+// ----------
 
 // Bans user
 router.post(

@@ -21,15 +21,21 @@ export const findByUid = async (uid) => {
 
 // Get user by username
 export const findByUsername = async (username) => {
-  const query = 'SELECT * FROM app_user WHERE LOWER(username) = LOWER($1)';
-  const result = await pool.query(query, [username]);
+  const query =
+    'SELECT * FROM app_user WHERE LOWER(username) = LOWER($1) AND status = $2';
+  const result = await pool.query(query, [username, USER_STATUS.ACTIVE.ID]);
   return result.rows[0];
 };
 
 // Gets user by username excluding current user
 export const findByUsernameExcludingUid = async (username, uid) => {
-  const query = 'SELECT * FROM app_user WHERE username = $1 AND uid <> $2';
-  const result = await pool.query(query, [username, uid]);
+  const query =
+    'SELECT * FROM app_user WHERE username = $1 AND uid <> $2 AND status = $3';
+  const result = await pool.query(query, [
+    username,
+    uid,
+    USER_STATUS.ACTIVE.ID,
+  ]);
   return result.rows[0];
 };
 
@@ -67,8 +73,8 @@ export const searchByUsername = async ({
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT uid, username, email, avatar, name, surnames, COUNT(*) OVER() AS total_count
     FROM app_user 
-    WHERE uid <> $1`;
-  const values = [excludedUid];
+    WHERE uid <> $1 AND status = $2`;
+  const values = [excludedUid, USER_STATUS.ACTIVE.ID];
 
   if (username) {
     values.push(username);
@@ -190,46 +196,27 @@ export const updateRating = async (uid, client = pool) => {
   return result.rows[0]?.rating;
 };
 
-//////// -------------
-
-export const anonymize = async (uid) => {
+export const anonymize = async (uid, client = pool) => {
   const query = `UPDATE app_user SET
-  username = '?Unknown_' || $1,
+  username = SUBSTRING('Del_' || $1::text, 1, 20),
   email = 'deleted_' || $1 || '@hermyx.deleted',
   firebase_uid = 'deleted_' || $1,
   description = NULL,
   name = NULL,
   surnames = NULL,
-  location = NULL
+  location = NULL,
+  avatar = NULL,
+  rating = 0,
+  stripe_customer_id = NULL,
+  stripe_connected_id = NULL,
+  status = $2
   WHERE uid = $1
   `;
-  const result = await pool.query(query, [uid]);
+  const result = await client.query(query, [uid, USER_STATUS.DELETED.ID]);
   return result.rowCount;
 };
 
-export const deanonymize = async (user) => {
-  const query = `UPDATE app_user SET
-  username = $2,
-  email = $3,
-  firebase_uid = $4,
-  description = $5,
-  name = $6,
-  surnames = $7,
-  location = $8
-  WHERE uid = $1
-  `;
-  const result = await pool.query(query, [
-    user.uid,
-    user.username,
-    user.email,
-    user.firebase_uid,
-    user.description,
-    user.name,
-    user.surnames,
-    user.location,
-  ]);
-  return result.rows[0];
-};
+//////// -------------
 
 export const ban = async (uid) => {
   const query = `UPDATE app_user SET status = $1 WHERE uid = $2 AND status = $3 RETURNING *`;

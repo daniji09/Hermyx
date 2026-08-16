@@ -230,3 +230,10 @@ export const disableConversationParticipants = async (
   );
   return result.rows;
 };
+
+// Removes a user from all conversations
+export const removeUserFromAll = async (uid, client = pool) => {
+  const query = `UPDATE conversation_participant SET left_at = NOW() WHERE user_id = $1 RETURNING * `;
+  const result = await client.query(query, [uid]);
+  return result.rows;
+};

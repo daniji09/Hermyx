@@ -124,6 +124,12 @@ export const countParticipationReviewAttempts = async (
   );
 };
 
+// Delete all user notifications
+export const deleteAllUserNotifications = async (uid, client) => {
+  checkRequired(uid, 'User id');
+  return await notificationModel.deleteAllByUid(uid, client);
+};
+
 /// Endpoint complex functions
 // Gets current user's notifications
 export const getMyNotifications = async (uid) => {

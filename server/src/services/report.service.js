@@ -35,13 +35,22 @@ export const getUserDisputes = async (userId) => {
   return await reportModel.findDisputesByUserId(userId);
 };
 
-export const hasActiveReport = async (reportData, client) =>
-  reportModel.checkActiveReport(reportData, client);
+// Checks active reports of a specified type
+export const hasActiveReport = async (reportData, client) => {
+  checkRequired(reportData, 'Report data');
+  return await reportModel.checkActiveReport(reportData, client);
+};
 
 // Creates report
 export const createReport = async (reportData, client) => {
   checkRequired(reportData, 'Report data');
   return await reportModel.create(reportData, client);
+};
+
+// Gets all active disputes of user
+export const getActiveDisputesByUid = async (uid, client) => {
+  checkRequired(uid, 'User id');
+  return await reportModel.findAllActiveDisputesByUid(uid, client);
 };
 
 /// Complex endpoint functions

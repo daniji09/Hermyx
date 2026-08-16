@@ -132,6 +132,12 @@ export const getAllOccupiedByMid = async (mid) => {
   return await missionParticipationModel.findAllOccupiedByMid(mid);
 };
 
+// Gets user's active missions
+export const getUserActiveMissions = async (uid) => {
+  checkRequired(uid, 'User id');
+  return await missionModel.getUserActiveMissions(uid);
+};
+
 // Updates mission payment
 export const updateMissionPayment = async (mid, payment, client) => {
   checkRequired(mid, 'Mission id');
