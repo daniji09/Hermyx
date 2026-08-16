@@ -59,10 +59,7 @@ export const sendMessage = async (req, res, next) => {
 export const getConversation = async (req, res, next) => {
   try {
     const { conversation, participants } =
-      await conversationService.getConversation(
-        req.params.conversationId,
-        req.user,
-      );
+      await conversationService.getConversation(req.params.cid, req.user);
     return res.status(200).json({ conversation, participants });
   } catch (error) {
     next(error);

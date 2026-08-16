@@ -9,6 +9,22 @@ import * as socketProvider from '../providers/socket.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
 
 /// Model access functions
+// Get conversation by id
+export const getConversationById = async (conversationId, client) => {
+  checkRequired(conversationId, 'Conversation id');
+  return conversationModel.findById(conversationId, client);
+};
+
+export const getConversationByIdOrThrow = async (conversationId, client) => {
+  const conversation = await getConversationById(conversationId, client);
+  if (!conversation)
+    throw new AppError(
+      messages.CONVERSATION.GENERAL.CONVERSATION_NOT_FOUND,
+      404,
+    );
+  return conversation;
+};
+
 export const createConversation = async (type, mid, client) => {
   checkRequired(type, 'Conversation type');
   return conversationModel.create(type, mid, client);
@@ -93,11 +109,6 @@ export const leaveMissionConversation = async (mid, uid, client) => {
   );
 };
 
-export const getConversationById = async (conversationId, client) => {
-  checkRequired(conversationId, 'Conversation id');
-  return conversationModel.findById(conversationId, client);
-};
-
 export const getActiveConversationParticipantIds = async (
   conversationId,
   client,
@@ -147,10 +158,20 @@ export const getMyUnreadMessageCount = async (userId) => {
   );
 };
 
-export const getConversationByIdOrThrow = async (conversationId, client) => {
-  const conversation = await getConversationById(conversationId, client);
-  if (!conversation) throw buildConversationNotFoundError();
-  return conversation;
+// Get conversation by id
+export const getConversation = async (conversationId, user) => {
+  // Gets conversation by id and checks it
+  const { conversation, isParticipant } = await getConversationAccess(
+    conversationId,
+    user,
+  );
+
+  // Find participants of conversation by cid
+  const participants = await conversationParticipantModel.findByAllByCid(
+    conversationId,
+    isParticipant ? user.uid : null,
+  );
+  return { conversation, participants };
 };
 
 export const getOrCreatePrivateConversationWithUser = async (
@@ -210,7 +231,7 @@ export const sendMessage = async ({
   const canInitiallyJoinAsAdmin =
     sender.role === 'ADMIN' && initialConversation.type === 'dispute';
   if (!initiallyParticipant && !canInitiallyJoinAsAdmin) {
-    throw buildUnauthorizedError();
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
   if (initialConversation.closed_at) {
     throw new AppError('This conversation is read-only.', 403);
@@ -242,7 +263,8 @@ export const sendMessage = async ({
     const canJoinAsAdmin =
       sender.role === 'ADMIN' && conversation.type === 'dispute';
 
-    if (!isParticipant && !canJoinAsAdmin) throw buildUnauthorizedError();
+    if (!isParticipant && !canJoinAsAdmin)
+      throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
     if (!isParticipant) {
       await createConversationParticipant(conversationId, senderId, client);
     }
@@ -303,18 +325,6 @@ export const sendMessage = async ({
   return message;
 };
 
-export const getConversation = async (conversationId, user) => {
-  const { conversation, isParticipant } = await getConversationAccess(
-    conversationId,
-    user,
-  );
-  const participants = await conversationParticipantModel.findByConversationId(
-    conversationId,
-    isParticipant ? user.uid : null,
-  );
-  return { conversation, participants };
-};
-
 export const getConversationMessages = async (conversationId, user) => {
   const { isAdminPreview } = await getConversationAccess(conversationId, user);
   return conversationMessageModel.findByConversationId(
@@ -329,20 +339,9 @@ export const markConversationAsRead = async (conversationId, userId) => {
     conversationId,
     userId,
   );
-  if (!wasMarkedAsRead) throw buildUnauthorizedError();
+  if (!wasMarkedAsRead)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   return 0;
-};
-
-const getConversationAccess = async (conversationId, user) => {
-  const conversation = await getConversationByIdOrThrow(conversationId);
-  const isParticipant = await isConversationParticipant(
-    conversationId,
-    user.uid,
-  );
-  const isAdminPreview =
-    !isParticipant && user.role === 'ADMIN' && conversation.type === 'dispute';
-  if (!isParticipant && !isAdminPreview) throw buildUnauthorizedError();
-  return { conversation, isAdminPreview, isParticipant };
 };
 
 const saveAttachment = async (photo) => {
@@ -357,11 +356,6 @@ const saveAttachment = async (photo) => {
   return { attachmentUrl, attachmentType: 'image' };
 };
 
-const buildUnauthorizedError = () =>
-  new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
-const buildConversationNotFoundError = () =>
-  new AppError('Conversation not found.', 404);
-
 /// Helper functions
 // Closes conversation
 export const closeConversation = async (conversationId, client) => {
@@ -375,4 +369,21 @@ export const closeConversation = async (conversationId, client) => {
     client,
   );
   return conversation;
+};
+
+// Gets and checks conversation
+const getConversationAccess = async (conversationId, user) => {
+  // Gets conversation
+  const conversation = await getConversationByIdOrThrow(conversationId);
+
+  // Checks if current user is actually participant
+  const isParticipant = await isConversationParticipant(
+    conversationId,
+    user.uid,
+  );
+  const isAdminPreview =
+    !isParticipant && user.role === 'ADMIN' && conversation.type === 'dispute';
+  if (!isParticipant && !isAdminPreview)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+  return { conversation, isAdminPreview, isParticipant };
 };

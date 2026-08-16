@@ -23,17 +23,18 @@ router.get('/', conversationController.getMyConversations);
 // Get current user's unread count
 router.get('/unread-count', conversationController.getMyUnreadMessageCount);
 
+// Get conversation by id
+router.get(
+  '/:cid',
+  validateParamsSchema(conversationIdParamsSchema),
+  conversationController.getConversation,
+);
+
 // ...
 router.patch(
   '/:conversationId/read',
   validateParamsSchema(conversationIdParamsSchema),
   conversationController.markConversationAsRead,
-);
-
-router.get(
-  '/:conversationId',
-  validateParamsSchema(conversationIdParamsSchema),
-  conversationController.getConversation,
 );
 
 router.post(

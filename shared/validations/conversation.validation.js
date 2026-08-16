@@ -18,8 +18,10 @@ export const privateConversationSchema = z.object({
   otherUserId: uidBaseSchema,
 });
 
+/// Endpoint complex validations
+// Get conversation by id
 export const conversationIdParamsSchema = z.object({
-  conversationId: conversationIdBaseSchema,
+  cid: conversationIdBaseSchema,
 });
 
 export const createMessageSchema = z.object({

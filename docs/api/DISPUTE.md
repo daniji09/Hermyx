@@ -119,6 +119,6 @@ Gets dispute by its report id
   ```
   <br>
 
-**Workflow:** application disputes with pagination used by default. (TODO: pagination)
+**Workflow:** gets application dispute.
 <br>
 <br>

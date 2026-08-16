@@ -335,6 +335,9 @@ export const messages = {
 
   /// Conversation messages
   CONVERSATION: {
+    GENERAL: {
+      CONVERSATION_NOT_FOUND: `Conversation not found`,
+    },
     // Conversation messages shown in a conversation
     REPORT_ADVENTURER: (username, vacancyTitle, missionTitle) =>
       `A dispute was opened after ${username} was reported for the vacancy "${vacancyTitle}" in "${missionTitle}".`,

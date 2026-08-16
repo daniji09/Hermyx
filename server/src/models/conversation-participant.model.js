@@ -30,6 +30,51 @@ export const createMissionType = async (missionId, userId, client = pool) => {
 };
 
 /// SELECTS
+// Find all by conversation id
+export const findByAllByCid = async (
+  conversationId,
+  userId = null,
+  client = pool,
+) => {
+  const query = `
+    SELECT
+      u.uid,
+      u.username,
+      u.avatar,
+      cp.joined_at,
+      cp.left_at,
+      cp.can_send,
+      cp.history_until
+    FROM conversation_participant cp
+    LEFT JOIN conversation_participant viewer
+      ON viewer.conversation_id = cp.conversation_id
+      AND viewer.user_id = $2
+    JOIN app_user u ON u.uid = cp.user_id
+    WHERE cp.conversation_id = $1
+      AND cp.left_at IS NULL
+      AND (
+        $2::int IS NULL
+        OR (
+          viewer.left_at IS NULL
+          AND (
+            viewer.history_until IS NULL
+            OR cp.joined_at <= viewer.history_until
+          )
+        )
+      )
+      AND (
+        $2::int IS NULL
+        OR viewer.history_until IS NOT NULL
+        OR cp.history_until IS NULL
+        OR cp.user_id = $2
+      )
+    ORDER BY cp.joined_at ASC
+  `;
+
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rows;
+};
+
 // Finds active conversation participants by conversation id
 export const findActiveIdsByConversationId = async (
   conversationId,
@@ -162,50 +207,6 @@ export const addPrivateConversationParticipants = async (
   `;
 
   await client.query(query, [conversationId, userAId, userBId]);
-};
-
-export const findByConversationId = async (
-  conversationId,
-  userId = null,
-  client = pool,
-) => {
-  const query = `
-    SELECT
-      u.uid,
-      u.username,
-      u.avatar,
-      cp.joined_at,
-      cp.left_at,
-      cp.can_send,
-      cp.history_until
-    FROM conversation_participant cp
-    LEFT JOIN conversation_participant viewer
-      ON viewer.conversation_id = cp.conversation_id
-      AND viewer.user_id = $2
-    JOIN app_user u ON u.uid = cp.user_id
-    WHERE cp.conversation_id = $1
-      AND cp.left_at IS NULL
-      AND (
-        $2::int IS NULL
-        OR (
-          viewer.left_at IS NULL
-          AND (
-            viewer.history_until IS NULL
-            OR cp.joined_at <= viewer.history_until
-          )
-        )
-      )
-      AND (
-        $2::int IS NULL
-        OR viewer.history_until IS NOT NULL
-        OR cp.history_until IS NULL
-        OR cp.user_id = $2
-      )
-    ORDER BY cp.joined_at ASC
-  `;
-
-  const result = await client.query(query, [conversationId, userId]);
-  return result.rows;
 };
 
 export const canSendMessageToConversation = async (
