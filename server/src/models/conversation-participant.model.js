@@ -14,6 +14,7 @@ export const create = async (conversationId, userId, client = pool) => {
   return result.rows[0];
 };
 
+// Creates mission type
 export const createMissionType = async (missionId, userId, client = pool) => {
   const query = `
     INSERT INTO conversation_participant (conversation_id, user_id)
@@ -27,6 +28,21 @@ export const createMissionType = async (missionId, userId, client = pool) => {
 
   const result = await client.query(query, [missionId, userId]);
   return result.rows[0] || null;
+};
+
+// Add participants into private conversation
+export const addPrivateConversationParticipants = async (
+  conversationId,
+  userAId,
+  userBId,
+  client = pool,
+) => {
+  const query = `
+    INSERT INTO conversation_participant (conversation_id, user_id)
+    VALUES ($1, $2), ($1, $3)
+  `;
+
+  await client.query(query, [conversationId, userAId, userBId]);
 };
 
 /// SELECTS
@@ -194,20 +210,6 @@ export const disableConversationParticipants = async (
 };
 
 // ------
-
-export const addPrivateConversationParticipants = async (
-  conversationId,
-  userAId,
-  userBId,
-  client = pool,
-) => {
-  const query = `
-    INSERT INTO conversation_participant (conversation_id, user_id)
-    VALUES ($1, $2), ($1, $3)
-  `;
-
-  await client.query(query, [conversationId, userAId, userBId]);
-};
 
 export const canSendMessageToConversation = async (
   conversationId,

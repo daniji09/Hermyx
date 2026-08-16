@@ -171,12 +171,70 @@ Gets conversation's messages by its id
   ```json
   {
     "errors": {
-      "general": ["Dispute not found."]
+      "general": ["Conversation not found."]
     }
   }
   ```
   <br>
 
 **Workflow:** gets application conversation's messages (TODO: paginación especial).
+<br>
+<br>
+
+## - Create private conversation: `POST /api/conversations/private`
+
+Creates private conversation between two users
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `otherUserId` | integer | Yes | Other user that current is initiating a conversation with. |
+<br>
+
+**Responses:**
+
+- `201 Created`: conversation created successfully.
+
+  ```json
+  {
+    "conversation": "<conversation>"
+  }
+  ```
+
+- `400 Bad Request`: body fields validation error, missing body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: conversation or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Conversation/User not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** creates a conversation between current user and the one specified via request body. A database transaction is needed to create the conversation and add the participants.
 <br>
 <br>

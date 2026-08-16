@@ -49,18 +49,14 @@ export const getConversationMessages = async (req, res, next) => {
   }
 };
 
-export const getOrCreatePrivateConversationWithUser = async (
-  req,
-  res,
-  next,
-) => {
+// Creates private conversation
+export const createPrivateConversation = async (req, res, next) => {
   try {
-    const conversation =
-      await conversationService.getOrCreatePrivateConversationWithUser(
-        req.user.uid,
-        req.body.otherUserId,
-      );
-    return res.status(200).json({ conversation });
+    const conversation = await conversationService.createPrivateConversation(
+      req.user.uid,
+      req.body.otherUserId,
+    );
+    return res.status(201).json({ conversation });
   } catch (error) {
     next(error);
   }

@@ -195,30 +195,41 @@ export const getConversationMessages = async (conversationId, user) => {
   );
 };
 
-export const getOrCreatePrivateConversationWithUser = async (
-  currentUserId,
-  otherUserId,
-) => {
+// Create private conversation
+export const createPrivateConversation = async (currentUserId, otherUserId) => {
   checkRequired(currentUserId, 'Current user id');
   checkRequired(otherUserId, 'Other user id');
 
+  // Check if user is trying to create a conversation with itself
   if (currentUserId === otherUserId) {
-    throw new AppError('You cannot create a conversation with yourself.', 400);
+    throw new AppError(
+      messages.CONVERSATION.GENERAL.CONVERSATION_WITH_YOURSELF,
+      409,
+    );
   }
 
+  // Checks user exists
   await userService.getUserByUidOrThrow(otherUserId);
 
+  // Checks if conversation already exists, if it does, it just simply returns it
   const existingConversation = await conversationModel.findPrivateConversation(
     currentUserId,
     otherUserId,
   );
   if (existingConversation) return existingConversation;
 
+  // If it doesn't, creation is done via a database transaction
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const conversation =
-      await conversationModel.createPrivateConversation(client);
+    // Creates conversation
+    const conversation = await conversationModel.create(
+      'private',
+      null,
+      client,
+    );
+
+    // Adds participants
     await conversationParticipantModel.addPrivateConversationParticipants(
       conversation.cid,
       currentUserId,

@@ -38,6 +38,14 @@ router.get(
   conversationController.getConversationMessages,
 );
 
+/// POST
+// Create a private conversation
+router.post(
+  '/private',
+  validateBodySchema(privateConversationSchema),
+  conversationController.createPrivateConversation,
+);
+
 // ...
 router.patch(
   '/:conversationId/read',
@@ -52,12 +60,6 @@ router.post(
   validateBodySchema(createMessageSchema),
   validateFileSchema(createMessageFileSchema),
   conversationController.sendMessage,
-);
-
-router.post(
-  '/private',
-  validateBodySchema(privateConversationSchema),
-  conversationController.getOrCreatePrivateConversationWithUser,
 );
 
 export default router;

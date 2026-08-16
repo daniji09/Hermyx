@@ -14,10 +14,6 @@ export const messageContentBaseSchema = z
   .trim()
   .max(1000, messages.GENERAL.FIELD_TOO_LONG('Content', 1000));
 
-export const privateConversationSchema = z.object({
-  otherUserId: uidBaseSchema,
-});
-
 /// Endpoint complex validations
 // Get conversation by id
 export const conversationIdParamsSchema = z.object({
@@ -27,6 +23,11 @@ export const conversationIdParamsSchema = z.object({
 // Get conversation messages
 export const conversationIdMessagesParamsSchema = z.object({
   cid: conversationIdBaseSchema,
+});
+
+// Create private conversation
+export const privateConversationSchema = z.object({
+  otherUserId: uidBaseSchema,
 });
 
 export const createMessageSchema = z.object({

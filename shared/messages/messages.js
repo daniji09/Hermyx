@@ -337,6 +337,7 @@ export const messages = {
   CONVERSATION: {
     GENERAL: {
       CONVERSATION_NOT_FOUND: `Conversation not found`,
+      CONVERSATION_WITH_YOURSELF: `You cannot create a conversation with yourself.`,
     },
     // Conversation messages shown in a conversation
     REPORT_ADVENTURER: (username, vacancyTitle, missionTitle) =>
