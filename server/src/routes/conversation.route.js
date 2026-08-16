@@ -20,8 +20,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Get all current user's conversations
 router.get('/', conversationController.getMyConversations);
 
+// Get current user's unread count
 router.get('/unread-count', conversationController.getMyUnreadMessageCount);
 
+// ...
 router.patch(
   '/:conversationId/read',
   validateParamsSchema(conversationIdParamsSchema),

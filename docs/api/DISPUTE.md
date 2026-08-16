@@ -55,7 +55,7 @@ Gets current user's disputes unread count.
 
 **Responses:**
 
-- `200 OK`: search done successfully (could retrieve no disputes). Example with pagination.
+- `200 OK`: search done successfully.
 
   ```json
   {

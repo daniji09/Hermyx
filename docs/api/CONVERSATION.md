@@ -46,3 +46,22 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 **Workflow:** application conversations with pagination used by default. (TODO: pagination)
 <br>
 <br>
+
+## - Get user's conversations unread count: `GET /api/conversations/unread-count`
+
+Gets current user's conversations unread count.
+
+**Requires authentication:** Yes
+
+**Responses:**
+
+- `200 OK`: search done successfully.
+  ```json
+  {
+    "unreadCount": ["<unreadCount>"]
+  }
+  ```
+
+**Workflow:** gets number of user's unread messages from all of their conversations.
+<br>
+<br>

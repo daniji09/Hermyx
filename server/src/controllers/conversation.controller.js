@@ -13,6 +13,18 @@ export const getMyConversations = async (req, res, next) => {
   }
 };
 
+// Get current user unread count
+export const getMyUnreadMessageCount = async (req, res, next) => {
+  try {
+    const unreadCount = await conversationService.getMyUnreadMessageCount(
+      req.user.uid,
+    );
+    return res.status(200).json({ unreadCount });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getOrCreatePrivateConversationWithUser = async (
   req,
   res,
@@ -64,17 +76,6 @@ export const getConversationMessages = async (req, res, next) => {
       req.user,
     );
     return res.status(200).json({ messages });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getMyUnreadMessageCount = async (req, res, next) => {
-  try {
-    const unreadCount = await conversationService.getMyUnreadMessageCount(
-      req.user.uid,
-    );
-    return res.status(200).json({ unreadCount });
   } catch (error) {
     next(error);
   }

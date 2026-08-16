@@ -134,7 +134,17 @@ export const closeMissionConversationType = async (mid, client) => {
 // Get all current user's conversations
 export const getMyConversations = async (userId) => {
   checkRequired(userId, 'User id');
-  return conversationModel.findAllByUid(userId);
+  return await conversationModel.findAllByUid(userId);
+};
+
+// Get current user's unread count
+export const getMyUnreadMessageCount = async (userId) => {
+  checkRequired(userId, 'User id');
+  return await conversationMessageModel.countUnreadByUserId(
+    userId,
+    null,
+    'dispute',
+  );
 };
 
 export const getConversationByIdOrThrow = async (conversationId, client) => {
@@ -313,9 +323,6 @@ export const getConversationMessages = async (conversationId, user) => {
     isAdminPreview,
   );
 };
-
-export const getMyUnreadMessageCount = async (userId) =>
-  getUnreadMessageCountByUserId(userId, null, 'dispute');
 
 export const markConversationAsRead = async (conversationId, userId) => {
   const wasMarkedAsRead = await markConversationAsReadByUserId(
