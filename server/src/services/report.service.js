@@ -1,6 +1,7 @@
 import {
   HERMYX_SYSTEM_ID,
   messages,
+  MISSION_PARTICIPATION_PAYMENT_STATUS,
   MISSION_PARTICIPATION_STATUS,
   MISSION_STATUS,
   NOTIFICATION_ACTION,
@@ -271,6 +272,7 @@ export const reportUser = async ({ message, senderId, userId }) => {
   );
 };
 
+// Report mission
 export const reportMission = async ({ message, mid, senderId }) => {
   // Check parameter
   checkRequired(mid, 'Mission id');
@@ -343,6 +345,7 @@ const createReportIfNotActive = async (
   );
 };
 
+// Closes report and associated conversation in db
 const closeReportAndConversationInternal = async (
   reportId,
   decision,
@@ -350,6 +353,7 @@ const closeReportAndConversationInternal = async (
   adminId,
   client,
 ) => {
+  // Closes report
   const report = await reportModel.close(
     reportId,
     decision,
@@ -357,8 +361,10 @@ const closeReportAndConversationInternal = async (
     adminId,
     client,
   );
-  if (!report) throw new AppError(messages.REPORT_NOT_FOUND, 404);
+  if (!report)
+    throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
 
+  // If there is an active conversation associated, closes it
   if (report.conversation_id) {
     const participantIds =
       await conversationService.getActiveConversationParticipantIds(
@@ -404,8 +410,15 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   // Gets adventurer, mission, vacancy and report info and basic checks
   const { adventurer, mission, report, vacancy } =
     await getDisputeResolutionContext(reportId);
-  let closedReport;
-  let participantIds;
+  let closedReport,
+    participantIds,
+    successfulPayment = true;
+  // First, status is changed outside of any transaction
+  await missionService.updateParticipationStatusByMidAndAdventurer(
+    mission.mid,
+    adventurer.uid,
+    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+  );
   // Creates Stripe transfer in its own try and with idempotency key
   try {
     let transfer;
@@ -426,11 +439,8 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await missionService.approveMissionParticipation(
-        mission.mid,
-        adventurer.uid,
-        client,
-      );
+
+      // Creates payment on db
       if (transfer) {
         await missionService.createMissionPayment(
           {
@@ -444,17 +454,34 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
           },
           client,
         );
+        // Marks vacancy as liquidated
         await missionService.updateParticipationPaymentStatusById(
           vacancy.id,
+          MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
           client,
         );
-        await missionService.releaseMissionParticipation(
-          mission.mid,
-          adventurer.uid,
-          client,
-        );
+
+        // Participation status is changed to release
+        const participation =
+          await missionService.updateParticipationStatusByMidAndAdventurer(
+            mission.mid,
+            adventurer.uid,
+            MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+            client,
+          );
+
+        // User stops participating on the mission conversation, but can see the history
+        if (participation)
+          await conversationService.freezeMissionConversationHistory(
+            mission.mid,
+            adventurer.uid,
+            client,
+          );
       }
+      // Mission completion status is synced
       await missionService.syncMissionCompletionStatus(mission.mid, client);
+
+      // Closes report and associated conversation on db
       ({ report: closedReport, participantIds } =
         await closeReportAndConversationInternal(
           reportId,
@@ -464,6 +491,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
           client,
         ));
       await client.query('COMMIT');
+      successfulPayment = true;
     } catch (dbError) {
       await client.query('ROLLBACK');
       // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
@@ -481,12 +509,25 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
       stripeError.message,
     );
   }
-  const client = await pool.connect();
-  const adventurerMessage = `Your participation in "${mission.title}" was approved by the administration after resolving the dispute. Reward is being payed to you!`;
-  const applicantMessage = `Participation ${vacancy.title} disputed by ${adventurer.username} in mission ${mission.title} was accepted by the administration. Reward is being payed to the adventurer.`;
+
+  const adventurerMessage = successfulPayment
+    ? messages.NOTIFICATION.ADVENTURER_WORK_ACCEPTED.TO_ADVENTURER.SUCCESSFUL(
+        mission.title,
+      )
+    : messages.NOTIFICATION.ADVENTURER_WORK_ACCEPTED.TO_ADVENTURER.ISSUED(
+        mission.title,
+      );
+  const applicantMessage =
+    messages.NOTIFICATION.ADVENTURER_WORK_ACCEPTED.TO_APPLICANT(
+      vacancy.title,
+      adventurer.username,
+      mission.title,
+    );
   let adventurerNotificationId, applicantNotificationId;
+  const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Creates adventurer notification
     adventurerNotificationId = await notificationService.createNotification(
       buildResolutionNotification(
         adventurer.uid,
@@ -496,6 +537,8 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
       ),
       client,
     );
+
+    // Creates applicant notification
     applicantNotificationId = await notificationService.createNotification(
       buildResolutionNotification(
         mission.owner_id,
@@ -513,6 +556,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
     client.release();
   }
 
+  // Send notifications and conversation closure
   emitConversationClosed(participantIds, closedReport);
   emitToUser(adventurer.uid, 'mission:participation-approved-dispute', {
     notificationId: adventurerNotificationId,
@@ -676,22 +720,6 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
   return closedReport;
 };
 
-const buildResolutionNotification = (
-  receiverId,
-  missionId,
-  message,
-  action,
-) => ({
-  type: NOTIFICATION_TYPE.MISSION.ID,
-  kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-  action,
-  status: null,
-  message,
-  senderId: HERMYX_SYSTEM_ID,
-  receiverId,
-  payload: { associated_mission_id: missionId },
-});
-
 const emitConversationClosed = (participantIds, report) => {
   if (!report?.conversation_id) return;
   emitToAdmins('report:updated', { reportId: report.rid });
@@ -741,3 +769,20 @@ const getDisputeResolutionContext = async (reportId) => {
   const adventurer = await getUserOrThrow(vacancy.adventurer_id);
   return { adventurer, mission, report, vacancy };
 };
+
+// Builds resolution notification
+const buildResolutionNotification = (
+  receiverId,
+  missionId,
+  message,
+  action,
+) => ({
+  type: NOTIFICATION_TYPE.MISSION.ID,
+  kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+  action,
+  status: null,
+  message,
+  senderId: HERMYX_SYSTEM_ID,
+  receiverId,
+  payload: { associated_mission_id: missionId },
+});

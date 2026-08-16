@@ -125,26 +125,13 @@ export const closeMissionConversationType = async (mid, client) => {
   checkRequired(mid, 'Mission id');
 
   // Closes mission conversation type
-  return await conversationModel.closeMissionType(mid, client);
+  return await conversationModel.closeByMid(mid, client);
 };
 
 /// Endpoint complex functions
 export const getConversationByIdOrThrow = async (conversationId, client) => {
   const conversation = await getConversationById(conversationId, client);
   if (!conversation) throw buildConversationNotFoundError();
-  return conversation;
-};
-
-export const closeConversation = async (conversationId, client) => {
-  checkRequired(conversationId, 'Conversation id');
-  const conversation = await conversationModel.closeById(
-    conversationId,
-    client,
-  );
-  await conversationParticipantModel.disableConversationParticipants(
-    conversationId,
-    client,
-  );
   return conversation;
 };
 
@@ -364,3 +351,18 @@ const buildUnauthorizedError = () =>
   new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 const buildConversationNotFoundError = () =>
   new AppError('Conversation not found.', 404);
+
+/// Helper functions
+// Closes conversation
+export const closeConversation = async (conversationId, client) => {
+  checkRequired(conversationId, 'Conversation id');
+  const conversation = await conversationModel.closeById(
+    conversationId,
+    client,
+  );
+  await conversationParticipantModel.disableConversationParticipants(
+    conversationId,
+    client,
+  );
+  return conversation;
+};

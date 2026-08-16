@@ -300,7 +300,7 @@ const rejectParticipationReview = async ({
     );
 
     // Updates mission status, syncing it using the status of all participations
-    await syncMissionCompletionStatus(mission.mid, client);
+    await missionService.syncMissionCompletionStatus(mission.mid, client);
 
     // Updates notification status and marks it as seen
     await resolveNotification(
@@ -513,7 +513,7 @@ const completeParticipationApproval = async ({
     );
   }
   // Syncs mission completion status
-  await syncMissionCompletionStatus(mission.mid, client);
+  await missionService.syncMissionCompletionStatus(mission.mid, client);
 };
 
 // Responds to participation rejection by applicant
@@ -572,7 +572,7 @@ const respondToParticipationRejection = async ({
     );
 
     // Syncs mission state
-    await syncMissionCompletionStatus(mid, client);
+    await missionService.syncMissionCompletionStatus(mid, client);
 
     // Resolves notification
     await resolveNotification(
@@ -1300,34 +1300,6 @@ const withTransaction = async (operation) => {
   } finally {
     client.release();
   }
-};
-
-// Sync a mission status after review a participation
-const syncMissionCompletionStatus = async (mid, client) => {
-  // Gets summary
-  const summary = await missionService.getMissionStatusSummary(mid, client);
-
-  // If it was not found, it returns null
-  if (!summary || summary.participant_count === 0) {
-    return null;
-  }
-
-  // Decides next status
-  let nextStatus = null;
-  if (
-    summary.active_count > 0 ||
-    (summary.active_count === 0 && summary.dispute_count === 0)
-  ) {
-    nextStatus = MISSION_STATUS.IN_PROGRESS.ID;
-  } else if (summary.dispute_count > 0) {
-    nextStatus = MISSION_STATUS.IN_DISPUTE.ID;
-  }
-  if (!nextStatus) {
-    return null;
-  }
-
-  // Updates status
-  return await missionService.updateStatusByMid(mid, nextStatus, client);
 };
 
 // Creates the participation transfer on Stripe

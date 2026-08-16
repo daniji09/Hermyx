@@ -29,6 +29,25 @@ export const createMissionType = async (missionId, userId, client = pool) => {
   return result.rows[0] || null;
 };
 
+/// SELECTS
+// Finds active conversation participants by conversation id
+export const findActiveIdsByConversationId = async (
+  conversationId,
+  client = pool,
+) => {
+  const query = `
+    SELECT user_id
+    FROM conversation_participant
+    WHERE conversation_id = $1
+      AND left_at IS NULL
+      AND can_send = TRUE
+      AND history_until IS NULL
+  `;
+
+  const result = await client.query(query, [conversationId]);
+  return result.rows.map((participant) => participant.user_id);
+};
+
 /// UPDATES
 // Mission conversation left by user
 export const leaveMissionConversation = async (
@@ -95,6 +114,19 @@ export const markConversationAsReadByUserId = async (
 
   const result = await client.query(query, [conversationId, userId]);
   return result.rowCount > 0;
+};
+
+// Disable participants
+export const disableConversationParticipants = async (
+  conversationId,
+  client = pool,
+) => {
+  const result = await client.query(
+    `UPDATE conversation_participant SET can_send = FALSE
+     WHERE conversation_id = $1 AND left_at IS NULL RETURNING *`,
+    [conversationId],
+  );
+  return result.rows;
 };
 
 // ------
@@ -194,33 +226,4 @@ export const canSendMessageToConversation = async (
 
   const result = await client.query(query, [conversationId, userId]);
   return result.rowCount > 0;
-};
-
-export const findActiveIdsByConversationId = async (
-  conversationId,
-  client = pool,
-) => {
-  const query = `
-    SELECT user_id
-    FROM conversation_participant
-    WHERE conversation_id = $1
-      AND left_at IS NULL
-      AND can_send = TRUE
-      AND history_until IS NULL
-  `;
-
-  const result = await client.query(query, [conversationId]);
-  return result.rows.map((participant) => participant.user_id);
-};
-
-export const disableConversationParticipants = async (
-  conversationId,
-  client = pool,
-) => {
-  const result = await client.query(
-    `UPDATE conversation_participant SET can_send = FALSE
-     WHERE conversation_id = $1 AND left_at IS NULL RETURNING *`,
-    [conversationId],
-  );
-  return result.rows;
 };

@@ -27,8 +27,18 @@ export const create = async (type, missionId = null, client = pool) => {
 };
 
 // UPDATES
-// Close mission conversation
-export const closeMissionType = async (missionId, client = pool) => {
+// Closes conversation by id
+export const closeById = async (conversationId, client = pool) => {
+  const result = await client.query(
+    `UPDATE conversation SET closed_at = CURRENT_TIMESTAMP
+     WHERE cid = $1 AND closed_at IS NULL RETURNING *`,
+    [conversationId],
+  );
+  return result.rows[0] || null;
+};
+
+// Closes conversation by mid
+export const closeByMid = async (missionId, client = pool) => {
   const query = `
     UPDATE conversation
     SET closed_at = CURRENT_TIMESTAMP
@@ -67,15 +77,6 @@ export const findPrivateConversation = async (
 
   const result = await client.query(query, [userAId, userBId]);
   return result.rows[0];
-};
-
-export const closeById = async (conversationId, client = pool) => {
-  const result = await client.query(
-    `UPDATE conversation SET closed_at = CURRENT_TIMESTAMP
-     WHERE cid = $1 AND closed_at IS NULL RETURNING *`,
-    [conversationId],
-  );
-  return result.rows[0] || null;
 };
 
 export const findById = async (conversationId, client = pool) => {

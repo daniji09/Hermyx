@@ -212,12 +212,6 @@ export const getMissionStatusSummary = async (mid, client) => {
   return await missionModel.getMissionStatusSummary(mid, client);
 };
 
-// Syncs mission status due to a participation status change
-export const syncMissionCompletionStatus = async (mid, client) => {
-  checkRequired(mid, 'Mission id');
-  return missionModel.syncMissionCompletionStatus(mid, client);
-};
-
 // Updates payment status by id
 export const updateParticipationPaymentStatusById = async (
   vacancyId,
@@ -366,47 +360,6 @@ export const getMissionsPublicJoinedByUid = async (uid, pagination) => {
 };
 
 /// Endpoint complex function
-export const releaseMissionParticipation = async (
-  mid,
-  adventurerId,
-  client,
-) => {
-  if (!client) {
-    const transactionClient = await pool.connect();
-    try {
-      await transactionClient.query('BEGIN');
-      const participation = await releaseMissionParticipation(
-        mid,
-        adventurerId,
-        transactionClient,
-      );
-      await transactionClient.query('COMMIT');
-      return participation;
-    } catch (error) {
-      await transactionClient.query('ROLLBACK');
-      throw error;
-    } finally {
-      transactionClient.release();
-    }
-  }
-  checkRequired(mid, 'Mission id');
-  checkRequired(adventurerId, 'Adventurer user id');
-  const participation =
-    await missionParticipationModel.updateStatusByMidAndAdventurer(
-      mid,
-      adventurerId,
-      MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-      client,
-    );
-  if (participation)
-    await conversationService.freezeMissionConversationHistory(
-      mid,
-      adventurerId,
-      client,
-    );
-  return participation;
-};
-
 // Get all missions
 export const getMissions = async (title, pagination) => {
   // Gets all missions filtering what is needed
@@ -2223,4 +2176,32 @@ const checkAdventurerAlreadyJoined = async (mid, uid) => {
     await missionParticipationModel.findByMidAndAdventurerId(mid, uid);
   if (alreadyJoined)
     throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+};
+
+// Sync a mission status after review a participation
+export const syncMissionCompletionStatus = async (mid, client) => {
+  // Gets summary
+  const summary = await missionModel.getMissionStatusSummary(mid, client);
+
+  // If it was not found, it returns null
+  if (!summary || summary.participant_count === 0) {
+    return null;
+  }
+
+  // Decides next status
+  let nextStatus = null;
+  if (
+    summary.active_count > 0 ||
+    (summary.active_count === 0 && summary.dispute_count === 0)
+  ) {
+    nextStatus = MISSION_STATUS.IN_PROGRESS.ID;
+  } else if (summary.dispute_count > 0) {
+    nextStatus = MISSION_STATUS.IN_DISPUTE.ID;
+  }
+  if (!nextStatus) {
+    return null;
+  }
+
+  // Updates status
+  return await missionModel.updateStatusByMid(mid, nextStatus, client);
 };

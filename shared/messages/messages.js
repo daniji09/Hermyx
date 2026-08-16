@@ -281,6 +281,16 @@ export const messages = {
     },
     REPORT_ADVENTURER: (title) =>
       `You have been reported by the applicant of the ${title} mission. You can respond in the dispute conversation.`,
+    ADVENTURER_WORK_ACCEPTED: {
+      TO_ADVENTURER: {
+        SUCCESSFUL: (title) =>
+          `Your participation in "${title}" was approved by the administration after resolving the dispute. Reward is being payed to you!`,
+        ISSUED: (title) =>
+          `Your participation in "${title}" was approved by the administration after resolving the dispute. We had an issue transferring your refund. Please contact support.`,
+      },
+      TO_APPLICANT: (vacancyTitle, username, missionTitle) =>
+        `Participation ${vacancyTitle} disputed by ${username} in mission ${missionTitle} was accepted by the administration. Reward is being payed to the adventurer.`,
+    },
   },
 
   /// Review messages
@@ -294,6 +304,7 @@ export const messages = {
   /// Report messages
   REPORT: {
     GENERAL: {
+      REPORT_NOT_FOUND: `Report not found.`,
       REPORTS_NOT_FOUND: `Reports not found.`,
       INCORRECT_ANSWER_FOR_REPORT: `This type of report can't be answered like this.`,
       REPORT_ALREADY_ANSWERED: `Can't answer a report that has been already answered.`,

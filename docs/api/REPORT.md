@@ -261,3 +261,74 @@ Reporting a mission on the application
 <br>
 <br>
 <br>
+
+## - Accept adventurer's work: `POST /api/reports/:rid/accept`
+
+Decision to accept adventurer's work is taken, closing report
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rid` | integer | Yes | Report identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `reason` | string | Yes | Reason message. |
+<br>
+
+**Responses:**
+
+- `200 OK`: report closed successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: body or path fields validation error, missing body or path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: only admins can close reports.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report, mission, vacancy or adventurer not found, report with that rid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Report/Mission/Vacancy/Adventurer not found."]
+    }
+  }
+  ```
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** when admins are checking participation reports, one possible decision is to accept's the adventurer's work, finishing participation of adventurer in mission, paying them and closing report and its associated conversation. Since there is a payout, same mechanism is used as in the rest of the functions, payment is first made in Stripe outside of the transaction but in a own try so, if it fails, it can be logged and tried later (not implemented); then, database changes are made in a transaction, and, if something fails, it can be also logged to fix the inconsistency.
+<br>
+<br>
+<br>
