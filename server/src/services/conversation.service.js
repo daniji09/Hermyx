@@ -25,6 +25,7 @@ export const getConversationByIdOrThrow = async (conversationId, client) => {
   return conversation;
 };
 
+// Create conversation
 export const createConversation = async (type, mid, client) => {
   checkRequired(type, 'Conversation type');
   return await conversationModel.create(type, mid, client);
@@ -89,6 +90,7 @@ export const isConversationParticipant = async (
   );
 };
 
+// Marks conversation as read by user id
 export const markConversationAsReadByUserId = async (
   conversationId,
   userId,
@@ -103,6 +105,7 @@ export const markConversationAsReadByUserId = async (
   );
 };
 
+// Leaves mission conversation
 export const leaveMissionConversation = async (mid, uid, client) => {
   checkRequired(mid, 'Mission id');
   checkRequired(uid, 'User id');
@@ -113,6 +116,7 @@ export const leaveMissionConversation = async (mid, uid, client) => {
   );
 };
 
+// Get active conversation participants ids
 export const getActiveConversationParticipantIds = async (
   conversationId,
   client,
@@ -124,6 +128,7 @@ export const getActiveConversationParticipantIds = async (
   );
 };
 
+// Freeze mission conversation history
 export const freezeMissionConversationHistory = async (
   missionId,
   userId,
@@ -138,6 +143,7 @@ export const freezeMissionConversationHistory = async (
   );
 };
 
+// Closes mission conversation by mid
 export const closeMissionConversationType = async (mid, client) => {
   checkRequired(mid, 'Mission id');
 
@@ -366,6 +372,7 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
   return message;
 };
 
+// Marks conversation as read
 export const markConversationAsRead = async (conversationId, userId) => {
   // Parameter checks
   checkRequired(conversationId, 'Conversation id');

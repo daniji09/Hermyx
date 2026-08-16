@@ -112,6 +112,32 @@ export const findAllByUid = async (userId, client = pool) => {
   return result.rows;
 };
 
+// Find private
+export const findPrivateConversation = async (
+  userAId,
+  userBId,
+  client = pool,
+) => {
+  const query = `
+    SELECT c.*
+    FROM conversation c
+    JOIN conversation_participant cp1
+      ON cp1.conversation_id = c.cid
+    JOIN conversation_participant cp2
+      ON cp2.conversation_id = c.cid
+    WHERE c.type = 'private'
+      AND c.closed_at IS NULL
+      AND cp1.user_id = $1
+      AND cp1.left_at IS NULL
+      AND cp2.user_id = $2
+      AND cp2.left_at IS NULL
+    LIMIT 1
+  `;
+
+  const result = await client.query(query, [userAId, userBId]);
+  return result.rows[0];
+};
+
 /// UPDATES
 // Closes conversation by id
 export const closeById = async (conversationId, client = pool) => {
@@ -136,31 +162,4 @@ export const closeByMid = async (missionId, client = pool) => {
 
   const result = await client.query(query, [missionId]);
   return result.rows[0] || null;
-};
-
-// ----
-
-export const findPrivateConversation = async (
-  userAId,
-  userBId,
-  client = pool,
-) => {
-  const query = `
-    SELECT c.*
-    FROM conversation c
-    JOIN conversation_participant cp1
-      ON cp1.conversation_id = c.cid
-    JOIN conversation_participant cp2
-      ON cp2.conversation_id = c.cid
-    WHERE c.type = 'private'
-      AND c.closed_at IS NULL
-      AND cp1.user_id = $1
-      AND cp1.left_at IS NULL
-      AND cp2.user_id = $2
-      AND cp2.left_at IS NULL
-    LIMIT 1
-  `;
-
-  const result = await client.query(query, [userAId, userBId]);
-  return result.rows[0];
 };

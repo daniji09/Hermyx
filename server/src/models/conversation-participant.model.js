@@ -128,6 +128,28 @@ export const isConversationParticipant = async (
   return result.rowCount > 0;
 };
 
+// Checks if user can send message to conversation
+export const canSendMessageToConversation = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
+  const query = `
+    SELECT 1
+    FROM conversation_participant cp
+    JOIN conversation c ON c.cid = cp.conversation_id
+    WHERE cp.conversation_id = $1
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
+      AND cp.can_send = TRUE
+      AND c.closed_at IS NULL
+    LIMIT 1
+  `;
+
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rowCount > 0;
+};
+
 /// UPDATES
 // Mission conversation left by user
 export const leaveMissionConversation = async (
@@ -207,27 +229,4 @@ export const disableConversationParticipants = async (
     [conversationId],
   );
   return result.rows;
-};
-
-// ------
-
-export const canSendMessageToConversation = async (
-  conversationId,
-  userId,
-  client = pool,
-) => {
-  const query = `
-    SELECT 1
-    FROM conversation_participant cp
-    JOIN conversation c ON c.cid = cp.conversation_id
-    WHERE cp.conversation_id = $1
-      AND cp.user_id = $2
-      AND cp.left_at IS NULL
-      AND cp.can_send = TRUE
-      AND c.closed_at IS NULL
-    LIMIT 1
-  `;
-
-  const result = await client.query(query, [conversationId, userId]);
-  return result.rowCount > 0;
 };
