@@ -29,14 +29,20 @@ const getReportByRidOrThrow = async (reportId) => {
   return report;
 };
 
-export const getUserDisputes = async (userId) =>
-  reportModel.findDisputesByUserId(userId);
+// Gets reports by uid
+export const getUserDisputes = async (userId) => {
+  checkRequired(userId, 'User id');
+  return await reportModel.findDisputesByUserId(userId);
+};
 
 export const hasActiveReport = async (reportData, client) =>
   reportModel.checkActiveReport(reportData, client);
 
-export const createUserReport = async (reportData, client) =>
-  reportModel.create(reportData, client);
+// Creates report
+export const createReport = async (reportData, client) => {
+  checkRequired(reportData, 'Report data');
+  return await reportModel.create(reportData, client);
+};
 
 /// Complex endpoint functions
 // Get report by rid
@@ -87,6 +93,12 @@ export const reportAdventurer = async ({
   sender,
   vacancyId,
 }) => {
+  // Parameter checks
+  checkRequired(message, 'Report message');
+  checkRequired(missionId, 'Mission id');
+  checkRequired(sender, 'Sender user');
+  checkRequired(vacancyId, 'Mission participation id');
+
   // Gets mission info
   const mission = await missionService.getMissionByIdOrThrow(missionId);
 
@@ -368,6 +380,11 @@ const closeReportAndConversationInternal = async (
 
 // Accepts adventurer work
 export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
+  // Parameter check
+  checkRequired(adminId, 'Admin user id');
+  checkRequired(reason, 'Resolution reason');
+  checkRequired(reportId, 'Report id');
+
   // Gets adventurer, mission, vacancy and report info and basic checks
   const { adventurer, mission, report, vacancy } =
     await getDisputeResolutionContext(reportId);
@@ -538,6 +555,11 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
 
 // Rejects adventurer work
 export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
+  // Parameter check
+  checkRequired(adminId, 'Admin user id');
+  checkRequired(reason, 'Resolution reason');
+  checkRequired(reportId, 'Report id');
+
   // Gets adventurer, mission, vacancy and report info and basic checks
   const { adventurer, mission, vacancy } =
     await getDisputeResolutionContext(reportId);
@@ -629,6 +651,11 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
 
 // Dismisses report
 export const dismiss = async ({ adminId, reason, reportId }) => {
+  // Parameter check
+  checkRequired(adminId, 'Admin user id');
+  checkRequired(reason, 'Resolution reason');
+  checkRequired(reportId, 'Report id');
+
   // Gets report info
   const report = await getReportByRidOrThrow(reportId);
 

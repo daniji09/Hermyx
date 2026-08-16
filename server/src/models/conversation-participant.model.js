@@ -48,6 +48,25 @@ export const findActiveIdsByConversationId = async (
   return result.rows.map((participant) => participant.user_id);
 };
 
+// Checks if a user is participant of a conversation
+export const isConversationParticipant = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
+  const query = `
+    SELECT 1
+    FROM conversation_participant
+    WHERE conversation_id = $1
+      AND user_id = $2
+      AND left_at IS NULL
+    LIMIT 1
+  `;
+
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rowCount > 0;
+};
+
 /// UPDATES
 // Mission conversation left by user
 export const leaveMissionConversation = async (
@@ -187,24 +206,6 @@ export const findByConversationId = async (
 
   const result = await client.query(query, [conversationId, userId]);
   return result.rows;
-};
-
-export const isConversationParticipant = async (
-  conversationId,
-  userId,
-  client = pool,
-) => {
-  const query = `
-    SELECT 1
-    FROM conversation_participant
-    WHERE conversation_id = $1
-      AND user_id = $2
-      AND left_at IS NULL
-    LIMIT 1
-  `;
-
-  const result = await client.query(query, [conversationId, userId]);
-  return result.rowCount > 0;
 };
 
 export const canSendMessageToConversation = async (

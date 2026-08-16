@@ -53,6 +53,8 @@ export const create = async (
   return result.rows[0];
 };
 
+/// SELECT
+// Find conversation by id
 export const findByConversationId = async (
   conversationId,
   userId,
@@ -99,6 +101,7 @@ export const findByConversationId = async (
   return result.rows;
 };
 
+// Count unread by user id
 export const countUnreadByUserId = async (
   userId,
   conversationType = null,

@@ -311,9 +311,6 @@ export const updateMissionParticipationAdventurerReview = async (
 
 //---
 
-export const disputeMissionParticipation = async (mid, adventurerId, client) =>
-  missionParticipationModel.disputeParticipation(mid, adventurerId, client);
-
 export const getOccupiedMissionParticipations = async (mid, client) =>
   missionParticipationModel.findAllOccupiedByMid(mid, client);
 

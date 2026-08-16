@@ -38,6 +38,37 @@ export const createMessage = async (message, client) => {
   return conversationMessageModel.create(message, client);
 };
 
+// Gets unread message counter by user id
+export const getUnreadMessageCountByUserId = async (
+  userId,
+  conversationType = null,
+  excludedConversationType = null,
+  client,
+) => {
+  checkRequired(userId, 'User id');
+  return conversationMessageModel.countUnreadByUserId(
+    userId,
+    conversationType,
+    excludedConversationType,
+    client,
+  );
+};
+
+// Checks if a user is participant of a conversation
+export const isConversationParticipant = async (
+  conversationId,
+  userId,
+  client,
+) => {
+  checkRequired(conversationId, 'Conversation id');
+  checkRequired(userId, 'User id');
+  return conversationParticipantModel.isConversationParticipant(
+    conversationId,
+    userId,
+    client,
+  );
+};
+
 export const markConversationAsReadByUserId = async (
   conversationId,
   userId,
@@ -78,20 +109,6 @@ export const getActiveConversationParticipantIds = async (
   );
 };
 
-export const isConversationParticipant = async (
-  conversationId,
-  userId,
-  client,
-) => {
-  checkRequired(conversationId, 'Conversation id');
-  checkRequired(userId, 'User id');
-  return conversationParticipantModel.isConversationParticipant(
-    conversationId,
-    userId,
-    client,
-  );
-};
-
 export const freezeMissionConversationHistory = async (
   missionId,
   userId,
@@ -102,21 +119,6 @@ export const freezeMissionConversationHistory = async (
   return conversationParticipantModel.freezeMissionConversationHistory(
     missionId,
     userId,
-    client,
-  );
-};
-
-export const getUnreadMessageCountByUserId = async (
-  userId,
-  conversationType = null,
-  excludedConversationType = null,
-  client,
-) => {
-  checkRequired(userId, 'User id');
-  return conversationMessageModel.countUnreadByUserId(
-    userId,
-    conversationType,
-    excludedConversationType,
     client,
   );
 };

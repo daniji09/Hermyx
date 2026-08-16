@@ -1,7 +1,7 @@
 import {
   HERMYX_SYSTEM_ID,
   messages,
-  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
   NOTIFICATION_ACTION,
   NOTIFICATION_KIND,
   NOTIFICATION_STATUS,
@@ -13,41 +13,58 @@ import * as conversationService from './conversation.service.js';
 import * as notificationService from './notification.service.js';
 import * as missionService from './mission.service.js';
 import * as reportService from './report.service.js';
-import { AppError } from '../utils/error.util.js';
+import { AppError, checkRequired } from '../utils/error.util.js';
 
+// Dispute types
 const DISPUTE_TYPES = new Set([
   REPORT_TYPE.REPORT_ADVENTURER.ID,
   REPORT_TYPE.REVIEW_DISPUTE.ID,
   REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
 ]);
 
-export const getMyDisputes = async (userId) =>
-  reportService.getUserDisputes(userId);
+/// Endpoint complex functions
+// Get all disputes from current user
+export const getMyDisputes = async (userId) => {
+  checkRequired(userId, 'User id');
+  return await reportService.getUserDisputes(userId);
+};
 
-export const getMyDisputeUnreadCount = async (userId) =>
-  conversationService.getUnreadMessageCountByUserId(userId, 'dispute');
+// Gets current user's unread count
+export const getMyDisputeUnreadCount = async (userId) => {
+  checkRequired(userId, 'User id');
+  return await conversationService.getUnreadMessageCountByUserId(
+    userId,
+    'dispute',
+  );
+};
 
+// Gets dispute by rid
 export const getDispute = async (reportId, userId) => {
   const dispute = await reportService.getReport(reportId);
+
+  // Checks if dispute actually exists and is correct type
   if (
     !dispute ||
     !dispute.conversation_id ||
     !DISPUTE_TYPES.has(dispute.type)
   ) {
-    throw new AppError(messages.REPORT_NOT_FOUND, 404);
+    throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
   }
 
+  // Checks if user is actually participating on that conversation
   const isParticipant = await conversationService.isConversationParticipant(
     dispute.conversation_id,
     userId,
   );
   if (!isParticipant) {
-    throw new AppError(messages.UNAUTHORIZED_ERROR, 403);
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
 
   return dispute;
 };
 
+// Helpers
+// Creates a dispute ticket
 export const createDisputeTicket = async ({
   senderId,
   counterpartId,
@@ -59,11 +76,12 @@ export const createDisputeTicket = async ({
   reason,
   systemMessage,
 }) => {
+  // Creates a dispute ticket with database transaction
   const client = await pool.connect();
-
   try {
     await client.query('BEGIN');
 
+    // Checks if applicant has already an active report
     const activeReport = await reportService.hasActiveReport(
       {
         senderId,
@@ -73,31 +91,45 @@ export const createDisputeTicket = async ({
       client,
     );
     if (activeReport > 0) {
-      throw new AppError(messages.APPLICANT_ALREADY_REPORTED, 409);
+      throw new AppError(
+        messages.REPORT.GENERAL.APPLICANT_ALREADY_REPORTED,
+        409,
+      );
     }
 
-    await missionService.disputeMissionParticipation(
+    // Marks participation as disputed
+    await missionService.updateParticipationStatusByMidAndAdventurer(
       missionId,
       adventurerId,
+      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
       client,
     );
-    const missionAfterSync = await syncMissionCompletionStatus(
+
+    // Syncs mission status
+    const missionAfterSync = await missionService.syncMissionCompletionStatus(
       missionId,
       client,
     );
+
+    // Updates notification status
     await notificationService.updateNotificationStatus(
       notificationId,
       NOTIFICATION_STATUS.DISPUTED.ID,
       client,
     );
+
+    // Marks notification as seem
     await notificationService.markNotificationAsSeen(notificationId, client);
 
+    // Creates conversation
     const conversation = await conversationService.createConversation(
       'dispute',
       null,
       client,
     );
-    const report = await reportService.createUserReport(
+
+    // Creates user report
+    const report = await reportService.createReport(
       {
         senderId,
         message: reason,
@@ -110,12 +142,15 @@ export const createDisputeTicket = async ({
       },
       client,
     );
+
+    // Adds associated report to notification
     await notificationService.addAssociatedReport(
       notificationId,
       report.rid,
       client,
     );
 
+    // Creates conversation participants
     for (const participantId of [senderId, counterpartId]) {
       await conversationService.createConversationParticipant(
         conversation.cid,
@@ -124,6 +159,7 @@ export const createDisputeTicket = async ({
       );
     }
 
+    // Creates initial system message
     await conversationService.createMessage(
       {
         conversationId: conversation.cid,
@@ -133,6 +169,7 @@ export const createDisputeTicket = async ({
       client,
     );
 
+    // Marks that initial message as seen for all participants
     for (const participantId of [senderId, counterpartId]) {
       await conversationService.markConversationAsReadByUserId(
         conversation.cid,
@@ -141,11 +178,13 @@ export const createDisputeTicket = async ({
       );
     }
 
+    // Now adds initial conversation actual message
     const initialMessage = await conversationService.createMessage(
       { conversationId: conversation.cid, senderId, content: reason },
       client,
     );
 
+    // Creates follow-up notification
     const followUpNotificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.MISSION.ID,
@@ -178,33 +217,4 @@ export const createDisputeTicket = async ({
   } finally {
     client.release();
   }
-};
-
-// Helpers
-// Sync a mission status after review a participation
-const syncMissionCompletionStatus = async (mid, client) => {
-  // Gets summary
-  const summary = await missionService.getMissionStatusSummary(mid, client);
-
-  // If it was not found, it returns null
-  if (!summary || summary.participant_count === 0) {
-    return null;
-  }
-
-  // Decides next status
-  let nextStatus = null;
-  if (
-    summary.active_count > 0 ||
-    (summary.active_count === 0 && summary.dispute_count === 0)
-  ) {
-    nextStatus = MISSION_STATUS.IN_PROGRESS.ID;
-  } else if (summary.dispute_count > 0) {
-    nextStatus = MISSION_STATUS.IN_DISPUTE.ID;
-  }
-  if (!nextStatus) {
-    return null;
-  }
-
-  // Updates status
-  return await missionService.updateStatusByMid(mid, nextStatus, client);
 };
