@@ -29,23 +29,6 @@ const getReportByRidOrThrow = async (reportId) => {
   return report;
 };
 
-const getMissionOrThrow = async (missionId) => {
-  return missionService.getMissionByIdOrThrow(missionId);
-};
-
-const getVacancyOrThrow = async (missionId, vacancyId) => {
-  const vacancy =
-    await missionService.getMissionParticipationByIdOrThrow(vacancyId);
-  if (vacancy.mid !== missionId) {
-    throw new AppError(messages.VACANCY_NOT_IN_MISSION, 409);
-  }
-  return vacancy;
-};
-
-const getUserOrThrow = async (userId) => {
-  return userService.getUserByUidOrThrow(userId);
-};
-
 export const getUserDisputes = async (userId) =>
   reportModel.findDisputesByUserId(userId);
 
@@ -105,7 +88,7 @@ export const reportAdventurer = async ({
   vacancyId,
 }) => {
   // Gets mission info
-  const mission = await getMissionOrThrow(missionId);
+  const mission = await missionService.getMissionByIdOrThrow(missionId);
 
   // Checks if report sender is mission owner
   if (mission.owner_id !== sender.uid) {
@@ -113,10 +96,16 @@ export const reportAdventurer = async ({
   }
 
   // Gets vacancy info
-  const vacancy = await getVacancyOrThrow(missionId, vacancyId);
+  const vacancy =
+    await missionService.getMissionParticipationByIdOrThrow(vacancyId);
+  if (vacancy.mid !== missionId) {
+    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+  }
 
   // Gets adventurer reported info
-  const adventurer = await getUserOrThrow(vacancy.adventurer_id);
+  const adventurer = await userService.getUserByUidOrThrow(
+    vacancy.adventurer_id,
+  );
   const notificationMessage = messages.NOTIFICATION.REPORT_ADVENTURER(
     mission.title,
   );
@@ -258,7 +247,7 @@ export const reportUser = async ({ message, senderId, userId }) => {
   checkRequired(message, 'Message');
 
   // Checks if user exists
-  await getUserOrThrow(userId);
+  await userService.getUserByUidOrThrow(userId);
   // Creates user report with transaction
   return await createReportTransaction(
     {
@@ -280,7 +269,7 @@ export const reportMission = async ({ message, mid, senderId }) => {
   checkRequired(message, 'Message');
 
   // Get mission information
-  const mission = await getMissionOrThrow(mid);
+  const mission = await missionService.getMissionByIdOrThrow(mid);
   // Check if sender is not mission owner
   if (mission.owner_id === senderId) {
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
@@ -375,34 +364,6 @@ const closeReportAndConversationInternal = async (
     return { participantIds, report };
   }
   return { participantIds: [], report };
-};
-
-export const closeReportAndConversation = async (
-  reportId,
-  decision,
-  reason,
-  adminId,
-) => {
-  const client = await pool.connect();
-  let result;
-  try {
-    await client.query('BEGIN');
-    result = await closeReportAndConversationInternal(
-      reportId,
-      decision,
-      reason,
-      adminId,
-      client,
-    );
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
-  }
-  emitConversationClosed(result.participantIds, result.report);
-  return result.report;
 };
 
 // Accepts adventurer work
@@ -685,18 +646,22 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
   let notificationEvent;
   if (report.type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
     // Gets mission info
-    const mission = await getMissionOrThrow(
+    const mission = await missionService.getMissionByIdOrThrow(
       report.payload.associated_mission_id,
     );
 
     // Gets vacancy info
-    const vacancy = await getVacancyOrThrow(
-      mission.mid,
+    const vacancy = await missionService.getMissionParticipationByIdOrThrow(
       report.payload.associated_vacancy_id,
     );
+    if (vacancy.mid !== mission.mid) {
+      throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+    }
 
     // Gets adventurer info
-    const adventurer = await getUserOrThrow(vacancy.adventurer_id);
+    const adventurer = await userService.getUserByUidOrThro(
+      vacancy.adventurer_id,
+    );
 
     // Creates notification data
     const message = messages.NOTIFICATION.DISMISS.REPORT_ADVENTURER(
@@ -782,17 +747,23 @@ const getDisputeResolutionContext = async (reportId) => {
   // Gets mission, vacancy and adventurer info
   const missionId = report.payload.associated_mission_id;
   const vacancyId = report.payload.associated_vacancy_id;
-  const mission = await getMissionOrThrow(missionId);
+  const mission = await missionService.getMissionByIdOrThrow(missionId);
   if (mission.status === MISSION_STATUS.REPORTED.ID) {
     throw new AppError(messages.REPORT.REPORT_MISSION.CLOSED_BY_REPORT, 409);
   }
 
-  const vacancy = await getVacancyOrThrow(missionId, vacancyId);
+  const vacancy =
+    await missionService.getMissionParticipationByIdOrThrow(vacancyId);
+  if (vacancy.mid !== missionId) {
+    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+  }
   if (vacancy.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID) {
     throw new AppError(messages.REPORT.GENERAL.VACANCY_NOT_DISPUTED, 409);
   }
 
-  const adventurer = await getUserOrThrow(vacancy.adventurer_id);
+  const adventurer = await userService.getUserByUidOrThrow(
+    vacancy.adventurer_id,
+  );
   return { adventurer, mission, report, vacancy };
 };
 
@@ -814,7 +785,6 @@ const buildResolutionNotification = (
 });
 
 // Emits conversation closed
-
 const emitConversationClosed = (participantIds, report) => {
   if (!report?.conversation_id) return;
   emitToAdmins('report:updated', { reportId: report.rid });
@@ -826,4 +796,33 @@ const emitConversationClosed = (participantIds, report) => {
       reportId: report.rid,
     });
   }
+};
+
+// Closes report and conversation
+export const closeReportAndConversation = async (
+  reportId,
+  decision,
+  reason,
+  adminId,
+) => {
+  const client = await pool.connect();
+  let result;
+  try {
+    await client.query('BEGIN');
+    result = await closeReportAndConversationInternal(
+      reportId,
+      decision,
+      reason,
+      adminId,
+      client,
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+  emitConversationClosed(result.participantIds, result.report);
+  return result.report;
 };
