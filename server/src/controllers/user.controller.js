@@ -188,7 +188,6 @@ export const updateMyEmail = async (req, res, next) => {
 
 // Updates user's configuration
 export const updateMyConfiguration = async (req, res, next) => {
-  console.log(req.body);
   try {
     const user = req.user;
     const { configuration } = req.body;

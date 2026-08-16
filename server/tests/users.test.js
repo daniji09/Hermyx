@@ -1,1033 +1,250 @@
-import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { AppError } from '../src/utils/error.util.js';
+
+const currentUser = vi.hoisted(() => ({
+  uid: 11,
+  email: 'current@example.com',
+  username: 'current_hero',
+  firebase_uid: 'firebase-current',
+  stripe_customer_id: 'cus_current',
+}));
+
+const userService = vi.hoisted(() => ({
+  searchUserByUsername: vi.fn(),
+  getMyProfile: vi.fn(),
+  getUserMissions: vi.fn(),
+  getUserPublicProfile: vi.fn(),
+  getUserPublicMissions: vi.fn(),
+  updateMyProfile: vi.fn(),
+  updateMyAvatar: vi.fn(),
+  updateMyEmail: vi.fn(),
+  updateMyConfiguration: vi.fn(),
+  addEmailAuthentication: vi.fn(),
+  getUserByUidOrThrow: vi.fn(),
+  updateUserStripeCustomerIdByUid: vi.fn(),
+}));
+
+vi.mock('../src/services/user.service.js', () => userService);
+vi.mock('../src/middlewares/auth.middleware.js', () => ({
+  verifyToken: (req, _res, next) => {
+    req.user = { ...currentUser };
+    next();
+  },
+  verifyAdmin: (_req, _res, next) => next(),
+}));
+
 import app from '../src/app.js';
-import pool from '../src/config/db.config.js';
-import { messages, consts } from '@hermyx/shared';
-import { createFirebaseUser } from '../src/providers/auth.provider.js';
 
-// Test fake data
-const test_user = vi.hoisted(() => {
-  return {
-    email: 'email@email.com',
-    emailAlternative: 'email2@email.com',
-    emailInvalid: 'test@email.c',
-    username: 'test_username',
-    usernameAlternative: 'test_username_alt',
-    usernameTooLong: 'username'.repeat(3),
-    usernameInvalid: '@username?',
-    password: 'testPassword123_',
-    passwordAlternative: 'testPassword123__',
-    passwordInvalid: 'reallyStrongPassword',
-    passwordTooShort: 'pass',
-    passwordTooLong: 'password'.repeat(1000),
-    confirmPassword: 'testPassword123_',
-    confirmPasswordAlternative: 'testPassword123__',
-    confirmPasswordInvalid: 'confirmPassword',
-    firebaseUid: 'test-firebase-uid-123',
-  };
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 
-// Mocks for Firebase API
-vi.mock('../src/services/auth.service.js', () => {
-  return {
-    createFirebaseUser: vi
-      .fn()
-      .mockResolvedValue({ uid: test_user.firebaseUid }),
+describe('User API', () => {
+  it('searches users by partial username with pagination', async () => {
+    const users = [{ uid: 12, username: 'current_friend' }];
+    const pagination = { currentPage: 2, totalPages: 3 };
+    userService.searchUserByUsername.mockResolvedValue({ users, pagination });
 
-    deleteFirebaseUser: vi.fn().mockResolvedValue(),
-  };
-});
+    const response = await request(app)
+      .get('/api/users/search')
+      .query({ username: 'current', page: 2, limit: 5 });
 
-// Before each test, test db data is cleansed
-beforeEach(async () => {
-  await pool.query('TRUNCATE TABLE mission CASCADE');
-  await pool.query('TRUNCATE TABLE app_user CASCADE');
-});
-
-// After all tests pool is ended
-afterAll(async () => {
-  await pool.end();
-});
-
-// Tests
-describe('GET /api/users', () => {
-  // Happy paths
-  it('should get a user by their email', async () => {
-    // First, the user is added
-    await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
-
-    // Then is it searched
-    const response = await request(app).get('/api/users').query({
-      email: test_user.email,
-    });
-
-    // Checks response
-    expect(response.status).toBe(200); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.user.username).toBe(test_user.username);
-    expect(response.body.user.email).toBe(test_user.email);
-    expect(response.body.user.firebase_uid).toBe(test_user.firebaseUid);
-  });
-
-  it('should get a user by their username', async () => {
-    // First, the user is added
-    await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
-
-    // Then is it searched
-    const response = await request(app).get('/api/users').query({
-      username: test_user.username,
-    });
-
-    // Checks response
-    expect(response.status).toBe(200); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.user.username).toBe(test_user.username);
-    expect(response.body.user.email).toBe(test_user.email);
-    expect(response.body.user.firebase_uid).toBe(test_user.firebaseUid);
-  });
-
-  // Corner cases
-  it('should return a 404 because user is not found by email', async () => {
-    // No user is added
-    // Then is it searched
-    const response = await request(app).get('/api/users').query({
-      email: test_user.email,
-    });
-
-    // Checks response
-    expect(response.status).toBe(404); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.usernameEmail[0]).toBe(
-      messages.EMAIL_NOT_FOUND(test_user.email),
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ users, pagination });
+    expect(userService.searchUserByUsername).toHaveBeenCalledWith(
+      'current',
+      currentUser.uid,
+      expect.objectContaining({ page: 2, limit: 5 }),
     );
   });
 
-  it('should return a 404 because user is not found by username', async () => {
-    // No user is added
-    // Then is it searched
-    const response = await request(app).get('/api/users').query({
-      username: test_user.username,
-    });
+  it('rejects an incomplete search pagination pair', async () => {
+    const response = await request(app)
+      .get('/api/users/search')
+      .query({ username: 'current', page: 2 });
 
-    // Checks response
-    expect(response.status).toBe(404); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.usernameEmail[0]).toBe(
-      messages.USERNAME_NOT_FOUND(test_user.username),
+    expect(response.status).toBe(400);
+    expect(userService.searchUserByUsername).not.toHaveBeenCalled();
+  });
+
+  it('returns the authenticated user without another lookup', async () => {
+    const response = await request(app).get('/api/users/me');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(currentUser);
+  });
+
+  it('gets the current user profile', async () => {
+    const profile = { username: currentUser.username, rating: 4.5 };
+    userService.getMyProfile.mockResolvedValue(profile);
+
+    const response = await request(app).get('/api/users/me/profile');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(profile);
+    expect(userService.getMyProfile).toHaveBeenCalledWith(currentUser);
+  });
+
+  it('gets a user mission page', async () => {
+    const missions = [{ mid: 31, title: 'Mission' }];
+    const pagination = { currentPage: 1, totalPages: 1 };
+    userService.getUserMissions.mockResolvedValue({ missions, pagination });
+
+    const response = await request(app)
+      .get('/api/users/12/missions')
+      .query({ type: 'joined', page: 1, limit: 10 });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ missions, pagination });
+    expect(userService.getUserMissions).toHaveBeenCalledWith(
+      12,
+      'joined',
+      expect.objectContaining({ page: 1, limit: 10 }),
     );
   });
 
-  it('should return a 500 status because there was a db error', async () => {
-    // First, the db error is simulated
-    const dbSpy = vi
-      .spyOn(pool, 'query')
-      .mockRejectedValueOnce(new Error('Bd connection failed'));
-
-    // Then a user is searched
-    const response = await request(app).get('/api/users').query({
-      username: test_user.username,
+  it('gets only the public profile fields', async () => {
+    const user = { username: 'public_hero', description: 'Hello' };
+    userService.getUserPublicProfile.mockResolvedValue({
+      user,
+      missionsVisible: true,
     });
 
-    // Checks response
-    expect(response.status).toBe(500); // 500 Internal Server Error
-    expect(response.body.errors.general[0]).toBe(messages.UNEXPECTED_ERROR);
+    const response = await request(app).get('/api/users/public_hero/profile');
 
-    dbSpy.mockRestore();
-  });
-});
-
-describe('POST /api/users - Sign Up', () => {
-  // Happy path
-  it('should sign up a user successfully and return a 201 status', async () => {
-    const response = await request(app).post('/api/users').send({
-      email: test_user.email,
-      username: test_user.username,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(201); // 201 Created
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ user, missionsVisible: true });
+    expect(userService.getUserPublicProfile).toHaveBeenCalledWith(
+      'public_hero',
     );
-    expect(response.body.user.username).toBeDefined();
-    expect(response.body.user.email).toBeDefined();
-    expect(response.body.user.firebase_uid).toBeDefined();
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(1);
-    expect(dbCheck.rows[0].username).toBe(test_user.username);
-    expect(dbCheck.rows[0].firebase_uid).toBe(test_user.firebaseUid);
   });
 
-  // Corner cases
-  // Field validation errors
-  it('should return a 400 status without modifying db because email field is required', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
+  it('gets public profile missions', async () => {
+    const missions = [{ mid: 32 }];
+    const pagination = { currentPage: 1 };
+    userService.getUserPublicMissions.mockResolvedValue({
+      missions,
+      pagination,
     });
 
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.email[0]).toBe(
-      messages.GENERAL.FIELD_NOT_VALID('email'),
-    );
+    const response = await request(app)
+      .get('/api/users/public_hero/profile/missions')
+      .query({ type: 'published' });
 
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ missions, pagination });
+    expect(userService.getUserPublicMissions).toHaveBeenCalledWith(
+      'public_hero',
+      'published',
+      undefined,
     );
-    expect(dbCheck.rows.length).toBe(0);
   });
 
-  it('should return a 400 status without modifying db because email field is invalid', async () => {
-    const response = await request(app).post('/api/users').send({
-      email: test_user.emailInvalid,
-      username: test_user.username,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
+  it('updates editable profile fields', async () => {
+    const payload = {
+      username: 'updated_hero',
+      name: 'Updated',
+      surnames: 'Hero',
+      description: 'New bio',
+      latitude: 40.4,
+      longitude: -3.7,
+    };
+    userService.updateMyProfile.mockResolvedValue(payload);
+
+    const response = await request(app)
+      .patch('/api/users/me/profile')
+      .send(payload);
+
+    expect(response.status).toBe(200);
+    expect(response.body.profile).toEqual({
+      username: payload.username,
+      name: payload.name,
+      surnames: payload.surnames,
+      description: payload.description,
     });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
+    expect(userService.updateMyProfile).toHaveBeenCalledWith(
+      currentUser,
+      payload,
     );
-    expect(response.body.errors.email[0]).toBe(
-      messages.GENERAL.FIELD_NOT_VALID('email'),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
   });
 
-  it('should return a 400 status without modifying db because username field is required', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: '',
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
+  it('updates the avatar through the upload endpoint', async () => {
+    userService.updateMyAvatar.mockResolvedValue('/uploads/avatars/avatar.png');
 
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.username[0]).toBe(messages.FIELD_REQUIRED);
+    const response = await request(app).patch('/api/users/me/avatar');
 
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ avatar: '/uploads/avatars/avatar.png' });
+    expect(userService.updateMyAvatar).toHaveBeenCalledWith(
+      currentUser.uid,
+      undefined,
     );
-    expect(dbCheck.rows.length).toBe(0);
   });
 
-  it('should return a 400 status without modifying db because username field is too long', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.usernameTooLong,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
+  it('updates the account email', async () => {
+    const changedUser = { ...currentUser, email: 'changed@example.com' };
+    userService.updateMyEmail.mockResolvedValue(changedUser);
 
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.username[0]).toBe(
-      messages.FIELD_TOO_LONG('Username', consts.USERNAME_MAX_LENGTH),
-    );
+    const response = await request(app)
+      .patch('/api/users/me/email')
+      .send({ email: changedUser.email });
 
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual(changedUser);
+    expect(userService.updateMyEmail).toHaveBeenCalledWith(
+      currentUser,
+      changedUser.email,
     );
-    expect(dbCheck.rows.length).toBe(0);
   });
 
-  it('should return a 400 status without modifying db because username field is invalid', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.usernameInvalid,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
+  it('updates user configuration', async () => {
+    const configuration = { show_missions_to_others: false };
+    userService.updateMyConfiguration.mockResolvedValue(configuration);
 
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.username[0]).toBe(
-      messages.USERNAME_INVALID_CHARACTERS,
-    );
+    const response = await request(app)
+      .patch('/api/users/me/configuration')
+      .send({ configuration });
 
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ configuration });
+    expect(userService.updateMyConfiguration).toHaveBeenCalledWith(
+      currentUser.uid,
+      configuration,
     );
-    expect(dbCheck.rows.length).toBe(0);
   });
 
-  it('should return a 400 status without modifying db because password field is required', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: '',
-      confirmPassword: test_user.confirmPassword,
+  it('adds email credentials to a Google account', async () => {
+    const payload = {
+      email: 'credentials@example.com',
+      password: 'StrongPassword1!',
+      confirmPassword: 'StrongPassword1!',
+    };
+    userService.addEmailAuthentication.mockResolvedValue({
+      ...currentUser,
+      email: payload.email,
     });
 
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.password[0]).toBe(messages.FIELD_REQUIRED);
+    const response = await request(app)
+      .post('/api/users/me/credentials')
+      .send(payload);
 
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
+    expect(response.status).toBe(200);
+    expect(userService.addEmailAuthentication).toHaveBeenCalledWith(
+      currentUser,
+      payload.email,
+      payload.password,
     );
-    expect(dbCheck.rows.length).toBe(0);
   });
 
-  it('should return a 400 status without modifying db because password field is too short', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.passwordTooShort,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.password[0]).toBe(
-      messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because password field is too long', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.passwordTooLong,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.password[0]).toBe(
-      messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because password field restrictions are not satisfied', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.passwordInvalid,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.password[0]).toBe(messages.PASSWORD_NUMBER);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because confirm password field is required', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: '',
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.confirmPassword[0]).toBe(
-      messages.CONFIRM_PASSWORD,
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because password and confirm password fields do not match', async () => {
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPasswordInvalid,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.confirmPassword[0]).toBe(
-      messages.PASSWORDS_NOT_MATCH,
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  // Logic errors
-  it('should return a 400 status without modifying db because new users email is already in use', async () => {
-    // First a correct new user is added
-    await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
-
-    // Then, another user with same email is tried to be added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.usernameAlternative,
-      email: test_user.email,
-      password: test_user.passwordAlternative,
-      confirmPassword: test_user.confirmPasswordAlternative,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.email[0]).toBe(
-      messages.EMAIL_ALREADY_EXISTS(test_user.email),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(1);
-
-    const dbCheck2 = await pool.query(
-      'SELECT * FROM app_user WHERE username = $1',
-      [test_user.usernameAlternative],
-    );
-    expect(dbCheck2.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because new users username is already in use', async () => {
-    // First a correct new user is added
-    await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
-
-    // Then, another user with same username is tried to be added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.emailAlternative,
-      password: test_user.passwordAlternative,
-      confirmPassword: test_user.confirmPasswordAlternative,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.username[0]).toBe(
-      messages.USERNAME_ALREADY_EXISTS(test_user.username),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE username = $1',
-      [test_user.username],
-    );
-    expect(dbCheck.rows.length).toBe(1);
-
-    const dbCheck2 = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.emailAlternative],
-    );
-    expect(dbCheck2.rows.length).toBe(0);
-  });
-
-  // Firebase errors
-  it('should return a 400 status without modifying db because new users email already exists in Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/email-already-exists';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.email[0]).toBe(
-      messages.EMAIL_ALREADY_EXISTS(test_user.email),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because new users email is already in use in Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/email-already-in-use';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.email[0]).toBe(
-      messages.EMAIL_ALREADY_EXISTS(test_user.email),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because new users email is invalid for Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/invalid-email';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.email[0]).toBe(
-      messages.GENERAL.FIELD_NOT_VALID('email'),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because new users password is invalid for Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/invalid-password';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.password[0]).toBe(
-      messages.GENERAL.FIELD_NOT_VALID('password'),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
+  it('uses the shared error handler for service failures', async () => {
+    userService.getMyProfile.mockRejectedValue(
+      new AppError('Profile not available.', 404),
     );
-    expect(dbCheck.rows.length).toBe(0);
-  });
 
-  it('should return a 400 status without modifying db because new users email is missing for Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/missing-email';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.email[0]).toBe(messages.FIELD_REQUIRED);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because new users password is missing for Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/missing-password';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.password[0]).toBe(messages.FIELD_REQUIRED);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 502 status without modifying db because network failed for Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/network-request-failed';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(502); // 502 Bad Gateway
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.general[0]).toBe(messages.CONNECTION_ERROR);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because users password is weak for Firebase', async () => {
-    // First, the Firebase error is emulated
-    const firebaseError = new Error();
-    firebaseError.code = 'auth/weak-password';
-
-    // Mock should reject this time the petition
-    createFirebaseUser.mockRejectedValueOnce(firebaseError);
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.password[0]).toBe(
-      messages.GENERAL.FIELD_NOT_VALID('password'),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 500 status without modifying db because there was a db error', async () => {
-    // First, the db error is simulated
-    const dbSpy = vi
-      .spyOn(pool, 'query')
-      .mockRejectedValueOnce(new Error('Bd connection failed'));
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(500); // 500 Internal Server Error
-    expect(response.body.errors.general[0]).toBe(messages.UNEXPECTED_ERROR);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-
-    dbSpy.mockRestore();
-  });
-});
-
-describe('POST /api/users/syncGoogle - Synchronization with Google', () => {
-  // Happy paths
-  it('should log in an existing user', async () => {
-    // First a correct new user is added
-    await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
-
-    const response = await request(app).post('/api/users/sync-google').send({
-      email: test_user.email,
-      username: test_user.username,
-      firebaseUid: test_user.firebaseUid,
-      isNewUser: false,
-    });
-
-    // Checks response
-    expect(response.status).toBe(200); // 200 OK
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.checkedUser.username).toBeDefined();
-    expect(response.body.checkedUser.email).toBeDefined();
-    expect(response.body.checkedUser.firebase_uid).toBeDefined();
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(1);
-    expect(dbCheck.rows[0].username).toBe(test_user.username);
-    expect(dbCheck.rows[0].firebase_uid).toBe(test_user.firebaseUid);
-  });
-
-  it('should sign up a new user', async () => {
-    const response = await request(app).post('/api/users/sync-google').send({
-      email: test_user.email,
-      username: test_user.username,
-      firebaseUid: test_user.firebaseUid,
-      isNewUser: true,
-    });
-
-    // Checks response
-    expect(response.status).toBe(201); // 201 Created
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.user.username).toBeDefined();
-    expect(response.body.user.email).toBeDefined();
-    expect(response.body.user.firebase_uid).toBeDefined();
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(1);
-    expect(dbCheck.rows[0].firebase_uid).toBe(test_user.firebaseUid);
-  });
-
-  // Corner cases
-  it('should return a 400 status without modifying db because email field is required', async () => {
-    const response = await request(app).post('/api/users/sync-google').send({
-      username: test_user.username,
-      firebaseUid: test_user.firebaseUid,
-      isNewUser: true,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.email[0]).toBe(
-      messages.GENERAL.FIELD_NOT_VALID('email'),
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because username field is required', async () => {
-    const response = await request(app).post('/api/users/sync-google').send({
-      username: '',
-      email: test_user.email,
-      firebaseUid: test_user.firebaseUid,
-      isNewUser: true,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.username[0]).toBe(messages.FIELD_REQUIRED);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 400 status without modifying db because firebaseUid field is required', async () => {
-    const response = await request(app).post('/api/users/sync-google').send({
-      username: test_user.username,
-      email: test_user.email,
-      firebaseUid: '',
-      isNewUser: true,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.firebaseUid[0]).toBe(messages.FIELD_REQUIRED);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  // Logic errors
-  it('should return a 400 status because Firebase made a sign up when it was a log in', async () => {
-    // First a correct new user is added
-    await pool.query(
-      'INSERT INTO app_user (email, username, firebase_uid) VALUES ($1, $2, $3)',
-      [test_user.email, test_user.username, test_user.firebaseUid],
-    );
-
-    const response = await request(app).post('/api/users/sync-google').send({
-      email: test_user.email,
-      username: test_user.username,
-      firebaseUid: test_user.firebaseUid,
-      isNewUser: true,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.general[0]).toBe(messages.COULD_NOT_LOG_IN);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(1);
-    expect(dbCheck.rows[0].firebase_uid).toBe(test_user.firebaseUid);
-  });
-
-  it('should return a 400 status because Firebase made a log in when it was a sign up', async () => {
-    // First a correct new user is added
-    const response = await request(app).post('/api/users/sync-google').send({
-      email: test_user.email,
-      username: test_user.username,
-      firebaseUid: test_user.firebaseUid,
-      isNewUser: false,
-    });
-
-    // Checks response
-    expect(response.status).toBe(400); // 400 Bad Request
-    expect(response.headers['content-type']).toEqual(
-      expect.stringContaining('json'),
-    );
-    expect(response.body.errors.general[0]).toBe(
-      messages.COULD_NOT_CREATE_NEW_ACCOUNT,
-    );
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
-  });
-
-  it('should return a 500 status without modifying db because there was a db error', async () => {
-    // First, the db error is simulated
-    const dbSpy = vi
-      .spyOn(pool, 'query')
-      .mockRejectedValueOnce(new Error('Bd connection failed'));
-
-    // Then a new user is added
-    const response = await request(app).post('/api/users').send({
-      username: test_user.username,
-      email: test_user.email,
-      password: test_user.password,
-      confirmPassword: test_user.confirmPassword,
-    });
-
-    // Checks response
-    expect(response.status).toBe(500); // 500 Internal Server Error
-    expect(response.body.errors.general[0]).toBe(messages.UNEXPECTED_ERROR);
-
-    // Checks db
-    const dbCheck = await pool.query(
-      'SELECT * FROM app_user WHERE email = $1',
-      [test_user.email],
-    );
-    expect(dbCheck.rows.length).toBe(0);
+    const response = await request(app).get('/api/users/me/profile');
 
-    dbSpy.mockRestore();
+    expect(response.status).toBe(404);
+    expect(response.body.errors.general).toEqual(['Profile not available.']);
   });
 });
