@@ -735,11 +735,17 @@ Finishes a mission.
 <br>
 <br>
 
-## - Reopen mission: `POST /api/missions/:mid/ban`
+## - Ban mission: `POST /api/missions/:mid/ban`
 
 Bans a mission.
 
 **Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
 
 **Body (JSON):**
 | Field | Type | Required | Description |
@@ -750,7 +756,7 @@ Bans a mission.
 
 **Responses:**
 
-- `200 OK`: mission finished successfully.
+- `200 OK`: mission banned successfully.
 
   ```json
   {}
@@ -799,6 +805,81 @@ Bans a mission.
 <br>
 
 **Workflow:** banning a mission means deleting it or cancelling it rewarding every adventurer.
+<br>
+<br>
+<br>
+
+## - Kick adventurer out: `POST /api/missions/:mid/kick/:vacancyId`
+
+Kicks an adventurer out of a specified mission
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+| `vacancyId` | integer | Yes | Mission participation identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rid` | int | Yes | Report identifier. |
+| `reason` | string | Yes | Report decision reason. |
+<br>
+
+**Responses:**
+
+- `200 OK`: adventurer kicked out successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: action can only done by an admin.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Report not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** kicking an adventurer out can be while mission is closed, so it just kicks them out; or while participation has already been payed, so adventurer is kicked out and their reward is refunded to the applicant.
 <br>
 <br>
 <br>

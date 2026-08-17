@@ -169,6 +169,17 @@ export const reportAdventurer = async ({
       client,
     );
 
+    // Marks participation as disputed
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      missionId,
+      adventurer.uid,
+      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
+      client,
+    );
+
+    // Syncs mission
+    await missionService.syncMissionCompletionStatus(missionId, client);
+
     // Creates conversation between reporter and reported
     const participantIds = [sender.uid, adventurer.uid];
     for (const participantId of participantIds) {
@@ -825,64 +836,6 @@ export const emitConversationClosed = (participantIds, report) => {
       reportId: report.rid,
     });
   }
-};
-
-// Closes report and associated conversation in db involving a determine mission
-export const closeReportAndConversationByMid = async (
-  mid,
-  decision,
-  reason,
-  adminId,
-  client,
-) => {
-  // Closes all reports associated with mission
-  const reports = await reportModel.closeAllByMid(
-    mid,
-    decision,
-    reason,
-    adminId,
-    client,
-  );
-
-  // Closes associated conversation
-  for (const report of reports)
-    await closeAssociatedConversation(report, client);
-  return;
-};
-
-// Closes report and associated conversation in db involving a determine mission
-export const closeReportAndConversationByUid = async (
-  uid,
-  participations,
-  decision,
-  reason,
-  adminId,
-  client,
-) => {
-  let reportsVacancy;
-  // Closes all reports associated with user
-  const reports = await reportModel.closeAllByUid(
-    uid,
-    decision,
-    reason,
-    adminId,
-    client,
-  );
-  console.log('Reports by uid:', reports);
-  // Closes all reports associated with each participation
-  if (participations.length > 1)
-    reportsVacancy = await reportModel.closeAllByParticipations(
-      participations,
-      decision,
-      reason,
-      adminId,
-      client,
-    );
-  console.log('Reports by vacancy:', reportsVacancy);
-  // Closes associated conversation
-  for (const report of [reports, reportsVacancy])
-    await closeAssociatedConversation(report, client);
-  return;
 };
 
 // Closes associated conversation

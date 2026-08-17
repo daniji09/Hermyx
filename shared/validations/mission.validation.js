@@ -337,6 +337,17 @@ export const banMissionBodySchema = z.object({
   reason: reportReasonBaseSchema,
 });
 
+// Kick adventurer out
+export const kickAdventurerOutParamsSchema = z.object({
+  mid: midBaseSchema,
+  vacancyId: vacancyIdBaseSchema,
+});
+
+export const kickAdventurerOutBodySchema = z.object({
+  rid: reportIdBaseSchema,
+  reason: reportReasonBaseSchema,
+});
+
 // Edit mission
 export const editMissionBodySchema = z.object({
   mid: midBaseSchema,
@@ -397,24 +408,6 @@ export const searchMissionByTitleSchema = z.object({
       consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
       messages.FIELD_TOO_LONG('Input'),
     ),
-});
-
-export const kickAdventurerOutParamsSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-  vacancyId: z.coerce
-    .number(messages.FIELD_NUMBER('Vacancy id'))
-    .int(messages.FIELD_INTEGER('Vacancy id'))
-    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
-});
-
-export const kickAdventurerOutBodySchema = z.object({
-  rid: z.coerce
-    .number(messages.FIELD_NUMBER('Rid'))
-    .int(messages.FIELD_INTEGER('Rid'))
-    .min(0, messages.FIELD_POSITIVE('Rid')),
 });
 
 export const addVacanciesSchema = z

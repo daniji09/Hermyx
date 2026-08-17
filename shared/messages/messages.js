@@ -239,6 +239,10 @@ export const messages = {
       CLOSE_AFTER_REOPENED_NO_NEW_ADVENTURERS: (title) =>
         `Mission ${title} has been closed after being reopened. No new adventurers have joined.`,
     },
+    REOPEN_MISSION: (title) =>
+      `Mission ${title} has been reopened, so new teammates will enter!`,
+    MISSION_STARTED: (title) =>
+      `Mission ${title} has started! Talk to your team and start working.`,
     SUBMIT_PARTICIPATION: (title, username) =>
       `The participation in "${title}" was submitted by ${username}.`,
     UNJOIN_MISSION: (username, vacancyTitle, missionTitle) =>
@@ -258,10 +262,12 @@ export const messages = {
         ISSUED: `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers. We had an issue transferring your compensation. Please contact support.`,
       },
     },
-    REOPEN_MISSION: (title) =>
-      `Mission ${title} has been reopened, so new teammates will enter!`,
-    MISSION_STARTED: (title) =>
-      `Mission ${title} has started! Talk to your team and start working.`,
+    KICK_ADVENTURER_OUT: {
+      TO_OWNER: (username, title) =>
+        `Adventurer ${username} of your mission ${title} has been kicked out by Hermyx administration, so this vacancy has been emptied.`,
+      TO_ADVENTURER: (title) =>
+        `You have been kicked out of the mission ${title}, so you won't be able to receive the reward.`,
+    },
     MISSION_NEGOTIATION_EXTRA: (title) =>
       `Your new monetary reward for ${title} has been funded. Now you can submit your part!`,
     MISSION_RESTARTED: (title) =>

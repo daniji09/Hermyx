@@ -124,7 +124,7 @@ export const payNew = async (mid, user, saveCard) => {
       ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
       metadata: { mid, ownerId: user.uid },
     },
-    `${user.stripe_customer_id}_payment_on_${Date.now()}`,
+    `pay_new_${mid}_${Date.now()}`,
   );
 
   return pi;

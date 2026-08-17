@@ -110,7 +110,7 @@ export const createMissionPayment = async (missionPaymentData, client) => {
 // Get mission payments by vacancy id
 export const getMissionPaymentsByVacancyId = async (vacancyId, client) => {
   checkRequired(vacancyId, 'Mission participation id');
-  return await missionPaymentModel.findByVacancyId(vacancyId, client);
+  return await missionPaymentModel.findAllByVacancyId(vacancyId, client);
 };
 
 // Gets mission participation
@@ -1789,6 +1789,282 @@ export const banMission = async (user, mid, rid, reason) => {
   }
 
   // And conversation closure
+  reportService.emitConversationClosed(
+    reportClosed.participantIds,
+    reportClosed.report,
+  );
+
+  return;
+};
+
+// Kick adventurer out
+export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
+  // Parameter checks
+  checkRequired(user, 'Admin user');
+  checkRequired(mid, 'Mission id');
+  checkRequired(rid, 'Report id');
+  checkRequired(reason, 'Report decision reason');
+
+  // Mission is searched
+  const mission = await getMissionByIdOrThrow(mid);
+
+  // Adventurer participation is got
+  const vacancy = await getMissionParticipationByIdOrThrow(vacancyId);
+  if (vacancy.mid !== mid)
+    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+
+  // Adventurer is got
+  const adventurer = await userService.getUserByUidOrThrow(
+    vacancy.adventurer_id,
+  );
+
+  // Gets all payments of vacancy
+  const payments = await missionPaymentModel.findAllByVacancyId(vacancyId);
+  const isCancellable = payments.length > 0;
+
+  // First transaction to kick adventurer out of mission
+  const prepClient = await pool.connect();
+  try {
+    await prepClient.query('BEGIN');
+
+    // Unjoin user
+    const unjoin = await missionParticipationModel.unjoinParticipant(
+      mission.mid,
+      vacancy.adventurer_id,
+      prepClient,
+    );
+    if (unjoin < 1)
+      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
+
+    // Updates mission
+    const unjoinMission = await missionModel.updateOccupiedVacancies(
+      mission.mid,
+      -1,
+      prepClient,
+    );
+    if (unjoinMission.length < 1)
+      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
+
+    let newStatus;
+    // If mission is cancellable, refund will be made
+    if (isCancellable) {
+      await missionParticipationModel.updatePaymentStatusById(
+        vacancyId,
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+        prepClient,
+      );
+      newStatus = MISSION_STATUS.REOPENED.ID;
+    } else newStatus = MISSION_STATUS.OPENED.ID;
+    // If there is no other user joined, mission is opened again
+    const occupied_vacancies =
+      await missionParticipationModel.findAllOccupiedByMid(mid, prepClient);
+    if (occupied_vacancies.length === 0)
+      await missionModel.updateStatusByMid(mid, newStatus, prepClient);
+
+    await prepClient.query('COMMIT');
+  } catch (error) {
+    await prepClient.query('ROLLBACK');
+    throw error;
+  } finally {
+    prepClient.release();
+  }
+  let refundSuccessful = true;
+  // If cancel, refunds are prepared
+  if (isCancellable) {
+    let amountToRefund = vacancy.monetary_reward;
+
+    for (const payment of payments) {
+      if (amountToRefund <= 0) break;
+
+      const availableBalance = payment.amount_paid - payment.amount_refunded;
+      const paymentRefund = Math.min(amountToRefund, availableBalance);
+
+      try {
+        // Refund is made on Stripe
+        const refund = await paymentProvider.createRefund(
+          {
+            payment_intent: payment.stripe_transaction_id,
+            amount: Math.round(paymentRefund * 100),
+            metadata: {
+              mission_id: mid,
+              vacancy_id: vacancyId,
+              reason: 'adventurer_kicked_out_refund',
+            },
+          },
+          `adventurer_kicked_out_refund_${mid}_${vacancyId}`,
+        );
+
+        // Transaction to save refund on db
+        const receiptClient = await pool.connect();
+        try {
+          await receiptClient.query('BEGIN');
+
+          // Payment is updated on db
+          await refundMissionPayment(paymentRefund, payment.pid, receiptClient);
+
+          // And new transaction is added to db
+          await missionPaymentModel.create(
+            {
+              mid: mid,
+              vacancy_id: vacancyId,
+              sender_id: HERMYX_SYSTEM_ID,
+              receiver_id: mission.owner_id,
+              stripe_transaction_id: refund.id,
+              transaction_type:
+                TRANSACTION_TYPE.ADVENTURER_KICKED_OUT_COMPENSATION.ID,
+              amount_paid: paymentRefund,
+            },
+            receiptClient,
+          );
+
+          await receiptClient.query('COMMIT');
+        } catch (dbError) {
+          await receiptClient.query('ROLLBACK');
+          refundSuccessful = true;
+          // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+          console.error(
+            `FATAL DB ERROR: refund of ${adventurer.uid} after adventurer kicked out but DB failed.`,
+            dbError,
+          );
+        } finally {
+          receiptClient.release();
+        }
+      } catch (stripeError) {
+        // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
+        console.error(
+          `Stripe Error while refunding out vacancy ${vacancy.id} due to adventurer kicked out:`,
+          stripeError.message,
+        );
+      }
+
+      amountToRefund -= paymentRefund;
+    }
+  }
+
+  // Transaction for final updates and notifications
+  const finalClient = await pool.connect();
+  let ownerNotificationId, advNotificationId;
+  let reportClosed;
+  let messageOwner = messages.NOTIFICATION.KICK_ADVENTURER_OUT.TO_OWNER(
+    adventurer.username,
+    mission.title,
+  );
+  const messageAdventurer =
+    messages.NOTIFICATION.KICK_ADVENTURER_OUT.TO_ADVENTURER(mission.title);
+
+  try {
+    await finalClient.query('BEGIN');
+
+    // If cancel, participation and mission are updated
+    if (isCancellable) {
+      // When refund is complete, is marked as that
+      if (refundSuccessful)
+        await refundBannedVacancy(
+          vacancyId,
+          vacancy.monetary_reward,
+          finalClient,
+        );
+
+      // Updates total payment on mission
+      const occupied_vacancies =
+        await missionParticipationModel.findAllOccupiedByMid(mid, finalClient);
+      const newTotal =
+        occupied_vacancies.reduce(
+          (sum, v) => sum + Number(v.monetary_reward),
+          0,
+        ) * HERMYX_FEE || 0;
+      await updateMissionPayment(mission.mid, newTotal, finalClient);
+
+      messageOwner += ` Their reward is being refunded to you.`;
+    }
+
+    // Report is closed
+    reportClosed = await reportService.closeReportAndConversation(
+      rid,
+      REPORT_DECISION.KICK_ADVENTURER_OUT.ID,
+      reason,
+      user.uid,
+      finalClient,
+    );
+    if (!reportClosed)
+      throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+
+    // Notifies owner of the mission
+    ownerNotificationId = await notificationService.createNotification(
+      {
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,
+        status: null,
+        message: messageOwner,
+        senderId: HERMYX_SYSTEM_ID,
+        receiverId: mission.owner_id,
+        payload: {
+          associated_mission_id: mission.mid,
+          associated_vacancy_id: vacancyId,
+        },
+      },
+      finalClient,
+    );
+
+    // Notifies adventurer
+    advNotificationId = await notificationService.createNotification(
+      {
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.ADVENTURER_KICKED_OUT.ID,
+        status: null,
+        message: messageAdventurer,
+        senderId: HERMYX_SYSTEM_ID,
+        receiverId: vacancy.adventurer_id,
+        payload: {
+          associated_mission_id: mission.mid,
+          associated_vacancy_id: vacancyId,
+        },
+      },
+      finalClient,
+    );
+
+    await finalClient.query('COMMIT');
+  } catch (error) {
+    await finalClient.query('ROLLBACK');
+    throw error;
+  } finally {
+    finalClient.release();
+  }
+
+  // Notifications sends and conversations closures
+  // To Owner
+  socketProvider.emitToUser(mission.owner_id, 'mission:adventurer-kicked-out', {
+    notificationId: ownerNotificationId,
+    missionId: mission.mid,
+    vacancyId: null,
+    missionTitle: mission.title,
+    senderId: HERMYX_SYSTEM_ID,
+    senderUsername: user.username,
+    receiverId: mission.owner_id,
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    message: messageOwner,
+  });
+
+  // To Adventurer
+  socketProvider.emitToUser(
+    vacancy.adventurer_id,
+    'mission:adventurer-kicked-out',
+    {
+      notificationId: advNotificationId,
+      missionId: mission.mid,
+      vacancyId: null,
+      missionTitle: mission.title,
+      senderId: HERMYX_SYSTEM_ID,
+      senderUsername: user.username,
+      receiverId: vacancy.adventurer_id,
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      message: messageAdventurer,
+    },
+  );
+
+  // And conversation closure notification
   reportService.emitConversationClosed(
     reportClosed.participantIds,
     reportClosed.report,

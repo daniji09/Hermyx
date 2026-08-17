@@ -148,6 +148,15 @@ router.post(
   missionController.banMission,
 );
 
+// Kicks an adventurer out
+router.post(
+  '/:mid/kick/:vacancyId',
+  verifyAdmin,
+  validateParamsSchema(kickAdventurerOutParamsSchema),
+  validateBodySchema(kickAdventurerOutBodySchema),
+  missionController.kickAdventurerOut,
+);
+
 /// PUT
 // Edits mission
 router.put(
@@ -162,15 +171,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// Kicks an adventurer out
-router.post(
-  '/:mid/kick/:vacancyId',
-  verifyAdmin,
-  validateParamsSchema(kickAdventurerOutParamsSchema),
-  validateBodySchema(kickAdventurerOutBodySchema),
-  missionController.kickAdventurerOut,
-);
 
 /// PUT
 
