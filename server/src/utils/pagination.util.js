@@ -1,5 +1,6 @@
 import pool from '../config/db.config.js';
 
+// For db queries that must returned paginated results
 export const executePaginatedQuery = async (
   baseQuery,
   baseValues,

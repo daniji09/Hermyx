@@ -23,11 +23,13 @@ import * as paymentProvider from '../providers/payment.provider.js';
 import * as socketProvider from '../providers/socket.provider.js';
 
 /// Model access functions
-export const createNotification = async (notificationData, client) =>
-  notificationModel.create(notificationData, client);
+export const createNotification = async (notificationData, client) => {
+  checkRequired(notificationData, 'Notification data');
+  return await notificationModel.create(notificationData, client);
+};
 
 // Get notification by nid
-export const getNotificationByNid = async (nid, client) => {
+const getNotificationByNid = async (nid, client) => {
   checkRequired(nid, 'Notification id');
   return await notificationModel.findByNid(nid, client);
 };
@@ -364,13 +366,16 @@ const acceptParticipationReview = async ({
 
   // Checks that the adventurer has configured their account
   if (!adventurer.stripe_connected_id)
-    throw new AppError(messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED, 403);
+    throw new AppError(
+      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+      403,
+    );
 
   // Checks that the participation can be disputed on current state
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-    messages.CANNOT_ACCEPT_PARTICIPATION_STATE,
+    messages.NOTIFICATION.GENERAL.CANNOT_ACCEPT_PARTICIPATION_STATE,
   );
 
   // Creates payment and modifies database
@@ -564,7 +569,7 @@ const respondToParticipationRejection = async ({
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
-    messages.CANNOT_REOPEN_PARTICIPATION_STATE,
+    messages.NOTIFICATION.GENERAL.CANNOT_REOPEN_PARTICIPATION_STATE,
   );
 
   // Reopens participation, syncs mission and responds to notification, all in a database transaction
@@ -701,7 +706,7 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
   checkParticipationTransition(
     vacancy,
     MISSION_PARTICIPATION_STATUS.JOINED.ID,
-    messages.CANNOT_JOIN_PARTICIPATION_STATE,
+    messages.GENERAL.NOTIFICATION.CANNOT_JOIN_PARTICIPATION_STATE,
   );
 
   // Check if adventurer has already joined the mission

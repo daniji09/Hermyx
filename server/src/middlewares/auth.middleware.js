@@ -2,6 +2,7 @@ import { messages, USER_ROLE, USER_STATUS } from '@hermyx/shared';
 import { verifyIdToken } from '../providers/auth.provider.js';
 import * as userService from '../services/user.service.js';
 
+// Verifies logged in user token
 export const verifyToken = async (req, res, next) => {
   try {
     // ID token is retrieved
@@ -11,7 +12,7 @@ export const verifyToken = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res
         .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+        .json({ errors: { general: [messages.GENERAL.UNAUTHORIZED_ERROR] } });
     }
 
     // ID token is retrieved
@@ -27,7 +28,7 @@ export const verifyToken = async (req, res, next) => {
     if (!req.user) {
       return res
         .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+        .json({ errors: { general: [messages.GENERAL.UNAUTHORIZED_ERROR] } });
     }
 
     if (req.user.status === USER_STATUS.BANNED.ID) {
@@ -39,10 +40,13 @@ export const verifyToken = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Error verifying token:', error);
-    return res.status(403).json({ errors: { general: [messages.FORBIDDEN] } });
+    return res
+      .status(403)
+      .json({ errors: { general: [messages.GENERAL.FORBIDDEN] } });
   }
 };
 
+// Verifies admin token
 export const verifyAdmin = async (req, res, next) => {
   // Firebase token is already checked, so only the admin role is checked
   if (
@@ -54,5 +58,5 @@ export const verifyAdmin = async (req, res, next) => {
 
   return res
     .status(403)
-    .json({ error: 'Access denied. Admin role is needed.' });
+    .json({ errors: { general: [messages.GENERAL.FORBIDDEN] } });
 };

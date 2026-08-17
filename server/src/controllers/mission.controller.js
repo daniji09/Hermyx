@@ -1,6 +1,4 @@
 //External modules
-import { messages } from '@hermyx/shared';
-import { getAllMissionsInDraft as _getAllMissionsInDraft } from '../models/mission.model.js';
 import * as missionService from '../services/mission.service.js';
 
 /// Controller functions
@@ -147,7 +145,6 @@ export const submitMissionParticipation = async (req, res, next) => {
     const updatedParticipation =
       await missionService.submitMissionParticipation(mid, req.user);
     return res.status(200).json({
-      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
       participation: updatedParticipation,
     });
   } catch (error) {
@@ -244,17 +241,5 @@ export const editMission = async (req, res, next) => {
     return res.status(200).json({ mission: newMission });
   } catch (error) {
     next(error);
-  }
-};
-
-// -------
-
-export const getAllMissionsInDraft = async (req, res) => {
-  try {
-    const missions = await _getAllMissionsInDraft();
-    res.status(200).json({ data: missions });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: messages.UNEXPECTED_ERROR });
   }
 };

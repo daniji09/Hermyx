@@ -1,6 +1,4 @@
 // External modules
-import { messages } from '@hermyx/shared';
-import { findByEmail, findByUsername } from '../models/user.model.js';
 import * as userService from '../services/user.service.js';
 
 /// Controller functions
@@ -183,42 +181,5 @@ export const deleteMe = async (req, res, next) => {
     return res.status(200).json({});
   } catch (error) {
     next(error);
-  }
-};
-
-// ------------
-export const getUser = async (req, res) => {
-  try {
-    // Gets attributes
-    const { email, username } = req.query;
-
-    if (email) {
-      // It searches user by email
-      const user = await findByEmail(email);
-
-      // Returns success or error
-      if (!user)
-        return res.status(404).json({
-          errors: { usernameEmail: [messages.EMAIL_NOT_FOUND(email)] },
-        });
-
-      return res.status(200).json({ user });
-    } else if (username) {
-      // It searches user by username
-      const user = await findByUsername(username);
-
-      // Returns success or error
-      if (!user)
-        return res.status(404).json({
-          errors: { usernameEmail: [messages.USERNAME_NOT_FOUND(username)] },
-        });
-
-      return res.status(200).json({ user });
-    }
-  } catch (e) {
-    console.error(e);
-    return res
-      .status(500)
-      .json({ errors: { general: [messages.UNEXPECTED_ERROR] } });
   }
 };

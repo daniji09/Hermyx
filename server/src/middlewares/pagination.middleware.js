@@ -1,5 +1,6 @@
 import { consts } from '@hermyx/shared';
 
+// Pagination handler
 export const pagination = () => (req, res, next) => {
   // Early exit if there is no pagination to be made
   if (!req.query.page || !req.query.limit) return next();

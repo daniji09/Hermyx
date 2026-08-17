@@ -152,7 +152,7 @@ const validateReview = (participation, reviewerId, reviewerRole) => {
   if (
     !MISSION_PARTICIPATION_STATUS[participation.participation_status].CAN_REVIEW
   )
-    throw new AppError(messages.MISSION_REVIEW_COMPLETED_REQUIRED, 409);
+    throw new AppError(messages.REVIEW.GENERAL.MISSION_COMPLETED, 409);
 
   // Gets rid and checks if already exists
   const reviewId =

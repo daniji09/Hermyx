@@ -30,7 +30,7 @@ export const createUser = async (email, username, firebaseUid) => {
 };
 
 // Gets user by uid
-export const getUserByUid = async (uid) => {
+const getUserByUid = async (uid) => {
   checkRequired(uid, 'User id');
 
   // Gets user by uid
@@ -72,13 +72,6 @@ export const getUserByEmail = async (email) => {
   return user;
 };
 
-export const getUserByEmailOrThrow = async (email) => {
-  const user = await getUserByEmail(email);
-  if (!user)
-    throw new AppError(messages.USER.EMAIL.EMAIL_NOT_FOUND(email), 404);
-  return user;
-};
-
 // Gets user by firebaseUid
 export const getUserByFirebaseUid = async (firebaseUid) => {
   checkRequired(firebaseUid, 'User Firebase uid');
@@ -99,9 +92,6 @@ export const updateUserStripeCustomerIdByUid = async (
   // Updates user's Stripe customer id
   await userModel.updateStripeCustomerIdByUid(uid, stripeCustomerId);
 };
-
-export const getActiveAdmin = async (client) =>
-  userModel.getActiveAdmin(client);
 
 // Updates user's Stripe customer id
 export const updateUserStripeConnectedIdByUid = async (

@@ -10,12 +10,12 @@ import * as storageProvider from '../providers/storage.provider.js';
 
 /// Model access functions
 // Get conversation by id
-export const getConversationById = async (conversationId, client) => {
+const getConversationById = async (conversationId, client) => {
   checkRequired(conversationId, 'Conversation id');
   return conversationModel.findById(conversationId, client);
 };
 
-export const getConversationByIdOrThrow = async (conversationId, client) => {
+const getConversationByIdOrThrow = async (conversationId, client) => {
   const conversation = await getConversationById(conversationId, client);
   if (!conversation)
     throw new AppError(

@@ -31,23 +31,6 @@ export const create = async (missionPaymentData, client = pool) => {
 };
 
 /// SELECTS
-// Finds transaction by Stripe transaction id
-export const findByStripeTransactionId = async (
-  stripeTransactionId,
-  client = pool,
-) => {
-  const query = `SELECT * FROM mission_payment WHERE stripe_transaction_id = $1`;
-  const result = await client.query(query, [stripeTransactionId]);
-  return result.rows;
-};
-
-// Find all by mission id
-export const findAllByMissionId = async (mid, client = pool) => {
-  const query = `SELECT * FROM mission_payment WHERE mid = $1`;
-  const result = await client.query(query, [mid]);
-  return result.rows;
-};
-
 // Find all by vacancy id
 export const findAllByVacancyId = async (vacancyId, client = pool) => {
   const query = `SELECT * 

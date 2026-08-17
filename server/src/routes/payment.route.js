@@ -77,20 +77,4 @@ router.delete(
   paymentController.deleteCard,
 );
 
-// -----
-
-//Route to release the money
-router.post(
-  '/missions/:missionId/release',
-  requireStripeCustomerId,
-  paymentController.releaseMissionPayment,
-);
-
-//Refund route
-router.post(
-  '/missions/:missionId/refund',
-  requireStripeCustomerId,
-  paymentController.refundMissionPayment,
-);
-
 export default router;

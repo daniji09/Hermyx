@@ -31,7 +31,7 @@ import * as missionPaymentModel from '../models/mission-payment.model.js';
 
 /// Model access functions
 // Get mission by id
-export const getMissionById = async (mid) => {
+const getMissionById = async (mid) => {
   checkRequired(mid, 'Mission id');
 
   // Find mission by id
@@ -46,7 +46,7 @@ export const getMissionByIdOrThrow = async (mid) => {
 };
 
 // Get mission participation by id
-export const getMissionParticipationById = async (id, client) => {
+const getMissionParticipationById = async (id, client) => {
   checkRequired(id, 'Mission participation id');
 
   // Find mission participation by id
@@ -140,7 +140,7 @@ export const getAllOccupiedByMid = async (mid, client) => {
 // Gets user's active missions
 export const getUserActiveMissions = async (uid) => {
   checkRequired(uid, 'User id');
-  return await missionModel.getUserActiveMissions(uid);
+  return await missionModel.findAllActiveByUid(uid);
 };
 
 // Updates mission payment
@@ -204,23 +204,6 @@ export const updateOccupiedVacancies = async (mid, amount, client) => {
 export const startParticipants = async (mid, client) => {
   checkRequired(mid, 'Mission id');
   return await missionParticipationModel.startParticipants(mid, client);
-};
-
-// Finds a payment by Stripe transaction id
-export const findPaymentByStripeTransactionId = async (stripeTransactionId) => {
-  checkRequired(
-    stripeTransactionId,
-    'Mission transaction Stripe transaction id',
-  );
-  return await missionPaymentModel.findByStripeTransactionId(
-    stripeTransactionId,
-  );
-};
-
-// Gets mission status summary
-export const getMissionStatusSummary = async (mid, client) => {
-  checkRequired(mid, 'Mission id');
-  return await missionModel.getMissionStatusSummary(mid, client);
 };
 
 // Updates payment status by id
@@ -290,17 +273,6 @@ export const refundMissionParticipation = async (
   );
 };
 
-// Refunds total payment of a banned mission participation
-export const refundBannedVacancy = async (id, amount, client) => {
-  checkRequired(id, 'Mission participation id');
-  checkRequired(amount, 'Amount to refund');
-  return await missionParticipationModel.refundBannedVacancy(
-    id,
-    amount,
-    client,
-  );
-};
-
 // Updates mission participation with owner review to an adventurer
 export const updateMissionParticipationOwnerReview = async (
   participationId,
@@ -331,23 +303,11 @@ export const updateMissionParticipationAdventurerReview = async (
   );
 };
 
-// Unjoin participant
-export const unjoinParticipant = async (mid, uid, client) => {
+// Get occupied mission participations
+export const getOccupiedMissionParticipations = async (mid, client) => {
   checkRequired(mid, 'Mission id');
-  checkRequired(uid, 'User id');
-  return await missionParticipationModel.unjoinParticipant(mid, uid, client);
+  return await missionParticipationModel.findAllOccupiedByMid(mid, client);
 };
-
-//---
-
-export const getOccupiedMissionParticipations = async (mid, client) =>
-  missionParticipationModel.findAllOccupiedByMid(mid, client);
-
-export const updateMissionParticipationStatus = async (
-  participationId,
-  status,
-  client,
-) => missionParticipationModel.updateStatus(participationId, status, client);
 
 // Missions published by uid
 export const getMissionsPublishedByUid = async (uid, pagination) => {
@@ -1959,7 +1919,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
     if (isCancellable) {
       // When refund is complete, is marked as that
       if (refundSuccessful)
-        await refundBannedVacancy(
+        await missionParticipationModel.refundBannedVacancy(
           vacancyId,
           vacancy.monetary_reward,
           finalClient,
@@ -2779,7 +2739,11 @@ export const expelBannedAdventurerFromMission = async (
       await client.query('BEGIN');
 
       // Unjoins user
-      const unjoin = await unjoinParticipant(mission.mid, user.uid, client);
+      const unjoin = await missionParticipationModel.unjoinParticipant(
+        mission.mid,
+        user.uid,
+        client,
+      );
       if (unjoin < 1)
         throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
 
@@ -2840,7 +2804,11 @@ export const expelBannedAdventurerFromMission = async (
       await prepClient.query('BEGIN');
 
       // Unjoins user
-      const unjoin = await unjoinParticipant(mission.mid, user.uid, prepClient);
+      const unjoin = await missionParticipationModel.unjoinParticipant(
+        mission.mid,
+        user.uid,
+        prepClient,
+      );
       if (unjoin < 1)
         throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
 
@@ -2940,7 +2908,7 @@ export const expelBannedAdventurerFromMission = async (
       // If refund was completely successful, status is changed
       if (refundSuccessful)
         // Refunds banned vacancy
-        await refundBannedVacancy(
+        await missionParticipationModel.refundBannedVacancy(
           mission.vacancy_id,
           mission.monetary_reward,
           finalClient,
