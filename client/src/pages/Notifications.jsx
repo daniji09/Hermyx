@@ -1,5 +1,9 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Bell, Check, ShieldAlert, User, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,7 +13,7 @@ import { AnswerReportDialog } from '@/components/custom/reports/AnswerReportDial
 import { useAlert } from '../contexts/AlertContext';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  getMyNotificationsQueryOptions,
+  getMyNotificationsInfiniteQueryOptions,
   markAllNotificationsAsSeenMutationOptions,
   respondToNotificationMutationOptions,
 } from '../queries/NotificationsQueries';
@@ -22,6 +26,7 @@ import {
   NOTIFICATION_TYPE,
   messages as messagesShared,
 } from '@hermyx/shared';
+import { PAGINATION_LIMIT } from '../consts/consts';
 
 const getInvitationTitle = (notification) => {
   if (notification.action === 'mission_invite')
@@ -39,8 +44,15 @@ export const Notifications = () => {
   const [disputeNotificationId, setDisputeNotificationId] = useState(null);
   const { showAlert } = useAlert();
 
-  const { data, isLoading, isError } = useQuery(
-    getMyNotificationsQueryOptions({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+  } = useInfiniteQuery(
+    getMyNotificationsInfiniteQueryOptions(PAGINATION_LIMIT.NOTIFICATIONS, {
       onSuccess: () => {
         setLatestNotification(null);
       },
@@ -100,10 +112,16 @@ export const Notifications = () => {
     }),
   );
 
-  const notifications = useMemo(() => data?.notifications || [], [data]);
+  const notifications = useMemo(
+    () => data?.pages.flatMap((page) => page.notifications) || [],
+    [data],
+  );
   const unseenCount = useMemo(() => {
-    return notifications.filter((notification) => !notification.seen).length;
-  }, [notifications]);
+    return (
+      data?.pages[0]?.totalUnseen ??
+      notifications.filter((notification) => !notification.seen).length
+    );
+  }, [data, notifications]);
   const filteredNotifications = useMemo(() => {
     if (filter === 'all') return notifications;
     return notifications.filter(
@@ -418,6 +436,20 @@ export const Notifications = () => {
                   </Card>
                 );
               })}
+              {hasNextPage && (
+                <div className='flex justify-center pt-3'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage
+                      ? 'Loading notifications'
+                      : 'Load more notifications'}
+                  </Button>
+                </div>
+              )}
             </section>
           )}
         </>

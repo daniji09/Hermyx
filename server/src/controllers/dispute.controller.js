@@ -3,8 +3,11 @@ import * as disputeService from '../services/dispute.service.js';
 // Get all current user's active dispute
 export const getMyDisputes = async (req, res, next) => {
   try {
-    const disputes = await disputeService.getMyDisputes(req.user.uid);
-    return res.status(200).json({ disputes });
+    const result = await disputeService.getMyDisputes(
+      req.user.uid,
+      req.pagination,
+    );
+    return res.status(200).json(result);
   } catch (error) {
     next(error);
   }

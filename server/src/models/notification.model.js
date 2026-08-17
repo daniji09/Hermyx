@@ -47,8 +47,12 @@ export const findByNid = async (nid, client = pool) => {
 };
 
 // Finds by recipient id
-export const findByRecipientId = async (recipientId, client = pool) => {
-  const query = `
+export const findByRecipientId = async (
+  recipientId,
+  pagination,
+  client = pool,
+) => {
+  let query = `
     SELECT
       n.nid,
       n.date,
@@ -64,7 +68,9 @@ export const findByRecipientId = async (recipientId, client = pool) => {
       (n.payload->>'associated_mission_id')::int as associated_mission_id,
       sender.username AS sender_username,
       sender.avatar AS sender_avatar,
-      m.title AS mission_title
+      m.title AS mission_title,
+      COUNT(*) OVER()::int AS total_count,
+      COUNT(*) FILTER (WHERE n.seen = FALSE) OVER()::int AS total_unseen
     FROM notification n
     JOIN app_user sender ON sender.uid = n.sender_id
     JOIN mission m ON m.mid = (n.payload->>'associated_mission_id')::int
@@ -72,13 +78,28 @@ export const findByRecipientId = async (recipientId, client = pool) => {
     ORDER BY
       CASE WHEN n.seen = FALSE THEN 0 ELSE 1 END,
       CASE WHEN COALESCE(n.status, '') = $2 THEN 0 ELSE 1 END,
-      n.date DESC
+      n.date DESC,
+      n.nid DESC
   `;
-  const result = await client.query(query, [
-    recipientId,
-    NOTIFICATION_STATUS.PENDING.ID,
-  ]);
-  return result.rows;
+  const values = [recipientId, NOTIFICATION_STATUS.PENDING.ID];
+  if (pagination) {
+    values.push(pagination.limit, pagination.offset);
+    query += ` LIMIT $3 OFFSET $4`;
+  }
+
+  const result = await client.query(query, values);
+  if (result.rows.length === 0) {
+    return { rows: [], totalCount: 0, totalUnseen: 0 };
+  }
+
+  const totalCount = Number(result.rows[0].total_count);
+  const totalUnseen = Number(result.rows[0].total_unseen);
+  const rows = result.rows.map((row) => {
+    // eslint-disable-next-line no-unused-vars
+    const { total_count, total_unseen, ...notification } = row;
+    return notification;
+  });
+  return { rows, totalCount, totalUnseen };
 };
 
 // Finds by action status and vacancy

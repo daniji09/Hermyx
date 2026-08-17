@@ -1,3 +1,4 @@
+import { consts } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
 export const executePaginatedQuery = async (
@@ -8,7 +9,6 @@ export const executePaginatedQuery = async (
   let query = baseQuery;
   const values = [...baseValues];
 
-  // Pagination is added dynamically
   if (pagination) {
     values.push(pagination.limit);
     query += ` LIMIT $${values.length}`;
@@ -17,16 +17,12 @@ export const executePaginatedQuery = async (
     query += ` OFFSET $${values.length}`;
   }
 
-  // Query is executed
   const result = await pool.query(query, values);
-
-  // Empty case is managed
   if (result.rows.length === 0) {
     return { rows: [], totalCount: 0 };
   }
 
-  // Total_count is cleaned
-  const totalCount = parseInt(result.rows[0].total_count);
+  const totalCount = Number(result.rows[0].total_count);
   const rows = result.rows.map((row) => {
     // eslint-disable-next-line no-unused-vars
     const { total_count, ...data } = row;
@@ -34,4 +30,24 @@ export const executePaginatedQuery = async (
   });
 
   return { rows, totalCount };
+};
+
+export const withDefaultPagination = (pagination) => {
+  if (pagination) return pagination;
+
+  const page = consts.PAGINATION.DEFAULT_PAGE;
+  const limit = consts.PAGINATION.DEFAULT_LIMIT;
+  return { page, limit, offset: (page - 1) * limit };
+};
+
+export const buildPagination = (pagination, totalItems) => {
+  const normalizedTotalItems = Number(totalItems) || 0;
+  const totalPages = Math.ceil(normalizedTotalItems / pagination.limit);
+
+  return {
+    currentPage: pagination.page,
+    totalPages,
+    totalItems: normalizedTotalItems,
+    hasMore: pagination.page < totalPages,
+  };
 };

@@ -5,15 +5,23 @@ import * as notificationController from '../controllers/notification.controller.
 import {
   validateBodySchema,
   validateParamsSchema,
+  validateQuerySchema,
 } from '../middlewares/validation.middleware.js';
 import {
   respondToNotificationBodySchema,
   respondToNotificationParamSchema,
+  paginationQuerySchema,
 } from '@hermyx/shared';
+import { pagination } from '../middlewares/pagination.middleware.js';
 
 /// GETS
 // List current user notifications
-router.get('/me', notificationController.getMyNotifications);
+router.get(
+  '/me',
+  validateQuerySchema(paginationQuerySchema),
+  pagination(),
+  notificationController.getMyNotifications,
+);
 
 /// POSTS
 // Mark all current user's unseen notifications as seen

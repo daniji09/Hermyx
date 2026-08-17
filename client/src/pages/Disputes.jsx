@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { MessageSquareWarning } from 'lucide-react';
 import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
-import { getMyDisputesQueryOptions } from '../queries/DisputesQueries';
+import { Button } from '@/components/ui/button';
+import { getMyDisputesInfiniteQueryOptions } from '../queries/DisputesQueries';
+import { PAGINATION_LIMIT } from '../consts/consts';
 
 const getPreview = (dispute) => {
   if (dispute.last_message_content) return dispute.last_message_content;
@@ -14,10 +16,16 @@ const getTypeLabel = (type) => REPORT_TYPE[type]?.LABEL || type;
 
 export const Disputes = () => {
   const {
-    data: disputes = [],
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading,
     isError,
-  } = useQuery(getMyDisputesQueryOptions());
+  } = useInfiniteQuery(
+    getMyDisputesInfiniteQueryOptions(PAGINATION_LIMIT.DISPUTES),
+  );
+  const disputes = data?.pages.flatMap((page) => page.disputes) || [];
 
   if (isLoading) {
     return <main className='p-8 text-center'>Loading disputes</main>;
@@ -82,6 +90,18 @@ export const Disputes = () => {
               </div>
             </Link>
           ))}
+          {hasNextPage && (
+            <div className='flex justify-center pt-3'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? 'Loading disputes' : 'Load more disputes'}
+              </Button>
+            </div>
+          )}
         </section>
       )}
     </main>

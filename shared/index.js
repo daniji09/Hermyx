@@ -11,6 +11,7 @@ export * from './validations/user.validation.js';
 export * from './validations/mission.validation.js';
 export * from './validations/notification.validation.js';
 export * from './validations/payment.validation.js';
+export * from './validations/pagination.validation.js';
 export * from './validations/review.validation.js';
 export * from './validations/report.validation.js';
 export * from './validations/conversation.validation.js';

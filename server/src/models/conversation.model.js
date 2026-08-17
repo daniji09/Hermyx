@@ -1,4 +1,5 @@
 import pool from '../config/db.config.js';
+import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// INSERTS
 // Creates a new conversation
@@ -42,7 +43,7 @@ export const findById = async (conversationId, client = pool) => {
 };
 
 // Find conversation by uid
-export const findAllByUid = async (userId, client = pool) => {
+export const findAllByUid = async (userId, pagination) => {
   const query = `
     SELECT
       c.cid,
@@ -62,7 +63,8 @@ export const findAllByUid = async (userId, client = pool) => {
       last_message.attachment_type AS last_message_attachment_type,
       last_message.created_at AS last_message_created_at,
       last_sender.uid AS last_message_sender_id,
-      last_sender.username AS last_message_sender_username
+      last_sender.username AS last_message_sender_username,
+      COUNT(*) OVER()::int AS total_count
     FROM conversation c
     JOIN conversation_participant current_participant
       ON current_participant.conversation_id = c.cid
@@ -97,7 +99,7 @@ export const findAllByUid = async (userId, client = pool) => {
           current_participant.history_until IS NULL
           OR m.created_at <= current_participant.history_until
         )
-      ORDER BY m.created_at DESC
+      ORDER BY m.created_at DESC, m.mid DESC
       LIMIT 1
     ) last_message ON true
     LEFT JOIN app_user last_sender
@@ -105,11 +107,13 @@ export const findAllByUid = async (userId, client = pool) => {
     WHERE current_participant.user_id = $1
       AND current_participant.left_at IS NULL
       AND c.type <> 'dispute'
-    ORDER BY last_message.created_at DESC NULLS LAST, c.created_at DESC
+    ORDER BY
+      last_message.created_at DESC NULLS LAST,
+      c.created_at DESC,
+      c.cid DESC
   `;
 
-  const result = await client.query(query, [userId]);
-  return result.rows;
+  return executePaginatedQuery(query, [userId], pagination);
 };
 
 /// UPDATES

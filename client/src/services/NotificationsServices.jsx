@@ -1,7 +1,9 @@
 import api from '../config/api';
 
-export const getMyNotifications = async () => {
-  const { data } = await api.get('/notifications/me');
+export const getMyNotifications = async (page, limit) => {
+  const { data } = await api.get('/notifications/me', {
+    params: { page, limit },
+  });
   return data;
 };
 

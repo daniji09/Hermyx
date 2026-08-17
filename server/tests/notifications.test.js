@@ -29,15 +29,42 @@ beforeEach(() => {
 describe('Notification API', () => {
   it('gets all notifications for the current user', async () => {
     const notifications = [{ nid: 1, seen: false }];
-    notificationService.getMyNotifications.mockResolvedValue(notifications);
+    const pagination = {
+      currentPage: 1,
+      totalPages: 2,
+      totalItems: 12,
+      hasMore: true,
+    };
+    notificationService.getMyNotifications.mockResolvedValue({
+      notifications,
+      totalUnseen: 4,
+      pagination,
+    });
 
-    const response = await request(app).get('/api/notifications/me');
+    const response = await request(app)
+      .get('/api/notifications/me')
+      .query({ page: 1, limit: 10 });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ notifications });
+    expect(response.body).toEqual({
+      notifications,
+      totalUnseen: 4,
+      pagination,
+    });
     expect(notificationService.getMyNotifications).toHaveBeenCalledWith(
       currentUser.uid,
+      { page: 1, limit: 10, offset: 0 },
     );
+  });
+
+  it('rejects incomplete notification pagination', async () => {
+    const response = await request(app)
+      .get('/api/notifications/me')
+      .query({ limit: 10 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors.page).toBeDefined();
+    expect(notificationService.getMyNotifications).not.toHaveBeenCalled();
   });
 
   it('marks every notification as seen', async () => {

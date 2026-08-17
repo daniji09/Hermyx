@@ -59,6 +59,7 @@ export const findByConversationId = async (
   conversationId,
   userId,
   allowAdminPreview = false,
+  { cursor, limit },
   client = pool,
 ) => {
   const query = `
@@ -90,15 +91,26 @@ export const findByConversationId = async (
         cp.history_until IS NULL
         OR m.created_at <= cp.history_until
       )
-    ORDER BY m.created_at ASC
+      AND ($4::int IS NULL OR m.mid < $4)
+    ORDER BY m.mid DESC
+    LIMIT $5
   `;
 
   const result = await client.query(query, [
     conversationId,
     userId,
     allowAdminPreview,
+    cursor || null,
+    limit + 1,
   ]);
-  return result.rows;
+  const hasMore = result.rows.length > limit;
+  const page = hasMore ? result.rows.slice(0, limit) : result.rows;
+  const nextCursor = hasMore ? page.at(-1).mid : null;
+
+  return {
+    messages: page.reverse(),
+    pageInfo: { hasMore, nextCursor },
+  };
 };
 
 // Count unread by user id

@@ -21,6 +21,10 @@ import * as userService from './user.service.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import { emitToAdmins, emitToUser } from '../providers/socket.provider.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
+import {
+  buildPagination,
+  withDefaultPagination,
+} from '../utils/pagination.util.js';
 
 /// Model access functions
 const getReportByRidOrThrow = async (reportId) => {
@@ -30,9 +34,18 @@ const getReportByRidOrThrow = async (reportId) => {
 };
 
 // Gets reports by uid
-export const getUserDisputes = async (userId) => {
+export const getUserDisputes = async (userId, pagination) => {
   checkRequired(userId, 'User id');
-  return await reportModel.findDisputesByUserId(userId);
+  const pageData = withDefaultPagination(pagination);
+  const { rows: disputes, totalCount } = await reportModel.findDisputesByUserId(
+    userId,
+    pageData,
+  );
+
+  return {
+    disputes,
+    pagination: buildPagination(pageData, totalCount),
+  };
 };
 
 export const hasActiveReport = async (reportData, client) =>

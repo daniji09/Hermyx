@@ -14,6 +14,10 @@ import {
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
+import {
+  buildPagination,
+  withDefaultPagination,
+} from '../utils/pagination.util.js';
 import * as notificationModel from '../models/notification.model.js';
 import * as disputeService from './dispute.service.js';
 import * as missionService from './mission.service.js';
@@ -126,12 +130,23 @@ export const countParticipationReviewAttempts = async (
 
 /// Endpoint complex functions
 // Gets current user's notifications
-export const getMyNotifications = async (uid) => {
+export const getMyNotifications = async (uid, pagination) => {
   // Parameter checks
   checkRequired(uid, 'User id');
 
   // Gets current user's notifications
-  return await notificationModel.findByRecipientId(uid);
+  const pageData = withDefaultPagination(pagination);
+  const {
+    rows: notifications,
+    totalCount,
+    totalUnseen,
+  } = await notificationModel.findByRecipientId(uid, pageData);
+
+  return {
+    notifications,
+    totalUnseen,
+    pagination: buildPagination(pageData, totalCount),
+  };
 };
 
 // Marks all current user's unseen notifications are seen

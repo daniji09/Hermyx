@@ -4,10 +4,11 @@ import * as conversationService from '../services/conversation.service.js';
 // Get all current user's conversations
 export const getMyConversations = async (req, res, next) => {
   try {
-    const conversations = await conversationService.getMyConversations(
+    const result = await conversationService.getMyConversations(
       req.user.uid,
+      req.pagination,
     );
-    return res.status(200).json({ conversations });
+    return res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -39,11 +40,12 @@ export const getConversation = async (req, res, next) => {
 // Get conversation by id messages
 export const getConversationMessages = async (req, res, next) => {
   try {
-    const messages = await conversationService.getConversationMessages(
+    const result = await conversationService.getConversationMessages(
       req.params.cid,
       req.user,
+      req.query,
     );
-    return res.status(200).json({ messages });
+    return res.status(200).json(result);
   } catch (error) {
     next(error);
   }

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
-import { limitBaseSchema, pageBaseSchema } from './pagination.validation.js';
+import { paginationQuerySchema } from './pagination.validation.js';
 import { midBaseSchema } from './mission.validation.js';
 import { uidBaseSchema } from './user.validation.js';
 
@@ -36,10 +36,7 @@ export const getUserReviewsParamSchema = z.object({
   uid: uidBaseSchema,
 });
 
-export const getUserReviewsQuerySchema = z.object({
-  page: pageBaseSchema,
-  limit: limitBaseSchema,
-});
+export const getUserReviewsQuerySchema = paginationQuerySchema;
 
 // Review adventurer
 export const reviewAdventurerParamSchema = z.object({

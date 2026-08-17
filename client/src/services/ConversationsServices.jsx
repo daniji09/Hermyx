@@ -26,14 +26,22 @@ export const sendMessage = async (conversationId, content, photo) => {
   return response.data.message;
 };
 
-export const getConversationMessages = async (conversationId) => {
-  const response = await api.get(`/conversations/${conversationId}/messages`);
-  return response.data.messages;
+export const getConversationMessages = async (
+  conversationId,
+  cursor,
+  limit,
+) => {
+  const { data } = await api.get(`/conversations/${conversationId}/messages`, {
+    params: { cursor, limit },
+  });
+  return data;
 };
 
-export const getMyConversations = async () => {
-  const { data } = await api.get('/conversations');
-  return data.conversations;
+export const getMyConversations = async (page, limit) => {
+  const { data } = await api.get('/conversations', {
+    params: { page, limit },
+  });
+  return data;
 };
 
 export const getUnreadMessageCount = async () => {

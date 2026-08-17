@@ -1,13 +1,22 @@
 import { Router } from 'express';
-import { getReportByIdValidation } from '@hermyx/shared';
+import { getReportByIdValidation, paginationQuerySchema } from '@hermyx/shared';
 import * as disputeController from '../controllers/dispute.controller.js';
-import { validateParamsSchema } from '../middlewares/validation.middleware.js';
+import {
+  validateParamsSchema,
+  validateQuerySchema,
+} from '../middlewares/validation.middleware.js';
+import { pagination } from '../middlewares/pagination.middleware.js';
 
 const router = Router();
 
 /// GET
 // Get all current user's disputes
-router.get('/', disputeController.getMyDisputes);
+router.get(
+  '/',
+  validateQuerySchema(paginationQuerySchema),
+  pagination(),
+  disputeController.getMyDisputes,
+);
 
 // Get current user's unread count
 router.get('/unread-count', disputeController.getMyDisputeUnreadCount);

@@ -31,6 +31,7 @@ import { useContext, useState } from 'react';
 import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueries';
 import { getUnreadMessageCountQueryOptions } from '../../queries/ConversationsQueries';
 import { getDisputeUnreadCountQueryOptions } from '../../queries/DisputesQueries';
+import { PAGINATION_LIMIT } from '../../consts/consts';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
@@ -326,7 +327,7 @@ const ProfileLink = ({ currentUser }) => {
 const NotificationsButton = () => {
   const { latestNotification } = useContext(AuthContext);
   const { data } = useQuery(
-    getMyNotificationsQueryOptions({
+    getMyNotificationsQueryOptions(PAGINATION_LIMIT.NOTIFICATIONS, {
       staleTime: 30000,
     }),
   );
@@ -334,6 +335,7 @@ const NotificationsButton = () => {
   const unseenNotifications = notifications.filter(
     (notification) => !notification.seen,
   );
+  const unseenCount = data?.totalUnseen ?? unseenNotifications.length;
   const previewNotifications = [...unseenNotifications]
     .sort((left, right) => {
       if (left.status === 'pending' && right.status !== 'pending') return -1;
@@ -359,11 +361,11 @@ const NotificationsButton = () => {
           aria-label='Open notifications'
         >
           <Bell className='h-5 w-5' aria-hidden='true' />
-          {(unseenNotifications.length > 0 ||
+          {(unseenCount > 0 ||
             (hasMissionCompletionNotification &&
               !latestNotificationAlreadyPersisted)) && (
             <span className='absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
-              {unseenNotifications.length > 0 ? unseenNotifications.length : 1}
+              {unseenCount > 0 ? unseenCount : 1}
             </span>
           )}
         </Button>

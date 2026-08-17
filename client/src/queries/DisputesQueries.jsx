@@ -1,14 +1,19 @@
-import { queryOptions } from '@tanstack/react-query';
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import {
   getDispute,
   getDisputeUnreadCount,
   getMyDisputes,
 } from '../services/DisputesServices';
 
-export const getMyDisputesQueryOptions = (options) =>
-  queryOptions({
-    queryKey: ['getMyDisputes'],
-    queryFn: getMyDisputes,
+export const getMyDisputesInfiniteQueryOptions = (limit, options) =>
+  infiniteQueryOptions({
+    queryKey: ['getMyDisputes', limit],
+    queryFn: ({ pageParam }) => getMyDisputes(pageParam, limit),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasMore
+        ? lastPage.pagination.currentPage + 1
+        : undefined,
     ...options,
   });
 

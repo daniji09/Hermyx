@@ -1,7 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { History, MessageCircle, User, Users } from 'lucide-react';
-import { getMyConversationsQueryOptions } from '../queries/ConversationsQueries';
+import { Button } from '@/components/ui/button';
+import { getMyConversationsInfiniteQueryOptions } from '../queries/ConversationsQueries';
+import { PAGINATION_LIMIT } from '../consts/consts';
 import { getImageUrl } from '../utils/media';
 
 const getLastMessagePreview = (conversation) => {
@@ -93,10 +95,16 @@ const ConversationCard = ({ conversation }) => {
 
 export const Conversations = () => {
   const {
-    data: conversations = [],
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isLoading,
     isError,
-  } = useQuery(getMyConversationsQueryOptions());
+  } = useInfiniteQuery(
+    getMyConversationsInfiniteQueryOptions(PAGINATION_LIMIT.CONVERSATIONS),
+  );
+  const conversations = data?.pages.flatMap((page) => page.conversations) || [];
   const activeConversations = conversations.filter(
     (conversation) => !isMissionHistory(conversation),
   );
@@ -169,6 +177,20 @@ export const Conversations = () => {
                 />
               ))}
             </section>
+          )}
+          {hasNextPage && (
+            <div className='flex justify-center'>
+              <Button
+                type='button'
+                variant='outline'
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage
+                  ? 'Loading conversations'
+                  : 'Load more conversations'}
+              </Button>
+            </div>
           )}
         </div>
       )}

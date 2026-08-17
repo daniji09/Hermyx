@@ -186,6 +186,9 @@ export const consts = {
 
   // Conversation consts
   CONVERSATION: {
+    MESSAGES: {
+      DEFAULT_LIMIT: 50,
+    },
     PHOTOS: {
       MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
       ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],

@@ -1,5 +1,10 @@
-import { useContext, useEffect, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -41,13 +46,16 @@ import {
 } from '@/components/ui/message-scroller';
 import { AuthContext } from '../contexts/AuthContext';
 import {
-  getConversationMessages,
   markConversationAsRead,
   sendMessage,
 } from '../services/ConversationsServices';
-import { getConversationQueryOptions } from '../queries/ConversationsQueries';
+import {
+  getConversationMessagesInfiniteQueryOptions,
+  getConversationQueryOptions,
+} from '../queries/ConversationsQueries';
 import { getImageUrl } from '../utils/media';
 import { cn } from '@/lib/utils';
+import { PAGINATION_LIMIT } from '../consts/consts';
 
 const groupConsecutiveMessages = (messages) =>
   messages.reduce((groups, message) => {
@@ -152,8 +160,7 @@ export const ConversationThread = ({
   const backTo = providedBackTo || location.state?.from || '/conversations';
   const [content, setContent] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [selectedPhotoPreview, setSelectedPhotoPreview] = useState('');
-  const [messages, setMessages] = useState([]);
+  const [liveMessages, setLiveMessages] = useState([]);
   const [errorMessage, setErrorMessage] = useState('');
   const formRef = useRef(null);
   const photoInputRef = useRef(null);
@@ -185,33 +192,55 @@ export const ConversationThread = ({
       : otherParticipant?.username);
   const canSendMessages =
     !conversation?.closed_at && currentParticipant?.can_send !== false;
-  const messageGroups = groupConsecutiveMessages(messages);
 
   const {
-    data: initialMessages = [],
+    data: messagePages,
+    fetchNextPage: fetchOlderMessages,
+    hasNextPage: hasOlderMessages,
+    isFetchingNextPage: isFetchingOlderMessages,
     isLoading,
     isError,
-  } = useQuery({
-    queryKey: ['conversationMessages', conversationId],
-    queryFn: () => getConversationMessages(conversationId),
-    enabled: !!conversationId,
-  });
+  } = useInfiniteQuery(
+    getConversationMessagesInfiniteQueryOptions(
+      conversationId,
+      PAGINATION_LIMIT.MESSAGES,
+    ),
+  );
+
+  const pagedMessages = useMemo(
+    () =>
+      [...(messagePages?.pages || [])]
+        .reverse()
+        .flatMap((page) => page.messages),
+    [messagePages],
+  );
+
+  const messages = useMemo(() => {
+    const currentLiveMessages = liveMessages.filter(
+      (message) => String(message.conversation_id) === String(conversationId),
+    );
+    const messagesById = new Map(
+      [...pagedMessages, ...currentLiveMessages].map((message) => [
+        message.mid,
+        message,
+      ]),
+    );
+    return [...messagesById.values()].sort(
+      (left, right) => left.mid - right.mid,
+    );
+  }, [conversationId, liveMessages, pagedMessages]);
+  const messageGroups = groupConsecutiveMessages(messages);
+
+  const selectedPhotoPreview = useMemo(
+    () => (selectedPhoto ? URL.createObjectURL(selectedPhoto) : ''),
+    [selectedPhoto],
+  );
 
   useEffect(() => {
-    setMessages(initialMessages);
-  }, [initialMessages]);
-
-  useEffect(() => {
-    if (!selectedPhoto) {
-      setSelectedPhotoPreview('');
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(selectedPhoto);
-    setSelectedPhotoPreview(previewUrl);
-
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [selectedPhoto]);
+    return () => {
+      if (selectedPhotoPreview) URL.revokeObjectURL(selectedPhotoPreview);
+    };
+  }, [selectedPhotoPreview]);
 
   useEffect(() => {
     if (!conversationData || !conversationId || !currentParticipant) return;
@@ -243,7 +272,7 @@ export const ConversationThread = ({
     const handleMessageCreated = async (message) => {
       if (String(message.conversation_id) !== String(conversationId)) return;
 
-      setMessages((currentMessages) => {
+      setLiveMessages((currentMessages) => {
         const alreadyExists = currentMessages.some(
           (currentMessage) => currentMessage.mid === message.mid,
         );
@@ -290,7 +319,7 @@ export const ConversationThread = ({
   const { mutate, isPending } = useMutation({
     mutationFn: () => sendMessage(conversationId, content, selectedPhoto),
     onSuccess: (message) => {
-      setMessages((currentMessages) =>
+      setLiveMessages((currentMessages) =>
         currentMessages.some(
           (currentMessage) => currentMessage.mid === message.mid,
         )
@@ -497,6 +526,21 @@ export const ConversationThread = ({
                       isDisputeConversation && 'space-y-4 bg-muted/10',
                     )}
                   >
+                    {hasOlderMessages && (
+                      <div className='flex justify-center pb-4'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          size='sm'
+                          onClick={() => fetchOlderMessages()}
+                          disabled={isFetchingOlderMessages}
+                        >
+                          {isFetchingOlderMessages
+                            ? 'Loading older messages'
+                            : 'Load older messages'}
+                        </Button>
+                      </div>
+                    )}
                     {isDisputeConversation
                       ? messages.map((message) => (
                           <MessageScrollerItem

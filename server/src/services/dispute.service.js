@@ -24,9 +24,9 @@ const DISPUTE_TYPES = new Set([
 
 /// Endpoint complex functions
 // Get all disputes from current user
-export const getMyDisputes = async (userId) => {
+export const getMyDisputes = async (userId, pagination) => {
   checkRequired(userId, 'User id');
-  return await reportService.getUserDisputes(userId);
+  return await reportService.getUserDisputes(userId, pagination);
 };
 
 // Gets current user's unread count

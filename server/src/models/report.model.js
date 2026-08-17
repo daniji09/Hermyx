@@ -1,5 +1,6 @@
 import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
+import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// INSERTS
 // Creates a report
@@ -181,9 +182,8 @@ export const checkActiveReport = async (
 };
 
 // Find disputes by user id
-export const findDisputesByUserId = async (userId) => {
-  const result = await pool.query(
-    `SELECT
+export const findDisputesByUserId = async (userId, pagination) => {
+  const query = `SELECT
        r.*,
        c.closed_at,
        m.title AS mission_title,
@@ -194,7 +194,8 @@ export const findDisputesByUserId = async (userId) => {
        last_message.content AS last_message_content,
        last_message.attachment_type AS last_message_attachment_type,
        last_message.created_at AS last_message_created_at,
-       COALESCE(unread.unread_count, 0)::int AS unread_count
+       COALESCE(unread.unread_count, 0)::int AS unread_count,
+       COUNT(*) OVER()::int AS total_count
      FROM report r
      JOIN conversation c ON c.cid = r.conversation_id
      JOIN conversation_participant current_participant
@@ -220,7 +221,7 @@ export const findDisputesByUserId = async (userId) => {
        SELECT cm.content, cm.attachment_type, cm.created_at
        FROM conversation_message cm
        WHERE cm.conversation_id = c.cid
-       ORDER BY cm.created_at DESC
+       ORDER BY cm.created_at DESC, cm.mid DESC
        LIMIT 1
      ) last_message ON true
      LEFT JOIN LATERAL (
@@ -231,15 +232,20 @@ export const findDisputesByUserId = async (userId) => {
          AND cm.created_at > current_participant.last_read_at
      ) unread ON true
      WHERE r.type IN ($2, $3, $4)
-     ORDER BY last_message.created_at DESC NULLS LAST, r.date DESC`,
+     ORDER BY
+       last_message.created_at DESC NULLS LAST,
+       r.date DESC,
+       r.rid DESC`;
+  return executePaginatedQuery(
+    query,
     [
       userId,
       REPORT_TYPE.REPORT_ADVENTURER.ID,
       REPORT_TYPE.REVIEW_DISPUTE.ID,
       REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID,
     ],
+    pagination,
   );
-  return result.rows;
 };
 
 /// UPDATES

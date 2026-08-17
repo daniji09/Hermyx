@@ -32,14 +32,26 @@ beforeEach(() => {
 describe('Conversation API', () => {
   it('gets the current user conversations', async () => {
     const conversations = [{ cid: 1, type: 'private' }];
-    conversationService.getMyConversations.mockResolvedValue(conversations);
+    const pagination = {
+      currentPage: 2,
+      totalPages: 3,
+      totalItems: 25,
+      hasMore: true,
+    };
+    conversationService.getMyConversations.mockResolvedValue({
+      conversations,
+      pagination,
+    });
 
-    const response = await request(app).get('/api/conversations');
+    const response = await request(app)
+      .get('/api/conversations')
+      .query({ page: 2, limit: 10 });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ conversations });
+    expect(response.body).toEqual({ conversations, pagination });
     expect(conversationService.getMyConversations).toHaveBeenCalledWith(
       currentUser.uid,
+      { page: 2, limit: 10, offset: 10 },
     );
   });
 
@@ -72,16 +84,33 @@ describe('Conversation API', () => {
 
   it('gets the messages visible to a participant', async () => {
     const messages = [{ id: 1, content: 'Hello' }];
-    conversationService.getConversationMessages.mockResolvedValue(messages);
+    const pageInfo = { hasMore: true, nextCursor: 80 };
+    conversationService.getConversationMessages.mockResolvedValue({
+      messages,
+      pageInfo,
+    });
 
-    const response = await request(app).get('/api/conversations/4/messages');
+    const response = await request(app)
+      .get('/api/conversations/4/messages')
+      .query({ cursor: 100, limit: 20 });
 
     expect(response.status).toBe(200);
-    expect(response.body).toEqual({ messages });
+    expect(response.body).toEqual({ messages, pageInfo });
     expect(conversationService.getConversationMessages).toHaveBeenCalledWith(
       4,
       currentUser,
+      { cursor: 100, limit: 20 },
     );
+  });
+
+  it('rejects incomplete conversation pagination', async () => {
+    const response = await request(app)
+      .get('/api/conversations')
+      .query({ page: 2 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors.page).toBeDefined();
+    expect(conversationService.getMyConversations).not.toHaveBeenCalled();
   });
 
   it('creates a private conversation', async () => {

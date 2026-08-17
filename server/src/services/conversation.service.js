@@ -1,4 +1,4 @@
-import { messages } from '@hermyx/shared';
+import { consts, messages } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
 import * as conversationModel from '../models/conversation.model.js';
@@ -7,6 +7,10 @@ import * as conversationMessageModel from '../models/conversation-message.model.
 import * as userService from './user.service.js';
 import * as socketProvider from '../providers/socket.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
+import {
+  buildPagination,
+  withDefaultPagination,
+} from '../utils/pagination.util.js';
 
 /// Model access functions
 // Get conversation by id
@@ -143,9 +147,16 @@ export const closeMissionConversationType = async (mid, client) => {
 
 /// Endpoint complex functions
 // Get all current user's conversations
-export const getMyConversations = async (userId) => {
+export const getMyConversations = async (userId, pagination) => {
   checkRequired(userId, 'User id');
-  return await conversationModel.findAllByUid(userId);
+  const pageData = withDefaultPagination(pagination);
+  const { rows: conversations, totalCount } =
+    await conversationModel.findAllByUid(userId, pageData);
+
+  return {
+    conversations,
+    pagination: buildPagination(pageData, totalCount),
+  };
 };
 
 // Get current user's unread count
@@ -179,7 +190,11 @@ export const getConversation = async (conversationId, user) => {
 };
 
 // Get conversation by id messages
-export const getConversationMessages = async (conversationId, user) => {
+export const getConversationMessages = async (
+  conversationId,
+  user,
+  { cursor, limit } = {},
+) => {
   // Parameter checks
   checkRequired(conversationId, 'Conversation id');
   checkRequired(user, 'Current user');
@@ -192,6 +207,10 @@ export const getConversationMessages = async (conversationId, user) => {
     conversationId,
     user.uid,
     isAdminPreview,
+    {
+      cursor,
+      limit: limit || consts.CONVERSATION.MESSAGES.DEFAULT_LIMIT,
+    },
   );
 };
 
