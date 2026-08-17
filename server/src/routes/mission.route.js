@@ -139,6 +139,15 @@ router.post(
   missionController.reopenMission,
 );
 
+// Bans mission
+router.post(
+  '/:mid/ban',
+  verifyAdmin,
+  validateParamsSchema(banMissionParamsSchema),
+  validateBodySchema(banMissionBodySchema),
+  missionController.banMission,
+);
+
 /// PUT
 // Edits mission
 router.put(
@@ -153,15 +162,6 @@ router.put(
 //------------
 //List all draft missions
 router.get('/in-draft', missionController.getAllMissionsInDraft);
-
-// Bans mission
-router.post(
-  '/:mid/ban',
-  verifyAdmin,
-  validateParamsSchema(banMissionParamsSchema),
-  validateBodySchema(banMissionBodySchema),
-  missionController.banMission,
-);
 
 // Kicks an adventurer out
 router.post(

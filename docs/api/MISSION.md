@@ -735,6 +735,74 @@ Finishes a mission.
 <br>
 <br>
 
+## - Reopen mission: `POST /api/missions/:mid/ban`
+
+Bans a mission.
+
+**Requires authentication:** Yes
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rid` | int | Yes | Report identifier. |
+| `reason` | string | Yes | Report decision reason. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission finished successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: action can only done by an admin.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Report not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** banning a mission means deleting it or cancelling it rewarding every adventurer.
+<br>
+<br>
+<br>
+
 ## - Edit mission: `PUT /api/missions/:mid`
 
 Edits information from a mission that has already been published.

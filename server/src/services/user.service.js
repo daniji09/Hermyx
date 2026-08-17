@@ -3,6 +3,7 @@ import {
   messages,
   REPORT_DECISION,
   REPORT_STATUS,
+  USER_ROLE,
   USER_STATUS,
 } from '@hermyx/shared';
 import { AppError, checkRequired } from '../utils/error.util.js';
@@ -477,11 +478,16 @@ export const addEmailAuthentication = async (user, email, password) => {
 };
 
 // Ban user
-export const ban = async (uid, rid, reason) => {
+export const banUser = async (uid, rid, reason, admin) => {
   // Parameter checks
   checkRequired(uid, 'User id');
   checkRequired(rid, 'Report id');
   checkRequired(reason, 'Report decision reason');
+  checkRequired(admin, 'Admin');
+
+  // Only admins can do this action
+  if (admin.role !== USER_ROLE.ADMIN.ID)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 
   // Finds user and checks if it has already been banned
   const user = await userModel.findByUid(uid);
@@ -492,11 +498,6 @@ export const ban = async (uid, rid, reason) => {
   const report = await reportService.getReport(rid);
   if (report.status === REPORT_STATUS.ANSWERED.ID)
     throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
-
-  // Then, checks if it has active disputes
-  const activeDisputes = await reportService.getActiveDisputesByUid(user.uid);
-  if (activeDisputes.length > 0)
-    throw new AppError(messages.REPORT.BAN_USER.ACTIVE_DISPUTES, 409);
 
   // External deletions are made first
   // First, rejects account on Stripe and their adventurer account is rejected so they cannot receive payments
@@ -537,6 +538,7 @@ export const ban = async (uid, rid, reason) => {
 
   // After user is unable to log in, they are banned in database and report is closed
   const client = await pool.connect();
+  let reportClosed;
   try {
     await client.query('BEGIN');
 
@@ -546,11 +548,11 @@ export const ban = async (uid, rid, reason) => {
     if (banHermyx < 1) throw new Error('User not found during ban');
 
     // Report is closed
-    const reportClosed = await reportService.closeReportAndConversation(
+    reportClosed = await reportService.closeReportAndConversation(
       rid,
       REPORT_DECISION.BAN_USER.ID,
       reason,
-      user.uid,
+      admin.uid,
       client,
     );
     if (!reportClosed)
@@ -577,10 +579,14 @@ export const ban = async (uid, rid, reason) => {
     const cleanupPromises = activeMissions.map((mission) => {
       if (mission.owner_id === uid) {
         // If user is owner, it just cancel them
-        return missionService.cancelMission(mission.mid, user);
+        return missionService.cancelMission(mission.mid, user, true);
       } else {
         // Otherwise, it expels them from the mission
-        return missionService.expelBannedAdventurerFromMission(mission, user);
+        return missionService.expelBannedAdventurerFromMission(
+          mission,
+          user,
+          admin,
+        );
       }
     });
 
@@ -601,6 +607,13 @@ export const ban = async (uid, rid, reason) => {
       missionCleanupError,
     );
   }
+
+  // And conversation closure
+  reportService.emitConversationClosed(
+    reportClosed.participantIds,
+    reportClosed.report,
+  );
+
   return;
 };
 

@@ -323,3 +323,57 @@ export const close = async (
   );
   return result.rows[0];
 };
+
+// Closes every report involving a mission
+export const closeAllByMid = async (
+  mid,
+  decision,
+  reason,
+  resolvedBy,
+  client = pool,
+) => {
+  const result = await client.query(
+    `UPDATE report
+       SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5
+       WHERE payload->>'associated_mission_id' = $2
+       RETURNING *`,
+    [REPORT_STATUS.ANSWERED.ID, mid, decision, reason, resolvedBy],
+  );
+  return result.rows;
+};
+
+// Closes every report involving a user
+export const closeAllByUid = async (
+  uid,
+  decision,
+  reason,
+  resolvedBy,
+  client = pool,
+) => {
+  const result = await client.query(
+    `UPDATE report
+       SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5
+       WHERE payload->>'associated_user_id' = $2
+       RETURNING *`,
+    [REPORT_STATUS.ANSWERED.ID, uid, decision, reason, resolvedBy],
+  );
+  return result.rows;
+};
+
+// Closes every report of vacancies
+export const closeAllByParticipations = async (
+  participations,
+  decision,
+  reason,
+  resolvedBy,
+  client = pool,
+) => {
+  const result = await client.query(
+    `UPDATE report
+       SET status = $1, decision = $3, decision_reason = $4, resolved_by = $5
+       WHERE NULLIF(payload->>'associated_vacancy_id', '')::int = ANY($2::int[])
+       RETURNING *`,
+    [REPORT_STATUS.ANSWERED.ID, participations, decision, reason, resolvedBy],
+  );
+  return result.rows;
+};

@@ -357,7 +357,7 @@ const createReportIfNotActive = async (
 };
 
 // Closes report and associated conversation in db
-const closeReportAndConversationInternal = async (
+export const closeReportAndConversation = async (
   reportId,
   decision,
   reason,
@@ -375,17 +375,9 @@ const closeReportAndConversationInternal = async (
   if (!report)
     throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
 
-  // If there is an active conversation associated, closes it
-  if (report.conversation_id) {
-    const participantIds =
-      await conversationService.getActiveConversationParticipantIds(
-        report.conversation_id,
-        client,
-      );
-    await conversationService.closeConversation(report.conversation_id, client);
-    return { participantIds, report };
-  }
-  return { participantIds: [], report };
+  // Closes associated conversation
+  const participantIds = await closeAssociatedConversation(report, client);
+  return { participantIds: participantIds || [], report };
 };
 
 // Accepts adventurer work
@@ -471,7 +463,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
 
       // Closes report and associated conversation on db
       ({ report: closedReport, participantIds } =
-        await closeReportAndConversationInternal(
+        await closeReportAndConversation(
           reportId,
           REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID,
           reason,
@@ -603,7 +595,7 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
 
     // Report and associated conversation is closed
     ({ report: closedReport, participantIds } =
-      await closeReportAndConversationInternal(
+      await closeReportAndConversation(
         reportId,
         REPORT_DECISION.REJECT_ADVENTURERS_WORK.ID,
         reason,
@@ -731,7 +723,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     await client.query('BEGIN');
     // Closes report and associated conversation on db
     ({ report: closedReport, participantIds } =
-      await closeReportAndConversationInternal(
+      await closeReportAndConversation(
         reportId,
         REPORT_DECISION.DISMISS.ID,
         reason,
@@ -822,7 +814,7 @@ const buildResolutionNotification = (
 });
 
 // Emits conversation closed
-const emitConversationClosed = (participantIds, report) => {
+export const emitConversationClosed = (participantIds, report) => {
   if (!report?.conversation_id) return;
   emitToAdmins('report:updated', { reportId: report.rid });
   const closedAt = new Date().toISOString();
@@ -835,31 +827,74 @@ const emitConversationClosed = (participantIds, report) => {
   }
 };
 
-// Closes report and conversation
-export const closeReportAndConversation = async (
-  reportId,
+// Closes report and associated conversation in db involving a determine mission
+export const closeReportAndConversationByMid = async (
+  mid,
   decision,
   reason,
   adminId,
+  client,
 ) => {
-  const client = await pool.connect();
-  let result;
-  try {
-    await client.query('BEGIN');
-    result = await closeReportAndConversationInternal(
-      reportId,
+  // Closes all reports associated with mission
+  const reports = await reportModel.closeAllByMid(
+    mid,
+    decision,
+    reason,
+    adminId,
+    client,
+  );
+
+  // Closes associated conversation
+  for (const report of reports)
+    await closeAssociatedConversation(report, client);
+  return;
+};
+
+// Closes report and associated conversation in db involving a determine mission
+export const closeReportAndConversationByUid = async (
+  uid,
+  participations,
+  decision,
+  reason,
+  adminId,
+  client,
+) => {
+  let reportsVacancy;
+  // Closes all reports associated with user
+  const reports = await reportModel.closeAllByUid(
+    uid,
+    decision,
+    reason,
+    adminId,
+    client,
+  );
+  console.log('Reports by uid:', reports);
+  // Closes all reports associated with each participation
+  if (participations.length > 1)
+    reportsVacancy = await reportModel.closeAllByParticipations(
+      participations,
       decision,
       reason,
       adminId,
       client,
     );
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
+  console.log('Reports by vacancy:', reportsVacancy);
+  // Closes associated conversation
+  for (const report of [reports, reportsVacancy])
+    await closeAssociatedConversation(report, client);
+  return;
+};
+
+// Closes associated conversation
+const closeAssociatedConversation = async (report, client) => {
+  // If there is an active conversation associated, closes it
+  if (report.conversation_id) {
+    const participantIds =
+      await conversationService.getActiveConversationParticipantIds(
+        report.conversation_id,
+        client,
+      );
+    await conversationService.closeConversation(report.conversation_id, client);
+    return participantIds;
   }
-  emitConversationClosed(result.participantIds, result.report);
-  return result.report;
 };

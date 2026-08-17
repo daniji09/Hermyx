@@ -2,7 +2,6 @@
 import {
   messages,
   MISSION_STATUS,
-  MISSION_PARTICIPATION_STATUS,
   NOTIFICATION_ACTION,
   NOTIFICATION_KIND,
   NOTIFICATION_TYPE,
@@ -11,14 +10,11 @@ import {
   TRANSACTION_TYPE,
   MISSION_PARTICIPATION_PAYMENT_STATUS,
   REPORT_DECISION,
-  REPORT_STATUS,
 } from '@hermyx/shared';
 import {
   getAllMissionsInDraft as _getAllMissionsInDraft,
   findByMid,
-  updateStatusByMid,
   updateOccupiedVacancies,
-  emptyMission,
   updateMissionPayment,
   openMission,
 } from '../models/mission.model.js';
@@ -26,21 +22,18 @@ import { findByUid as getUserById } from '../models/user.model.js';
 import {
   findById,
   findAllOccupiedByMid,
-  updatePaymentStatusById,
-  cleanMissionParticipation,
   unjoinParticipant,
   updatePaymentStatus,
   refundBannedVacancy,
 } from '../models/mission-participation.model.js';
 import { createNotification as create } from '../services/notification.service.js';
 import { emitToUser } from '../providers/socket.provider.js';
-import { createRefund, createTransfer } from '../providers/payment.provider.js';
+import { createRefund } from '../providers/payment.provider.js';
 import {
   findByVacancyId as getMissionPaymentsByVacancy,
   refund as refundFromPayment,
 } from '../models/mission-payment.model.js';
-import { findById as getReportById } from '../models/report.model.js';
-import { closeReportAndConversation } from '../services/report.service.js';
+import { closeReportAndConversationByMid } from '../services/report.service.js';
 import * as missionService from '../services/mission.service.js';
 
 /// Controller functions
@@ -228,6 +221,18 @@ export const finishMission = async (req, res, next) => {
   }
 };
 
+// Bans mission
+export const banMission = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const { rid, reason } = req.body;
+    await missionService.banMission(req.user, mid, rid, reason);
+    return res.status(200).json({});
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Edits a mission
 export const editMission = async (req, res, next) => {
   try {
@@ -269,159 +274,11 @@ export const getAllMissionsInDraft = async (req, res) => {
   }
 };
 
-// Bans mission
-export const banMission = async (req, res) => {
-  const { mid } = req.params;
-  const { rid, reason } = req.body;
-
-  try {
-    // Gets report
-    const report = await getReportById(rid);
-    if (!report)
-      return res
-        .status(404)
-        .json({ errors: { general: [messages.REPORT_NOT_FOUND] } });
-
-    // Checks if report has not been answered yet
-    if (report.status === REPORT_STATUS.ANSWERED.ID)
-      return res.status(409).json({ errors: messages.REPORT_ALREADY_ANSWERED });
-
-    // Mission is searched
-    const mission = await findByMid(mid);
-    if (!mission)
-      return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-
-    // Participation is got
-    const participation = await findAllOccupiedByMid(mid);
-
-    // Mission state changes logic, if payment has been done it has to be release to adventurers
-    if (MISSION_STATUS[mission.status].CAN_DELETE) {
-      // Mission participation is cleaned
-      const updatedVacancies = await cleanMissionParticipation(mid);
-      if (participation.length !== updatedVacancies)
-        return res
-          .status(409)
-          .json({ error: messages.CANNOT_DELETE_VACANCIES });
-
-      // Occupied vacancies are updated
-      const emptiedMission = await emptyMission(mid);
-      if (emptiedMission < 1)
-        return res.status(404).json({ error: messages.MISSIONS_NOT_FOUND });
-    } else {
-      for (const vacancy of participation) {
-        const adventurer = await getUserById(vacancy.adventurer_id);
-        if (adventurer.stripe_connected_id) {
-          const transferData = {
-            amount: Math.round(vacancy.monetary_reward * 100),
-            currency: 'eur',
-            destination: adventurer.stripe_connected_id,
-            description: `mission_banned`,
-            transfer_group: `mission_${mid}`,
-          };
-
-          const idempotencyKey = `ban_${mid}_vac_${vacancy.id}`;
-          const transfer = await createTransfer(transferData, idempotencyKey);
-
-          // Adds mission payment
-          await create({
-            mid: mission.mid,
-            vacancy_id: vacancy.id,
-            sender_id: HERMYX_SYSTEM_ID,
-            receiver_id: adventurer.uid,
-            stripe_transaction_id: transfer.id,
-            transaction_type: TRANSACTION_TYPE.BAN_COMPENSATION.ID,
-            amount_paid: vacancy.monetary_reward,
-          });
-
-          await updatePaymentStatusById(vacancy.id);
-        }
-      }
-    }
-
-    // Finally, mission is reopened
-    await updateStatusByMid(mid, MISSION_STATUS.REPORTED.ID);
-
-    // Report is closed
-    const reportClosed = await closeReportAndConversation(
-      rid,
-      REPORT_DECISION.BAN_MISSION.ID,
-      reason,
-      req.user.uid,
-    );
-    if (!reportClosed)
-      return res.status(404).json({ error: messages.REPORT_NOT_FOUND });
-
-    // Then, applicant and possible adventurers are notified
-    const message = MISSION_STATUS[mission.status].CAN_DELETE
-      ? `This mission has been banned by Hermyx administration, now is retired from the public and won't be done.`
-      : `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers.`;
-
-    // Applicant is informed
-    const notificationId = await create({
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-      action: NOTIFICATION_ACTION.MISSION_BAN.ID,
-      status: null,
-      message: message,
-      senderId: HERMYX_SYSTEM_ID,
-      receiverId: mission.owner_id,
-      payload: {
-        associated_mission_id: mission.mid,
-      },
-    });
-    emitToUser(mission.owner_id, 'mission:ban', {
-      notificationId,
-      missionId: mission.mid,
-      vacancyId: null,
-      missionTitle: mission.title,
-      senderId: HERMYX_SYSTEM_ID,
-      senderUsername: req.user.username,
-      receiverId: mission.owner_id,
-      type: NOTIFICATION_TYPE.MISSION.ID,
-      message: message,
-    });
-
-    // All adventurers are informed
-    for (const vacancy of participation) {
-      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const notificationId = await create({
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
-          action: NOTIFICATION_ACTION.MISSION_BAN.ID,
-          status: null,
-          message: message,
-          senderId: HERMYX_SYSTEM_ID,
-          receiverId: vacancy.adventurer_id,
-          payload: {
-            associated_mission_id: mission.mid,
-          },
-        });
-        emitToUser(vacancy.adventurer_id, 'mission:ban', {
-          notificationId,
-          missionId: mission.mid,
-          vacancyId: vacancy.id,
-          missionTitle: mission.title,
-          senderId: HERMYX_SYSTEM_ID,
-          senderUsername: req.user.username,
-          receiverId: vacancy.adventurer_id,
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          message: message,
-        });
-      }
-    }
-
-    return res.status(200).json({});
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: messages.UNEXPECTED_ERROR });
-  }
-};
-
 // Kick adventurer out
 export const kickAdventurerOut = async (req, res) => {
   const { mid, vacancyId } = req.params;
   const { rid, reason } = req.body;
-
+  let reportClosed;
   try {
     // Mission is searched
     const mission = await findByMid(mid);
@@ -522,7 +379,7 @@ export const kickAdventurerOut = async (req, res) => {
     }
 
     // Report is closed
-    const reportClosed = await closeReportAndConversation(
+    reportClosed = await closeReportAndConversationByMid(
       rid,
       REPORT_DECISION.KICK_ADVENTURER_OUT.ID,
       reason,
@@ -588,6 +445,13 @@ export const kickAdventurerOut = async (req, res) => {
       type: NOTIFICATION_TYPE.MISSION.ID,
       message: messageAdventurer,
     });
+
+    // And conversation closure
+    reportService.emitConversationClosed(
+      reportClosed.participantIds,
+      reportClosed.report,
+    );
+
     return res.status(200).json({});
   } catch (error) {
     console.error(error);

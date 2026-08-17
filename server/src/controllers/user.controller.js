@@ -169,7 +169,7 @@ export const banUser = async (req, res, next) => {
   try {
     const { uid } = req.params;
     const { rid, reason } = req.body;
-    await userService.ban(uid, rid, reason);
+    await userService.banUser(uid, rid, reason, req.user);
     return res.status(200).json({});
   } catch (error) {
     next(error);

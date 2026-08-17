@@ -415,6 +415,13 @@ export const updateMissionPayment = async (mid, payment, client = pool) => {
   return result.rows[0] || null;
 };
 
+// Empties a mission
+export const emptyMission = async (mid) => {
+  const query = `UPDATE mission SET occupied_vacancies = 0 WHERE mid = $1 RETURNING *`;
+  const result = pool.query(query, [mid]);
+  return result.rowCount;
+};
+
 /// ......
 
 //Updates the Stripe Payment Intent ID and the mission status. Uses COALESCE to prevent overwriting the ID with null if only status needs update.
@@ -549,13 +556,6 @@ export const getMissionParticipation = async (mid) => {
   const query = `SELECT count(*) FROM mission_participation WHERE mid = $1`;
   const result = await pool.query(query, [mid]);
   return result.rows[0].count;
-};
-
-// Empties a mission
-export const emptyMission = async (mid) => {
-  const query = `UPDATE mission SET occupied_vacancies = 0 WHERE mid = $1 RETURNING *`;
-  const result = pool.query(query, [mid]);
-  return result.rowCount;
 };
 
 // Opens a mission again

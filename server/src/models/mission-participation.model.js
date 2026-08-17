@@ -75,6 +75,16 @@ export const findAllByMid = async (mid) => {
   return result.rows;
 };
 
+// Finds vacancies by uid
+export const findAllByUid = async (uid, client = pool) => {
+  const query = `SELECT *
+  FROM mission_participation
+  WHERE adventurer_id = $1
+  `;
+  const result = await client.query(query, [uid]);
+  return result.rows;
+};
+
 // Finds mission payment by mid
 export const findMissionPaymentByMid = async (mid) => {
   const query = `SELECT SUM(monetary_reward - amount_paid) 
@@ -321,6 +331,17 @@ export const refundBannedVacancy = async (id, amount_refunded) => {
   return result.rowCount;
 };
 
+// Unjoin every participant
+export const cleanMissionParticipation = async (mid) => {
+  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status = $3`;
+  const result = await pool.query(query, [
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    mid,
+    MISSION_PARTICIPATION_STATUS.JOINED.ID,
+  ]);
+  return result.rowCount;
+};
+
 /// DELETES
 export const deleteAllUnoccupied = async (mid, existingIds, client = pool) => {
   let query, result;
@@ -412,17 +433,6 @@ export const payVacancies = async (mid, amount_paid) => {
     MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
     MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
     amount_paid,
-  ]);
-  return result.rowCount;
-};
-
-// Unjoin every participant
-export const cleanMissionParticipation = async (mid) => {
-  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status = $3`;
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-    mid,
-    MISSION_PARTICIPATION_STATUS.JOINED.ID,
   ]);
   return result.rowCount;
 };

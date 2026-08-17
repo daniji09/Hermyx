@@ -204,6 +204,22 @@ export const messageBaseSchema = z
   .optional()
   .default('');
 
+// Report id
+export const reportIdBaseSchema = z.coerce
+  .number(messages.GENERAL.FIELD_NUMBER('Report id'))
+  .int(messages.GENERAL.FIELD_INTEGER('Report id'))
+  .min(0, messages.GENERAL.FIELD_POSITIVE('Report id'));
+
+// Report reason
+export const reportReasonBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Reason'))
+  .max(
+    consts.REPORT.REASON_MESSAGE.MAX,
+    messages.GENERAL.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+  );
+
 /// Endpoint complex validation
 // Get all missions
 export const getMissionsQuerySchema = z.object({
@@ -311,6 +327,16 @@ export const finishMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
+// Ban mission
+export const banMissionParamsSchema = z.object({
+  mid: midBaseSchema,
+});
+
+export const banMissionBodySchema = z.object({
+  rid: reportIdBaseSchema,
+  reason: reportReasonBaseSchema,
+});
+
 // Edit mission
 export const editMissionBodySchema = z.object({
   mid: midBaseSchema,
@@ -371,29 +397,6 @@ export const searchMissionByTitleSchema = z.object({
       consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
       messages.FIELD_TOO_LONG('Input'),
     ),
-});
-
-export const banMissionParamsSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
-
-export const banMissionBodySchema = z.object({
-  rid: z.coerce
-    .number(messages.FIELD_NUMBER('Rid'))
-    .int(messages.FIELD_INTEGER('Rid'))
-    .min(0, messages.FIELD_POSITIVE('Rid')),
-  reason: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.REPORT.REASON_MESSAGE.MAX,
-      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
-    )
-    .default(''),
 });
 
 export const kickAdventurerOutParamsSchema = z.object({

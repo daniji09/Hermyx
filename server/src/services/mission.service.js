@@ -10,13 +10,17 @@ import {
   NOTIFICATION_KIND,
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
+  REPORT_DECISION,
+  REPORT_STATUS,
   TRANSACTION_TYPE,
+  USER_ROLE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
 import * as conversationService from '../services/conversation.service.js';
 import * as notificationService from '../services/notification.service.js';
 import * as userService from '../services/user.service.js';
+import * as reportService from '../services/report.service.js';
 import * as storageProvider from '../providers/storage.provider.js';
 import * as socketProvider from '../providers/socket.provider.js';
 import * as paymentProvider from '../providers/payment.provider.js';
@@ -1312,10 +1316,6 @@ export const cancelMission = async (mid, user) => {
         }
       }
     }
-
-    // Finally, mission has been updated to cancel status
-    if (occupied_vacancies.length === successfulPayments.length)
-      await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
   }
 
   // Either way, all adventurers are informed and mission conversation is closed
@@ -1325,6 +1325,10 @@ export const cancelMission = async (mid, user) => {
   // Notifications are created in a transaction
   try {
     await client.query('BEGIN');
+    // First, mission has been updated to cancel status
+    if (occupied_vacancies.length === successfulPayments.length)
+      await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
+
     // Conversation is ended
     await conversationService.closeMissionConversationType(mid, client);
 
@@ -1550,6 +1554,247 @@ export const finishMission = async (mid, user) => {
   } finally {
     client.release();
   }
+};
+
+// Ban mission
+export const banMission = async (user, mid, rid, reason) => {
+  // Parameter checks
+  checkRequired(user, 'Admin user');
+  checkRequired(mid, 'Mission id');
+  checkRequired(rid, 'Report id');
+  checkRequired(reason, 'Report decision reason');
+
+  // Only admins can do this action
+  if (user.role !== USER_ROLE.ADMIN.ID)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+
+  // Gets report
+  const report = await reportService.getReport(rid);
+
+  // Checks if report has not been answered yet
+  if (report.status === REPORT_STATUS.ANSWERED.ID)
+    throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
+
+  // Mission is searched
+  const mission = await getMissionByIdOrThrow(mid);
+  const isDeleting = MISSION_STATUS[mission.status].CAN_DELETE;
+
+  // Participations are got
+  const participations =
+    await missionParticipationModel.findAllOccupiedByMid(mid);
+  const successfulPayments = [];
+  // If mission is cancelled, payment is sent to every vacancy
+  if (!isDeleting) {
+    const stripePromises = participations.map(async (vacancy) => {
+      try {
+        // Gets adventurer info
+        const adventurer = await userService.getUserByUidOrThrow(
+          vacancy.adventurer_id,
+        );
+
+        // Creates transfer in Stripe outside database transaction
+        if (adventurer.stripe_connected_id) {
+          const transferData = {
+            amount: Math.round(vacancy.monetary_reward * 100),
+            currency: 'eur',
+            destination: adventurer.stripe_connected_id,
+            description: `mission_banned`,
+            transfer_group: `mission_${mid}`,
+          };
+          const idempotencyKey = `ban_${mid}_vac_${vacancy.id}`;
+
+          // Makes transfer with idempotency key
+          const transfer = await paymentProvider.createTransfer(
+            transferData,
+            idempotencyKey,
+          );
+
+          // Now saves it in database inside its own transaction
+          const receiptClient = await pool.connect();
+          try {
+            await receiptClient.query('BEGIN');
+
+            await missionPaymentModel.create(
+              {
+                mid: mission.mid,
+                vacancy_id: vacancy.id,
+                sender_id: HERMYX_SYSTEM_ID,
+                receiver_id: adventurer.uid,
+                stripe_transaction_id: transfer.id,
+                transaction_type: TRANSACTION_TYPE.BAN_COMPENSATION.ID,
+                amount_paid: vacancy.monetary_reward,
+              },
+              receiptClient,
+            );
+
+            // Updates mission participation payment status
+            await missionParticipationModel.updatePaymentStatusById(
+              vacancy.id,
+              MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
+              receiptClient,
+            );
+
+            await receiptClient.query('COMMIT');
+            successfulPayments.push(vacancy.id);
+          } catch (dbError) {
+            await receiptClient.query('ROLLBACK');
+            // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+            console.error(
+              `FATAL DB ERROR: Transfer ${transfer.id} sent to ${adventurer.uid} after mission ban but DB failed`,
+              dbError,
+            );
+          } finally {
+            receiptClient.release();
+          }
+        }
+      } catch (stripeError) {
+        // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
+        console.error(
+          `Stripe Error while paying out vacancy ${vacancy.id} due to mission ban compensation:`,
+          stripeError.message,
+        );
+      }
+    });
+
+    // All transfers are executed in parallel so is time saving
+    await Promise.allSettled(stripePromises);
+  }
+
+  // Then, main transaction is done
+  const client = await pool.connect();
+  const notificationsToSend = [];
+  let reportClosed;
+  try {
+    await client.query('BEGIN');
+    // First, status is changed if every of each is correct
+    if (participations.length === successfulPayments.length)
+      await missionModel.updateStatusByMid(
+        mid,
+        MISSION_STATUS.REPORTED.ID,
+        client,
+      );
+
+    // If mission can be deleted, its emptied completely
+    if (isDeleting) {
+      const updatedVacancies =
+        await missionParticipationModel.cleanMissionParticipation(mid, client);
+      if (participations.length !== updatedVacancies)
+        throw new AppError(messages.MISSION.BAN.CANNOT_DELETE_VACANCIES, 409);
+
+      const emptiedMission = await missionModel.emptyMission(mid, client);
+      if (emptiedMission < 1)
+        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 409);
+    }
+
+    // And current report is closed
+    reportClosed = await reportService.closeReportAndConversation(
+      rid,
+      REPORT_DECISION.BAN_MISSION.ID,
+      reason,
+      user.uid,
+      client,
+    );
+    if (!reportClosed)
+      throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+
+    const ownerMessage = isDeleting
+      ? messages.NOTIFICATION.BAN_MISSION.DELETE
+      : messages.NOTIFICATION.CANCEL_MISSION.CANCEL;
+    // To mission owner
+    const ownerNotificationId = await notificationService.createNotification(
+      {
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.MISSION_BAN.ID,
+        status: null,
+        message: ownerMessage,
+        senderId: HERMYX_SYSTEM_ID,
+        receiverId: mission.owner_id,
+        payload: { associated_mission_id: mission.mid },
+      },
+      client,
+    );
+
+    notificationsToSend.push({
+      receiverId: mission.owner_id,
+      eventName: 'mission:ban',
+      payload: {
+        notificationId: ownerNotificationId,
+        missionId: mission.mid,
+        vacancyId: null,
+        missionTitle: mission.title,
+        senderId: HERMYX_SYSTEM_ID,
+        senderUsername: user.username,
+        receiverId: mission.owner_id,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        message: ownerMessage,
+      },
+    });
+
+    // To every adventurer
+    for (const vacancy of participations) {
+      if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
+        const message = isDeleting
+          ? messages.NOTIFICATION.BAN_MISSION.DELETE
+          : successfulPayments.includes(vacancy.id)
+            ? messages.NOTIFICATION.BAN_MISSION.CANCEL.SUCCESSFUL
+            : messages.NOTIFICATION.BAN_MISSION.CANCEL.ISSUED;
+        const advNotificationId = await notificationService.createNotification(
+          {
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+            action: NOTIFICATION_ACTION.MISSION_BAN.ID,
+            status: null,
+            message: message,
+            senderId: HERMYX_SYSTEM_ID,
+            receiverId: vacancy.adventurer_id,
+            payload: { associated_mission_id: mission.mid },
+          },
+          client,
+        );
+
+        notificationsToSend.push({
+          receiverId: vacancy.adventurer_id,
+          eventName: 'mission:ban',
+          payload: {
+            notificationId: advNotificationId,
+            missionId: mission.mid,
+            vacancyId: vacancy.id,
+            missionTitle: mission.title,
+            senderId: HERMYX_SYSTEM_ID,
+            senderUsername: user.username,
+            receiverId: vacancy.adventurer_id,
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            message,
+          },
+        });
+      }
+    }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  // Finally, every notification is sent
+  for (const notification of notificationsToSend) {
+    socketProvider.emitToUser(
+      notification.receiverId,
+      notification.eventName,
+      notification.payload,
+    );
+  }
+
+  // And conversation closure
+  reportService.emitConversationClosed(
+    reportClosed.participantIds,
+    reportClosed.report,
+  );
+
+  return;
 };
 
 // Edit mission
@@ -2239,7 +2484,16 @@ export const syncMissionCompletionStatus = async (mid, client) => {
 };
 
 // Expels a banned adventurer from a mission and handles refunds
-export const expelBannedAdventurerFromMission = async (mission, user) => {
+export const expelBannedAdventurerFromMission = async (
+  mission,
+  user,
+  admin,
+) => {
+  // Parameter checks
+  checkRequired(mission, 'Mission');
+  checkRequired(user, 'User');
+  checkRequired(admin, 'Admin');
+
   let notificationId, notificationMessage;
   // If mission is not closed
   if (MISSION_STATUS[mission.status].CAN_DELETE) {
@@ -2332,6 +2586,7 @@ export const expelBannedAdventurerFromMission = async (mission, user) => {
       prepClient.release();
     }
 
+    let refundSuccessful = true;
     try {
       // Now, outside of a transaction, refund is made
       const payments = await getMissionPaymentsByVacancyId(mission.vacancy_id);
@@ -2380,6 +2635,7 @@ export const expelBannedAdventurerFromMission = async (mission, user) => {
           await receiptClient.query('COMMIT');
         } catch (dbError) {
           await receiptClient.query('ROLLBACK');
+          refundSuccessful = true;
           // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
           console.error(
             `FATAL DB ERROR: a refund from ${mission.vacancy_id} after monetary reward lowered but DB failed`,
@@ -2393,6 +2649,7 @@ export const expelBannedAdventurerFromMission = async (mission, user) => {
       }
     } catch (stripeError) {
       // If a Stripe payment fails error should be saved in a log to fix it as soon as possible
+      refundSuccessful = true;
       console.error(
         `Stripe Error when refunding vacancy ${mission.vacancy_id} due to monetary reward lowered:`,
         stripeError.message,
@@ -2404,12 +2661,14 @@ export const expelBannedAdventurerFromMission = async (mission, user) => {
     try {
       await finalClient.query('BEGIN');
 
-      // Refunds banned vacancy
-      await refundBannedVacancy(
-        mission.vacancy_id,
-        mission.monetary_reward,
-        finalClient,
-      );
+      // If refund was completely successful, status is changed
+      if (refundSuccessful)
+        // Refunds banned vacancy
+        await refundBannedVacancy(
+          mission.vacancy_id,
+          mission.monetary_reward,
+          finalClient,
+        );
 
       // Recalculates total payment and saves it
       const occupied_vacancies = await getAllOccupiedByMid(
@@ -2430,10 +2689,15 @@ export const expelBannedAdventurerFromMission = async (mission, user) => {
       );
 
       // Chooses message
-      notificationMessage = messages.NOTIFICATION.BAN_USER.CLOSED_MISSION(
-        user.username,
-        mission.title,
-      );
+      notificationMessage = refundSuccessful
+        ? messages.NOTIFICATION.BAN_USER.CLOSED_MISSION.SUCCESSFUL(
+            user.username,
+            mission.title,
+          )
+        : messages.NOTIFICATION.BAN_USER.CLOSED_MISSION.ISSUED(
+            user.username,
+            mission.title,
+          );
       // Creates notification
       notificationId = await notificationService.createNotification({
         type: NOTIFICATION_TYPE.MISSION.ID,

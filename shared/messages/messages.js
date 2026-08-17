@@ -147,6 +147,9 @@ export const messages = {
       CANNOT_IN_CURRENT_MISSION_STATE: `Can't finish mission on current state.`,
       CANNOT_FINISH: `Can't finish mission`,
     },
+    BAN: {
+      CANNOT_DELETE_VACANCIES: `Couldn't delete every occupied vacancy, please try again.`,
+    },
   },
 
   /// Payment messages
@@ -213,8 +216,12 @@ export const messages = {
     BAN_USER: {
       OPENED_MISSION: (username, title) =>
         `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied.`,
-      CLOSED_MISSION: (username, title) =>
-        `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you.`,
+      CLOSED_MISSION: {
+        SUCCESSFUL: (username, title) =>
+          `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you.`,
+        ISSUED: (username, title) =>
+          `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you. We had an issue transferring your compensation. Please contact support.`,
+      },
     },
     MISSION_EDIT: {
       MISSION_INFO_CHANGED: (title, changes) =>
@@ -243,6 +250,13 @@ export const messages = {
         `Mission ${title} has been cancelled, but don't worry, your reward is on your way!.`,
       ISSUED: (title) =>
         `Mission ${title} has been cancelled. We had an issue transferring your compensation. Please contact support.`,
+    },
+    BAN_MISSION: {
+      DELETE: `This mission has been banned by Hermyx administration, now is retired from the public and won't be done.`,
+      CANCEL: {
+        SUCCESSFUL: `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers.`,
+        ISSUED: `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers. We had an issue transferring your compensation. Please contact support.`,
+      },
     },
     REOPEN_MISSION: (title) =>
       `Mission ${title} has been reopened, so new teammates will enter!`,
