@@ -1172,7 +1172,7 @@ export const submitMissionParticipation = async (mid, user) => {
   return updatedParticipation;
 };
 
-// Cancel mission TODO: probar
+// Cancel mission
 export const cancelMission = async (mid, user) => {
   // Parameter checks
   checkRequired(mid, 'Mission id');
@@ -1197,6 +1197,8 @@ export const cancelMission = async (mid, user) => {
 
   // If its neither, then is an error
   if (!isDeleting && !isCancelling) {
+    if (mission.status === MISSION_STATUS.IN_DISPUTE.ID)
+      throw new AppError(messages.MISSION.DELETE.CANNOT_ACTIVE_DISPUTES, 409);
     throw new AppError(
       messages.MISSION.DELETE.CANNOT_DELETE_MISSION_STATE,
       409,
@@ -1316,13 +1318,17 @@ export const cancelMission = async (mid, user) => {
       await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
   }
 
-  // Either way, all adventurers are informed
+  // Either way, all adventurers are informed and mission conversation is closed
   const notificationsToSend = [];
   const client = await pool.connect();
 
   // Notifications are created in a transaction
   try {
     await client.query('BEGIN');
+    // Conversation is ended
+    await conversationService.closeMissionConversationType(mid, client);
+
+    // Notifications are sent
     for (const vacancy of occupied_vacancies) {
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const message = isDeleting
@@ -2171,7 +2177,11 @@ const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
     mid,
   );
   if (hasDuplicate)
-    throw new AppError(messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE, 400);
+    throw new AppError(
+      messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
+      400,
+      'title',
+    );
 };
 
 const checkMissionBelongsToUser = (missionOwnerUid, currentUserUid) => {

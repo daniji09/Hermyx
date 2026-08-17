@@ -170,6 +170,7 @@ export const banUser = async (req, res, next) => {
     const { uid } = req.params;
     const { rid, reason } = req.body;
     await userService.ban(uid, rid, reason);
+    return res.status(200).json({});
   } catch (error) {
     next(error);
   }

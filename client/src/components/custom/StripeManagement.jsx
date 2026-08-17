@@ -318,7 +318,7 @@ const AddBankAccountButton = ({ user }) => {
       mutationFn: () => goToDashboard(),
       onSuccess: (data) => {
         queryClient.invalidateQueries(['getMyProfile']);
-        window.location.href = data;
+        window.location.href = data.url;
       },
       // Backend error handling
       onError: (error) => {

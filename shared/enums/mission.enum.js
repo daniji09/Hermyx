@@ -88,7 +88,7 @@ export const MISSION_STATUS = {
     LABEL: 'In dispute',
     CAN_EDIT: true,
     CAN_DELETE: false,
-    CAN_CANCEL: true,
+    CAN_CANCEL: false,
     CAN_ACCEPT_ADVENTURERS: false,
     CAN_DELETE_ADVENTURERS: false,
     ADVENTURERS_CAN_UNJOIN: false,

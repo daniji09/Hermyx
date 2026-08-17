@@ -572,18 +572,28 @@ export const ban = async (uid, rid, reason) => {
 
   // Finally, mission info is cleared
   try {
-    // Clears all active missions
+    // Clears all active missions using a map of promises
     const activeMissions = await missionService.getUserActiveMissions(uid);
-    for (const mission of activeMissions) {
+    const cleanupPromises = activeMissions.map((mission) => {
       if (mission.owner_id === uid) {
         // If user is owner, it just cancel them
-        await missionService.cancelMission(mission.mid, user);
+        return missionService.cancelMission(mission.mid, user);
       } else {
         // Otherwise, it expels them from the mission
-        await missionService.expelBannedAdventurerFromMission(mission, user);
+        return missionService.expelBannedAdventurerFromMission(mission, user);
       }
-    }
+    });
 
+    // Then all promises are resolved
+    const results = await Promise.allSettled(cleanupPromises);
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(
+          `Error in mission ${activeMissions[index].mid}:`,
+          result.reason,
+        );
+      }
+    });
     // Clears all active disputes
   } catch (missionCleanupError) {
     console.error(
@@ -591,8 +601,7 @@ export const ban = async (uid, rid, reason) => {
       missionCleanupError,
     );
   }
-
-  return { message: 'User successfully banned' };
+  return;
 };
 
 // Deletes current user

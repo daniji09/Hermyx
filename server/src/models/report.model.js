@@ -242,6 +242,7 @@ export const findDisputesByUserId = async (userId) => {
   return result.rows;
 };
 
+// Finds all active disputes by uid
 export const findAllActiveDisputesByUid = async (uid, client = pool) => {
   const result = await client.query(
     `SELECT
