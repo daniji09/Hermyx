@@ -1,4 +1,10 @@
-import { consts, messages } from '@hermyx/shared';
+import {
+  consts,
+  messages,
+  REPORT_DECISION,
+  REPORT_STATUS,
+  USER_STATUS,
+} from '@hermyx/shared';
 import { AppError, checkRequired } from '../utils/error.util.js';
 import * as missionService from './mission.service.js';
 import * as reportService from './report.service.js';
@@ -470,6 +476,125 @@ export const addEmailAuthentication = async (user, email, password) => {
   }
 };
 
+// Ban user
+export const ban = async (uid, rid, reason) => {
+  // Parameter checks
+  checkRequired(uid, 'User id');
+  checkRequired(rid, 'Report id');
+  checkRequired(reason, 'Report decision reason');
+
+  // Finds user and checks if it has already been banned
+  const user = await userModel.findByUid(uid);
+  if (user.status === USER_STATUS.BANNED.ID)
+    throw new AppError(messages.REPORT.BAN_USER.USER_ALREADY_BANNED, 409);
+
+  // Finds report and checks if it has already been answered
+  const report = await reportService.getReport(rid);
+  if (report.status === REPORT_STATUS.ANSWERED.ID)
+    throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
+
+  // Then, checks if it has active disputes
+  const activeDisputes = await reportService.getActiveDisputesByUid(user.uid);
+  if (activeDisputes.length > 0)
+    throw new AppError(messages.REPORT.BAN_USER.ACTIVE_DISPUTES, 409);
+
+  // External deletions are made first
+  // First, rejects account on Stripe and their adventurer account is rejected so they cannot receive payments
+  // Not needed for applicant account, because being banned avoids any type of transaction
+  try {
+    if (user.stripe_connected_id) {
+      await paymentProvider.rejectAccount(user.stripe_connected_id);
+    }
+  } catch (e) {
+    console.error(`Error deleting Stripe account for ${user.uid}:`, e);
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+
+  // Then, Firebase
+  try {
+    await authProvider.disableUser(user.firebase_uid);
+    await authProvider.revokeTokens(user.firebase_uid);
+  } catch (e) {
+    console.error(`Error deleting Firebase account for ${user.uid}:`, e);
+    await authProvider.enableUser(user.firebase_uid).catch(console.error);
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+
+  // Deletes avatar
+  if (user.avatar) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    try {
+      if (isProduction) {
+        await storageProvider.deleteFromAzureBlob(user.avatar, 'avatars');
+      } else {
+        await storageProvider.deleteFromLocalStorage(user.avatar);
+      }
+    } catch (e) {
+      console.error(`Error deleting avatar for ${user.uid}:`, e);
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+
+  // After user is unable to log in, they are banned in database and report is closed
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Banned from database
+    const banHermyx = await userModel.ban(uid, client);
+
+    if (banHermyx < 1) throw new Error('User not found during ban');
+
+    // Report is closed
+    const reportClosed = await reportService.closeReportAndConversation(
+      rid,
+      REPORT_DECISION.BAN_USER.ID,
+      reason,
+      user.uid,
+      client,
+    );
+    if (!reportClosed)
+      throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+
+    // All conversations are closed
+    await conversationService.removeUserFromAllConversations(uid, client);
+
+    await client.query('COMMIT');
+  } catch (e) {
+    console.error(e);
+    await client.query('ROLLBACK');
+    // Rollbacks auth ban
+    await authProvider.enableUser(user.firebase_uid).catch(console.error);
+    throw new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500);
+  } finally {
+    client.release();
+  }
+
+  // Finally, mission info is cleared
+  try {
+    // Clears all active missions
+    const activeMissions = await missionService.getUserActiveMissions(uid);
+    for (const mission of activeMissions) {
+      if (mission.owner_id === uid) {
+        // If user is owner, it just cancel them
+        await missionService.cancelMission(mission.mid, user);
+      } else {
+        // Otherwise, it expels them from the mission
+        await missionService.expelBannedAdventurerFromMission(mission, user);
+      }
+    }
+
+    // Clears all active disputes
+  } catch (missionCleanupError) {
+    console.error(
+      `Error cleaning up missions for banned user ${uid}:`,
+      missionCleanupError,
+    );
+  }
+
+  return { message: 'User successfully banned' };
+};
+
 // Deletes current user
 export const deleteMe = async (user) => {
   // Parameter checks
@@ -482,10 +607,10 @@ export const deleteMe = async (user) => {
 
   // Then, checks if it has active disputes
   const activeDisputes = await reportService.getActiveDisputesByUid(user.uid);
-
   if (activeDisputes.length > 0)
     throw new AppError(messages.USER.DELETE_ME.ACTIVE_DISPUTES, 409);
 
+  // External deletions are made first
   // Deletes user from Stripe
   if (user.stripe_connected_id) {
     try {
@@ -525,22 +650,8 @@ export const deleteMe = async (user) => {
   try {
     await client.query('BEGIN');
     // First, removes user from all chats, setting its left_at attribute
-    const conversations =
-      await conversationService.removeUserFromAllConversations(
-        user.uid,
-        client,
-      );
-
-    // Then, closes those conversations
-    for (const conversationParticipant of conversations) {
-      const conversation = await conversationService.getConversationById(
-        conversationParticipant.conversation_id,
-        client,
-      );
-      console.log(conversation);
-      if (conversation.type === 'private')
-        await conversationService.closeConversation(conversation.cid, client);
-    }
+    // Also disallows writing for other person in private chats and closes chat
+    await conversationService.removeUserFromAllConversations(user.uid, client);
 
     // Then deletes every notification that this user has ever received
     await notificationService.deleteAllUserNotifications(user.uid, client);

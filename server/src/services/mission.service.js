@@ -1,5 +1,6 @@
 import {
   consts,
+  HERMYX_FEE,
   HERMYX_SYSTEM_ID,
   messages,
   MISSION_PARTICIPATION_PAYMENT_STATUS,
@@ -127,9 +128,9 @@ export const payParticipant = async (id, payment, client) => {
 };
 
 // Get all occupied vacancies of a mission
-export const getAllOccupiedByMid = async (mid) => {
+export const getAllOccupiedByMid = async (mid, client) => {
   checkRequired(mid, 'Mission id');
-  return await missionParticipationModel.findAllOccupiedByMid(mid);
+  return await missionParticipationModel.findAllOccupiedByMid(mid, client);
 };
 
 // Gets user's active missions
@@ -270,7 +271,7 @@ export const refundMissionPayment = async (amount, paymentId, client) => {
   return await missionPaymentModel.refund(amount, paymentId, client);
 };
 
-// Refunds mission participation
+// Refunds partial payment of mission participation
 export const refundMissionParticipation = async (
   participationId,
   amount,
@@ -278,8 +279,19 @@ export const refundMissionParticipation = async (
 ) => {
   checkRequired(participationId, 'Mission participation id');
   checkRequired(amount, 'Monetary amount');
-  return await missionParticipationModel.refundVacancy(
+  return await missionParticipationModel.refundVacancyPartially(
     participationId,
+    amount,
+    client,
+  );
+};
+
+// Refunds total payment of a banned mission participation
+export const refundBannedVacancy = async (id, amount, client) => {
+  checkRequired(id, 'Mission participation id');
+  checkRequired(amount, 'Amount to refund');
+  return await missionParticipationModel.refundBannedVacancy(
+    id,
     amount,
     client,
   );
@@ -313,6 +325,13 @@ export const updateMissionParticipationAdventurerReview = async (
     rid,
     client,
   );
+};
+
+// Unjoin participant
+export const unjoinParticipant = async (mid, uid, client) => {
+  checkRequired(mid, 'Mission id');
+  checkRequired(uid, 'User id');
+  return await missionParticipationModel.unjoinParticipant(mid, uid, client);
 };
 
 //---
@@ -983,7 +1002,7 @@ export const unjoinMission = async (mid, vacancyId, user) => {
     const updatedVacancy =
       await missionParticipationModel.updateAdventurerAndStatus(
         vacancyId,
-        null, // ¡La magia de desconectar al usuario!
+        null,
         MISSION_PARTICIPATION_STATUS.EMPTY.ID,
         client,
       );
@@ -2207,4 +2226,254 @@ export const syncMissionCompletionStatus = async (mid, client) => {
 
   // Updates status
   return await missionModel.updateStatusByMid(mid, nextStatus, client);
+};
+
+// Expels a banned adventurer from a mission and handles refunds
+export const expelBannedAdventurerFromMission = async (mission, user) => {
+  let notificationId, notificationMessage;
+  // If mission is not closed
+  if (MISSION_STATUS[mission.status].CAN_DELETE) {
+    // Uses database transaction from the start
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Unjoins user
+      const unjoin = await unjoinParticipant(mission.mid, user.uid, client);
+      if (unjoin < 1)
+        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
+
+      // Updates occupied vacancies
+      const unjoinMission = await updateOccupiedVacancies(
+        mission.mid,
+        -1,
+        client,
+      );
+      if (unjoinMission.length < 1)
+        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND);
+
+      // Chooses message
+      notificationMessage = messages.NOTIFICATION.BAN_USER.OPENED_MISSION(
+        user.username,
+        mission.title,
+      );
+      // Creates notification
+      notificationId = await notificationService.createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.USER_BAN.ID,
+        status: null,
+        message: notificationMessage,
+        senderId: HERMYX_SYSTEM_ID,
+        receiverId: mission.owner_id,
+        payload: {
+          associated_mission_id: mission.mid,
+          associated_vacancy_id: mission.vacancy_id || null,
+        },
+      });
+
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+
+    // Send notification to applicant
+    await sendBannedAdventurerNotification(
+      mission,
+      user,
+      notificationId,
+      notificationMessage,
+    );
+  }
+
+  // Mission is closed
+  else if (
+    MISSION_STATUS[mission.status].CAN_CANCEL &&
+    MISSION_PARTICIPATION_STATUS[mission.participation_status].CAN_INTERACT
+  ) {
+    // In a database transaction, prepares mission and marks it as partially refunded
+    const prepClient = await pool.connect();
+    try {
+      await prepClient.query('BEGIN');
+
+      // Unjoins user
+      const unjoin = await unjoinParticipant(mission.mid, user.uid, prepClient);
+      if (unjoin < 1)
+        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
+
+      // Updates occupied vacancies
+      await updateOccupiedVacancies(mission.mid, -1, prepClient);
+
+      // Updates participation payment status, so intent is marked
+      await updateParticipationPaymentStatusById(
+        mission.vacancy_id,
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+        prepClient,
+      );
+
+      await prepClient.query('COMMIT');
+    } catch (e) {
+      await prepClient.query('ROLLBACK');
+      throw e;
+    } finally {
+      prepClient.release();
+    }
+
+    try {
+      // Now, outside of a transaction, refund is made
+      const payments = await getMissionPaymentsByVacancyId(mission.vacancy_id);
+      let amountToRefund = mission.monetary_reward;
+
+      for (const payment of payments) {
+        if (amountToRefund <= 0) break;
+
+        const availableBalance = payment.amount_paid - payment.amount_refunded;
+        const paymentRefund = Math.min(amountToRefund, availableBalance);
+
+        // Call to Stripe for refund
+        const refund = await paymentProvider.createRefund(
+          {
+            payment_intent: payment.stripe_transaction_id,
+            amount: Math.round(paymentRefund * 100),
+            metadata: {
+              mission_id: mission.mid,
+              vacancy_id: mission.vacancy_id,
+              reason: 'user_banned_refund',
+            },
+          },
+          `user_banned_refund_${mission.mid}_${mission.vacancy_id}`,
+        );
+
+        // Transaction to save refund on db
+        const receiptClient = await pool.connect();
+        try {
+          await receiptClient.query('BEGIN');
+
+          await refundMissionPayment(paymentRefund, payment.pid, receiptClient);
+
+          await createMissionPayment(
+            {
+              mid: mission.mid,
+              vacancy_id: mission.vacancy_id,
+              sender_id: HERMYX_SYSTEM_ID,
+              receiver_id: mission.owner_id,
+              stripe_transaction_id: refund.id,
+              transaction_type: TRANSACTION_TYPE.BAN_COMPENSATION.ID,
+              amount_paid: paymentRefund,
+            },
+            receiptClient,
+          );
+
+          await receiptClient.query('COMMIT');
+        } catch (dbError) {
+          await receiptClient.query('ROLLBACK');
+          // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+          console.error(
+            `FATAL DB ERROR: a refund from ${mission.vacancy_id} after monetary reward lowered but DB failed`,
+            dbError,
+          );
+        } finally {
+          receiptClient.release();
+        }
+
+        amountToRefund -= paymentRefund;
+      }
+    } catch (stripeError) {
+      // If a Stripe payment fails error should be saved in a log to fix it as soon as possible
+      console.error(
+        `Stripe Error when refunding vacancy ${mission.vacancy_id} due to monetary reward lowered:`,
+        stripeError.message,
+      );
+    }
+
+    // Lastly, a final database transaction to close the refund process and recalculate totals
+    const finalClient = await pool.connect();
+    try {
+      await finalClient.query('BEGIN');
+
+      // Refunds banned vacancy
+      await refundBannedVacancy(
+        mission.vacancy_id,
+        mission.monetary_reward,
+        finalClient,
+      );
+
+      // Recalculates total payment and saves it
+      const occupied_vacancies = await getAllOccupiedByMid(
+        mission.mid,
+        finalClient,
+      );
+
+      const newTotal =
+        occupied_vacancies.reduce(
+          (sum, vacancy) => sum + Number(vacancy.monetary_reward),
+          0,
+        ) * HERMYX_FEE || 0;
+
+      await missionModel.updateMissionPayment(
+        mission.mid,
+        newTotal,
+        finalClient,
+      );
+
+      // Chooses message
+      notificationMessage = messages.NOTIFICATION.BAN_USER.CLOSED_MISSION(
+        user.username,
+        mission.title,
+      );
+      // Creates notification
+      notificationId = await notificationService.createNotification({
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.USER_BAN.ID,
+        status: null,
+        message: notificationMessage,
+        senderId: HERMYX_SYSTEM_ID,
+        receiverId: mission.owner_id,
+        payload: {
+          associated_mission_id: mission.mid,
+          associated_vacancy_id: mission.vacancy_id || null,
+        },
+      });
+
+      await finalClient.query('COMMIT');
+    } catch (e) {
+      await finalClient.query('ROLLBACK');
+      throw e;
+    } finally {
+      finalClient.release();
+    }
+
+    // Send notifications
+    await sendBannedAdventurerNotification(
+      mission,
+      user,
+      notificationId,
+      notificationMessage,
+    );
+  }
+};
+
+// Sends notifications to the applicant of the mission where the user has been banned
+const sendBannedAdventurerNotification = async (
+  mission,
+  user,
+  notificationId,
+  message,
+) => {
+  // And sends it
+  socketProvider.emitToUser(mission.owner_id, 'mission:adventurer-ban', {
+    notificationId,
+    missionId: mission.mid,
+    vacancyId: mission.vacancy_id || null,
+    missionTitle: mission.title,
+    senderId: HERMYX_SYSTEM_ID,
+    senderUsername: user.username,
+    receiverId: mission.owner_id,
+    type: NOTIFICATION_TYPE.MISSION.ID,
+    message: message,
+  });
 };

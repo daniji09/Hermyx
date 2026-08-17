@@ -233,7 +233,33 @@ export const disableConversationParticipants = async (
 
 // Removes a user from all conversations
 export const removeUserFromAll = async (uid, client = pool) => {
-  const query = `UPDATE conversation_participant SET left_at = NOW() WHERE user_id = $1 RETURNING * `;
-  const result = await client.query(query, [uid]);
-  return result.rows;
+  // User leaves all chats
+  await client.query(
+    `UPDATE conversation_participant SET left_at = NOW(), can_send = false WHERE user_id = $1 AND left_at IS NULL`,
+    [uid],
+  );
+
+  // Writing for other person is blocked
+  await client.query(
+    `
+    UPDATE conversation_participant SET can_send = false
+    WHERE conversation_id IN (
+      SELECT cp.conversation_id FROM conversation_participant cp
+      JOIN conversation c ON c.cid = cp.conversation_id
+      WHERE cp.user_id = $1 AND c.type = 'private'
+    ) AND user_id <> $1 AND left_at IS NULL
+  `,
+    [uid],
+  );
+
+  // Chat is closed
+  await client.query(
+    `
+    UPDATE conversation SET closed_at = NOW()
+    WHERE type = 'private' AND closed_at IS NULL AND cid IN (
+      SELECT conversation_id FROM conversation_participant WHERE user_id = $1
+    )
+  `,
+    [uid],
+  );
 };

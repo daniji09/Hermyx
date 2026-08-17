@@ -285,8 +285,12 @@ export const updateAdventurerReview = async (id, reviewId, client = pool) => {
   return result.rows[0] || null;
 };
 
-// Refunds mission participation
-export const refundVacancy = async (id, amountRefunded, client = pool) => {
+// Refunds partial payment of mission participation
+export const refundVacancyPartially = async (
+  id,
+  amountRefunded,
+  client = pool,
+) => {
   const query = `
     UPDATE mission_participation 
     SET payment_status = $1, amount_paid = amount_paid - $2 
@@ -295,6 +299,22 @@ export const refundVacancy = async (id, amountRefunded, client = pool) => {
   const result = await client.query(query, [
     MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID,
     amountRefunded,
+    id,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+  ]);
+  return result.rowCount;
+};
+
+// Refunds banned vacancy
+export const refundBannedVacancy = async (id, amount_refunded) => {
+  const query = `
+    UPDATE mission_participation 
+    SET payment_status = $1, amount_paid = amount_paid - $2 
+    WHERE id = $3 AND payment_status = $4`;
+
+  const result = await pool.query(query, [
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    amount_refunded,
     id,
     MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
   ]);
@@ -408,30 +428,15 @@ export const cleanMissionParticipation = async (mid) => {
 };
 
 // Unjoin specific participant
-export const unjoinParticipant = async (mid, uid) => {
+export const unjoinParticipant = async (mid, uid, client = pool) => {
   const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status NOT IN ($3, $4, $5) AND adventurer_id = $6`;
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     mid,
     MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
     MISSION_PARTICIPATION_STATUS.RELEASED.ID,
     uid,
-  ]);
-  return result.rowCount;
-};
-
-export const refundBannedVacancy = async (id, amount_refunded) => {
-  const query = `
-    UPDATE mission_participation 
-    SET payment_status = $1, amount_paid = amount_paid - $2 
-    WHERE id = $3 AND payment_status = $4`;
-
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
-    amount_refunded,
-    id,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
   ]);
   return result.rowCount;
 };

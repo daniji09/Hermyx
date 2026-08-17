@@ -104,6 +104,22 @@ export const longitudeBaseSchema = z.coerce.number();
 // Configuration
 export const configurationBaseSchema = z.json();
 
+// Report id
+export const reportIdBaseSchema = z.coerce
+  .number(messages.GENERAL.FIELD_NUMBER('Report id'))
+  .int(messages.GENERAL.FIELD_INTEGER('Report id'))
+  .min(0, messages.GENERAL.FIELD_POSITIVE('Report id'));
+
+// Report reason
+export const reportReasonBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Reason'))
+  .max(
+    consts.REPORT.REASON_MESSAGE.MAX,
+    messages.GENERAL.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+  );
+
 /// Endpoint complex validation
 // Search user by username
 export const searchUsersByUsernameQueryBaseSchema = z.object({
@@ -190,6 +206,16 @@ export const addEmailAuthenticationSchema = z
     path: ['confirmPassword'],
   });
 
+// Ban user
+export const banUserParamsSchema = z.object({
+  uid: uidBaseSchema,
+});
+
+export const banUserBodySchema = z.object({
+  rid: reportIdBaseSchema,
+  reason: reportReasonBaseSchema,
+});
+
 /// -----------------------
 export const getUsersByFirebaseUidParamSchema = z.object({
   firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
@@ -234,25 +260,4 @@ export const updatePasswordValidation = z
 
 export const userConfigurationValidation = z.object({
   show_missions_to_others: z.boolean(),
-});
-
-// Ban user
-export const banUserParamsSchema = z.object({
-  uid: uidBaseSchema,
-});
-
-export const banUserBodySchema = z.object({
-  rid: z.coerce
-    .number(messages.FIELD_NUMBER('Rid'))
-    .int(messages.FIELD_INTEGER('Rid'))
-    .min(0, messages.FIELD_POSITIVE('Rid')),
-  reason: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.REPORT.REASON_MESSAGE.MAX,
-      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
-    )
-    .default(''),
 });

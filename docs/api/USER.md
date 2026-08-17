@@ -467,3 +467,96 @@ _> Note: new `email` has to be unique and `password` and `confirmPassword` must 
 <br>
 <br>
 <br>
+
+## - Delete current user's account: `POST /api/users/:uid/ban`
+
+Bans a user.
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `uid` | int | Yes | User identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rid` | int | Yes | Report identifier. |
+| `reason` | string | Yes | Report decision reason. |
+<br>
+
+**Responses:**
+
+- `200 OK`: user banned successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields or logic error.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: search fails.
+
+  ```json
+  {
+    "errors": {
+      "general": ["User not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** banning a user can be done if subject doesn't have any other disputes active. This will reject it account on `Stripe`, meaning not only access will be denied to the account but that Stripe is aware of that user as a suspicious one and won't let him enter in any other account Stripe. `Firebase` also bans the account and its avatar is deleted. Then, all their conversations are closed, and all missions are cleared: deleting or cancelling the ones that they own; and kicking him out, with refund to applicant if needed, from the ones that they are an adventurer. It is also marked as banned in database. Various transactions are needed and payment mechanism where intent is marked and failures are catch for logging and retrying them is used (logs not implemented).
+<br>
+<br>
+
+## - Delete current user's account: `DELETE /api/users/me`
+
+Deletes current user's account.
+
+**Requires authentication:** Yes
+
+**Responses:**
+
+- `200 OK`: user deleted successfully.
+
+  ```json
+  {}
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** deleting an account is quite a complex function. In first place, for a user to being able to do it, they have to don't have any active missions or reports. Then, all external objects are deleted, first the avatar if any, then the Stripe account if any and lastly the Firebase account. Finally, and inside of a transaction, user is removed from conversations (setting their left_at), their private conversations are closed so the other user knows they don't exist anymore, their received notifications are deleted because those are useless and is some space saved and, lastly, user is anonymize, there is no hard delete. (TODO: comprobar que con el RGPD todo bien).
+<br>
+<br>

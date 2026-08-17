@@ -209,6 +209,12 @@ export const messages = {
     },
 
     // Messages sent to users in a notification
+    BAN_USER: {
+      OPENED_MISSION: (username, title) =>
+        `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied.`,
+      CLOSED_MISSION: (username, title) =>
+        `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you.`,
+    },
     MISSION_EDIT: {
       MISSION_INFO_CHANGED: (title, changes) =>
         `${title} info has been changed: ${changes.join(', ')}. Check it out!`,
@@ -334,6 +340,10 @@ export const messages = {
     REPORT_MISSION: {
       ACTIVE_REPORT: `You already have an active report for this mission. Our team is checking it.`,
       CLOSED_BY_REPORT: `This mission has already been close by a report.`,
+    },
+    BAN_USER: {
+      USER_ALREADY_BANNED: `User already banned.`,
+      ACTIVE_DISPUTES: `You cant ban this user because they have other active disputes, resolve those first!.`,
     },
   },
 

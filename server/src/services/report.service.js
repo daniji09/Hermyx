@@ -25,7 +25,8 @@ import { AppError, checkRequired } from '../utils/error.util.js';
 /// Model access functions
 const getReportByRidOrThrow = async (reportId) => {
   const report = await reportModel.findById(reportId);
-  if (!report) throw new AppError(messages.REPORT_NOT_FOUND, 404);
+  if (!report)
+    throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
   return report;
 };
 

@@ -196,6 +196,7 @@ export const updateRating = async (uid, client = pool) => {
   return result.rows[0]?.rating;
 };
 
+// Anonymize user info
 export const anonymize = async (uid, client = pool) => {
   const query = `UPDATE app_user SET
   username = SUBSTRING('Del_' || $1::text, 1, 20),
@@ -216,10 +217,9 @@ export const anonymize = async (uid, client = pool) => {
   return result.rowCount;
 };
 
-//////// -------------
-
+// Bans user from application
 export const ban = async (uid) => {
-  const query = `UPDATE app_user SET status = $1 WHERE uid = $2 AND status = $3 RETURNING *`;
+  const query = `UPDATE app_user SET status = $1, avatar = NULL WHERE uid = $2 AND status = $3 RETURNING *`;
   const result = await pool.query(query, [
     USER_STATUS.BANNED.ID,
     uid,
@@ -228,6 +228,7 @@ export const ban = async (uid) => {
   return result.rows[0];
 };
 
+// Unbans user from applications
 export const unban = async (uid) => {
   const query = `UPDATE app_user SET status = $1 WHERE uid = $2 AND status = $3 RETURNING *`;
   const result = await pool.query(query, [
