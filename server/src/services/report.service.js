@@ -54,6 +54,13 @@ export const getActiveDisputesByUid = async (uid, client) => {
   return await reportModel.findAllActiveDisputesByUid(uid, client);
 };
 
+// Updates status checking current one
+export const updateStatusIfCurrent = async (rid, status, client) => {
+  checkRequired(rid, 'Report id');
+  checkRequired(status, 'Report status');
+  return await reportModel.updateStatusIfCurrent(rid, status, client);
+};
+
 /// Complex endpoint functions
 // Get report by rid
 export const getReport = async (rid) => {
@@ -404,12 +411,38 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   let closedReport,
     participantIds,
     successfulPayment = true;
-  // First, status is changed outside of any transaction
-  await missionService.updateParticipationStatusByMidAndAdventurer(
-    mission.mid,
-    adventurer.uid,
-    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-  );
+
+  // Early transaction is made ensuring this admins is answering the report without another one doing the same at the same
+  // Time, causing two payments or some inconsistency
+  const earlyClient = await pool.connect();
+  try {
+    await earlyClient.query('BEGIN');
+
+    // Report is updated if it is possible, so is like a block
+    const reportLocked = await reportModel.updateStatusIfCurrent(
+      reportId,
+      REPORT_STATUS.ANSWERED.ID,
+      earlyClient,
+    );
+    if (!reportLocked)
+      throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
+    // Participation is updated
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      mission.mid,
+      adventurer.uid,
+      MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+      earlyClient,
+    );
+
+    await earlyClient.query('COMMIT');
+  } catch (error) {
+    await earlyClient.query('ROLLBACK');
+    throw error;
+  } finally {
+    earlyClient.release();
+  }
+
   // Creates Stripe transfer in its own try and with idempotency key
   try {
     let transfer;
@@ -494,6 +527,8 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
       client.release();
     }
   } catch (stripeError) {
+    // Report is updated to sent status only if Stripe has failed
+    await reportModel.updateStatusIfCurrent(reportId, REPORT_STATUS.SENT.ID);
     // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
     console.error(
       `Stripe Error while paying out vacancy ${vacancy.id}  after an admin accepted adventurer's:`,
@@ -593,6 +628,15 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
     );
   try {
     await client.query('BEGIN');
+    // Report is updated if it is possible, so is like a block
+    const reportLocked = await reportModel.updateStatusIfCurrent(
+      reportId,
+      REPORT_STATUS.ANSWERED.ID,
+      client,
+    );
+    if (!reportLocked)
+      throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
     // First, status is changed to in progress again
     await missionService.updateParticipationStatusByMidAndAdventurer(
       mission.mid,
@@ -699,7 +743,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     }
 
     // Gets adventurer info
-    const adventurer = await userService.getUserByUidOrThro(
+    const adventurer = await userService.getUserByUidOrThrow(
       vacancy.adventurer_id,
     );
 
@@ -732,6 +776,15 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
   let notificationId;
   try {
     await client.query('BEGIN');
+    // Report is updated if it is possible, so is like a block
+    const reportLocked = await reportModel.updateStatusIfCurrent(
+      reportId,
+      REPORT_STATUS.ANSWERED.ID,
+      client,
+    );
+    if (!reportLocked)
+      throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
     // Closes report and associated conversation on db
     ({ report: closedReport, participantIds } =
       await closeReportAndConversation(

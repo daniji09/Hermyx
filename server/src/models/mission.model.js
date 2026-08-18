@@ -53,6 +53,17 @@ export const findByMid = async (mid) => {
   return result.rows[0];
 };
 
+// Get mission by its mid for update
+export const findByMidForUpdate = async (mid, client = pool) => {
+  const query = `SELECT *,  
+    ST_Y(m.location::geometry) as latitude, 
+    ST_X(m.location::geometry) as longitude 
+    FROM mission m WHERE mid = $1
+    FOR UPDATE`;
+  const result = await client.query(query, [mid]);
+  return result.rows[0];
+};
+
 // Get mission by mid excluding an uid
 export const findByMidExcludingUid = async (id, uid) => {
   const query = `SELECT *, 
@@ -417,13 +428,22 @@ export const update = async (missionData, client = pool) => {
 
 // Update mission status
 export const updateStatusByMid = async (mid, status, client = pool) => {
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
+
   const query = `
     UPDATE mission
     SET status = $1
-    WHERE mid = $2
+    WHERE mid = $2 AND status = ANY($3::text[])
     RETURNING *
   `;
-  const result = await client.query(query, [status, mid]);
+  const result = await client.query(query, [
+    status,
+    mid,
+    allowedPreviousStates,
+  ]);
   return result.rows[0];
 };
 

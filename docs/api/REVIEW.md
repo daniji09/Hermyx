@@ -124,7 +124,7 @@ Applicant can review one of their mission's adventurer after they finish
   }
   ```
 
-**Workflow:** after basic checks, review is added to the adventurer and they global rating is updated. Since two applicants could review the same adventurer at the same time, an optimistic transaction is needed, so rating is updated correctly (TODO:).
+**Workflow:** after basic checks, review is added to the adventurer and they global rating is updated. Since two applicants could review the same adventurer at the same time, an optimistic transaction is needed, so rating is updated correctly. A pessimistic concurrency approach is used so 'rating' column in user table is never inconsistent, and, for UX purposes, in this case is better than an optimistic approach.
 <br>
 <br>
 <br>
@@ -199,7 +199,7 @@ Adventurer can review their applicant after finish
   }
   ```
 
-**Workflow:** after basic checks, review is added to the applicant and they global rating is updated. Since two adventurers could review the same applicant at the same time, an optimistic transaction is needed, so rating is updated correctly (TODO:).
+**Workflow:** after basic checks, review is added to the applicant and they global rating is updated. Since two adventurers could review the same applicant at the same time, an optimistic transaction is needed, so rating is updated correctly. A pessimistic concurrency approach is used so 'rating' column in user table is never inconsistent, and, for UX purposes, in this case is better than an optimistic approach.
 <br>
 <br>
 <br>

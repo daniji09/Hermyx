@@ -43,7 +43,7 @@ export const signUpAction = async (previousState, formData) => {
   } catch (error) {
     // If it some controlled error found in server
     if (
-      [400, 500].includes(error.response?.status) &&
+      [400, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
@@ -111,7 +111,7 @@ export const logInAction = async (previousState, formData) => {
   } catch (error) {
     // Controlled errors thrown from backend
     if (
-      [400, 401, 500].includes(error.response?.status) &&
+      [400, 401, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
@@ -172,7 +172,7 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
   } catch (error) {
     // If it some controlled error found in server
     if (
-      [400, 500].includes(error.response?.status) &&
+      [400, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {

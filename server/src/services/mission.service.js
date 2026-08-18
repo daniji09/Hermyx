@@ -45,6 +45,12 @@ export const getMissionByIdOrThrow = async (mid) => {
   return mission;
 };
 
+export const getMissionByIdForUpdateOrThrow = async (mid, pool) => {
+  const mission = await missionModel.findByMidForUpdate(mid, pool);
+  if (!mission) throw buildMissionNotFoundError();
+  return mission;
+};
+
 // Get mission participation by id
 const getMissionParticipationById = async (id, client) => {
   checkRequired(id, 'Mission participation id');
@@ -59,6 +65,17 @@ const getMissionParticipationById = async (id, client) => {
 
 export const getMissionParticipationByIdOrThrow = async (id) => {
   const missionParticipation = await getMissionParticipationById(id);
+  if (!missionParticipation)
+    throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+  return missionParticipation;
+};
+
+export const getMissionParticipationByIdForUpdateOrThrow = async (
+  id,
+  client,
+) => {
+  const missionParticipation =
+    await missionParticipationModel.findByIdForUpdate(id, client);
   if (!missionParticipation)
     throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
   return missionParticipation;
@@ -96,9 +113,12 @@ export const getMissionPaymentByMid = async (mid) => {
 };
 
 // Gets all waiting for payment participants by mission
-export const getAllWaitingForPaymentByMid = async (mid) => {
+export const getAllWaitingForPaymentByMid = async (mid, client) => {
   checkRequired(mid, 'Mission id');
-  return await missionParticipationModel.findAllWaitingForPaymentByMid(mid);
+  return await missionParticipationModel.findAllWaitingForPaymentByMid(
+    mid,
+    client,
+  );
 };
 
 // Create mission payment
@@ -1543,6 +1563,15 @@ export const banMission = async (user, mid, rid, reason) => {
   const participations =
     await missionParticipationModel.findAllOccupiedByMid(mid);
   const successfulPayments = [];
+
+  // Report is updated if it is possible, so is like a block
+  const reportLocked = await reportService.updateStatusIfCurrent(
+    rid,
+    REPORT_STATUS.ANSWERED.ID,
+  );
+  if (!reportLocked)
+    throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
   // If mission is cancelled, payment is sent to every vacancy
   if (!isDeleting) {
     const stripePromises = participations.map(async (vacancy) => {
@@ -1561,7 +1590,7 @@ export const banMission = async (user, mid, rid, reason) => {
             description: `mission_banned`,
             transfer_group: `mission_${mid}`,
           };
-          const idempotencyKey = `ban_${mid}_vac_${vacancy.id}`;
+          const idempotencyKey = `ban_${mid}`;
 
           // Makes transfer with idempotency key
           const transfer = await paymentProvider.createTransfer(
@@ -1608,6 +1637,11 @@ export const banMission = async (user, mid, rid, reason) => {
           }
         }
       } catch (stripeError) {
+        // Report is updated to sent status only if Stripe has failed
+        await reportService.updateStatusIfCurrent(
+          rid,
+          REPORT_STATUS.ANSWERED.ID,
+        );
         // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
         console.error(
           `Stripe Error while paying out vacancy ${vacancy.id} due to mission ban compensation:`,
@@ -1782,52 +1816,14 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   const payments = await missionPaymentModel.findAllByVacancyId(vacancyId);
   const isCancellable = payments.length > 0;
 
-  // First transaction to kick adventurer out of mission
-  const prepClient = await pool.connect();
-  try {
-    await prepClient.query('BEGIN');
+  // Report is updated if it is possible, so is like a block
+  const reportLocked = await reportService.updateStatusIfCurrent(
+    rid,
+    REPORT_STATUS.ANSWERED.ID,
+  );
+  if (!reportLocked)
+    throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
 
-    // Unjoin user
-    const unjoin = await missionParticipationModel.unjoinParticipant(
-      mission.mid,
-      vacancy.adventurer_id,
-      prepClient,
-    );
-    if (unjoin < 1)
-      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
-
-    // Updates mission
-    const unjoinMission = await missionModel.updateOccupiedVacancies(
-      mission.mid,
-      -1,
-      prepClient,
-    );
-    if (unjoinMission.length < 1)
-      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
-
-    let newStatus;
-    // If mission is cancellable, refund will be made
-    if (isCancellable) {
-      await missionParticipationModel.updatePaymentStatusById(
-        vacancyId,
-        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
-        prepClient,
-      );
-      newStatus = MISSION_STATUS.REOPENED.ID;
-    } else newStatus = MISSION_STATUS.OPENED.ID;
-    // If there is no other user joined, mission is opened again
-    const occupied_vacancies =
-      await missionParticipationModel.findAllOccupiedByMid(mid, prepClient);
-    if (occupied_vacancies.length === 0)
-      await missionModel.updateStatusByMid(mid, newStatus, prepClient);
-
-    await prepClient.query('COMMIT');
-  } catch (error) {
-    await prepClient.query('ROLLBACK');
-    throw error;
-  } finally {
-    prepClient.release();
-  }
   let refundSuccessful = true;
   // If cancel, refunds are prepared
   if (isCancellable) {
@@ -1890,6 +1886,11 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
           receiptClient.release();
         }
       } catch (stripeError) {
+        // Report is updated to sent status only if Stripe has failed
+        await reportService.updateStatusIfCurrent(
+          rid,
+          REPORT_STATUS.ANSWERED.ID,
+        );
         // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
         console.error(
           `Stripe Error while refunding out vacancy ${vacancy.id} due to adventurer kicked out:`,
@@ -1902,7 +1903,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   }
 
   // Transaction for final updates and notifications
-  const finalClient = await pool.connect();
+  const client = await pool.connect();
   let ownerNotificationId, advNotificationId;
   let reportClosed;
   let messageOwner = messages.NOTIFICATION.KICK_ADVENTURER_OUT.TO_OWNER(
@@ -1913,7 +1914,41 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
     messages.NOTIFICATION.KICK_ADVENTURER_OUT.TO_ADVENTURER(mission.title);
 
   try {
-    await finalClient.query('BEGIN');
+    await client.query('BEGIN');
+
+    // Unjoin user
+    const unjoin = await missionParticipationModel.unjoinParticipant(
+      mission.mid,
+      vacancy.adventurer_id,
+      client,
+    );
+    if (unjoin < 1)
+      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
+
+    // Updates mission
+    const unjoinMission = await missionModel.updateOccupiedVacancies(
+      mission.mid,
+      -1,
+      client,
+    );
+    if (unjoinMission.length < 1)
+      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
+
+    let newStatus;
+    // If mission is cancellable, refund will be made
+    if (isCancellable) {
+      await missionParticipationModel.updatePaymentStatusById(
+        vacancyId,
+        MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+        client,
+      );
+      newStatus = MISSION_STATUS.REOPENED.ID;
+    } else newStatus = MISSION_STATUS.OPENED.ID;
+    // If there is no other user joined, mission is opened again
+    const occupied_vacancies =
+      await missionParticipationModel.findAllOccupiedByMid(mid, client);
+    if (occupied_vacancies.length === 0)
+      await missionModel.updateStatusByMid(mid, newStatus, client);
 
     // If cancel, participation and mission are updated
     if (isCancellable) {
@@ -1922,18 +1957,18 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
         await missionParticipationModel.refundBannedVacancy(
           vacancyId,
           vacancy.monetary_reward,
-          finalClient,
+          client,
         );
 
       // Updates total payment on mission
       const occupied_vacancies =
-        await missionParticipationModel.findAllOccupiedByMid(mid, finalClient);
+        await missionParticipationModel.findAllOccupiedByMid(mid, client);
       const newTotal =
         occupied_vacancies.reduce(
           (sum, v) => sum + Number(v.monetary_reward),
           0,
         ) * HERMYX_FEE || 0;
-      await updateMissionPayment(mission.mid, newTotal, finalClient);
+      await updateMissionPayment(mission.mid, newTotal, client);
 
       messageOwner += ` Their reward is being refunded to you.`;
     }
@@ -1944,7 +1979,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
       REPORT_DECISION.KICK_ADVENTURER_OUT.ID,
       reason,
       user.uid,
-      finalClient,
+      client,
     );
     if (!reportClosed)
       throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
@@ -1964,7 +1999,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
           associated_vacancy_id: vacancyId,
         },
       },
-      finalClient,
+      client,
     );
 
     // Notifies adventurer
@@ -1982,15 +2017,15 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
           associated_vacancy_id: vacancyId,
         },
       },
-      finalClient,
+      client,
     );
 
-    await finalClient.query('COMMIT');
+    await client.query('COMMIT');
   } catch (error) {
-    await finalClient.query('ROLLBACK');
+    await client.query('ROLLBACK');
     throw error;
   } finally {
-    finalClient.release();
+    client.release();
   }
 
   // Notifications sends and conversations closures
@@ -2660,7 +2695,7 @@ const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
   if (hasDuplicate)
     throw new AppError(
       messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
-      400,
+      409,
       'title',
     );
 };
@@ -2724,11 +2759,13 @@ export const expelBannedAdventurerFromMission = async (
   mission,
   user,
   admin,
+  rid,
 ) => {
   // Parameter checks
   checkRequired(mission, 'Mission');
   checkRequired(user, 'User');
   checkRequired(admin, 'Admin');
+  checkRequired(rid, 'Report id');
 
   let notificationId, notificationMessage;
   // If mission is not closed
@@ -2754,7 +2791,7 @@ export const expelBannedAdventurerFromMission = async (
         client,
       );
       if (unjoinMission.length < 1)
-        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND);
+        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
 
       // Chooses message
       notificationMessage = messages.NOTIFICATION.BAN_USER.OPENED_MISSION(
@@ -2879,10 +2916,12 @@ export const expelBannedAdventurerFromMission = async (
           await receiptClient.query('COMMIT');
         } catch (dbError) {
           await receiptClient.query('ROLLBACK');
+          // Report is updated to sent status only if Stripe has failed
+          await reportService.updateStatusIfCurrent(rid, REPORT_STATUS.SENT.ID);
           refundSuccessful = true;
           // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
           console.error(
-            `FATAL DB ERROR: a refund from ${mission.vacancy_id} after monetary reward lowered but DB failed`,
+            `FATAL DB ERROR: a refund from ${mission.vacancy_id} after monetary user banned but DB failed`,
             dbError,
           );
         } finally {
@@ -2895,7 +2934,7 @@ export const expelBannedAdventurerFromMission = async (
       // If a Stripe payment fails error should be saved in a log to fix it as soon as possible
       refundSuccessful = true;
       console.error(
-        `Stripe Error when refunding vacancy ${mission.vacancy_id} due to monetary reward lowered:`,
+        `Stripe Error when refunding vacancy ${mission.vacancy_id} due to user banned:`,
         stripeError.message,
       );
     }

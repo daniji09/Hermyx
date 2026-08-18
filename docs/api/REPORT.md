@@ -328,7 +328,7 @@ Decision to accept adventurer's work is taken, closing report; used for particip
 
 <br>
 
-**Workflow:** when admins are checking participation reports, one possible decision is to accept's the adventurer's work, finishing participation of adventurer in mission, paying them and closing report and its associated conversation. Since there is a payout, same mechanism is used as in the rest of the functions, payment is first made in Stripe outside of the transaction but in a own try so, if it fails, it can be logged and tried later (not implemented); then, database changes are made in a transaction, and, if something fails, it can be also logged to fix the inconsistency.
+**Workflow:** when admins are checking participation reports, one possible decision is to accept's the adventurer's work, finishing participation of adventurer in mission, paying them and closing report and its associated conversation. Since there is a payout, same mechanism is used as in the rest of the functions, payment is first made in Stripe outside of the transaction but in a own try so, if it fails, it can be logged and tried later (not implemented); then, database changes are made in a transaction, and, if something fails, it can be also logged to fix the inconsistency. Since this operation implies a money transaction and implies a report, the following mechanism is used: report is locked by updating it to 'answered' state, then `Stripe` transaction is done, and, after that, all operations left are done inside a database transaction. If Stripe transaction fails, report block is reverted, otherwise it will still be standing even if anything else fails, so a database inconsistency is expected.
 <br>
 <br>
 <br>
@@ -399,7 +399,7 @@ Decision to reject adventurer's work is taken, closing report; used for particip
 
 <br>
 
-**Workflow:** when admins are checking participation reports, one possible decision is to reject's the adventurer's work, changing participation to be in progress again and closing report and associated conversation.
+**Workflow:** when admins are checking participation reports, one possible decision is to reject's the adventurer's work, changing participation to be in progress again and closing report and associated conversation. Report locked mechanism is used as a optimistic concurrency approach, changing status to 'answered' at the first moment of the transaction so any other admin is unable to change it at the same time.
 <br>
 <br>
 <br>
@@ -470,7 +470,7 @@ Decision to dismiss report, used for mission, user or adventurer reports
 
 <br>
 
-**Workflow:** when admins are checking user, mission or adventurer reports, they can dismiss the report, doing nothing and finishing that report.
+**Workflow:** when admins are checking user, mission or adventurer reports, they can dismiss the report, doing nothing and finishing that report. Report locked mechanism is used as a optimistic concurrency approach, changing status to 'answered' at the first moment of the transaction so any other admin is unable to change it at the same time.
 <br>
 <br>
 <br>

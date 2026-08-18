@@ -30,6 +30,7 @@ _> Note: `password` and `confirmPassword` must match._
   ```
 
 - `400 Bad Request`: fields validation error, missing fields, logic conflicts as: username or email already exists.
+
   ```json
   {
     "errors": {
@@ -37,9 +38,20 @@ _> Note: `password` and `confirmPassword` must match._
     }
   }
   ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
   <br>
 
-**Workflow:** the sign up process takes place entirely on the backend, handling data received from the frontend. After verifying that the username and email address do not already exist in the Hermyx database, the system checks that the email is not present in Firebase either. Subsequently, the user is created first in Firebase and then in the Hermyx database, correctly storing the user's Firebase UID. This approach eliminates the need for database transactions, though compensatory transactions in Firebase may be used.
+**Workflow:** the sign up process takes place entirely on the backend, handling data received from the frontend. After verifying that the username and email address do not already exist in the Hermyx database, the system checks that the email is not present in Firebase either. Subsequently, the user is created first in Firebase and then in the Hermyx database, correctly storing the user's Firebase UID. This approach eliminates the need for database transactions, though compensatory transactions in Firebase may be used. Additionally, there are two unique indexes in database, one for username and another for the email, that allow to no use transactions for concurrency purposes, since one of any two users that want to sign up using the same username/email at the same will collide with the indexes and won't be able to sign up.
 <br>
 <br>
 <br>
@@ -125,6 +137,7 @@ Registration made with Google is synced in Hermyx.
   ```
 
 - `400 Bad Request`: fields validation error, missing fields.
+
   ```json
   {
     "errors": {
@@ -132,6 +145,17 @@ Registration made with Google is synced in Hermyx.
     }
   }
   ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
   <br>
 
-**Workflow:** previously, the system attempted to determine on both, the frontend and backend, whether the operation was a login or a signup. This caused two major issues: first, it could stall the process when the Google pop-up appeared; second, an endpoint that allowed any registered user to delete another user was needed, representing a critical security flaw. Now, the frontend simply handles the Google registration via Firebase and passes the information to the backend, which checks if the user already exists (treating it as a login) or creates the user if they do not (treating it as a signup). While database transactions are not required in this scenario, compensatory transactions with Firebase are; in fact, one of these frontend compensatory transactions was the root cause of that problematic endpoint. However, the current approach handles failures, whether during signup or login, by ​​simply logging the user out on the frontend. The next time the user attempts to sync with Google, the backend detects whether or not the user was actually created in the Hermyx database.
+**Workflow:** previously, the system attempted to determine on both, the frontend and backend, whether the operation was a login or a signup. This caused two major issues: first, it could stall the process when the Google pop-up appeared; second, an endpoint that allowed any registered user to delete another user was needed, representing a critical security flaw. Now, the frontend simply handles the Google registration via Firebase and passes the information to the backend, which checks if the user already exists (treating it as a login) or creates the user if they do not (treating it as a signup). While database transactions are not required in this scenario, compensatory transactions with Firebase are; in fact, one of these frontend compensatory transactions was the root cause of that problematic endpoint. However, the current approach handles failures, whether during signup or login, by ​​simply logging the user out on the frontend. The next time the user attempts to sync with Google, the backend detects whether or not the user was actually created in the Hermyx database. Additionally, there are two unique indexes in database, one for username and another for the email, that allow to no use transactions for concurrency purposes, since one of any two users that want to sign up using the same username/email at the same will collide with the indexes and won't be able to sign up.

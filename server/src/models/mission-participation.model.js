@@ -33,6 +33,18 @@ export const findById = async (vacancyId, client = pool) => {
   return result.rows[0] || null;
 };
 
+// Get participation by id for update
+export const findByIdForUpdate = async (vacancyId, client = pool) => {
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE id = $1
+    FOR UPDATE
+  `;
+  const result = await client.query(query, [vacancyId]);
+  return result.rows[0] || null;
+};
+
 // Finds by mid and adventurer id
 export const findByMidAndAdventurerId = async (mid, adventurerId) => {
   const query = `
@@ -88,10 +100,10 @@ export const findMissionPaymentByMid = async (mid) => {
 };
 
 // Gets waiting for payment participants
-export const findAllWaitingForPaymentByMid = async (mid) => {
+export const findAllWaitingForPaymentByMid = async (mid, client = pool) => {
   const query =
     'SELECT * FROM mission_participation WHERE status = $1 AND payment_status IN ($2, $3) AND mid = $4';
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
     MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
     MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
@@ -165,8 +177,14 @@ export const update = async (mid, vacancy, client = pool) => {
 
 // Update mission participation status
 export const updateStatus = async (id, status, client = pool) => {
-  const query = 'UPDATE mission_participation SET status = $1 WHERE id = $2';
-  const result = await client.query(query, [status, id]);
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
+
+  const query =
+    'UPDATE mission_participation SET status = $1 WHERE id = $2 AND status = ANY($3::text[])';
+  const result = await client.query(query, [status, id, allowedPreviousStates]);
   return result.rowCount;
 };
 
@@ -177,13 +195,23 @@ export const updateStatusByMidAndAdventurer = async (
   status,
   client = pool,
 ) => {
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
+
   const query = `
     UPDATE mission_participation
     SET status = $3
-    WHERE mid = $1 AND adventurer_id = $2
+    WHERE mid = $1 AND adventurer_id = $2 AND status = ANY($4::text[])
     RETURNING *
   `;
-  const result = await client.query(query, [mid, adventurerId, status]);
+  const result = await client.query(query, [
+    mid,
+    adventurerId,
+    status,
+    allowedPreviousStates,
+  ]);
   return result.rows[0] || null;
 };
 
@@ -194,21 +222,30 @@ export const updatePaymentStatusById = async (id, status, client = pool) => {
   return result.rowCount;
 };
 
-// Unjoin vacancy
+// Update adventurer and status
 export const updateAdventurerAndStatus = async (
   id,
   adventurerId,
   status,
   client = pool,
 ) => {
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
   const query = `
     UPDATE mission_participation
     SET adventurer_id = $2, status = $3
-    WHERE id = $1
+    WHERE id = $1 AND status = ANY($4::text[]) 
     RETURNING *
   `;
 
-  const result = await client.query(query, [id, adventurerId, status]);
+  const result = await client.query(query, [
+    id,
+    adventurerId,
+    status,
+    allowedPreviousStates,
+  ]);
   return result.rows[0] || null;
 };
 
@@ -223,7 +260,7 @@ export const updateMonetaryReward = async (
   return result.rows[0];
 };
 
-// UpdateS payment status
+// Updates payment status
 export const updatePaymentStatus = async (id, status, client = pool) => {
   const query =
     'UPDATE mission_participation SET payment_status = $1 WHERE id = $2';

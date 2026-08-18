@@ -13,10 +13,18 @@ export const create = async (email, username, firebaseUid) => {
 
 /// FINDS
 // Get user by uid
-export const findByUid = async (uid) => {
+export const findByUid = async (uid, client = pool) => {
   const query = 'SELECT * FROM app_user WHERE uid = $1';
-  const result = await pool.query(query, [uid]);
+  const result = await client.query(query, [uid]);
   return result.rows[0];
+};
+
+// Get users by uid for update
+export const findAllByUidForUpdate = async (uids, client = pool) => {
+  const query =
+    'SELECT uid FROM app_user WHERE uid = ANY($1::int[]) ORDER BY uid FOR UPDATE';
+  const result = await client.query(query, [uids]);
+  return result.rows;
 };
 
 // Get user by username
@@ -165,7 +173,8 @@ export const updateStripeCustomerIdByUid = async (uid, stripeCustomerId) => {
 
 // Updates user's Stripe connected id
 export const updateStripeConnectedByUid = async (uid, stripeConnectedId) => {
-  const query = 'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2';
+  const query =
+    'UPDATE app_user SET stripe_connected_id = $1 WHERE uid = $2 AND stripe_connected_id IS NULL';
   await pool.query(query, [stripeConnectedId, uid]);
 };
 

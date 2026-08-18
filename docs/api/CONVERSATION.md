@@ -3,7 +3,7 @@
 Manages users conversations into the platform
 <br><br>
 
-## - Get all user's disputes: `GET /api/conversations`
+## - Get all user's conversations: `GET /api/conversations`
 
 Gets all current user's conversations from Hermyx.
 
@@ -56,6 +56,7 @@ Gets current user's conversations unread count.
 **Responses:**
 
 - `200 OK`: search done successfully.
+
   ```json
   {
     "unreadCount": ["<unreadCount>"]
@@ -293,7 +294,7 @@ Creates private conversation between two users
 
   <br>
 
-**Workflow:** creates a conversation between current user and the one specified via request body. A database transaction is needed to create the conversation and add the participants.
+**Workflow:** creates a conversation between current user and the one specified via request body. A database transaction is needed to create the conversation and add the participants. Additionally, to avoid creating the same private conversation between to users at the same time, a pessimistic concurrency approach is taken, where both users are read in the same order and locked, dealing this way both with deadlocks and concurrency problems.
 <br>
 <br>
 

@@ -692,46 +692,52 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
   // If join is accepted
   checkAcceptedResponse(response);
 
-  // Gets participation info
-  const vacancyId = notification.payload.associated_vacancy_id;
-  if (!vacancyId)
-    throw new AppError(
-      messages.NOTIFICATION.GENERAL.NOT_ASSOCIATED_WITH_VACANCY,
-      409,
-    );
-  const vacancy =
-    await missionService.getMissionParticipationByIdOrThrow(vacancyId);
-
-  // Checks if vacancy can be joined
-  checkParticipationTransition(
-    vacancy,
-    MISSION_PARTICIPATION_STATUS.JOINED.ID,
-    messages.GENERAL.NOTIFICATION.CANNOT_JOIN_PARTICIPATION_STATE,
-  );
-
-  // Check if adventurer has already joined the mission
-  const adventurerId =
-    mission.owner_id === notification.sender_id
-      ? notification.recipient_id
-      : notification.sender_id;
-  const alreadyJoined =
-    await missionService.getMissionParticipationByMidAndAdventurerId(
-      mid,
-      adventurerId,
-    );
-  if (alreadyJoined)
-    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
-
-  // Gets adventurer info
-  const adventurer = await userService.getUserByUidOrThrow(adventurerId);
-  if (!adventurer.stripe_connected_id)
-    throw new AppError(
-      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
-      403,
-    );
-
   // Finally, joins mission in a transaction
   const events = await withTransaction(async (client) => {
+    // Gets participation info using pessimistic approach
+    const vacancyId = notification.payload.associated_vacancy_id;
+    if (!vacancyId)
+      throw new AppError(
+        messages.NOTIFICATION.GENERAL.NOT_ASSOCIATED_WITH_VACANCY,
+        409,
+      );
+    const vacancy =
+      await missionService.getMissionParticipationByIdForUpdateOrThrow(
+        vacancyId,
+        client,
+      );
+
+    // Checks if vacancy can be joined
+    checkParticipationTransition(
+      vacancy,
+      MISSION_PARTICIPATION_STATUS.JOINED.ID,
+      messages.NOTIFICATION.GENERAL.CANNOT_JOIN_PARTICIPATION_STATE,
+    );
+
+    // Check if adventurer has already joined the mission
+    const adventurerId =
+      mission.owner_id === notification.sender_id
+        ? notification.recipient_id
+        : notification.sender_id;
+    const alreadyJoined =
+      await missionService.getMissionParticipationByMidAndAdventurerId(
+        mid,
+        adventurerId,
+      );
+    if (alreadyJoined)
+      throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+
+    // Gets adventurer info
+    const adventurer = await userService.getUserByUidOrThrow(
+      adventurerId,
+      client,
+    );
+    if (!adventurer.stripe_connected_id)
+      throw new AppError(
+        messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+        403,
+      );
+
     // Updates participation to joined
     const joinedVacancy =
       await missionService.updateParticipationAdventurerAndStatus(
@@ -1147,13 +1153,6 @@ const persistNegotiationPaymentChanges = async (
 ) => {
   // If the new offer is lower than the reward, a refund is needed
   if (participation.monetary_reward > newOffer) {
-    // Updates participation payment status to partially refunded
-    await missionService.updateMissionParticipationPaymentStatus(
-      participation.id,
-      MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
-      client,
-    );
-
     // For every Stripe refund
     for (const { amount, payment, refund } of refunds) {
       // Updates payment refunded amount

@@ -30,18 +30,23 @@ export const createUser = async (email, username, firebaseUid) => {
 };
 
 // Gets user by uid
-const getUserByUid = async (uid) => {
+const getUserByUid = async (uid, client) => {
   checkRequired(uid, 'User id');
 
   // Gets user by uid
-  const user = await userModel.findByUid(uid);
+  const user = await userModel.findByUid(uid, client);
   return user;
 };
 
-export const getUserByUidOrThrow = async (uid) => {
-  const user = await getUserByUid(uid);
+export const getUserByUidOrThrow = async (uid, client) => {
+  const user = await getUserByUid(uid, client);
   if (!user) throw new AppError(messages.USER.GENERAL.USER_NOT_FOUND, 404);
   return user;
+};
+
+export const getUsersByUidForUpdate = async (uids, client) => {
+  checkRequired(uids, 'User ids');
+  return await userModel.findAllByUidForUpdate(uids, client);
 };
 
 // Gets user by username
@@ -526,6 +531,51 @@ export const banUser = async (uid, rid, reason, admin) => {
     }
   }
 
+  // Report is updated if it is possible, so is like a block
+  const reportLocked = await reportService.updateStatusIfCurrent(
+    rid,
+    REPORT_STATUS.ANSWERED.ID,
+  );
+  if (!reportLocked)
+    throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
+  // Then, mission info is cleared
+  try {
+    // Clears all active missions using a map of promises
+    const activeMissions = await missionService.getUserActiveMissions(uid);
+    const cleanupPromises = activeMissions.map((mission) => {
+      if (mission.owner_id === uid) {
+        // If user is owner, it just cancel them
+        return missionService.cancelMission(mission.mid, user, true);
+      } else {
+        // Otherwise, it expels them from the mission
+        return missionService.expelBannedAdventurerFromMission(
+          mission,
+          user,
+          admin,
+          rid,
+        );
+      }
+    });
+
+    // Then all promises are resolved
+    const results = await Promise.allSettled(cleanupPromises);
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(
+          `Error in mission ${activeMissions[index].mid}:`,
+          result.reason,
+        );
+      }
+    });
+    // Clears all active disputes
+  } catch (missionCleanupError) {
+    console.error(
+      `Error cleaning up missions for banned user ${uid}:`,
+      missionCleanupError,
+    );
+  }
+
   // After user is unable to log in, they are banned in database and report is closed
   const client = await pool.connect();
   let reportClosed;
@@ -560,42 +610,6 @@ export const banUser = async (uid, rid, reason, admin) => {
     throw new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500);
   } finally {
     client.release();
-  }
-
-  // Finally, mission info is cleared
-  try {
-    // Clears all active missions using a map of promises
-    const activeMissions = await missionService.getUserActiveMissions(uid);
-    const cleanupPromises = activeMissions.map((mission) => {
-      if (mission.owner_id === uid) {
-        // If user is owner, it just cancel them
-        return missionService.cancelMission(mission.mid, user, true);
-      } else {
-        // Otherwise, it expels them from the mission
-        return missionService.expelBannedAdventurerFromMission(
-          mission,
-          user,
-          admin,
-        );
-      }
-    });
-
-    // Then all promises are resolved
-    const results = await Promise.allSettled(cleanupPromises);
-    results.forEach((result, index) => {
-      if (result.status === 'rejected') {
-        console.error(
-          `Error in mission ${activeMissions[index].mid}:`,
-          result.reason,
-        );
-      }
-    });
-    // Clears all active disputes
-  } catch (missionCleanupError) {
-    console.error(
-      `Error cleaning up missions for banned user ${uid}:`,
-      missionCleanupError,
-    );
   }
 
   // And conversation closure

@@ -362,6 +362,7 @@ export const messages = {
       ALREADY_ANSWERED: `Can't answer a report that has been already answered.`,
       VACANCY_NOT_DISPUTED: `This vacancy is not disputed currently.`,
       APPLICANT_ALREADY_REPORTED: `You already have an active report for this applicant. Our team is checking it.`,
+      BEING_ANSWERED: `Another administrator is answering this report, please check it again.`,
     },
     REPORT_ADVENTURER: {
       ACTIVE_REPORT: `You already have an active report for this adventurer. Our team is checking it.`,

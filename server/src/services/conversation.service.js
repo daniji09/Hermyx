@@ -224,20 +224,33 @@ export const createPrivateConversation = async (currentUserId, otherUserId) => {
     );
   }
 
-  // Checks user exists
-  await userService.getUserByUidOrThrow(otherUserId);
-
-  // Checks if conversation already exists, if it does, it just simply returns it
-  const existingConversation = await conversationModel.findPrivateConversation(
-    currentUserId,
-    otherUserId,
-  );
-  if (existingConversation) return existingConversation;
-
   // If it doesn't, creation is done via a database transaction
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Blocks users for pessimistic concurrency
+    const sortedIds = [currentUserId, otherUserId].sort(); // Sorts them so it always block the first user, avoiding deadlocks
+    const usersLocked = await userService.getUsersByUidForUpdate(
+      sortedIds,
+      client,
+    );
+
+    // Checks if both users actually exists
+    if (usersLocked.length !== 2) {
+      throw new AppError(messages.USER.GENERAL.USER_NOT_FOUND, 404);
+    }
+
+    // Checks if conversation already exists, if it does, it just simply returns it
+    const existingConversation =
+      await conversationModel.findPrivateConversation(
+        currentUserId,
+        otherUserId,
+      );
+    if (existingConversation) {
+      await client.query('ROLLBACK'); // Rollback that unlocks users and stops transactions
+      return existingConversation;
+    }
+
     // Creates conversation
     const conversation = await conversationModel.create(
       'private',

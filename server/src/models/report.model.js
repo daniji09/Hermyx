@@ -323,3 +323,22 @@ export const close = async (
   );
   return result.rows[0];
 };
+
+// Updates status depending on current one, used for concurrency
+export const updateStatusIfCurrent = async (rid, status, client = pool) => {
+  const result = await client.query(
+    `UPDATE report
+       SET status = $1
+       WHERE rid = $2 AND status = $3
+       RETURNING *`,
+    [
+      REPORT_STATUS.ANSWERED.ID,
+      rid,
+      status,
+      status === REPORT_STATUS.ANSWERED.ID
+        ? REPORT_STATUS.SENT.ID
+        : REPORT_STATUS.ANSWERED.ID,
+    ],
+  );
+  return result.rows[0];
+};
