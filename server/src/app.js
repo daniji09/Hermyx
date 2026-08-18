@@ -11,6 +11,7 @@ export const corsOptions = {
     'http://localhost:5173',
     'https://hermyx-git-dev-deploy-daniji09s-projects.vercel.app',
     'https://hermyx-git-main-daniji09s-projects.vercel.app',
+    'https://hermyx.vercel.app',
   ],
 };
 
