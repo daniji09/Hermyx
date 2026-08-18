@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { messages } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({ uid: 41, username: 'notified_hero' }));
@@ -158,12 +159,14 @@ describe('Notification API', () => {
 
   it('maps notification service errors through the shared handler', async () => {
     notificationService.markMyNotificationAsSeen.mockRejectedValue(
-      new AppError('Notification not found.', 404),
+      new AppError(messages.NOTIFICATION.GENERAL.NOT_FOUND, 404),
     );
 
     const response = await request(app).post('/api/notifications/999/seen');
 
     expect(response.status).toBe(404);
-    expect(response.body.errors.general).toEqual(['Notification not found.']);
+    expect(response.body.errors.general).toEqual([
+      messages.NOTIFICATION.GENERAL.NOT_FOUND,
+    ]);
   });
 });

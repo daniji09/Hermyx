@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { messages } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({
@@ -232,14 +233,14 @@ describe('Payment API', () => {
 
   it('maps payment service failures with the shared error handler', async () => {
     paymentService.listCards.mockRejectedValue(
-      new AppError('Stripe customer not found.', 404),
+      new AppError(messages.GENERAL.STRIPE_CUSTOMER_ERROR, 404),
     );
 
     const response = await request(app).get('/api/stripe/cards');
 
     expect(response.status).toBe(404);
     expect(response.body.errors.general).toEqual([
-      'Stripe customer not found.',
+      messages.GENERAL.STRIPE_CUSTOMER_ERROR,
     ]);
   });
 });

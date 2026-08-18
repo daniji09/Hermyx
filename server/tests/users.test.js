@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { messages } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({
@@ -239,12 +240,14 @@ describe('User API', () => {
 
   it('uses the shared error handler for service failures', async () => {
     userService.getMyProfile.mockRejectedValue(
-      new AppError('Profile not available.', 404),
+      new AppError(messages.USER.GENERAL.USER_NOT_FOUND, 404),
     );
 
     const response = await request(app).get('/api/users/me/profile');
 
     expect(response.status).toBe(404);
-    expect(response.body.errors.general).toEqual(['Profile not available.']);
+    expect(response.body.errors.general).toEqual([
+      messages.USER.GENERAL.USER_NOT_FOUND,
+    ]);
   });
 });

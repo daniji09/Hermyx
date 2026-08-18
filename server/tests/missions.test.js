@@ -250,7 +250,7 @@ describe('Mission API', () => {
 
   it('forwards a duplicate mission title error', async () => {
     missionService.publishMission.mockRejectedValue(
-      new AppError(messages.MISSION_SAME_TITLE, 400),
+      new AppError(messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE, 400),
     );
 
     const response = await request(app)
@@ -258,7 +258,9 @@ describe('Mission API', () => {
       .send(missionPayload);
 
     expect(response.status).toBe(400);
-    expect(response.body.errors.general).toEqual([messages.MISSION_SAME_TITLE]);
+    expect(response.body.errors.general).toEqual([
+      messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
+    ]);
   });
 
   it('closes a mission', async () => {
@@ -274,24 +276,28 @@ describe('Mission API', () => {
 
   it('rejects closing a mission by a non-owner', async () => {
     missionService.closeMission.mockRejectedValue(
-      new AppError(messages.UNAUTHORIZED_ERROR, 403),
+      new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403),
     );
 
     const response = await request(app).post('/api/missions/6/close');
 
     expect(response.status).toBe(403);
-    expect(response.body.errors.general).toEqual([messages.UNAUTHORIZED_ERROR]);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.UNAUTHORIZED_ERROR,
+    ]);
   });
 
   it('returns not found when closing a missing mission', async () => {
     missionService.closeMission.mockRejectedValue(
-      new AppError(messages.MISSION_NOT_FOUND, 404),
+      new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404),
     );
 
     const response = await request(app).post('/api/missions/999/close');
 
     expect(response.status).toBe(404);
-    expect(response.body.errors.general).toEqual([messages.MISSION_NOT_FOUND]);
+    expect(response.body.errors.general).toEqual([
+      messages.MISSION.GENERAL.MISSION_NOT_FOUND,
+    ]);
   });
 
   it('sends a join request', async () => {
@@ -351,7 +357,6 @@ describe('Mission API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
-      message: messages.MISSION_PART_SUBMITTED_SUCCESSFULLY,
       participation,
     });
     expect(missionService.submitMissionParticipation).toHaveBeenCalledWith(
@@ -397,12 +402,14 @@ describe('Mission API', () => {
 
   it('forwards mission service errors through the API error contract', async () => {
     missionService.getMissionByMid.mockRejectedValue(
-      new AppError(messages.MISSION_NOT_FOUND, 404),
+      new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404),
     );
 
     const response = await request(app).get('/api/missions/999');
 
     expect(response.status).toBe(404);
-    expect(response.body.errors.general).toEqual([messages.MISSION_NOT_FOUND]);
+    expect(response.body.errors.general).toEqual([
+      messages.MISSION.GENERAL.MISSION_NOT_FOUND,
+    ]);
   });
 });

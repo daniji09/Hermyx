@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { messages } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({ uid: 51, username: 'chat_hero' }));
@@ -171,14 +172,14 @@ describe('Conversation API', () => {
 
   it('maps conversation access errors through the shared handler', async () => {
     conversationService.getConversation.mockRejectedValue(
-      new AppError('Conversation access forbidden.', 403),
+      new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403),
     );
 
     const response = await request(app).get('/api/conversations/4');
 
     expect(response.status).toBe(403);
     expect(response.body.errors.general).toEqual([
-      'Conversation access forbidden.',
+      messages.GENERAL.UNAUTHORIZED_ERROR,
     ]);
   });
 });
