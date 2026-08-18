@@ -4,7 +4,7 @@ import {
   getMissionByIdQueryOptions,
   inviteToMissionMutationOptions,
 } from './../queries/MissionsQueries';
-import { searchUsersByUsernameQueryOptions } from '../queries/UsersQueries';
+import { searchUsersByUsernameInfiniteQueryOptions } from '../queries/UsersQueries';
 import {
   Card,
   CardContent,
@@ -67,17 +67,22 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { consts, messages as messagesShared } from '@hermyx/shared';
-import { Map } from '../components/custom/Map';
 import {
-  MISSION_LIFE_CYCLE,
-  VACANCY_LIFE_CYCLE,
-} from '@hermyx/shared/utils/missions.utils';
+  consts,
+  messages as messagesShared,
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+} from '@hermyx/shared';
+import { Map } from '../components/custom/Map';
 import { reportMissionAction } from '../actions/ReportActions';
-import { initialStateUseStateAction } from './../consts/consts';
+import {
+  initialStateUseStateAction,
+  PAGINATION_LIMIT,
+} from './../consts/consts';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getImageUrl } from '../utils/media';
 
 export const Mission = () => {
   // Mission id
@@ -103,7 +108,6 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
-  console.log(mission);
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
@@ -245,17 +249,17 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <CardFooter>
                 <>
                   {isCreator ? (
-                    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID ||
+                    mission.status === MISSION_STATUS.CLOSED.ID ||
                     mission.waitingForPaymentVacancies.length > 0 ? (
                       <PayMissionButton mission={mission}></PayMissionButton>
-                    ) : mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID ? (
+                    ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID ? (
                       <MissionOwnerStatusMessage status={mission.status} />
                     ) : (
                       <p className='text-muted-foreground bg-muted/20'>
                         {messages.MISSION.MISSION_CLOSED}
                       </p>
                     )
-                  ) : mission.status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID &&
+                  ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID &&
                     currentParticipation ? (
                     <SubmitParticipationButton
                       missionId={mission.mid}
@@ -271,13 +275,13 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     </p>
                   )}
                   {isCreator &&
-                    (mission.status === MISSION_LIFE_CYCLE.OPENED.ID ||
-                      mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) && (
+                    (mission.status === MISSION_STATUS.OPENED.ID ||
+                      mission.status === MISSION_STATUS.REOPENED.ID) && (
                       <CloseMissionButton
                         mission={mission}
                       ></CloseMissionButton>
                     )}
-                  {isCreator && MISSION_LIFE_CYCLE[mission.status].CAN_EDIT && (
+                  {isCreator && MISSION_STATUS[mission.status].CAN_EDIT && (
                     <Button asChild>
                       <Link to={`/missions/${mission.mid}/edit`}>
                         Edit mission
@@ -285,19 +289,17 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     </Button>
                   )}
                   {isCreator &&
-                    (MISSION_LIFE_CYCLE[mission.status].CAN_DELETE ||
-                      MISSION_LIFE_CYCLE[mission.status].CAN_CANCEL) && (
+                    (MISSION_STATUS[mission.status].CAN_DELETE ||
+                      MISSION_STATUS[mission.status].CAN_CANCEL) && (
                       <CancelMissionButton mission={mission} />
                     )}
                   {isCreator &&
-                    MISSION_LIFE_CYCLE[
-                      mission.status
-                    ].VALID_NEXT_STATES.includes(
-                      MISSION_LIFE_CYCLE.REOPENED.ID,
+                    MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+                      MISSION_STATUS.REOPENED.ID,
                     ) && <ReopenMissionButton mission={mission} />}
                   {isCreator &&
                     mission.canFinish &&
-                    mission.status !== MISSION_LIFE_CYCLE.FINISHED.ID && (
+                    mission.status !== MISSION_STATUS.FINISHED.ID && (
                       <FinishMissionButton mission={mission} />
                     )}
                   {mission.conversation_id && (
@@ -312,7 +314,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     </Button>
                   )}
                   {!isCreator &&
-                    mission.status !== MISSION_LIFE_CYCLE.REPORTED.ID && (
+                    mission.status !== MISSION_STATUS.REPORTED.ID && (
                       <ReportMissionButton mission={mission} />
                     )}
                 </>
@@ -333,23 +335,14 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   );
 };
 
-const canReviewParticipant = (participant) => {
-  return (
-    !!participant.adventurer_id &&
-    [
-      VACANCY_LIFE_CYCLE.ACCEPTED.ID,
-      VACANCY_LIFE_CYCLE.IN_DISPUTE.ID,
-      VACANCY_LIFE_CYCLE.RELEASED.ID,
-    ].includes(participant.status)
-  );
-};
-
 const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
   const isAssigned = !!vacancy.adventurer_id;
   const [reviewDialogType, setReviewDialogType] = useState(null);
   const isAssignedToUser = vacancy.adventurer_id === currentUser?.id;
-  const canReviewAdventurer = isCreator && canReviewParticipant(vacancy);
-  const canReviewOwner = isAssignedToUser && canReviewParticipant(vacancy);
+  const canReviewAdventurer =
+    isCreator && MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_REVIEW;
+  const canReviewOwner =
+    isAssignedToUser && MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_REVIEW;
   const hasOwnerReview = !!vacancy.owner_review_id;
   const hasAdventurerReview = !!vacancy.adventurer_review_id;
 
@@ -382,7 +375,7 @@ const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
           <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
             <Avatar size='md' className='h-full w-full'>
               <AvatarImage
-                src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${vacancy.avatar}`}
+                src={getImageUrl(vacancy.avatar)}
                 alt={`${vacancy.username} avatar`}
                 className='h-full w-full object-cover'
               />
@@ -552,7 +545,7 @@ const ViewVacancyDialog = ({
 
           {!isCreator &&
             isAssignedToUser &&
-            mission.status !== MISSION_LIFE_CYCLE.IN_PROGRESS.ID && (
+            mission.status !== MISSION_STATUS.IN_PROGRESS.ID && (
               <UnjoinMissionButton
                 missionId={mission.mid}
                 vacancyId={vacancy.vacancy_id}
@@ -622,10 +615,9 @@ const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
 
   return (
     <div className='flex flex-wrap items-center gap-2 pt-1'>
-      {isCreator &&
-        MISSION_LIFE_CYCLE[mission.status].CAN_ACCEPT_ADVENTURERS && (
-          <AddAdventurerButton onClick={onAddAdventurer} />
-        )}
+      {isCreator && MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS && (
+        <AddAdventurerButton onClick={onAddAdventurer} />
+      )}
       {(mission.participants || []).map((participant) => (
         <ParticipantRow
           key={participant.vacancy_id}
@@ -643,7 +635,7 @@ const ParticipantRow = ({ participant }) => {
         <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
           {participant.avatar ? (
             <img
-              src={participant.avatar}
+              src={getImageUrl(participant.avatar)}
               alt={`${participant.username} avatar`}
               className='h-full w-full object-cover'
             />
@@ -712,9 +704,9 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
       return;
     }
 
-    if (comment.length > consts.MISSION.REVIEW.COMMENT_MAX_LENGTH) {
+    if (comment.length > consts.REVIEW.COMMENT_MAX_LENGTH) {
       setErrorMessage(
-        `Comment must be shorter than ${consts.MISSION.REVIEW.COMMENT_MAX_LENGTH} characters.`,
+        `Comment must be shorter than ${consts.REVIEW.COMMENT_MAX_LENGTH} characters.`,
       );
       return;
     }
@@ -737,7 +729,7 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
           </DialogDescription>
         </DialogHeader>
 
-        <form id='reviewAdventurerForm' onSubmit={handleSubmit}>
+        <form id='reviewAdventurerForm' onSubmit={handleSubmit} noValidate>
           <div className='space-y-4'>
             <div className='space-y-2'>
               <label htmlFor='adventurerRating' className='text-sm font-medium'>
@@ -746,9 +738,9 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
               <Input
                 id='adventurerRating'
                 type='number'
-                min={consts.MISSION.REVIEW.RATING_MIN}
-                max={consts.MISSION.REVIEW.RATING_MAX}
-                step={consts.MISSION.REVIEW.RATING_STEP}
+                min={consts.REVIEW.RATING_MIN}
+                max={consts.REVIEW.RATING_MAX}
+                step={consts.REVIEW.RATING_STEP}
                 value={rating}
                 onChange={(event) => setRating(Number(event.target.value))}
               />
@@ -761,12 +753,12 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
               <Textarea
                 id='adventurerReview'
                 value={comment}
-                maxLength={consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                maxLength={consts.REVIEW.COMMENT_MAX_LENGTH}
                 onChange={(event) => setComment(event.target.value)}
                 rows={5}
               />
               <p className='text-xs text-muted-foreground'>
-                {comment.length}/{consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                {comment.length}/{consts.REVIEW.COMMENT_MAX_LENGTH}
               </p>
             </div>
 
@@ -845,9 +837,9 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
       return;
     }
 
-    if (comment.length > consts.MISSION.REVIEW.COMMENT_MAX_LENGTH) {
+    if (comment.length > consts.REVIEW.COMMENT_MAX_LENGTH) {
       setErrorMessage(
-        `Comment must be shorter than ${consts.MISSION.REVIEW.COMMENT_MAX_LENGTH} characters.`,
+        `Comment must be shorter than ${consts.REVIEW.COMMENT_MAX_LENGTH} characters.`,
       );
       return;
     }
@@ -870,7 +862,7 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
           </DialogDescription>
         </DialogHeader>
 
-        <form id='reviewOwnerForm' onSubmit={handleSubmit}>
+        <form id='reviewOwnerForm' onSubmit={handleSubmit} noValidate>
           <div className='space-y-4'>
             <div className='space-y-2'>
               <label htmlFor='ownerRating' className='text-sm font-medium'>
@@ -879,9 +871,9 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
               <Input
                 id='ownerRating'
                 type='number'
-                min={consts.MISSION.REVIEW.RATING_MIN}
-                max={consts.MISSION.REVIEW.RATING_MAX}
-                step={consts.MISSION.REVIEW.RATING_STEP}
+                min={consts.RATING_MIN}
+                max={consts.REVIEW.RATING_MAX}
+                step={consts.REVIEW.RATING_STEP}
                 value={rating}
                 onChange={(event) => setRating(Number(event.target.value))}
               />
@@ -894,12 +886,12 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
               <Textarea
                 id='ownerReview'
                 value={comment}
-                maxLength={consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                maxLength={consts.REVIEW.COMMENT_MAX_LENGTH}
                 onChange={(event) => setComment(event.target.value)}
                 rows={5}
               />
               <p className='text-xs text-muted-foreground'>
-                {comment.length}/{consts.MISSION.REVIEW.COMMENT_MAX_LENGTH}
+                {comment.length}/{consts.REVIEW.COMMENT_MAX_LENGTH}
               </p>
             </div>
 
@@ -925,6 +917,11 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
 };
 
 const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
+  // Query options
+  const retryOption = (failureCount, error) => {
+    if (error.response?.status === 404) return false; // So Axios won't try to search again the data if there is none
+    return failureCount < 3;
+  };
   const queryClient = useQueryClient();
   const [username, setUsername] = useState('');
   const [foundUsers, setFoundUsers] = useState([]);
@@ -966,9 +963,16 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
     setErrorMessage('');
 
     try {
-      const users = await queryClient.fetchQuery(
-        searchUsersByUsernameQueryOptions(trimmedUsername),
+      const data = await queryClient.fetchInfiniteQuery(
+        searchUsersByUsernameInfiniteQueryOptions(
+          PAGINATION_LIMIT.MISSIONS,
+          { username: trimmedUsername },
+          {
+            retry: retryOption,
+          },
+        ),
       );
+      const users = data?.pages.flatMap((page) => page.users);
       setFoundUsers(users);
       if (users.length === 0) {
         setErrorMessage('No adventurer found with that username.');
@@ -1007,7 +1011,11 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
 
         <div className='min-w-0'>
           {!selectedUser ? (
-            <form onSubmit={handleSearch} className='flex flex-col gap-4'>
+            <form
+              onSubmit={handleSearch}
+              className='flex flex-col gap-4'
+              noValidate
+            >
               <label
                 htmlFor='searchAdventurerByUsername'
                 className='text-sm font-medium text-slate-900'
@@ -1374,7 +1382,7 @@ const CloseMissionButton = ({ mission }) => {
   // Interceptor
   const handleAttempt = () => {
     // This action needs confirmation
-    if (mission.status === MISSION_LIFE_CYCLE.REOPENED.ID) {
+    if (mission.status === MISSION_STATUS.REOPENED.ID) {
       showAlert({
         title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
         description:
@@ -1452,10 +1460,10 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 
   const isSubmitted =
     participationStatus &&
-    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID;
+    participationStatus !== MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID;
   const buttonLabel =
     participationStatus &&
-    participationStatus !== VACANCY_LIFE_CYCLE.IN_PROGRESS.ID
+    participationStatus !== MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID
       ? getParticipationStatusLabel(participationStatus)
       : 'Submit my part';
 
@@ -1472,7 +1480,7 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
 };
 
 const MissionOwnerStatusMessage = ({ status }) => {
-  if (status === MISSION_LIFE_CYCLE.IN_PROGRESS.ID) {
+  if (status === MISSION_STATUS.IN_PROGRESS.ID) {
     return (
       <p className='text-muted-foreground bg-muted/20'>
         Waiting for adventurers to submit their participation.
@@ -1499,13 +1507,13 @@ const PayMissionButton = ({ mission }) => {
   const { showAlert } = useAlert();
   const navigate = useNavigate();
   const text =
-    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID
+    mission.status === MISSION_STATUS.CLOSED.ID
       ? 'Start mission'
       : 'Pay mission';
 
   // Interceptor
   const handleAttempt = () => {
-    mission.status === MISSION_LIFE_CYCLE.CLOSED.ID
+    mission.status === MISSION_STATUS.CLOSED.ID
       ? // This action needs confirmation
         showAlert({
           title: messages.MISSION.START_MISSION_ALERT.TITLE,
@@ -1550,7 +1558,7 @@ const CancelMissionButton = ({ mission }) => {
     // This action needs confirmation
     showAlert({
       title: messages.MISSION.CANCEL_MISSION_ALERT.TITLE,
-      description: MISSION_LIFE_CYCLE[mission.status].CAN_DELETE
+      description: MISSION_STATUS[mission.status].CAN_DELETE
         ? messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_DELETE
         : messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_CANCEL,
       variant: 'warning',
@@ -1801,10 +1809,4 @@ const getParticipationStatusLabel = (status) => {
   }
 
   return messages.MISSION.STATUS_LABELS[status] || status.replaceAll('_', ' ');
-};
-
-const getImageUrl = (photoPath) => {
-  if (photoPath.startsWith('http')) return photoPath;
-  // Adjusts "/uploads/" so it calls the actual backend
-  return `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${photoPath}`;
 };

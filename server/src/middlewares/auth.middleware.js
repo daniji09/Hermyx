@@ -1,9 +1,8 @@
-import { messages } from '@hermyx/shared';
-import { verifyIdToken } from '../services/auth.service.js';
-import { getByFirebaseUid } from '../models/app_user.model.js';
-import { CRON_SECRET_TOKEN } from '../config/config.js';
-import { USER_ROLE, USER_STATUS } from '@hermyx/shared/utils/users.utils.js';
+import { messages, USER_ROLE, USER_STATUS } from '@hermyx/shared';
+import { verifyIdToken } from '../providers/auth.provider.js';
+import * as userService from '../services/user.service.js';
 
+// Verifies logged in user token
 export const verifyToken = async (req, res, next) => {
   try {
     // ID token is retrieved
@@ -13,7 +12,7 @@ export const verifyToken = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res
         .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+        .json({ errors: { general: [messages.GENERAL.UNAUTHORIZED_ERROR] } });
     }
 
     // ID token is retrieved
@@ -23,28 +22,31 @@ export const verifyToken = async (req, res, next) => {
     const decodedToken = await verifyIdToken(token, true);
 
     // User and token are saved
-    req.user = await getByFirebaseUid(decodedToken.uid);
+    req.user = await userService.getUserByFirebaseUid(decodedToken.uid);
     req.firebaseToken = decodedToken;
 
     if (!req.user) {
       return res
         .status(401)
-        .json({ errors: { general: [messages.UNAUTHORIZED_ERROR] } });
+        .json({ errors: { general: [messages.GENERAL.UNAUTHORIZED_ERROR] } });
     }
 
     if (req.user.status === USER_STATUS.BANNED.ID) {
       return res
         .status(403)
-        .json({ errors: { general: [messages.FORBIDDEN_BAN_USER] } });
+        .json({ errors: { general: [messages.GENERAL.FORBIDDEN_BAN_USER] } });
     }
 
     next();
   } catch (error) {
     console.error('Error verifying token:', error);
-    return res.status(403).json({ errors: { general: [messages.FORBIDDEN] } });
+    return res
+      .status(403)
+      .json({ errors: { general: [messages.GENERAL.FORBIDDEN] } });
   }
 };
 
+// Verifies admin token
 export const verifyAdmin = async (req, res, next) => {
   // Firebase token is already checked, so only the admin role is checked
   if (
@@ -56,18 +58,5 @@ export const verifyAdmin = async (req, res, next) => {
 
   return res
     .status(403)
-    .json({ error: 'Access denied. Admin role is needed.' });
-};
-
-export const verifyCronToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const expectedToken = `Bearer ${CRON_SECRET_TOKEN}`;
-
-  if (!authHeader || authHeader !== expectedToken) {
-    return res.status(403).json({
-      error: messages.SYSTEM_FORBIDDEN,
-    });
-  }
-
-  next();
+    .json({ errors: { general: [messages.GENERAL.FORBIDDEN] } });
 };

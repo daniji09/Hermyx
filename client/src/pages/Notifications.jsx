@@ -1,14 +1,19 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { Bell, Check, ShieldAlert, User, X } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AnswerReportDialog } from '@/components/custom/reports/AnswerReportDialog';
 import { useAlert } from '../contexts/AlertContext';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  getMyNotificationsQueryOptions,
+  getMyNotificationsInfiniteQueryOptions,
   markAllNotificationsAsSeenMutationOptions,
   respondToNotificationMutationOptions,
 } from '../queries/NotificationsQueries';
@@ -19,8 +24,9 @@ import {
   NOTIFICATION_KIND,
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
-} from '@hermyx/shared/utils/notifications.utils';
-import { messages as messagesShared } from '@hermyx/shared';
+  messages as messagesShared,
+} from '@hermyx/shared';
+import { PAGINATION_LIMIT } from '../consts/consts';
 
 const getInvitationTitle = (notification) => {
   if (notification.action === 'mission_invite')
@@ -35,10 +41,18 @@ export const Notifications = () => {
   const queryClient = useQueryClient();
   const { setLatestNotification } = useContext(AuthContext);
   const [filter, setFilter] = useState('all');
+  const [disputeNotificationId, setDisputeNotificationId] = useState(null);
   const { showAlert } = useAlert();
 
-  const { data, isLoading, isError } = useQuery(
-    getMyNotificationsQueryOptions({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+  } = useInfiniteQuery(
+    getMyNotificationsInfiniteQueryOptions(PAGINATION_LIMIT.NOTIFICATIONS, {
       onSuccess: () => {
         setLatestNotification(null);
       },
@@ -54,6 +68,11 @@ export const Notifications = () => {
         await queryClient.invalidateQueries({ queryKey: ['getMission'] });
         await queryClient.invalidateQueries({ queryKey: ['getMissions'] });
         await queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+        await queryClient.invalidateQueries({ queryKey: ['getMyDisputes'] });
+        await queryClient.invalidateQueries({
+          queryKey: ['getDisputeUnreadCount'],
+        });
+        setDisputeNotificationId(null);
       },
       onError: (error, variables) => {
         const backendMessage =
@@ -66,9 +85,11 @@ export const Notifications = () => {
 
         showAlert({
           title:
-            variables?.response === 'accepted'
-              ? 'Could not accept invitation'
-              : 'Could not reject invitation',
+            variables?.response === 'disputed'
+              ? 'Could not open dispute'
+              : variables?.response === 'accepted'
+                ? 'Could not accept invitation'
+                : 'Could not reject invitation',
           description: backendMessage,
           ...(mustConfigureBankAccount && {
             variant: 'warning',
@@ -91,10 +112,16 @@ export const Notifications = () => {
     }),
   );
 
-  const notifications = useMemo(() => data?.notifications || [], [data]);
+  const notifications = useMemo(
+    () => data?.pages.flatMap((page) => page.notifications) || [],
+    [data],
+  );
   const unseenCount = useMemo(() => {
-    return notifications.filter((notification) => !notification.seen).length;
-  }, [notifications]);
+    return (
+      data?.pages[0]?.totalUnseen ??
+      notifications.filter((notification) => !notification.seen).length
+    );
+  }, [data, notifications]);
   const filteredNotifications = useMemo(() => {
     if (filter === 'all') return notifications;
     return notifications.filter(
@@ -134,6 +161,18 @@ export const Notifications = () => {
         notification.status === NOTIFICATION_STATUS.PENDING.ID,
     ).length;
   }, [notifications]);
+
+  const openDisputeDialog = (notificationId) => {
+    setDisputeNotificationId(notificationId);
+  };
+
+  const submitDispute = (reason) => {
+    mutate({
+      notificationId: disputeNotificationId,
+      response: 'disputed',
+      message: reason,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -323,14 +362,16 @@ export const Notifications = () => {
                           <Button
                             type='button'
                             variant='outline'
-                            onClick={() =>
-                              mutate({
-                                notificationId: notification.nid,
-                                response: isPendingRevisionResponse
-                                  ? 'disputed'
-                                  : 'rejected',
-                              })
-                            }
+                            onClick={() => {
+                              if (isPendingRevisionResponse) {
+                                openDisputeDialog(notification.nid);
+                              } else {
+                                mutate({
+                                  notificationId: notification.nid,
+                                  response: 'rejected',
+                                });
+                              }
+                            }}
                             disabled={isCurrentNotificationPending}
                           >
                             <X aria-hidden='true' />
@@ -341,10 +382,7 @@ export const Notifications = () => {
                               type='button'
                               variant='destructive'
                               onClick={() =>
-                                mutate({
-                                  notificationId: notification.nid,
-                                  response: 'disputed',
-                                })
+                                openDisputeDialog(notification.nid)
                               }
                               disabled={isCurrentNotificationPending}
                             >
@@ -354,21 +392,81 @@ export const Notifications = () => {
                           )}
                         </div>
                       ) : notification.status ? (
-                        <p className='text-sm font-medium text-muted-foreground'>
-                          Status: {notification.status}
-                        </p>
+                        <div className='flex flex-wrap items-center gap-3'>
+                          <p className='text-sm font-medium text-muted-foreground'>
+                            Status: {notification.status}
+                          </p>
+                          {notification.payload?.associated_report_id && (
+                            <Button
+                              type='button'
+                              variant='outline'
+                              size='sm'
+                              onClick={() =>
+                                navigate(
+                                  `/disputes/${notification.payload.associated_report_id}`,
+                                )
+                              }
+                            >
+                              Open dispute
+                            </Button>
+                          )}
+                        </div>
                       ) : (
-                        <p className='text-sm font-medium text-muted-foreground'>
-                          Informational notification
-                        </p>
+                        <div className='flex flex-wrap items-center gap-3'>
+                          <p className='text-sm font-medium text-muted-foreground'>
+                            Informational notification
+                          </p>
+                          {notification.payload?.associated_report_id && (
+                            <Button
+                              type='button'
+                              variant='outline'
+                              size='sm'
+                              onClick={() =>
+                                navigate(
+                                  `/disputes/${notification.payload.associated_report_id}`,
+                                )
+                              }
+                            >
+                              Open dispute
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </CardContent>
                   </Card>
                 );
               })}
+              {hasNextPage && (
+                <div className='flex justify-center pt-3'>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={() => fetchNextPage()}
+                    disabled={isFetchingNextPage}
+                  >
+                    {isFetchingNextPage
+                      ? 'Loading notifications'
+                      : 'Load more notifications'}
+                  </Button>
+                </div>
+              )}
             </section>
           )}
         </>
+      )}
+      {disputeNotificationId && (
+        <AnswerReportDialog
+          key={disputeNotificationId}
+          open
+          onOpenChange={(open) => {
+            if (!open) setDisputeNotificationId(null);
+          }}
+          title='Open dispute'
+          description='Explain why you disagree. This will be the first message visible to the other participant and the administrator.'
+          confirmText='Open dispute'
+          isPending={isPending}
+          onConfirm={submitDispute}
+        />
       )}
     </main>
   );

@@ -2,8 +2,7 @@ import api from '../config/api';
 
 // Finds mission by id
 export const saveNewCard = async (id) => {
-  const { data } = await api.post('/stripe/pay/new', {
-    mid: id.trim(),
+  const { data } = await api.post(`/stripe/missions/${id.trim()}/pay/new`, {
     saveCard: true,
   });
 
@@ -11,7 +10,7 @@ export const saveNewCard = async (id) => {
 };
 
 export const confirmPayment = async (id, result) => {
-  await api.post(`/stripe/missions/${id.trim()}/confirm-payment`, {
+  await api.post(`/stripe/missions/${id.trim()}/confirm`, {
     paymentIntentId: result.paymentIntent.id,
   });
 };
@@ -28,7 +27,7 @@ export const getSavedCards = async () => {
 };
 
 export const createCardSetupIntent = async () => {
-  const { data } = await api.post('/stripe/add-card-to-customer');
+  const { data } = await api.post('/stripe/cards');
   return data;
 };
 
@@ -41,7 +40,9 @@ export const setDefaultSavedCard = async (paymentMethodId) => {
 };
 
 export const deleteSavedCard = async (paymentMethodId) => {
-  const { data } = await api.delete(`/stripe/cards/${paymentMethodId}`);
+  const { data } = await api.delete(`/stripe/cards`, {
+    data: { paymentMethodId },
+  });
   return data;
 };
 
@@ -51,6 +52,6 @@ export const connectOnBoard = async () => {
 };
 
 export const goToDashboard = async () => {
-  const { data } = await api.post(`/stripe/connect/login-link`);
+  const { data } = await api.post(`/stripe/connect/dashboard-link`);
   return data;
 };

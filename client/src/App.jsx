@@ -20,6 +20,8 @@ import { Conversation } from './pages/Conversation';
 import { Conversations } from './pages/Conversations';
 import { Reports } from './pages/Reports';
 import { Report } from './pages/Report';
+import { Dispute } from './pages/Dispute';
+import { Disputes } from './pages/Disputes';
 
 function App() {
   return (
@@ -59,6 +61,8 @@ function App() {
             element={<Conversation />}
           />
           <Route path='/conversations' element={<Conversations />} />
+          <Route path='/disputes/:id' element={<Dispute />} />
+          <Route path='/disputes' element={<Disputes />} />
         </Route>
 
         {/* --- Admin routes (admin role needed) --- */}

@@ -1,8 +1,8 @@
 import api from '../config/api';
 
-// Creates dispute
-export const disputeAdventurer = async ({ message, mid, vacancyId }) => {
-  const { data } = await api.post(`/reports/dispute/adventurer`, {
+// Reports an adventurer
+export const reportAdventurer = async ({ message, mid, vacancyId }) => {
+  const { data } = await api.post(`/reports/adventurer`, {
     message,
     mid,
     vacancyId,

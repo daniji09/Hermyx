@@ -23,7 +23,6 @@ build
 # ==========================
 # Environment & Secrets
 # ==========================
-# Environment files
 .env
 .env.*
 .env.local
@@ -63,3 +62,8 @@ coverage/
 Thumbs.db
 ehthumbs.db
 .vercel
+
+# ==========================
+# Public Files & Images
+# ==========================
+/server/public/uploads/

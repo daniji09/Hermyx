@@ -1,10 +1,27 @@
 // To load environment variables
 import 'dotenv/config';
 
-// External modules
+// Configuration and packages imports
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
+
+// Middleware imports
+import { verifyToken } from './middlewares/auth.middleware.js';
+import { errorHandler } from './middlewares/error.middleware.js';
+
+// Routes imports
+import authRouter from './routes/auth.route.js';
+import usersRouter from './routes/user.route.js';
+import paymentRouter from './routes/payment.route.js';
+import missionsRouter from './routes/mission.route.js';
+import notificationRouter from './routes/notification.route.js';
+import reviewsRouter from './routes/review.route.js';
+import reportsRouter from './routes/report.route.js';
+import conversationsRouter from './routes/conversation.route.js';
+import disputesRouter from './routes/dispute.route.js';
+
+// Variables and config
 export const corsOptions = {
   // Cors configuration for accepting only allowed urls
   origin: [
@@ -25,23 +42,18 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(staticFiles));
 
-// Application routers
-import usersRouter from './routes/users.router.js';
-import paymentRouter from './routes/payment.router.js';
-import missionsRouter from './routes/missions.router.js';
-import notificationRouter from './routes/notification.router.js';
-import reviewsRouter from './routes/reviews.router.js';
-import reportsRouter from './routes/reports.router.js';
-import { verifyToken } from './middlewares/auth.middleware.js';
-import conversationsRouter from './routes/conversations.router.js';
-
 // Application routes
-app.use('/api/stripe', verifyToken, paymentRouter);
-app.use('/api/users', usersRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/users', verifyToken, usersRouter);
 app.use('/api/missions', verifyToken, missionsRouter);
+app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/notifications', verifyToken, notificationRouter);
 app.use('/api/reviews', verifyToken, reviewsRouter);
 app.use('/api/conversations', verifyToken, conversationsRouter);
 app.use('/api/reports', verifyToken, reportsRouter);
+app.use('/api/disputes', verifyToken, disputesRouter);
+
+// Error handling
+app.use(errorHandler);
 
 export default app;

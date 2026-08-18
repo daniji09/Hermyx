@@ -1,4 +1,4 @@
-import { queryOptions } from '@tanstack/react-query';
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import {
   getMyNotifications,
   markAllNotificationsAsSeen,
@@ -6,13 +6,25 @@ import {
   respondToNotification,
 } from '../services/NotificationsServices';
 
-export const getMyNotificationsQueryOptions = (options) => {
+export const getMyNotificationsQueryOptions = (limit, options) => {
   return queryOptions({
-    queryKey: ['getMyNotifications'],
-    queryFn: getMyNotifications,
+    queryKey: ['getMyNotifications', 'preview', limit],
+    queryFn: () => getMyNotifications(1, limit),
     ...options,
   });
 };
+
+export const getMyNotificationsInfiniteQueryOptions = (limit, options) =>
+  infiniteQueryOptions({
+    queryKey: ['getMyNotifications', 'infinite', limit],
+    queryFn: ({ pageParam }) => getMyNotifications(pageParam, limit),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.hasMore
+        ? lastPage.pagination.currentPage + 1
+        : undefined,
+    ...options,
+  });
 
 export const respondToNotificationMutationOptions = (options) => {
   return {

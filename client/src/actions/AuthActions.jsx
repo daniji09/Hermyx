@@ -2,14 +2,14 @@ import {
   addEmailAuthenticationSchema,
   logInSchema,
   signUpSchema,
+  messages,
 } from '@hermyx/shared';
-import { messages } from '@hermyx/shared';
+import { addEmailAuthentication } from '../services/UsersServices';
 import {
-  addEmailAuthentication,
   createUser,
-  getUserByUsername,
-} from '../services/UsersServices';
-import { firebaseSignIn } from '../services/AuthServices';
+  login,
+  signInWithCustomToken,
+} from '../services/AuthServices';
 
 // Sign up action, executed when form is sent
 export const signUpAction = async (previousState, formData) => {
@@ -34,7 +34,7 @@ export const signUpAction = async (previousState, formData) => {
     if (!success)
       throw {
         errors: {
-          general: [messages.COULD_NOT_CREATE_NEW_ACCOUNT],
+          general: [messages.AUTH.SIGNUP.COULD_NOT_CREATE_NEW_ACCOUNT],
         },
       };
 
@@ -43,7 +43,7 @@ export const signUpAction = async (previousState, formData) => {
   } catch (error) {
     // If it some controlled error found in server
     if (
-      [400, 500].includes(error.response?.status) &&
+      [400, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
@@ -94,20 +94,24 @@ export const logInAction = async (previousState, formData) => {
 
   // API call
   try {
-    // If username is provided, its email is searched
-    if (fieldsData.username) {
-      const user = await getUserByUsername(fieldsData.username);
-      fieldsData.email = user.email;
-    }
+    // Logins user in Hermyx and retrieves Firebase token
+    const data = await login(fieldsData);
 
-    // Log In is done on client with Firebase
-    await firebaseSignIn(fieldsData.email, fieldsData.password);
+    // Uses Firebase token for login
+    const success = await signInWithCustomToken(data.token);
+
+    if (!success)
+      throw {
+        errors: {
+          general: [messages.COULD_NOT_LOG_IN],
+        },
+      };
 
     return { success: true };
   } catch (error) {
     // Controlled errors thrown from backend
     if (
-      [400, 404, 500].includes(error.response?.status) &&
+      [400, 401, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
@@ -168,7 +172,7 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
   } catch (error) {
     // If it some controlled error found in server
     if (
-      [400, 500].includes(error.response?.status) &&
+      [400, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {

@@ -39,8 +39,7 @@ import {
 } from '../queries/UsersQueries';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { AuthContext } from '../contexts/AuthContext';
-import { consts } from '@hermyx/shared';
-import { messages as messagesShared } from '@hermyx/shared';
+import { consts, messages as messagesShared } from '@hermyx/shared';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { StripeManagement } from '../components/custom/StripeManagement';
@@ -49,6 +48,7 @@ import { deleteUser } from '../services/UsersServices';
 import { useNavigate } from 'react-router-dom';
 import { messages } from '../messages/messages';
 import { Map } from '../components/custom/Map';
+import { getImageUrl } from '../utils/media';
 import {
   Dialog,
   DialogClose,
@@ -100,6 +100,7 @@ export const MyProfile = () => {
     }),
   );
   const profileUser = data?.user;
+
   const reviewsEnabled =
     !!profileUser?.username &&
     profileUser.configuration?.show_missions_to_others !== false;
@@ -111,7 +112,7 @@ export const MyProfile = () => {
     isLoading: isReviewsLoading,
   } = useInfiniteQuery(
     getUserReviewsInfiniteQueryOptions(
-      profileUser?.username,
+      profileUser?.uid,
       PAGINATION_LIMIT.REVIEWS,
       {
         enabled: reviewsEnabled,
@@ -195,12 +196,24 @@ const ProfileAvatar = ({ user }) => {
   const fileInputRef = useRef(null);
   const queryClient = useQueryClient();
   const { showAlert } = useAlert();
+  const { setCurrentUser } = useContext(AuthContext);
 
   // Mutation for changing avatar
   const { mutate, isPending } = useMutation(
     updateMyAvatarMutationOptions({
-      onSuccess: () => {
+      onSuccess: ({ avatar }) => {
+        setCurrentUser((currentUser) =>
+          currentUser ? { ...currentUser, avatar } : currentUser,
+        );
+        queryClient.setQueryData(['getMyProfile'], (currentData) =>
+          currentData
+            ? { ...currentData, user: { ...currentData.user, avatar } }
+            : currentData,
+        );
         queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
+        queryClient.invalidateQueries({ queryKey: ['conversationMessages'] });
+        queryClient.invalidateQueries({ queryKey: ['getMission'] });
+        queryClient.invalidateQueries({ queryKey: ['getPublicUserProfile'] });
       },
       onError: (error) => {
         showAlert({
@@ -238,7 +251,7 @@ const ProfileAvatar = ({ user }) => {
     >
       <Avatar size='profile' className='h-full w-full'>
         <AvatarImage
-          src={`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}${user.avatar}`}
+          src={getImageUrl(user.avatar)}
           alt={`${user.username} avatar`}
           className='h-full w-full object-cover'
         />

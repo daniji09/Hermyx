@@ -1,7 +1,7 @@
 import { createContext, useEffect, useRef, useState } from 'react';
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
-import { getUserByFirebaseUid } from '../services/UsersServices';
+import { getMe } from '../services/UsersServices';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { createSocketConnection } from '../services/SocketService';
@@ -39,13 +39,13 @@ export const AuthProvider = ({ children }) => {
           const tokenResult = await firebaseUser.getIdTokenResult();
           const userIsAdmin = !!tokenResult.claims.admin;
           setIsAdmin(userIsAdmin);
-          hermyxUser = await getUserByFirebaseUid(firebaseUser.uid);
-
+          hermyxUser = await getMe();
           setCurrentUser({
             firebaseUid: firebaseUser.uid,
             email: firebaseUser.email,
             id: hermyxUser.uid,
             username: hermyxUser.username,
+            avatar: hermyxUser.avatar,
             isAdmin: userIsAdmin,
           });
         } catch (e) {
@@ -97,18 +97,47 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
-        socketRef.current.on('conversation:message-received', () => {
-          queryClient.invalidateQueries({
-            queryKey: ['getUnreadMessageCount'],
-          });
-          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+        socketRef.current.on('conversation:message-received', (payload) => {
+          if (payload.conversationType === 'dispute') {
+            queryClient.invalidateQueries({
+              queryKey: ['getDisputeUnreadCount'],
+            });
+            queryClient.invalidateQueries({ queryKey: ['getMyDisputes'] });
+            if (payload.reportId) {
+              queryClient.invalidateQueries({
+                queryKey: ['getDispute', String(payload.reportId)],
+              });
+            }
+            queryClient.invalidateQueries({ queryKey: ['getReports'] });
+          } else {
+            queryClient.invalidateQueries({
+              queryKey: ['getUnreadMessageCount'],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ['getMyConversations'],
+            });
+          }
         });
 
-        socketRef.current.on('conversation:closed', (payload) => {
+        socketRef.current.on('conversation:closed', () => {
           queryClient.invalidateQueries({
-            queryKey: ['getConversation', String(payload.conversationId)],
+            queryKey: ['getConversation'],
           });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyDisputes'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getDisputeUnreadCount'],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getReports'] });
+        });
+
+        socketRef.current.on('report:created', () => {
+          queryClient.invalidateQueries({ queryKey: ['getReports'] });
+        });
+
+        socketRef.current.on('report:updated', () => {
+          queryClient.invalidateQueries({ queryKey: ['getReports'] });
+          queryClient.invalidateQueries({ queryKey: ['getReport'] });
         });
 
         socketRef.current.on('mission:participation-submitted', (payload) => {

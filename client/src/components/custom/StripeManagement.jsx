@@ -161,7 +161,7 @@ export const StripeManagement = ({ user }) => {
     setErrors({});
     deleteSavedCardMutation.mutate(paymentMethodId);
   };
-  console.log(user);
+
   return (
     <Card asChild>
       <section id='payment-settings' className='p-4 sm:p-6 mt-6'>

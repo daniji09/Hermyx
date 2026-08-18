@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
+import { getImageUrl } from '../utils/media';
 import {
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
@@ -40,7 +41,7 @@ export const PublicProfile = () => {
   const { username } = useParams();
   const navigate = useNavigate();
   const { currentUser } = useContext(AuthContext);
-  const [filter, setFilter] = useState('created');
+  const [filter, setFilter] = useState('published');
   const [messageError, setMessageError] = useState('');
   const isOwnProfile =
     username?.toLowerCase() === currentUser?.username?.toLowerCase();
@@ -79,6 +80,7 @@ export const PublicProfile = () => {
       },
     ),
   );
+  const user = profileData?.user;
 
   const {
     data: reviewsPagesData,
@@ -87,13 +89,12 @@ export const PublicProfile = () => {
     fetchNextPage: fetchNextReviewsPage,
     isLoading: isReviewsLoading,
   } = useInfiniteQuery(
-    getUserReviewsInfiniteQueryOptions(username, PAGINATION_LIMIT.REVIEWS, {
+    getUserReviewsInfiniteQueryOptions(user?.uid, PAGINATION_LIMIT.REVIEWS, {
       retry: retryOption,
-      enabled: !!username && !isOwnProfile && !!profileData?.missionsVisible,
+      enabled: !!user?.uid && !isOwnProfile && !!profileData?.missionsVisible,
     }),
   );
 
-  const user = profileData?.user;
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
@@ -148,7 +149,7 @@ export const PublicProfile = () => {
         <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
           {user.avatar ? (
             <img
-              src={user.avatar}
+              src={getImageUrl(user.avatar)}
               alt={`${user.username} avatar`}
               className='h-full w-full object-cover'
             />
@@ -213,17 +214,17 @@ export const PublicProfile = () => {
         </section>
       ) : (
         <Tabs
-          defaultValue='created'
+          defaultValue='published'
           value={filter}
           onValueChange={setFilter}
           className='w-full'
         >
           <TabsList className='mb-8 grid w-full max-w-100 grid-cols-2'>
-            <TabsTrigger value='created'>Created</TabsTrigger>
+            <TabsTrigger value='published'>Published</TabsTrigger>
             <TabsTrigger value='joined'>Joined</TabsTrigger>
           </TabsList>
 
-          <TabsContent value='created' className='mt-0'>
+          <TabsContent value='published' className='mt-0'>
             <MissionSearchContainer
               missions={missions}
               hasNextPage={hasNextPage}
@@ -231,7 +232,7 @@ export const PublicProfile = () => {
               fetchNextPage={fetchNextPage}
               isLoading={isMissionsLoading}
               isError={isMissionsError}
-              noMissionsMessage='This user has not created missions yet.'
+              noMissionsMessage='This user has not published missions yet.'
             />
           </TabsContent>
 

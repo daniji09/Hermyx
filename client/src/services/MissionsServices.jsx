@@ -68,8 +68,6 @@ export const createMission = async (missionData) => {
     formData.append('longitude', missionData.longitude);
   if (missionData.latitude) formData.append('latitude', missionData.latitude);
 
-  formData.append('isDraft', Boolean(missionData.status === 'draft'));
-
   // Adds photos as files
   if (missionData.photos && missionData.photos.length > 0) {
     missionData.photos.forEach((photoObj) => {
@@ -128,7 +126,7 @@ export const editMission = async (missionData) => {
           : [rawPhotos];
       }
     } catch (error) {
-      console.error('Error al desempaquetar existingPhotos:', error);
+      console.error(error);
       existingPhotosArray = [];
     }
 
@@ -152,7 +150,7 @@ export const editMission = async (missionData) => {
       }
     });
   }
-  const response = await api.post(`/missions/${missionData.mid}`, formData);
+  const response = await api.put(`/missions/${missionData.mid}`, formData);
 
   return response.data;
 };
@@ -169,7 +167,7 @@ export const joinMission = async (mid, vacancyId, message = '') => {
 
 // Unjoin mission
 export const unjoinMission = async (mid, vacancyId) => {
-  const { data } = await api.delete(`/missions/${mid}/unjoin`, {
+  const { data } = await api.post(`/missions/${mid}/unjoin`, {
     data: { vacancyId },
   });
 
@@ -182,8 +180,7 @@ export const inviteToMission = async ({
   vacancyId,
   message,
 }) => {
-  const { data } = await api.post('/missions/invite', {
-    missionId,
+  const { data } = await api.post(`/missions/${missionId}/invite`, {
     receiverId,
     vacancyId,
     message,

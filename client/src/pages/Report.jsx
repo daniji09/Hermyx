@@ -7,21 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useActionState, useEffect, useRef, useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose,
-} from '@/components/ui/dialog';
-import {
-  REPORT_DECISION,
-  REPORT_TYPE,
-} from '@hermyx/shared/utils/reports.utils.js';
+import { REPORT_DECISION, REPORT_TYPE, REPORT_STATUS } from '@hermyx/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { getReportByIdQueryOptions } from '../queries/ReportQueries';
@@ -30,18 +16,27 @@ import { Button } from '@/components/ui/button';
 import { useAlert } from '../contexts/AlertContext';
 import { messages } from '../messages/messages';
 import { banMission, kickAdventurerOut } from '../services/MissionsServices';
-import { REPORT_STATUS } from './../../../shared/utils/reports.utils';
 import { banUser } from '../services/UsersServices';
 import {
   acceptAdventurersWork,
   dismiss,
   rejectAdventurersWork,
 } from '../services/ReportsServices';
-import { FormTextareaField } from '../components/custom/form/FormTextareaField';
-import { consts } from '@hermyx/shared';
-import { FormAlert } from '../components/custom/form/FormAlert';
-import { answerReportAction } from '../actions/ReportActions';
-import { initialStateUseStateAction } from '../consts/consts';
+import { ConversationThread } from './Conversation';
+import { AnswerReportDialog } from '../components/custom/reports/AnswerReportDialog';
+
+const invalidateResolvedReportQueries = (queryClient, report) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['getReport'] }),
+    queryClient.invalidateQueries({ queryKey: ['getReports'] }),
+    queryClient.invalidateQueries({ queryKey: ['getMyDisputes'] }),
+    queryClient.invalidateQueries({ queryKey: ['getDisputeUnreadCount'] }),
+    report.conversation_id
+      ? queryClient.invalidateQueries({
+          queryKey: ['getConversation'],
+        })
+      : Promise.resolve(),
+  ]);
 
 export const Report = () => {
   // Report id
@@ -118,7 +113,10 @@ const ReportError = ({ isError, children }) => {
 
 const ReportContent = ({ report }) => {
   if (!report) return null;
-  console.log(report);
+  const isDispute =
+    report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ||
+    report.type === REPORT_TYPE.REVIEW_DISPUTE.ID ||
+    report.type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID;
   return (
     <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
       <Card asChild className='justify-between'>
@@ -138,6 +136,11 @@ const ReportContent = ({ report }) => {
               </h1>
             </CardTitle>
             <CardDescription>{`Status: ${report.status}`}</CardDescription>
+            {report.needs_admin_attention && (
+              <CardDescription className='font-semibold text-destructive'>
+                Needs admin attention
+              </CardDescription>
+            )}
             <CardAction>
               <p>{timestampToDayMonthYear(report.date)}</p>
             </CardAction>
@@ -192,6 +195,14 @@ const ReportContent = ({ report }) => {
           </article>
         </Card>
       )}
+      {isDispute && report.conversation_id && (
+        <ConversationThread
+          conversationId={report.conversation_id}
+          showBack={false}
+          title='Dispute conversation'
+          description='Mission owner, adventurer and administration'
+        />
+      )}
     </section>
   );
 };
@@ -203,7 +214,7 @@ const BanUserButton = ({ report }) => {
     mutationFn: (reason) =>
       banUser(report.payload.associated_user_id, report.rid, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getReport']);
+      void invalidateResolvedReportQueries(queryClient, report);
     },
     // Backend error handling
     onError: (error) => {
@@ -238,7 +249,7 @@ const BanMissionButton = ({ report }) => {
     mutationFn: (reason) =>
       banMission(report.payload.associated_mission_id, report.rid, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getReport']);
+      void invalidateResolvedReportQueries(queryClient, report);
     },
     // Backend error handling
     onError: (error) => {
@@ -278,7 +289,7 @@ const KickAdventurerOutButton = ({ report }) => {
         reason,
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getReport']);
+      void invalidateResolvedReportQueries(queryClient, report);
     },
     // Backend error handling
     onError: (error) => {
@@ -312,7 +323,7 @@ const AcceptAdventurersWorkButton = ({ report }) => {
   const { isPending, mutate } = useMutation({
     mutationFn: (reason) => acceptAdventurersWork(report.rid, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getReport']);
+      void invalidateResolvedReportQueries(queryClient, report);
     },
     // Backend error handling
     onError: (error) => {
@@ -350,7 +361,7 @@ const RejectAdventurersWorkButton = ({ report }) => {
   const { isPending, mutate } = useMutation({
     mutationFn: (reason) => rejectAdventurersWork(report.rid, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getReport']);
+      void invalidateResolvedReportQueries(queryClient, report);
     },
     // Backend error handling
     onError: (error) => {
@@ -388,7 +399,7 @@ const DismissButton = ({ report }) => {
   const { isPending, mutate } = useMutation({
     mutationFn: (reason) => dismiss(report.rid, reason),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getReport']);
+      void invalidateResolvedReportQueries(queryClient, report);
     },
     // Backend error handling
     onError: (error) => {
@@ -413,117 +424,5 @@ const DismissButton = ({ report }) => {
         {`Dismiss`}
       </Button>
     </AnswerReportDialog>
-  );
-};
-
-const AnswerReportDialog = ({
-  children,
-  title,
-  description,
-  confirmText,
-  isMutationPending,
-  onConfirm,
-}) => {
-  // Action handling for update email form
-  const [state, answerReportFormAction, isPending] = useActionState(
-    answerReportAction,
-    initialStateUseStateAction,
-  );
-
-  // Logic for cleaning errors in fields or alerts when modifications are done
-  const [clearedFields, setClearedFields] = useState({});
-  const [prevServerState, setPrevServerState] = useState(state);
-  const [isAlertClosed, setIsAlertClosed] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const processedState = useRef(null);
-  const { showAlert } = useAlert();
-
-  // If the state has changed, field errors should be cleared
-  if (state !== prevServerState) {
-    setPrevServerState(state);
-    setClearedFields({});
-    setIsAlertClosed(false);
-    if (state.success) {
-      setIsOpen(false);
-    }
-  }
-
-  // When user changes field's value, the error is not shown until the form is sent again
-  const handleFieldChange = (e) => {
-    const fieldName = e.target.name;
-    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
-  };
-
-  // Effect for success handling
-  useEffect(() => {
-    if (state.success && processedState.current !== state) {
-      processedState.current = state;
-      onConfirm(state.data.data.reason);
-    }
-  }, [state, showAlert, onConfirm]);
-
-  // Handle manual dialog close to reset visual errors
-  const handleOpenChange = (open) => {
-    if (!isPending && !isMutationPending) {
-      setIsOpen(open);
-      if (!open) {
-        setIsAlertClosed(true);
-      }
-    }
-  };
-  return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <form action={answerReportFormAction} id='answerReportForm' noValidate>
-          <div className='space-y-4 py-4'>
-            <div className='space-y-2'>
-              <FormTextareaField
-                id='answerReportReason'
-                name='reason'
-                label='Reason (required):'
-                type='text'
-                maxLength={consts.REPORT.REASON_MESSAGE.MAX}
-                defaultValue={state.data?.reason || ''}
-                error={
-                  !clearedFields.reason && state.errors?.reason
-                    ? state.errors.reason[0]
-                    : undefined
-                }
-                invalid={!clearedFields.reason && !!state.errors?.reason}
-                aria-invalid={!clearedFields.reason && !!state.errors?.reason}
-                required
-                autoComplete='off'
-                disabled={isPending || isMutationPending}
-                onChange={handleFieldChange}
-              />
-            </div>
-            {state.errors?.general && !isAlertClosed && (
-              <FormAlert onClose={() => setIsAlertClosed(true)}>
-                {state.errors.general[0]}
-              </FormAlert>
-            )}
-          </div>
-        </form>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant='outline' type='button'>
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button
-            type='submit'
-            disabled={isPending || isMutationPending}
-            form='answerReportForm'
-          >
-            {isPending || isMutationPending ? 'Processing...' : confirmText}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 };

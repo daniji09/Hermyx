@@ -1,20 +1,17 @@
 import {
   publishMissionSchema,
-  draftMissionSchema,
   searchMissionByTitleSchema,
   addVacanciesSchema,
   editVacancySchema,
   editMissionBodySchema,
+  messages,
 } from '@hermyx/shared';
-
-import { messages } from '@hermyx/shared';
 import { createMission, editMission } from '../services/MissionsServices';
 
 //New mission action, executed when form is sent
 
 export const createMissionAction = async (previousState, formData) => {
   const fieldsData = Object.fromEntries(formData);
-  const intent = formData.get('intent');
 
   // Photos are extracted
   const filesArray = formData.getAll('photos');
@@ -27,14 +24,9 @@ export const createMissionAction = async (previousState, formData) => {
       mimetype: file.type,
       file: file,
     }));
-  let validatedFields;
 
   // Fields validation
-  if (intent === 'draft') {
-    validatedFields = draftMissionSchema.safeParse(fieldsData);
-  } else {
-    validatedFields = publishMissionSchema.safeParse(fieldsData);
-  }
+  const validatedFields = publishMissionSchema.safeParse(fieldsData);
 
   if (!validatedFields.success) {
     return {
@@ -46,19 +38,6 @@ export const createMissionAction = async (previousState, formData) => {
 
   // API call
   try {
-    if (intent === 'draft') {
-      const success = await createMission({
-        ...validatedFields.data,
-        status: 'draft',
-      });
-
-      if (!success) {
-        throw { errors: { general: ['The mission could not be saved.'] } };
-      }
-
-      return { success: true, redirectUrl: null, data: null, errors: {} };
-    }
-
     const success = await createMission({
       ...validatedFields.data,
     });
@@ -142,12 +121,12 @@ export const editMissionAction = async (previousState, formData) => {
     const success = await editMission({
       ...validatedFields.data,
     });
-
+    console.log(success);
     if (!success?.mission?.mid) {
       throw {
         response: {
           status: 500,
-          data: { message: messages.UNEXPECTED_ERROR },
+          data: { message: messages.GENERAL.UNEXPECTED_ERROR },
         },
       };
     }
@@ -156,7 +135,7 @@ export const editMissionAction = async (previousState, formData) => {
       throw {
         response: {
           status: 500,
-          data: { message: messages.UNEXPECTED_ERROR },
+          data: { message: messages.GENERAL.UNEXPECTED_ERROR },
         },
       };
     }

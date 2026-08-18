@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
@@ -18,15 +19,19 @@ import {
   Mail,
   X,
   Menu,
+  MessageSquareWarning,
   User,
 } from 'lucide-react';
 import { consts } from '@hermyx/shared';
 import { useNavigate } from 'react-router-dom';
 import { SearchBar } from './form/SearchBar';
+import { getImageUrl } from '@/utils/media';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useContext, useState } from 'react';
 import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueries';
 import { getUnreadMessageCountQueryOptions } from '../../queries/ConversationsQueries';
+import { getDisputeUnreadCountQueryOptions } from '../../queries/DisputesQueries';
+import { PAGINATION_LIMIT } from '../../consts/consts';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
@@ -34,6 +39,12 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { data: unreadMessageCount = 0 } = useQuery(
     getUnreadMessageCountQueryOptions({
+      enabled: !!currentUser,
+      staleTime: 30000,
+    }),
+  );
+  const { data: unreadDisputeCount = 0 } = useQuery(
+    getDisputeUnreadCountQueryOptions({
       enabled: !!currentUser,
       staleTime: 30000,
     }),
@@ -91,6 +102,10 @@ export function Navbar() {
                 </DropdownMenu>
 
                 <MessagesLink unreadMessageCount={unreadMessageCount} />
+                <DisputesLink
+                  unreadCount={unreadDisputeCount}
+                  isAdmin={currentUser.isAdmin}
+                />
                 <NotificationsButton />
                 <ProfileLink currentUser={currentUser} />
               </>
@@ -162,6 +177,24 @@ export function Navbar() {
                     <Bell className='h-4 w-4' aria-hidden='true' />
                   </span>
                   Notifications
+                </Link>
+                <Link
+                  to={currentUser.isAdmin ? '/reports' : '/disputes'}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                >
+                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                    <MessageSquareWarning
+                      className='h-4 w-4'
+                      aria-hidden='true'
+                    />
+                  </span>
+                  {currentUser.isAdmin ? 'Reports' : 'My disputes'}
+                  {unreadDisputeCount > 0 && (
+                    <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+                      {unreadDisputeCount}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   to='/conversations'
@@ -242,6 +275,30 @@ const MessagesLink = ({ unreadMessageCount }) => {
   );
 };
 
+const DisputesLink = ({ unreadCount, isAdmin }) => (
+  <Button
+    asChild
+    variant='ghost'
+    size='icon'
+    className='rounded-full hover:bg-slate-200/50'
+  >
+    <Link
+      to={isAdmin ? '/reports' : '/disputes'}
+      aria-label={`Go to ${isAdmin ? 'reports' : 'my disputes'}${
+        unreadCount > 0 ? `, ${unreadCount} unread messages` : ''
+      }`}
+      className='relative'
+    >
+      <MessageSquareWarning className='h-5 w-5' aria-hidden='true' />
+      {unreadCount > 0 && (
+        <span className='absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+          {unreadCount}
+        </span>
+      )}
+    </Link>
+  </Button>
+);
+
 const ProfileLink = ({ currentUser }) => {
   return (
     <Button
@@ -250,9 +307,15 @@ const ProfileLink = ({ currentUser }) => {
       className='gap-2 rounded-full px-2 hover:bg-slate-200/50'
     >
       <Link to='/profile' aria-label='Go to my profile'>
-        <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-          <User className='h-4 w-4' aria-hidden='true' />
-        </span>
+        <Avatar className='size-7'>
+          <AvatarImage
+            src={getImageUrl(currentUser.avatar)}
+            alt={`${currentUser.username} avatar`}
+          />
+          <AvatarFallback>
+            <User className='h-4 w-4' aria-hidden='true' />
+          </AvatarFallback>
+        </Avatar>
         <span className='max-w-20 lg:max-w-28 truncate'>
           {currentUser.username}
         </span>
@@ -264,7 +327,7 @@ const ProfileLink = ({ currentUser }) => {
 const NotificationsButton = () => {
   const { latestNotification } = useContext(AuthContext);
   const { data } = useQuery(
-    getMyNotificationsQueryOptions({
+    getMyNotificationsQueryOptions(PAGINATION_LIMIT.NOTIFICATIONS, {
       staleTime: 30000,
     }),
   );
@@ -272,6 +335,7 @@ const NotificationsButton = () => {
   const unseenNotifications = notifications.filter(
     (notification) => !notification.seen,
   );
+  const unseenCount = data?.totalUnseen ?? unseenNotifications.length;
   const previewNotifications = [...unseenNotifications]
     .sort((left, right) => {
       if (left.status === 'pending' && right.status !== 'pending') return -1;
@@ -297,11 +361,11 @@ const NotificationsButton = () => {
           aria-label='Open notifications'
         >
           <Bell className='h-5 w-5' aria-hidden='true' />
-          {(unseenNotifications.length > 0 ||
+          {(unseenCount > 0 ||
             (hasMissionCompletionNotification &&
               !latestNotificationAlreadyPersisted)) && (
             <span className='absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
-              {unseenNotifications.length > 0 ? unseenNotifications.length : 1}
+              {unseenCount > 0 ? unseenCount : 1}
             </span>
           )}
         </Button>
