@@ -3,15 +3,23 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
+import {
+  Camera,
   Edit,
   Info,
   LockKeyhole,
   Mail,
   Save,
+  Star,
   User,
   UserRoundX,
   X,
@@ -26,11 +34,12 @@ import { FormInputField } from '../components/custom/form/FormInputField';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import {
   getMyProfileQueryOptions,
+  updateMyAvatarMutationOptions,
   updateMyProfileMutationOptions,
 } from '../queries/UsersQueries';
+import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { AuthContext } from '../contexts/AuthContext';
-import { consts } from '@hermyx/shared';
-import { messages as messagesShared } from '@hermyx/shared';
+import { consts, messages as messagesShared } from '@hermyx/shared';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { StripeManagement } from '../components/custom/StripeManagement';
@@ -38,7 +47,8 @@ import { useAlert } from '../contexts/AlertContext';
 import { deleteUser } from '../services/UsersServices';
 import { useNavigate } from 'react-router-dom';
 import { messages } from '../messages/messages';
-
+import { Map } from '../components/custom/Map';
+import { getImageUrl } from '../utils/media';
 import {
   Dialog,
   DialogClose,
@@ -49,7 +59,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { initialStateUseStateAction } from '../consts/consts';
+import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import {
   updateEmailAction,
@@ -89,6 +99,26 @@ export const MyProfile = () => {
       },
     }),
   );
+  const profileUser = data?.user;
+
+  const reviewsEnabled =
+    !!profileUser?.username &&
+    profileUser.configuration?.show_missions_to_others !== false;
+  const {
+    data: reviewsPagesData,
+    hasNextPage: hasNextReviewsPage,
+    isFetchingNextPage: isFetchingNextReviewsPage,
+    fetchNextPage: fetchNextReviewsPage,
+    isLoading: isReviewsLoading,
+  } = useInfiniteQuery(
+    getUserReviewsInfiniteQueryOptions(
+      profileUser?.uid,
+      PAGINATION_LIMIT.REVIEWS,
+      {
+        enabled: reviewsEnabled,
+      },
+    ),
+  );
 
   if (isLoading) {
     return (
@@ -111,35 +141,43 @@ export const MyProfile = () => {
   }
 
   const user = data.user;
+  const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
 
   return (
     <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
       <ProfileHeader user={user}></ProfileHeader>
       <ProfileInformation data={data}></ProfileInformation>
+      <ProfileReviews
+        reviewsData={reviewsData}
+        isLoading={isReviewsLoading}
+        isPrivate={!reviewsEnabled}
+        hasNextPage={hasNextReviewsPage}
+        isFetchingNextPage={isFetchingNextReviewsPage}
+        fetchNextPage={fetchNextReviewsPage}
+      />
       <ProfileAccessMethods user={user}></ProfileAccessMethods>
-      <ProfilePaymentMethods></ProfilePaymentMethods>
+      <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
       <ProfileConfiguration user={user}></ProfileConfiguration>
       <ProfileDangerZone></ProfileDangerZone>
     </main>
   );
 };
 
+const getReviewsDataFromPages = (pages = []) => {
+  const firstPage = pages[0];
+
+  return {
+    averageRating: firstPage?.averageRating || 0,
+    totalReviews: firstPage?.totalReviews || 0,
+    reviews: pages.flatMap((page) => page.reviews || []),
+  };
+};
+
 const ProfileHeader = ({ user }) => {
   const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
   return (
     <header className='mb-8 flex flex-col gap-6 border-b pb-8 sm:flex-row sm:items-center'>
-      <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
-        <Avatar size='profile'>
-          <AvatarImage
-            src={user.avatar}
-            alt={`${user.username} avatar`}
-            className='h-full w-full object-cover'
-          />
-          <AvatarFallback>
-            <User className='h-12 w-12 text-muted-foreground' />
-          </AvatarFallback>
-        </Avatar>
-      </div>
+      <ProfileAvatar user={user}></ProfileAvatar>
 
       <div className='min-w-0 flex-1'>
         <h1 className='break-all text-3xl font-bold tracking-tight sm:text-4xl'>
@@ -151,6 +189,181 @@ const ProfileHeader = ({ user }) => {
         </p>
       </div>
     </header>
+  );
+};
+
+const ProfileAvatar = ({ user }) => {
+  const fileInputRef = useRef(null);
+  const queryClient = useQueryClient();
+  const { showAlert } = useAlert();
+  const { setCurrentUser } = useContext(AuthContext);
+
+  // Mutation for changing avatar
+  const { mutate, isPending } = useMutation(
+    updateMyAvatarMutationOptions({
+      onSuccess: ({ avatar }) => {
+        setCurrentUser((currentUser) =>
+          currentUser ? { ...currentUser, avatar } : currentUser,
+        );
+        queryClient.setQueryData(['getMyProfile'], (currentData) =>
+          currentData
+            ? { ...currentData, user: { ...currentData.user, avatar } }
+            : currentData,
+        );
+        queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
+        queryClient.invalidateQueries({ queryKey: ['conversationMessages'] });
+        queryClient.invalidateQueries({ queryKey: ['getMission'] });
+        queryClient.invalidateQueries({ queryKey: ['getPublicUserProfile'] });
+      },
+      onError: (error) => {
+        showAlert({
+          title: 'Error',
+          description:
+            error.response?.data?.errors?.general?.[0] ||
+            `Couldn't update photo`,
+          variant: 'danger',
+        });
+      },
+    }),
+  );
+
+  const handleAvatarClick = () => {
+    // Avoids multiple clicks
+    if (!isPending) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      mutate(formData);
+    }
+    e.target.value = '';
+  };
+
+  return (
+    <div
+      className={`group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border bg-muted transition-opacity ${isPending ? 'opacity-50' : ''}`}
+      onClick={handleAvatarClick}
+    >
+      <Avatar size='profile' className='h-full w-full'>
+        <AvatarImage
+          src={getImageUrl(user.avatar)}
+          alt={`${user.username} avatar`}
+          className='h-full w-full object-cover'
+        />
+        <AvatarFallback>
+          <User className='h-12 w-12 text-muted-foreground' />
+        </AvatarFallback>
+      </Avatar>
+
+      {!isPending && (
+        <div className='absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100'>
+          <Camera className='mb-1 h-6 w-6' />
+          <span className='text-xs font-medium'>Change</span>
+        </div>
+      )}
+
+      {isPending && (
+        <div className='absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white'>
+          <span className='text-xs font-medium'>Uploading...</span>
+        </div>
+      )}
+
+      <input
+        type='file'
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept='image/jpeg, image/png, image/webp'
+        className='hidden'
+      />
+    </div>
+  );
+};
+
+const ProfileReviews = ({
+  reviewsData,
+  isLoading,
+  isPrivate,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
+}) => {
+  const reviews = reviewsData?.reviews || [];
+
+  return (
+    <Card asChild>
+      <section className='mb-6 p-4 sm:p-6'>
+        <div className='mb-5 flex items-center justify-between gap-4'>
+          <h2 className='text-xl font-semibold'>Reviews</h2>
+          {!isLoading && (
+            <p className='text-sm text-muted-foreground'>
+              {Number(reviewsData?.averageRating || 0).toFixed(1)}/5 from{' '}
+              {reviewsData?.totalReviews || 0}
+            </p>
+          )}
+        </div>
+
+        {isPrivate ? (
+          <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
+            Reviews are hidden while your mission history is private.
+          </p>
+        ) : isLoading ? (
+          <p className='text-muted-foreground'>Loading reviews</p>
+        ) : reviews.length === 0 ? (
+          <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
+            You have no reviews yet.
+          </p>
+        ) : (
+          <>
+            <div className='grid gap-4'>
+              {reviews.map((review) => (
+                <article
+                  key={review.id}
+                  className='rounded-lg border bg-card p-4 shadow-sm'
+                >
+                  <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
+                    <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
+                      <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+                      {Number(review.rating).toFixed(1)}/5
+                    </span>
+                    <span className='text-sm text-muted-foreground'>
+                      {new Date(review.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  {review.comment && (
+                    <p className='whitespace-pre-line text-sm leading-6'>
+                      {review.comment}
+                    </p>
+                  )}
+
+                  <p className='mt-3 text-xs text-muted-foreground'>
+                    {review.owner_username} on {review.mission_title}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            {hasNextPage && (
+              <div className='mt-6 flex justify-center'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? 'Loading reviews' : 'Load more reviews'}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </Card>
   );
 };
 
@@ -220,10 +433,17 @@ const ProfileInformation = ({ data }) => {
     if (!isEditing) return;
     mutate(form);
   };
+
+  // State for map
+  const [missionCoords, setMissionCoords] = useState({
+    lat: profileForm.location?.latitude || '',
+    lng: profileForm.location?.longitude || '',
+  });
+
   return (
     <Card asChild>
       <section className='p-4 sm:p-6'>
-        <form className='space-y-6'>
+        <form>
           <div className='flex gap-3 items-start justify-between'>
             <h2 className='text-xl font-semibold'>Profile information</h2>
             <div className='flex justify-end gap-2'>
@@ -253,7 +473,7 @@ const ProfileInformation = ({ data }) => {
             </div>
           </div>
 
-          <div className='grid gap-4 sm:grid-cols-2'>
+          <div className='grid gap-4 sm:grid-cols-2 pt-6'>
             <FormInputField
               id='profileUsername'
               label='Username (required):'
@@ -314,17 +534,51 @@ const ProfileInformation = ({ data }) => {
               />
             </div>
           </div>
-          {successMessage && !isAlertClosed && (
-            <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
-              {successMessage}
-            </AlertStatic>
-          )}
-          {errors.general?.[0] && !isAlertClosed && (
-            <FormAlert onClose={() => setIsAlertClosed(true)}>
-              {errors.general[0]}
-            </FormAlert>
+          {missionCoords && (
+            <>
+              <input type='hidden' name='latitude' value={missionCoords.lat} />
+              <input type='hidden' name='longitude' value={missionCoords.lng} />
+            </>
           )}
         </form>
+
+        {!isEditing && <Label>Location:</Label>}
+        <Map
+          onLocationSelected={(coords) => {
+            setMissionCoords(coords);
+            updateField('location', {
+              latitude: coords.lat,
+              longitude: coords.lng,
+            });
+            updateField('latitude', coords.lat);
+            updateField('longitude', coords.lng);
+          }}
+          readOnly={!isEditing}
+          description={messages.MY_PROFILE.LOCATION_DESCRIPTION}
+          initialLocation={
+            profileForm.location?.latitude &&
+            profileForm.location?.longitude && {
+              lat: profileForm.location?.latitude,
+              lng: profileForm.location?.longitude,
+            }
+          }
+        ></Map>
+
+        <div className='flex items-center self-end me-3'>
+          <Info className='w-4 h-4 mr-1' aria-hidden='true' />
+          <small>{messages.MY_PROFILE.LOCATION_INFO}</small>
+        </div>
+
+        {successMessage && !isAlertClosed && (
+          <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
+            {successMessage}
+          </AlertStatic>
+        )}
+        {errors.general?.[0] && !isAlertClosed && (
+          <FormAlert onClose={() => setIsAlertClosed(true)}>
+            {errors.general[0]}
+          </FormAlert>
+        )}
       </section>
     </Card>
   );
@@ -349,7 +603,7 @@ const ProfileAccessMethods = ({ user }) => {
       <section className='p-4 sm:p-6 mt-6'>
         <h2 className='text-xl font-semibold'>Access methods</h2>
         <div className='flex flex-col gap-y-2'>
-          <p className='text-lg font-medium'>E-mail & password</p>
+          <h3 className='text-lg font-medium'>E-mail & password</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
             <p className='text-sm'>
               {hasPasswordProvider
@@ -374,7 +628,7 @@ const ProfileAccessMethods = ({ user }) => {
               )}
             </div>
           </div>
-          <p className='text-lg mt-3 font-medium'>Google</p>
+          <h3 className='text-lg mt-3 font-medium'>Google</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
             <p className='text-sm'>
               {hasGoogleProvider
@@ -393,10 +647,7 @@ const ProfileAccessMethods = ({ user }) => {
           {hasGoogleProvider && !hasPasswordProvider && (
             <div className='flex items-center self-end me-3'>
               <Info className='w-4 h-4 mr-1' aria-hidden='true' />
-              <small>
-                {`Can't unlink Google account if there is no e-mail
-                authentication added.`}
-              </small>
+              <small>{messages.MY_PROFILE.UNLINK_GOOGLE_INFO}</small>
             </div>
           )}
         </div>
@@ -452,7 +703,11 @@ const AddEmailAuthenticationButton = ({ hasPasswordProvider }) => {
             queryClient.clear();
             navigate('/login');
           } catch (error) {
-            console.error('Error logging out:', error);
+            showAlert({
+              title: messages.MY_PROFILE.ADD_EMAIL_AUTHENTICATION_ALERT.TITLE,
+              description:
+                error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+            });
           }
         },
       });
@@ -957,7 +1212,6 @@ const LinkGoogleButton = ({
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error);
       showAlert({
         title: messages.MY_PROFILE.LINK_GOOGLE_ALERT.ERROR_TITLE,
         description:
@@ -1002,12 +1256,12 @@ const LinkGoogleButton = ({
   );
 };
 
-const ProfilePaymentMethods = () => {
+const ProfilePaymentMethods = ({ user }) => {
   return (
     <>
       {stripePromise ? (
         <Elements stripe={stripePromise} options={{ locale: 'en' }}>
-          <StripeManagement />
+          <StripeManagement user={user} />
         </Elements>
       ) : (
         <Card asChild>
@@ -1123,7 +1377,6 @@ const DeleteAccountButton = () => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error.response.data.errors);
       showAlert({
         title: messages.MY_PROFILE.DELETE_ACCOUNT_ALERT.ERROR_TITLE,
         description: error?.response.data.errors?.general,
@@ -1163,6 +1416,9 @@ const buildForm = (profile) => {
     name: profile.name || '',
     surnames: profile.surnames || '',
     description: profile.description || '',
+    location: profile.location || '',
+    latitude: profile.latitude || '',
+    longitude: profile.longitude || '',
   };
 };
 

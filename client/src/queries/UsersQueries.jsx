@@ -4,6 +4,7 @@ import {
   getPublicUserProfile,
   getPublicUserProfileMissions,
   searchUsersByUsername,
+  updateMyAvatar,
   updateMyProfile,
 } from '../services/UsersServices';
 
@@ -45,11 +46,21 @@ export const getMyProfileQueryOptions = (options) => {
   });
 };
 
-export const searchUsersByUsernameQueryOptions = (username, options) => {
-  return queryOptions({
-    queryKey: ['searchUsersByUsername', username],
-    queryFn: () => searchUsersByUsername(username),
-    enabled: !!username,
+export const searchUsersByUsernameInfiniteQueryOptions = (
+  limit,
+  params,
+  options,
+) => {
+  return infiniteQueryOptions({
+    queryKey: ['searchUsersByUsername', params],
+    queryFn: ({ pageParam }) =>
+      searchUsersByUsername({ page: pageParam, limit, params }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      return lastPage.pagination.hasMore
+        ? lastPage.pagination.currentPage + 1
+        : undefined;
+    },
     ...options,
   });
 };
@@ -57,6 +68,13 @@ export const searchUsersByUsernameQueryOptions = (username, options) => {
 export const updateMyProfileMutationOptions = (options) => {
   return {
     mutationFn: updateMyProfile,
+    ...options,
+  };
+};
+
+export const updateMyAvatarMutationOptions = (options) => {
+  return {
+    mutationFn: updateMyAvatar,
     ...options,
   };
 };

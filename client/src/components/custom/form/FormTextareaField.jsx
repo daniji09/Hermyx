@@ -41,7 +41,7 @@ export const FormTextareaField = ({
   };
 
   return (
-    <Field data-invalid={invalid}>
+    <Field data-invalid={invalid} className='w-full min-w-0'>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <Textarea
         id={id}
@@ -51,6 +51,7 @@ export const FormTextareaField = ({
         onChange={handleChange}
         defaultValue={defaultValue}
         value={value}
+        className={`w-full min-w-0 wrap-anywhere resize-none ${props.className || ''}`}
         {...props}
       ></Textarea>
       <div className='flex justify-between items-start pt-1'>

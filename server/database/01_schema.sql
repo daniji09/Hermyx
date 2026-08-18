@@ -1,8 +1,17 @@
 -- Tables deletion
 DROP TABLE IF EXISTS GUILD_MISSION;
 DROP TABLE IF EXISTS GUILD_MEMBER;
-DROP TABLE IF EXISTS MISSION_PARTICIPATION;
+DROP TABLE IF EXISTS CONVERSATION_MESSAGE;
+DROP TABLE IF EXISTS MESSAGE;
+DROP TABLE IF EXISTS CONVERSATION_PARTICIPANT;
+DROP TABLE IF EXISTS REPORT;
+DROP TABLE IF EXISTS CONVERSATION;
+DROP TABLE IF EXISTS NOTIFICATION;
 DROP TABLE IF EXISTS INVITATION;
+DROP TABLE IF EXISTS MISSION_PHOTO;
+DROP TABLE IF EXISTS MISSION_PAYMENT;
+DROP TABLE IF EXISTS MISSION_PARTICIPATION;
+DROP TABLE IF EXISTS REVIEW;
 DROP TABLE IF EXISTS TAG;
 DROP TABLE IF EXISTS PAYMENT_METHOD;
 DROP TABLE IF EXISTS ROLE; 
@@ -10,24 +19,30 @@ DROP TABLE IF EXISTS MISSION;
 DROP TABLE IF EXISTS GUILD;
 DROP TABLE IF EXISTS APP_USER;
 
--- Special options creation
+-- Special extensions creation
 CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Tables creation
 CREATE TABLE APP_USER (
 	uid SERIAL PRIMARY KEY,
-	username VARCHAR(20) NOT NULL UNIQUE,
-	email VARCHAR(100) UNIQUE,
+	username VARCHAR(20) NOT NULL, -- Uniqueness has to considered lower and uppercase, so a index is created
+	email VARCHAR(100), -- Uniqueness has to considered lower and uppercase, so a index is created
 	firebase_uid VARCHAR(255) NOT NULL UNIQUE,
+	role VARCHAR(10) NOT NULL DEFAULT 'USER' CHECK (role IN ('USER', 'ADMIN', 'SYSTEM')),
+	status VARCHAR(10) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN('ACTIVE', 'DELETED', 'BANNED')),
 	description VARCHAR(500),
 	name VARCHAR(50),
 	surnames VARCHAR(100),
-	location VARCHAR(300),
-	avatar VARCHAR(255),
+	location geography(Point, 4326),
+	avatar TEXT,
 	configuration JSONB NOT NULL DEFAULT '{"show_missions_to_others": true}'::jsonb,
+	rating NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
 	stripe_customer_id VARCHAR(255),
-  stripe_connected_id VARCHAR(255)
+  	stripe_connected_id VARCHAR(255)
 );
+CREATE UNIQUE INDEX unique_username_lower ON app_user (LOWER(username));
+CREATE UNIQUE INDEX unique_email_lower ON app_user (LOWER(email));
 
 CREATE TABLE PAYMENT_METHOD (
 	payment_method VARCHAR(100) NOT NULL,
@@ -41,92 +56,212 @@ CREATE TABLE MISSION (
 	publication_date TIMESTAMP NOT NULL,
 	title VARCHAR(100) NOT NULL,
 	description VARCHAR(1000) NOT NULL,
-	difficulty INT NOT NULL,
 	total_vacancies INT NOT NULL,
 	occupied_vacancies INT NOT NULL,
-	monetary_reward NUMERIC NOT NULL,
-	status VARCHAR(20) NOT NULL CHECK (status IN ('draft','pending_payment',
-    'funded',
-    'in_progress',
-    'delivered',
-    'accepted',
-    'releasing',
-    'released',
-	'partially_released',
-    'refunding',
-    'refunded',
-    'canceled',
-    'in_dispute')),
+	location geography(Point, 4326),
+	total_payment NUMERIC NOT NULL,
+	status VARCHAR(30) NOT NULL CHECK (status IN (
+		'OPENED',
+		'CLOSED',
+		'IN_PROGRESS',
+		'REOPENED',
+		'CANCELLING',
+		'CANCELLED',
+		'DELETED',
+		'IN_DISPUTE',
+		'FINISHED',
+		'REPORTED')),
 	completion_date TIMESTAMP,
 	owner_id INT NOT NULL,
-	stripe_pi_id VARCHAR(255),
-  stripe_refund_id VARCHAR(255),
-	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid)
+	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
+);
+
+CREATE TABLE MISSION_PHOTO (
+	id SERIAL PRIMARY KEY,
+	mid INT NOT NULL,
+	url TEXT NOT NULL,
+	FOREIGN KEY (mid) REFERENCES MISSION(mid)
+);
+
+CREATE TABLE CONVERSATION (
+	cid SERIAL PRIMARY KEY,
+	type VARCHAR(20) NOT NULL CHECK (type IN ('private', 'mission', 'dispute')),
+	mission_id INT UNIQUE,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	closed_at TIMESTAMP,
+	FOREIGN KEY (mission_id) REFERENCES MISSION(mid) ON DELETE CASCADE
+);
+
+CREATE TABLE CONVERSATION_PARTICIPANT (
+	conversation_id INT NOT NULL,
+	user_id INT NOT NULL,
+	joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	left_at TIMESTAMP,
+	can_send BOOLEAN NOT NULL DEFAULT TRUE,
+	history_until TIMESTAMP,
+	last_read_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (conversation_id, user_id),
+	FOREIGN KEY (conversation_id) REFERENCES CONVERSATION(cid) ON DELETE CASCADE,
+	FOREIGN KEY (user_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
+);
+
+CREATE TABLE CONVERSATION_MESSAGE (
+	mid SERIAL PRIMARY KEY,
+	conversation_id INT NOT NULL,
+	sender_id INT NOT NULL,
+	content VARCHAR(1000),
+	attachment_url TEXT,
+	attachment_type VARCHAR(20) CHECK (attachment_type IS NULL OR attachment_type IN ('image')),
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	CHECK (
+		LENGTH(TRIM(COALESCE(content, ''))) > 0
+		OR attachment_url IS NOT NULL
+	),
+	FOREIGN KEY (conversation_id) REFERENCES CONVERSATION(cid) ON DELETE CASCADE,
+	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
+);
+
+CREATE TABLE REVIEW (
+	id SERIAL PRIMARY KEY,
+	comment VARCHAR(500),
+	rating NUMERIC(2,1) NOT NULL CHECK (rating >= 1 AND rating <= 5),
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE MISSION_PARTICIPATION (
+	id SERIAL PRIMARY KEY,
 	mid INT NOT NULL,
-	adventurer_id INT NOT NULL,
-	transfer_id VARCHAR(255),
-  amount_paid NUMERIC,
-	review VARCHAR(500),
-	FOREIGN KEY (mid) REFERENCES MISSION(mid),
-	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid),
-	PRIMARY KEY (mid, adventurer_id)
+	adventurer_id INT,
+	title VARCHAR(50),
+	description VARCHAR(500),
+  	monetary_reward NUMERIC NOT NULL,
+	amount_paid NUMERIC NOT NULL,
+	payment_status VARCHAR(20) DEFAULT 'UNPAID' CHECK (payment_status IN (
+		'UNPAID', 
+		'PAID', 
+		'PARTIALLY_PAID', 
+		'PARTIALLY_REFUNDED',
+		'LIQUIDATED', 
+		'REFUNDED'
+		)),
+	status VARCHAR(20) NOT NULL DEFAULT 'EMPTY' CHECK (status IN (
+		'EMPTY',
+		'JOINED',
+		'PENDING_PAYMENT',
+		'IN_PROGRESS',
+		'SUBMITTED',
+		'ACCEPTED',
+		'REJECTED',
+		'IN_DISPUTE',
+		'RELEASED'
+	)),
+	owner_review_id INT UNIQUE,
+	adventurer_review_id INT UNIQUE,
+	FOREIGN KEY (mid) REFERENCES MISSION(mid) ON DELETE CASCADE,
+	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid) ON DELETE CASCADE,
+	FOREIGN KEY (owner_review_id) REFERENCES REVIEW(id) ON DELETE CASCADE,
+	FOREIGN KEY (adventurer_review_id) REFERENCES REVIEW(id) ON DELETE CASCADE
 );
 
-CREATE TABLE INVITATION (
-	iid SERIAL PRIMARY KEY,
+CREATE TABLE MISSION_PAYMENT (
+	pid SERIAL PRIMARY KEY,
+	mid INT NOT NULL,
+	vacancy_id INT NOT NULL,
+	sender_id INT NOT NULL,
+	receiver_id INT NOT NULL,
+	stripe_transaction_id VARCHAR(255) NOT NULL,
+	transaction_type VARCHAR(255) NOT NULL CHECK (transaction_type IN(
+		'INITIAL_FUNDING',
+		'NEW_ADVENTURER_FUNDING',
+		'NEGOTIATION_EXTRA',
+		'NEGOTIATION_REFUND',
+		'CANCELLATION_COMPENSATION',
+		'BAN_COMPENSATION',
+		'ADVENTURER_KICKED_OUT_COMPENSATION',
+		'PAYOUT'
+	)),
+	amount_paid NUMERIC NOT NULL,
+	amount_refunded NUMERIC NOT NULL,
+	status VARCHAR(25) NOT NULL DEFAULT 'SUCCEEDED' CHECK (status IN ('SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED')),
+	created_at TIMESTAMP NOT NULL,
+	FOREIGN KEY (mid) REFERENCES MISSION(mid) ON DELETE CASCADE,
+	FOREIGN KEY (vacancy_id) REFERENCES MISSION_PARTICIPATION(id) ON DELETE CASCADE,
+	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid) ON DELETE CASCADE,
+	FOREIGN KEY (receiver_id) REFERENCES APP_USER (uid) ON DELETE CASCADE
+);
+
+
+CREATE TABLE NOTIFICATION (
+	nid SERIAL PRIMARY KEY,
 	date TIMESTAMP NOT NULL,
 	seen BOOLEAN NOT NULL DEFAULT FALSE,
-	type VARCHAR(50) NOT NULL CHECK (type IN ('applicant_to_adventurer','adventurer_to_applicant')),
-	status VARCHAR(20) NOT NULL CHECK (status IN ('pending','accepted','rejected')),
+	type VARCHAR(50) NOT NULL CHECK (type IN ('INVITATION', 'MISSION', 'REPORT')),
+	kind VARCHAR(20) NOT NULL DEFAULT 'ACTIONABLE' CHECK (kind IN ('INFORMATIONAL', 'ACTIONABLE')),
+	action VARCHAR(50) NOT NULL DEFAULT 'MISSION_INVITE' CHECK (action IN (
+		'JOIN_REQUEST',
+		'MISSION_INVITE',
+		'PARTICIPATION_REVIEW',
+		'PARTICIPATION_REJECTION_RESPONSE',
+		'PARTICIPATION_APPROVED',
+		'PARTICIPATION_REJECTED',
+		'PARTICIPATION_DISPUTED',
+		'MISSION_EDIT',
+		'MISSION_CLOSE', --- Mission has been closed for adventurers, but its not payed
+		'MISSION_START', --- Mission has been payed, so it starts
+		'MISSION_UNJOIN',
+		'MISSION_DELETE',
+		'MISSION_CANCEL',
+		'MISSION_REOPEN',
+		'ADVENTURER_REPORT',
+		'REVIEW_DISPUTE',
+		'REJECTED_REVIEW_DISPUTE',
+		'MISSION_BAN',
+		'USER_BAN',
+		'ADVENTURER_KICKED_OUT',
+		'REPORT_DISMISSED'
+	)),
+	status VARCHAR(20) CHECK (status IS NULL OR status IN ('PENDING','ACCEPTED','REJECTED','DISPUTED')),
 	message VARCHAR(500),
 	sender_id INT NOT NULL,
 	recipient_id INT NOT NULL,
-	associated_mission_id INT NOT NULL,
-	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid),
-	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid),
-	FOREIGN KEY (associated_mission_id) REFERENCES MISSION(mid)
+	payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid) ON DELETE CASCADE,
+	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid) ON DELETE CASCADE
 );
 
-CREATE TABLE GUILD (
-	gid SERIAL PRIMARY KEY,
-	name VARCHAR(30) NOT NULL,
-	description VARCHAR(500) NOT NULL,
-	country VARCHAR(200) NOT NULL,
-	xp INT NOT NULL
+CREATE UNIQUE INDEX unique_pending_join 
+	ON notification 
+	(sender_id, recipient_id, (payload->>'associated_mission_id'), (payload->>'associated_vacancy_id')) 
+	WHERE status = 'PENDING' AND action = 'JOIN_REQUEST'; -- To avoid users sending the same notification twice due to a double click
+
+CREATE TABLE REPORT (
+	rid SERIAL PRIMARY KEY,
+	date TIMESTAMP NOT NULL,
+	sender_id INT NOT NULL,
+	message VARCHAR(1000) NOT NULL,
+	status VARCHAR(20) NOT NULL DEFAULT 'SENT' CHECK (status IN ('SENT', 'ANSWERED')),
+	type VARCHAR(255) NOT NULL CHECK (type IN(
+		'REPORT_PROFILE',
+		'REPORT_MISSION',
+		'REPORT_ADVENTURER',
+		'REVIEW_DISPUTE',
+		'REJECTED_REVIEW_DISPUTE'
+	)),
+	decision VARCHAR(255) CHECK (decision IN(
+		'BAN_USER', 
+		'BAN_MISSION', 
+		'KICK_ADVENTURER_OUT', 
+		'ACCEPT_ADVENTURERS_WORK', 
+		'REJECT_ADVENTURERS_WORK',
+		'DISMISS')),
+	decision_reason VARCHAR(1000),
+	resolved_by INT,
+	conversation_id INT UNIQUE,
+	payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid) ON DELETE CASCADE,
+	FOREIGN KEY (resolved_by) REFERENCES APP_USER(uid) ON DELETE CASCADE,
+	FOREIGN KEY (conversation_id) REFERENCES CONVERSATION(cid) ON DELETE SET NULL
 );
 
-CREATE TABLE TAG (
-	gid INT NOT NULL,
-	tag VARCHAR(20) NOT NULL,
-	FOREIGN KEY (gid) REFERENCES GUILD(gid),
-	PRIMARY KEY (gid, tag)
-);
-
-CREATE TABLE ROLE(
-	gid INT NOT NULL,
-	role VARCHAR(20),
-	FOREIGN KEY (gid) REFERENCES GUILD(gid),
-	PRIMARY KEY (gid, role)	
-);
-
-CREATE TABLE GUILD_MEMBER (
-	uid INT NOT NULL,
-	gid INT NOT NULL,
-	xp INT NOT NULL,
-	role VARCHAR(20) NOT NULL,
-	FOREIGN KEY (uid) REFERENCES APP_USER(uid),
-	FOREIGN KEY (gid) REFERENCES GUILD(gid),
-	FOREIGN KEY (gid, role) REFERENCES ROLE(gid, role),
-	PRIMARY KEY (uid, gid)
-);
-
-CREATE TABLE GUILD_MISSION (
-	gid INT NOT NULL,
-	mid INT NOT NULL,
-	FOREIGN KEY (gid) REFERENCES GUILD(gid),
-	FOREIGN KEY (mid) REFERENCES MISSION(mid),
-	PRIMARY KEY (gid, mid)
-);
+INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames, status)
+VALUES('Hermyx_system', 'system@hermyx.com', 'firebase-system-uid', 'SYSTEM', 'Hermyx system account.', 'Hermyx', 'system', 'ACTIVE');

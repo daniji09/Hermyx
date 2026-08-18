@@ -30,7 +30,7 @@ export const Alert = ({ isAlertOpen, setIsAlertOpen, alertConfig }) => {
             onClick={alertConfig?.onConfirm}
             variant={alertConfig?.variant === 'danger' ? 'destructive' : ''}
           >
-            {alertConfig?.confirmText || 'OK'}
+            {alertConfig?.confirmText || 'Ok'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
