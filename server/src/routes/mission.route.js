@@ -10,7 +10,6 @@ import {
 
 import {
   publishMissionSchema,
-  draftMissionSchema,
   getMissionSchema,
   getMissionsQuerySchema,
   submitMissionParticipationSchema,
@@ -38,13 +37,6 @@ import { pagination } from '../middlewares/pagination.middleware.js';
 import { verifyAdmin } from '../middlewares/auth.middleware.js';
 import { upload } from '../utils/file.utils.js';
 import * as missionController from '../controllers/mission.controller.js';
-
-//Dynamic middleware to decide which schema to use
-const dynamicValidation = (req, res, next) => {
-  const isDraft = req.body.isDraft === true || req.body.isDraft === 'true';
-  const schemaToUse = isDraft ? draftMissionSchema : publishMissionSchema;
-  return validateBodySchema(schemaToUse)(req, res, next);
-};
 
 /// GET
 // Get all missions
@@ -75,7 +67,7 @@ router.get(
 router.post(
   '/',
   upload.array('photos', 5),
-  dynamicValidation,
+  validateBodySchema(publishMissionSchema),
   validateFilesSchema(publishMissionFilesSchema),
   missionController.publishMission,
 );
@@ -139,21 +131,6 @@ router.post(
   missionController.reopenMission,
 );
 
-/// PUT
-// Edits mission
-router.put(
-  '/:mid',
-  upload.array('photos', 5),
-  validateParamsSchema(editMissionParamSchema),
-  validateBodySchema(editMissionBodySchema),
-  validateFilesSchema(editMissionFilesSchema),
-  missionController.editMission,
-);
-
-//------------
-//List all draft missions
-router.get('/in-draft', missionController.getAllMissionsInDraft);
-
 // Bans mission
 router.post(
   '/:mid/ban',
@@ -173,8 +150,14 @@ router.post(
 );
 
 /// PUT
-
-//Update mission
-//Router.put('/:id', dynamicValidation, updateMission);
+// Edits mission
+router.put(
+  '/:mid',
+  upload.array('photos', 5),
+  validateParamsSchema(editMissionParamSchema),
+  validateBodySchema(editMissionBodySchema),
+  validateFilesSchema(editMissionFilesSchema),
+  missionController.editMission,
+);
 
 export default router;

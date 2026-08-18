@@ -73,7 +73,7 @@ const photosBaseSchema = z
   )
   .max(
     consts.MISSION.PHOTOS.MAX,
-    messages.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    messages.GENERAL.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
   )
   .optional()
   .default([]);
@@ -204,6 +204,22 @@ export const messageBaseSchema = z
   .optional()
   .default('');
 
+// Report id
+export const reportIdBaseSchema = z.coerce
+  .number(messages.GENERAL.FIELD_NUMBER('Report id'))
+  .int(messages.GENERAL.FIELD_INTEGER('Report id'))
+  .min(0, messages.GENERAL.FIELD_POSITIVE('Report id'));
+
+// Report reason
+export const reportReasonBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Reason'))
+  .max(
+    consts.REPORT.REASON_MESSAGE.MAX,
+    messages.GENERAL.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+  );
+
 /// Endpoint complex validation
 // Get all missions
 export const getMissionsQuerySchema = z.object({
@@ -311,6 +327,27 @@ export const finishMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
+// Ban mission
+export const banMissionParamsSchema = z.object({
+  mid: midBaseSchema,
+});
+
+export const banMissionBodySchema = z.object({
+  rid: reportIdBaseSchema,
+  reason: reportReasonBaseSchema,
+});
+
+// Kick adventurer out
+export const kickAdventurerOutParamsSchema = z.object({
+  mid: midBaseSchema,
+  vacancyId: vacancyIdBaseSchema,
+});
+
+export const kickAdventurerOutBodySchema = z.object({
+  rid: reportIdBaseSchema,
+  reason: reportReasonBaseSchema,
+});
+
 // Edit mission
 export const editMissionBodySchema = z.object({
   mid: midBaseSchema,
@@ -345,107 +382,58 @@ export const editMissionFilesSchema = z.object({
     }),
 });
 
-// ------
-
-const optionalNumberFromFormSchema = (schema) =>
-  z.preprocess((value) => {
-    if (value === undefined || value === null) return undefined;
-    if (typeof value === 'string' && value.trim() === '') return undefined;
-    return value;
-  }, schema.optional());
-
-// Server and client sign up shared validation
-export const draftMissionSchema = z.object({
-  title: z.string().trim().optional(),
-  description: z.string().trim().optional(),
-  vacancies: optionalNumberFromFormSchema(z.coerce.number().int()),
-  isDraft: z.boolean().optional(),
-});
-
+/// Frontend exclusive schemas
+// Search mission by title
 export const searchMissionByTitleSchema = z.object({
   searchMissionByTitle_input: z
     .string()
     .trim()
-    .min(1, messages.FIELD_REQUIRED)
+    .min(1, messages.GENERAL.FIELD_REQUIRED('Title'))
     .max(
-      consts.SEARCH_MISSION_TITLE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG('Input'),
+      consts.MISSION.TITLE.MAX_LENGTH,
+      messages.GENERAL.FIELD_TOO_LONG('Input'),
     ),
 });
 
-export const banMissionParamsSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-});
-
-export const banMissionBodySchema = z.object({
-  rid: z.coerce
-    .number(messages.FIELD_NUMBER('Rid'))
-    .int(messages.FIELD_INTEGER('Rid'))
-    .min(0, messages.FIELD_POSITIVE('Rid')),
-  reason: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.REPORT.REASON_MESSAGE.MAX,
-      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
-    )
-    .default(''),
-});
-
-export const kickAdventurerOutParamsSchema = z.object({
-  mid: z.coerce
-    .number(messages.FIELD_NUMBER('Mid'))
-    .int(messages.FIELD_INTEGER('Mid'))
-    .min(0, messages.FIELD_POSITIVE('Mid')),
-  vacancyId: z.coerce
-    .number(messages.FIELD_NUMBER('Vacancy id'))
-    .int(messages.FIELD_INTEGER('Vacancy id'))
-    .min(0, messages.FIELD_POSITIVE('Vacancy id')),
-});
-
-export const kickAdventurerOutBodySchema = z.object({
-  rid: z.coerce
-    .number(messages.FIELD_NUMBER('Rid'))
-    .int(messages.FIELD_INTEGER('Rid'))
-    .min(0, messages.FIELD_POSITIVE('Rid')),
-});
-
+// Add vacancies schema
 export const addVacanciesSchema = z
   .object({
     vacanciesQuantity: z.coerce
-      .number(messages.FIELD_NUMBER('Quantity'))
-      .int(messages.FIELD_INTEGER('Quantity'))
+      .number(messages.GENERAL.FIELD_NUMBER('Quantity'))
+      .int(messages.GENERAL.FIELD_INTEGER('Quantity'))
       .min(
         consts.MISSION.VACANCIES.MIN,
-        messages.FIELD_TOO_SMALL('Quantity', consts.MISSION.VACANCIES.MIN),
+        messages.GENERAL.FIELD_TOO_SMALL(
+          'Quantity',
+          consts.MISSION.VACANCIES.MIN,
+        ),
       )
       .max(
         consts.MISSION.VACANCIES.MAX,
-        messages.FIELD_TOO_BIG('Quantity', consts.MISSION.VACANCIES.MAX),
+        messages.GENERAL.FIELD_TOO_BIG(
+          'Quantity',
+          consts.MISSION.VACANCIES.MAX,
+        ),
       ),
     vacanciesTotalQuantity: z.coerce
-      .number(messages.FIELD_NUMBER('Total quantity'))
-      .int(messages.FIELD_INTEGER('Total quantity')),
+      .number(messages.GENERAL.FIELD_NUMBER('Total quantity'))
+      .int(messages.GENERAL.FIELD_INTEGER('Total quantity')),
     vacanciesReward: z.coerce
-      .number(messages.FIELD_NUMBER('Reward'))
+      .number(messages.GENERAL.FIELD_NUMBER('Reward'))
       .min(
         consts.MISSION.REWARD.MIN,
-        messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+        messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
       )
       .max(
         consts.MISSION.REWARD.MAX,
-        messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+        messages.GENERAL.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
       ),
     vacanciesTitle: z
       .string()
       .trim()
       .max(
         consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
-        messages.FIELD_TOO_LONG(
+        messages.GENERAL.FIELD_TOO_LONG(
           'Title',
           consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
         ),
@@ -456,7 +444,7 @@ export const addVacanciesSchema = z
       .trim()
       .max(
         consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
-        messages.FIELD_TOO_LONG(
+        messages.GENERAL.FIELD_TOO_LONG(
           'Description',
           consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
         ),
@@ -464,27 +452,28 @@ export const addVacanciesSchema = z
       .optional(),
   })
   .refine((val) => val.vacanciesQuantity + val.vacanciesTotalQuantity <= 100, {
-    message: messages.MISSION_VACANCIES_SURPASSED,
+    message: messages.MISSION.PUBLISH.MISSION_VACANCIES_SURPASSED,
     path: ['vacanciesQuantity'],
   });
 
+// Edit vacancy
 export const editVacancySchema = z.object({
   vacanciesReward: z.coerce
-    .number(messages.FIELD_NUMBER('Reward'))
+    .number(messages.GENERAL.FIELD_NUMBER('Reward'))
     .min(
       consts.MISSION.REWARD.MIN,
-      messages.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+      messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
     )
     .max(
       consts.MISSION.REWARD.MAX,
-      messages.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+      messages.GENERAL.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
     ),
   vacanciesTitle: z
     .string()
     .trim()
     .max(
       consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
+      messages.GENERAL.FIELD_TOO_LONG(
         'Title',
         consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
       ),
@@ -496,7 +485,7 @@ export const editVacancySchema = z.object({
     .trim()
     .max(
       consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
-      messages.FIELD_TOO_LONG(
+      messages.GENERAL.FIELD_TOO_LONG(
         'Description',
         consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
       ),

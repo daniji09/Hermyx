@@ -176,12 +176,22 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
   }
   ```
 
-- `400 Bad Request`: fields validation error, missing fields or logic error: user already has a mission named like that.
+- `400 Bad Request`: fields validation error, missing fields.
 
   ```json
   {
     "errors": {
       "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
     }
   }
   ```
@@ -218,7 +228,7 @@ Close a mission after been opened or reopened.
   }
   ```
 
-- `400 Bad Request`: path fields validation error, missing path fields or logic error: cannot close mission on current state or cannot close mission with no adventurers.
+- `400 Bad Request`: path fields validation error, missing path fields or logic error.
 
   ```json
   {
@@ -244,6 +254,16 @@ Close a mission after been opened or reopened.
   {
     "errors": {
       "general": ["Mission not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
     }
   }
   ```
@@ -735,6 +755,155 @@ Finishes a mission.
 <br>
 <br>
 
+## - Ban mission: `POST /api/missions/:mid/ban`
+
+Bans a mission.
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rid` | int | Yes | Report identifier. |
+| `reason` | string | Yes | Report decision reason. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission banned successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: action can only done by an admin.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Report not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** banning a mission means deleting it or cancelling it rewarding every adventurer. Since this operation can imply a money transaction and implies a report, the following mechanism is used: report is locked by updating it to 'answered' state, then `Stripe` transaction is done, and, after that, all operations left are done inside a database transaction. If Stripe transaction fails, report block is reverted, otherwise it will still be standing even if anything else fails, so a database inconsistency is expected.
+<br>
+<br>
+<br>
+
+## - Kick adventurer out: `POST /api/missions/:mid/kick/:vacancyId`
+
+Kicks an adventurer out of a specified mission
+
+**Requires authentication:** Yes
+
+**Path params:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+| `vacancyId` | integer | Yes | Mission participation identifier. |
+<br>
+
+**Body (JSON):**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `rid` | int | Yes | Report identifier. |
+| `reason` | string | Yes | Report decision reason. |
+<br>
+
+**Responses:**
+
+- `200 OK`: adventurer kicked out successfully.
+
+  ```json
+  {}
+  ```
+
+- `400 Bad Request`: path or body fields validation error, missing path or body fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `403 Forbidden`: user is unauthorized to do this action: action can only done by an admin.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: report not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Report not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+<br>
+
+**Workflow:** kicking an adventurer out can be while mission is closed, so it just kicks them out; or while participation has already been payed, so adventurer is kicked out and their reward is refunded to the applicant. Since this operation can imply a money transaction and implies a report, the following mechanism is used: report is locked by updating it to 'answered' state, then `Stripe` transaction is done, and, after that, all operations left are done inside a database transaction. If Stripe transaction fails, report block is reverted, otherwise it will still be standing even if anything else fails, so a database inconsistency is expected.
+<br>
+<br>
+<br>
+
 ## - Edit mission: `PUT /api/missions/:mid`
 
 Edits information from a mission that has already been published.
@@ -778,7 +947,7 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
   }
   ```
 
-- `400 Bad Request`: fields validation error, missing fields or logic error: user already has a mission named like that, cannot edit mission in current state, cannot delete vacancy in current state, cannot edit vacancy in current state.
+- `400 Bad Request`: fields validation error, missing fields or logic error.
 
   ```json
   {
@@ -794,6 +963,16 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
   {
     "errors": {
       "general": ["Mission not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
     }
   }
   ```

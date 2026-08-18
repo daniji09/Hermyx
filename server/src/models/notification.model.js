@@ -122,6 +122,44 @@ export const findByActionStatusAndMissionParticipationId = async (
   return result.rows;
 };
 
+// Find by action status, sender id and mission id
+export const findByActionStatusSenderAndMission = async (
+  action,
+  status,
+  associated_mission_id,
+  sender_id,
+  client = pool,
+) => {
+  const query = `SELECT * 
+  FROM notification 
+  WHERE action = $1 
+    AND status = $2 
+    AND payload->>'associated_mission_id' = $3::text
+    AND sender_id = $4`;
+  const result = await client.query(query, [
+    action,
+    status,
+    associated_mission_id,
+    sender_id,
+  ]);
+  return result.rows;
+};
+
+// Finds all expired participation reviews: participations that have been send more than 7 days ago and haven't been responded
+export const findExpiredParticipationReviews = async () => {
+  const query = `
+      SELECT * 
+      FROM notification
+      WHERE action = $1 AND status = $2 
+        AND date <= NOW() - INTERVAL '168 hours'
+    `; // 7 days
+  const result = await pool.query(query, [
+    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+  ]);
+  return result.rows;
+};
+
 // Finds pending join notifications
 export const hasPendingJoinNotification = async (
   missionId,
@@ -175,21 +213,6 @@ export const countParticipationReviewAttempts = async (
     NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
   ]);
   return result.rows[0].attempts;
-};
-
-// Finds all expired participation reviews: participations that have been send more than 7 days ago and haven't been responded
-export const findExpiredParticipationReviews = async () => {
-  const query = `
-      SELECT * 
-      FROM notification
-      WHERE action = $1 AND status = $2 
-        AND date <= NOW() - INTERVAL '168 hours'
-    `; // 7 days
-  const result = await pool.query(query, [
-    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
-    NOTIFICATION_STATUS.PENDING.ID,
-  ]);
-  return result.rows;
 };
 
 /// UPDATES
@@ -259,8 +282,7 @@ export const markAsSeenByNid = async (nid, client = pool) => {
   return result.rows[0];
 };
 
-// ------
-
+// Adds an associated report to the notification
 export const addAssociatedReport = async (
   notificationId,
   reportId,
@@ -276,24 +298,9 @@ export const addAssociatedReport = async (
   return result.rows[0] || null;
 };
 
-export const findByActionStatusSenderAndMission = async (
-  action,
-  status,
-  associated_mission_id,
-  sender_id,
-  client = pool,
-) => {
-  const query = `SELECT * 
-  FROM notification 
-  WHERE action = $1 
-    AND status = $2 
-    AND payload->>'associated_mission_id' = $3::text
-    AND sender_id = $4`;
-  const result = await client.query(query, [
-    action,
-    status,
-    associated_mission_id,
-    sender_id,
-  ]);
-  return result.rows;
+/// DELETE
+export const deleteAllByUid = async (uid, client = pool) => {
+  const query = `DELETE FROM notification WHERE recipient_id = $1`;
+  const result = await client.query(query, [uid]);
+  return result.rowCount;
 };

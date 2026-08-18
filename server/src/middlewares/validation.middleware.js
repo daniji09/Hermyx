@@ -1,5 +1,6 @@
 // Validation (and sanitization) middleware using Zod
 
+// Validates body
 export const validateBodySchema = (schema) => (req, res, next) => {
   // Frontend data is evaluated with Zod schema.
   // If no body is provided it is interpreted as a void object, so it can be validated
@@ -19,6 +20,7 @@ export const validateBodySchema = (schema) => (req, res, next) => {
   next();
 };
 
+// Validates params
 export const validateParamsSchema = (schema) => (req, res, next) => {
   // Frontend data is evaluated with Zod schema.
   // If no body is provided it is interpreted as a void object, so it can be validated
@@ -42,6 +44,7 @@ export const validateParamsSchema = (schema) => (req, res, next) => {
   next();
 };
 
+// Validates query
 export const validateQuerySchema = (schema) => (req, res, next) => {
   // Frontend data is evaluated with Zod schema.
   // If no body is provided it is interpreted as a void object, so it can be validated
@@ -66,6 +69,7 @@ export const validateQuerySchema = (schema) => (req, res, next) => {
   next();
 };
 
+// Validates files
 export const validateFilesSchema = (schema) => (req, res, next) => {
   // Frontend data is evaluated with Zod schema.
   // If no files are provided it is interpreted as a void array, so it can be validated

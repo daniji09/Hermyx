@@ -61,7 +61,6 @@ CREATE TABLE MISSION (
 	location geography(Point, 4326),
 	total_payment NUMERIC NOT NULL,
 	status VARCHAR(30) NOT NULL CHECK (status IN (
-		'DRAFT',
 		'OPENED',
 		'CLOSED',
 		'IN_PROGRESS',

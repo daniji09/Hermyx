@@ -9,6 +9,7 @@ import {
   createMessageBodySchema,
   privateConversationSchema,
   paginationQuerySchema,
+  readConversationParamsSchema,
 } from '@hermyx/shared';
 import * as conversationController from '../controllers/conversation.controller.js';
 import {
@@ -49,6 +50,13 @@ router.get(
   conversationController.getConversationMessages,
 );
 
+/// PATCH
+router.patch(
+  '/:cid/read',
+  validateParamsSchema(readConversationParamsSchema),
+  conversationController.markConversationAsRead,
+);
+
 /// POST
 // Create a private conversation
 router.post(
@@ -65,13 +73,6 @@ router.post(
   validateBodySchema(createMessageBodySchema),
   validateFileSchema(createMessageFileSchema),
   conversationController.sendMessage,
-);
-
-// ...
-router.patch(
-  '/:cid/read',
-  validateParamsSchema(conversationIdParamsSchema),
-  conversationController.markConversationAsRead,
 );
 
 export default router;

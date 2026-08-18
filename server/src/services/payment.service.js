@@ -124,7 +124,7 @@ export const payNew = async (mid, user, saveCard) => {
       ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
       metadata: { mid, ownerId: user.uid },
     },
-    `${user.stripe_customer_id}_payment_on_${Date.now()}`,
+    `pay_new_${mid}_${Date.now()}`,
   );
 
   return pi;
@@ -135,24 +135,6 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
   checkMid(mid);
   checkPaymentIntentId(paymentIntentId);
   checkUser(user);
-
-  // Gets mission
-  const mission = await missionService.getMissionByIdOrThrow(mid);
-
-  // Checks if mission belongs to user
-  checkMissionBelongsToUser(mission.owner_id, user.uid);
-
-  // Checks if mission can be in progress by status
-  if (
-    mission.status !== MISSION_STATUS.IN_PROGRESS.ID &&
-    !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-      MISSION_STATUS.IN_PROGRESS.ID,
-    )
-  )
-    throw new AppError(
-      messages.PAYMENT.CONFIRM_PAYMENT.CANNOT_PAY_MISSION_STATE,
-      409,
-    );
 
   // Gets payment intent
   const pi = await paymentProvider.retrievePI(paymentIntentId);
@@ -168,20 +150,43 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
       409,
     );
 
-  // Finds waiting for payment vacancies
-  const waitingForPaymentVacancies =
-    await missionService.getAllWaitingForPaymentByMid(mid);
-
-  const occupied_vacancies = await missionService.getAllOccupiedByMid(
-    mission.mid,
-  );
-
   // Updates database
   const client = await pool.connect();
   const notificationsToSend = [];
 
   try {
     await client.query('BEGIN');
+
+    // Gets mission using pessimistic concurrency because no adventurer can vary, due to monetary reward and payments will be change
+    const mission = await missionService.getMissionByIdForUpdateOrThrow(
+      mid,
+      client,
+    );
+
+    // Checks if mission belongs to user
+    checkMissionBelongsToUser(mission.owner_id, user.uid);
+
+    // Checks if mission can be in progress by status
+    if (
+      mission.status !== MISSION_STATUS.IN_PROGRESS.ID &&
+      !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+        MISSION_STATUS.IN_PROGRESS.ID,
+      )
+    )
+      throw new AppError(
+        messages.PAYMENT.CONFIRM_PAYMENT.CANNOT_PAY_MISSION_STATE,
+        409,
+      );
+
+    // Finds waiting for payment vacancies
+    const waitingForPaymentVacancies =
+      await missionService.getAllWaitingForPaymentByMid(mid, client);
+
+    const occupied_vacancies = await missionService.getAllOccupiedByMid(
+      mission.mid,
+      client,
+    );
+
     // Treats each vacancy sequentially
     for (const vacancy of waitingForPaymentVacancies) {
       let transaction_type;
@@ -343,7 +348,8 @@ export const getDashboardLink = async (user) => {
   const loginLink = await paymentProvider.createLoginLink(
     user.stripe_connected_id,
   );
-  return loginLink.url;
+
+  return loginLink;
 };
 
 // Delete card

@@ -102,11 +102,6 @@ router.post(
   userController.addEmailAuthentication,
 );
 
-// ----------
-
-/// DELETE
-router.delete('/me', userController.deleteUser);
-
 // Bans user
 router.post(
   '/:uid/ban',
@@ -115,5 +110,8 @@ router.post(
   validateBodySchema(banUserBodySchema),
   userController.banUser,
 );
+
+/// DELETE
+router.delete('/me', userController.deleteMe);
 
 export default router;

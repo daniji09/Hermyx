@@ -33,6 +33,18 @@ export const findById = async (vacancyId, client = pool) => {
   return result.rows[0] || null;
 };
 
+// Get participation by id for update
+export const findByIdForUpdate = async (vacancyId, client = pool) => {
+  const query = `
+    SELECT *
+    FROM mission_participation
+    WHERE id = $1
+    FOR UPDATE
+  `;
+  const result = await client.query(query, [vacancyId]);
+  return result.rows[0] || null;
+};
+
 // Finds by mid and adventurer id
 export const findByMidAndAdventurerId = async (mid, adventurerId) => {
   const query = `
@@ -88,10 +100,10 @@ export const findMissionPaymentByMid = async (mid) => {
 };
 
 // Gets waiting for payment participants
-export const findAllWaitingForPaymentByMid = async (mid) => {
+export const findAllWaitingForPaymentByMid = async (mid, client = pool) => {
   const query =
     'SELECT * FROM mission_participation WHERE status = $1 AND payment_status IN ($2, $3) AND mid = $4';
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
     MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
     MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_PAID.ID,
@@ -165,8 +177,14 @@ export const update = async (mid, vacancy, client = pool) => {
 
 // Update mission participation status
 export const updateStatus = async (id, status, client = pool) => {
-  const query = 'UPDATE mission_participation SET status = $1 WHERE id = $2';
-  const result = await client.query(query, [status, id]);
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
+
+  const query =
+    'UPDATE mission_participation SET status = $1 WHERE id = $2 AND status = ANY($3::text[])';
+  const result = await client.query(query, [status, id, allowedPreviousStates]);
   return result.rowCount;
 };
 
@@ -177,13 +195,23 @@ export const updateStatusByMidAndAdventurer = async (
   status,
   client = pool,
 ) => {
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
+
   const query = `
     UPDATE mission_participation
     SET status = $3
-    WHERE mid = $1 AND adventurer_id = $2
+    WHERE mid = $1 AND adventurer_id = $2 AND status = ANY($4::text[])
     RETURNING *
   `;
-  const result = await client.query(query, [mid, adventurerId, status]);
+  const result = await client.query(query, [
+    mid,
+    adventurerId,
+    status,
+    allowedPreviousStates,
+  ]);
   return result.rows[0] || null;
 };
 
@@ -194,21 +222,30 @@ export const updatePaymentStatusById = async (id, status, client = pool) => {
   return result.rowCount;
 };
 
-// Unjoin vacancy
+// Update adventurer and status
 export const updateAdventurerAndStatus = async (
   id,
   adventurerId,
   status,
   client = pool,
 ) => {
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
   const query = `
     UPDATE mission_participation
     SET adventurer_id = $2, status = $3
-    WHERE id = $1
+    WHERE id = $1 AND status = ANY($4::text[]) 
     RETURNING *
   `;
 
-  const result = await client.query(query, [id, adventurerId, status]);
+  const result = await client.query(query, [
+    id,
+    adventurerId,
+    status,
+    allowedPreviousStates,
+  ]);
   return result.rows[0] || null;
 };
 
@@ -223,7 +260,7 @@ export const updateMonetaryReward = async (
   return result.rows[0];
 };
 
-// UpdateS payment status
+// Updates payment status
 export const updatePaymentStatus = async (id, status, client = pool) => {
   const query =
     'UPDATE mission_participation SET payment_status = $1 WHERE id = $2';
@@ -285,8 +322,12 @@ export const updateAdventurerReview = async (id, reviewId, client = pool) => {
   return result.rows[0] || null;
 };
 
-// Refunds mission participation
-export const refundVacancy = async (id, amountRefunded, client = pool) => {
+// Refunds partial payment of mission participation
+export const refundVacancyPartially = async (
+  id,
+  amountRefunded,
+  client = pool,
+) => {
   const query = `
     UPDATE mission_participation 
     SET payment_status = $1, amount_paid = amount_paid - $2 
@@ -297,6 +338,47 @@ export const refundVacancy = async (id, amountRefunded, client = pool) => {
     amountRefunded,
     id,
     MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+  ]);
+  return result.rowCount;
+};
+
+// Refunds banned vacancy
+export const refundBannedVacancy = async (id, amount_refunded) => {
+  const query = `
+    UPDATE mission_participation 
+    SET payment_status = $1, amount_paid = amount_paid - $2 
+    WHERE id = $3 AND payment_status = $4`;
+
+  const result = await pool.query(query, [
+    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
+    amount_refunded,
+    id,
+    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
+  ]);
+  return result.rowCount;
+};
+
+// Unjoin every participant
+export const cleanMissionParticipation = async (mid) => {
+  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status = $3`;
+  const result = await pool.query(query, [
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    mid,
+    MISSION_PARTICIPATION_STATUS.JOINED.ID,
+  ]);
+  return result.rowCount;
+};
+
+// Unjoin specific participant
+export const unjoinParticipant = async (mid, uid, client = pool) => {
+  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status NOT IN ($3, $4, $5) AND adventurer_id = $6`;
+  const result = await client.query(query, [
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    mid,
+    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+    MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+    uid,
   ]);
   return result.rowCount;
 };
@@ -319,119 +401,5 @@ export const deleteAllUnoccupied = async (mid, existingIds, client = pool) => {
     `;
     result = await client.query(query, [mid]);
   }
-  return result.rowCount;
-};
-
-//-----
-export const updateTransferInfo = async (mid, uid, transferId, amount) => {
-  const query = `
-    UPDATE mission_participation 
-    SET transfer_id = $1, amount_paid = $2 
-    WHERE mid = $3 AND adventurer_id = $4
-  `;
-  await pool.query(query, [transferId, amount, mid, uid]);
-};
-
-export const deleteParticipant = async (mid, adventurerId) => {
-  const query = `
-    DROP * FROM mission_participation WHERE mid = $1 AND adventurer_id = $2`;
-  const result = await pool.query(query, [mid, adventurerId]);
-  return result.rows[0];
-};
-
-export const releaseParticipation = async (mid, adventurerId, client = pool) =>
-  updateStatusByMidAndAdventurer(
-    mid,
-    adventurerId,
-    MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-    client,
-  );
-
-export const disputeParticipation = async (
-  mid,
-  adventurerId,
-  client = pool,
-) => {
-  const query = `
-    UPDATE mission_participation
-    SET status = $3
-    WHERE mid = $1 AND adventurer_id = $2
-    RETURNING *
-  `;
-  const result = await client.query(query, [
-    mid,
-    adventurerId,
-    MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
-  ]);
-  return result.rows[0] || null;
-};
-
-export const insertVacancies = async (mid, vacancies) => {
-  const insertPromises = vacancies.map((vacancy) => {
-    const insertQuery = `
-      INSERT INTO mission_participation (mid, monetary_reward, title, description, status, amount_paid)
-      VALUES ($1, $2, $3, $4, $5, 0)
-    `;
-    return pool.query(insertQuery, [
-      mid,
-      vacancy.reward,
-      vacancy.title || null,
-      vacancy.description || null,
-      MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-    ]);
-  });
-  const result = await Promise.all([...insertPromises]);
-  return result;
-};
-
-export const payVacancies = async (mid, amount_paid) => {
-  const query = `UPDATE mission_participation SET payment_status = $1, amount_paid = $5 WHERE mid = $2 AND adventurer_id IS NOT NULL AND payment_status = $3 AND status = $4`;
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID,
-    mid,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
-    MISSION_PARTICIPATION_STATUS.PENDING_PAYMENT.ID,
-    amount_paid,
-  ]);
-  return result.rowCount;
-};
-
-// Unjoin every participant
-export const cleanMissionParticipation = async (mid) => {
-  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status = $3`;
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-    mid,
-    MISSION_PARTICIPATION_STATUS.JOINED.ID,
-  ]);
-  return result.rowCount;
-};
-
-// Unjoin specific participant
-export const unjoinParticipant = async (mid, uid) => {
-  const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status NOT IN ($3, $4, $5) AND adventurer_id = $6`;
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-    mid,
-    MISSION_PARTICIPATION_STATUS.EMPTY.ID,
-    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-    MISSION_PARTICIPATION_STATUS.RELEASED.ID,
-    uid,
-  ]);
-  return result.rowCount;
-};
-
-export const refundBannedVacancy = async (id, amount_refunded) => {
-  const query = `
-    UPDATE mission_participation 
-    SET payment_status = $1, amount_paid = amount_paid - $2 
-    WHERE id = $3 AND payment_status = $4`;
-
-  const result = await pool.query(query, [
-    MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
-    amount_refunded,
-    id,
-    MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
-  ]);
   return result.rowCount;
 };

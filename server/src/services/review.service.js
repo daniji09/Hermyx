@@ -107,6 +107,11 @@ const createReview = async ({
     // Validates review
     validateReview(participation, reviewerId, reviewerRole);
 
+    // Gets user using pessimistic concurrency approach, so rating column is not updated wrongly
+    const targetUserId =
+      reviewerRole === 'owner' ? adventurerId : participation.owner_id;
+    await userService.getUsersByUidForUpdate(targetUserId, client);
+
     // Creates review
     const review = await reviewModel.create({ rating, comment }, client);
     if (reviewerRole === 'owner') {
@@ -152,7 +157,7 @@ const validateReview = (participation, reviewerId, reviewerRole) => {
   if (
     !MISSION_PARTICIPATION_STATUS[participation.participation_status].CAN_REVIEW
   )
-    throw new AppError(messages.MISSION_REVIEW_COMPLETED_REQUIRED, 409);
+    throw new AppError(messages.REVIEW.GENERAL.MISSION_COMPLETED, 409);
 
   // Gets rid and checks if already exists
   const reviewId =

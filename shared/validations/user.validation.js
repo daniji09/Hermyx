@@ -9,9 +9,9 @@ import * as missionValidation from './mission.validation.js';
 /// Base validations, raw logic
 // Uid
 export const uidBaseSchema = z.coerce
-  .number(messages.FIELD_NUMBER('Uid'))
-  .int(messages.FIELD_INTEGER('Uid'))
-  .min(0, messages.FIELD_POSITIVE('Uid'));
+  .number(messages.GENERAL.FIELD_NUMBER('Uid'))
+  .int(messages.GENERAL.FIELD_INTEGER('Uid'))
+  .min(0, messages.GENERAL.FIELD_POSITIVE('Uid'));
 
 // Username
 export const usernameBaseSchema = z
@@ -20,7 +20,10 @@ export const usernameBaseSchema = z
   .min(1, messages.GENERAL.FIELD_REQUIRED('Username'))
   .max(
     consts.USER.USERNAME.MAX_LENGTH,
-    messages.FIELD_TOO_LONG('Username', consts.USER.USERNAME.MAX_LENGTH),
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Username',
+      consts.USER.USERNAME.MAX_LENGTH,
+    ),
   )
   .regex(regex.USER.USERNAME, messages.USER.USERNAME.INVALID_CHARACTERS);
 
@@ -39,11 +42,17 @@ export const passwordBaseSchema = z
 export const newPasswordBaseSchema = passwordBaseSchema
   .min(
     consts.USER.PASSWORD.MIN_LENGTH,
-    messages.FIELD_TOO_SHORT('Password', consts.USER.PASSWORD.MIN_LENGTH),
+    messages.GENERAL.FIELD_TOO_SHORT(
+      'Password',
+      consts.USER.PASSWORD.MIN_LENGTH,
+    ),
   )
   .max(
     consts.USER.PASSWORD.MAX_LENGTH,
-    messages.FIELD_TOO_LONG('Password', consts.USER.PASSWORD.MAX_LENGTH),
+    messages.GENERAL.FIELD_TOO_LONG(
+      'Password',
+      consts.USER.PASSWORD.MAX_LENGTH,
+    ),
   ) // Firebase requirement
   .regex(regex.USER.PASSWORD.UPPERCASE, messages.USER.PASSWORD.UPPERCASE)
   .regex(regex.USER.PASSWORD.LOWERCASE, messages.USER.PASSWORD.LOWERCASE)
@@ -103,6 +112,22 @@ export const longitudeBaseSchema = z.coerce.number();
 
 // Configuration
 export const configurationBaseSchema = z.json();
+
+// Report id
+export const reportIdBaseSchema = z.coerce
+  .number(messages.GENERAL.FIELD_NUMBER('Report id'))
+  .int(messages.GENERAL.FIELD_INTEGER('Report id'))
+  .min(0, messages.GENERAL.FIELD_POSITIVE('Report id'));
+
+// Report reason
+export const reportReasonBaseSchema = z
+  .string()
+  .trim()
+  .min(1, messages.GENERAL.FIELD_REQUIRED('Reason'))
+  .max(
+    consts.REPORT.REASON_MESSAGE.MAX,
+    messages.GENERAL.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
+  );
 
 /// Endpoint complex validation
 // Search user by username
@@ -190,11 +215,17 @@ export const addEmailAuthenticationSchema = z
     path: ['confirmPassword'],
   });
 
-/// -----------------------
-export const getUsersByFirebaseUidParamSchema = z.object({
-  firebaseUid: z.string().min(1, messages.FIELD_REQUIRED),
+// Ban user
+export const banUserParamsSchema = z.object({
+  uid: uidBaseSchema,
 });
 
+export const banUserBodySchema = z.object({
+  rid: reportIdBaseSchema,
+  reason: reportReasonBaseSchema,
+});
+
+/// Frontend exclusive validation
 // Update email validation
 export const updateEmailValidation = z
   .object({
@@ -202,30 +233,15 @@ export const updateEmailValidation = z
     confirmEmail: z.email(messages.GENERAL.FIELD_NOT_VALID('email')).trim(),
   })
   .refine((val) => val.email === val.confirmEmail, {
-    message: messages.EMAILS_NOT_MATCH,
+    message: messages.USER.UPDATE_EMAIL.EMAILS_NOT_MATCH,
     path: ['confirmEmail'],
   });
 
 // Update email validation
 export const updatePasswordValidation = z
   .object({
-    password: z
-      .string()
-      .trim()
-      .min(1, messages.FIELD_REQUIRED)
-      .min(
-        consts.PASSWORD_MIN_LENGTH,
-        messages.FIELD_TOO_SHORT('Password', consts.PASSWORD_MIN_LENGTH),
-      )
-      .max(
-        consts.PASSWORD_MAX_LENGTH,
-        messages.FIELD_TOO_LONG('Password', consts.PASSWORD_MAX_LENGTH),
-      ) // Firebase requirement
-      .regex(regex.PASSWORD_UPPERCASE_REGEX, messages.PASSWORD_UPPERCASE)
-      .regex(regex.PASSWORD_LOWERCASE_REGEX, messages.PASSWORD_LOWERCASE)
-      .regex(regex.PASSWORD_NUMBER_REGEX, messages.PASSWORD_NUMBER)
-      .regex(regex.PASSWORD_SYMBOL_REGEX, messages.PASSWORD_SYMBOL),
-    confirmPassword: z.string().trim().min(1, messages.CONFIRM_PASSWORD),
+    password: newPasswordBaseSchema,
+    confirmPassword: confirmPasswordBaseSchema,
   })
   .refine((val) => val.password === val.confirmPassword, {
     message: messages.PASSWORDS_NOT_MATCH,
@@ -234,25 +250,4 @@ export const updatePasswordValidation = z
 
 export const userConfigurationValidation = z.object({
   show_missions_to_others: z.boolean(),
-});
-
-// Ban user
-export const banUserParamsSchema = z.object({
-  uid: uidBaseSchema,
-});
-
-export const banUserBodySchema = z.object({
-  rid: z.coerce
-    .number(messages.FIELD_NUMBER('Rid'))
-    .int(messages.FIELD_INTEGER('Rid'))
-    .min(0, messages.FIELD_POSITIVE('Rid')),
-  reason: z
-    .string()
-    .trim()
-    .min(1, messages.FIELD_REQUIRED)
-    .max(
-      consts.REPORT.REASON_MESSAGE.MAX,
-      messages.FIELD_TOO_LONG('Reason', consts.REPORT.REASON_MESSAGE.MAX),
-    )
-    .default(''),
 });

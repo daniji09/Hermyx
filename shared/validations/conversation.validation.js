@@ -35,6 +35,11 @@ export const conversationMessagesQuerySchema = z.object({
   limit: limitBaseSchema,
 });
 
+// Read message
+export const readConversationParamsSchema = z.object({
+  cid: conversationIdBaseSchema,
+});
+
 // Create private conversation
 export const privateConversationSchema = z.object({
   otherUserId: uidBaseSchema,

@@ -68,8 +68,6 @@ export const createMission = async (missionData) => {
     formData.append('longitude', missionData.longitude);
   if (missionData.latitude) formData.append('latitude', missionData.latitude);
 
-  formData.append('isDraft', Boolean(missionData.status === 'draft'));
-
   // Adds photos as files
   if (missionData.photos && missionData.photos.length > 0) {
     missionData.photos.forEach((photoObj) => {

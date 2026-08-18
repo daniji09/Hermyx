@@ -14,12 +14,12 @@ import {
 
 /// Model access functions
 // Get conversation by id
-export const getConversationById = async (conversationId, client) => {
+const getConversationById = async (conversationId, client) => {
   checkRequired(conversationId, 'Conversation id');
   return conversationModel.findById(conversationId, client);
 };
 
-export const getConversationByIdOrThrow = async (conversationId, client) => {
+const getConversationByIdOrThrow = async (conversationId, client) => {
   const conversation = await getConversationById(conversationId, client);
   if (!conversation)
     throw new AppError(
@@ -29,16 +29,17 @@ export const getConversationByIdOrThrow = async (conversationId, client) => {
   return conversation;
 };
 
+// Create conversation
 export const createConversation = async (type, mid, client) => {
   checkRequired(type, 'Conversation type');
-  return conversationModel.create(type, mid, client);
+  return await conversationModel.create(type, mid, client);
 };
 
 // Creates conversation participant
 export const createConversationParticipant = async (cid, uid, client) => {
   checkRequired(cid, 'Conversation id');
   checkRequired(uid, 'User id');
-  return conversationParticipantModel.create(cid, uid, client);
+  return await conversationParticipantModel.create(cid, uid, client);
 };
 
 // Creates a mission conversation participant
@@ -49,13 +50,17 @@ export const createMissionConversationParticipant = async (
 ) => {
   checkRequired(mid, 'Mission id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.createMissionType(mid, userId, client);
+  return await conversationParticipantModel.createMissionType(
+    mid,
+    userId,
+    client,
+  );
 };
 
 // Creates message
 export const createMessage = async (message, client) => {
   checkRequired(message, 'Conversation message');
-  return conversationMessageModel.create(message, client);
+  return await conversationMessageModel.create(message, client);
 };
 
 // Gets unread message counter by user id
@@ -66,7 +71,7 @@ export const getUnreadMessageCountByUserId = async (
   client,
 ) => {
   checkRequired(userId, 'User id');
-  return conversationMessageModel.countUnreadByUserId(
+  return await conversationMessageModel.countUnreadByUserId(
     userId,
     conversationType,
     excludedConversationType,
@@ -82,13 +87,14 @@ export const isConversationParticipant = async (
 ) => {
   checkRequired(conversationId, 'Conversation id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.isConversationParticipant(
+  return await conversationParticipantModel.isConversationParticipant(
     conversationId,
     userId,
     client,
   );
 };
 
+// Marks conversation as read by user id
 export const markConversationAsReadByUserId = async (
   conversationId,
   userId,
@@ -96,34 +102,37 @@ export const markConversationAsReadByUserId = async (
 ) => {
   checkRequired(conversationId, 'Conversation id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.markConversationAsReadByUserId(
+  return await conversationParticipantModel.markConversationAsReadByUserId(
     conversationId,
     userId,
     client,
   );
 };
 
+// Leaves mission conversation
 export const leaveMissionConversation = async (mid, uid, client) => {
   checkRequired(mid, 'Mission id');
   checkRequired(uid, 'User id');
-  return conversationParticipantModel.leaveMissionConversation(
+  return await conversationParticipantModel.leaveMissionConversation(
     mid,
     uid,
     client,
   );
 };
 
+// Get active conversation participants ids
 export const getActiveConversationParticipantIds = async (
   conversationId,
   client,
 ) => {
   checkRequired(conversationId, 'Conversation id');
-  return conversationParticipantModel.findActiveIdsByConversationId(
+  return await conversationParticipantModel.findActiveIdsByConversationId(
     conversationId,
     client,
   );
 };
 
+// Freeze mission conversation history
 export const freezeMissionConversationHistory = async (
   missionId,
   userId,
@@ -131,18 +140,25 @@ export const freezeMissionConversationHistory = async (
 ) => {
   checkRequired(missionId, 'Mission id');
   checkRequired(userId, 'User id');
-  return conversationParticipantModel.freezeMissionConversationHistory(
+  return await conversationParticipantModel.freezeMissionConversationHistory(
     missionId,
     userId,
     client,
   );
 };
 
+// Closes mission conversation by mid
 export const closeMissionConversationType = async (mid, client) => {
   checkRequired(mid, 'Mission id');
 
   // Closes mission conversation type
   return await conversationModel.closeByMid(mid, client);
+};
+
+// Removes a user from all chats
+export const removeUserFromAllConversations = async (uid, client) => {
+  checkRequired(uid, 'User id');
+  return await conversationParticipantModel.removeUserFromAll(uid, client);
 };
 
 /// Endpoint complex functions
@@ -227,20 +243,33 @@ export const createPrivateConversation = async (currentUserId, otherUserId) => {
     );
   }
 
-  // Checks user exists
-  await userService.getUserByUidOrThrow(otherUserId);
-
-  // Checks if conversation already exists, if it does, it just simply returns it
-  const existingConversation = await conversationModel.findPrivateConversation(
-    currentUserId,
-    otherUserId,
-  );
-  if (existingConversation) return existingConversation;
-
   // If it doesn't, creation is done via a database transaction
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Blocks users for pessimistic concurrency
+    const sortedIds = [currentUserId, otherUserId].sort(); // Sorts them so it always block the first user, avoiding deadlocks
+    const usersLocked = await userService.getUsersByUidForUpdate(
+      sortedIds,
+      client,
+    );
+
+    // Checks if both users actually exists
+    if (usersLocked.length !== 2) {
+      throw new AppError(messages.USER.GENERAL.USER_NOT_FOUND, 404);
+    }
+
+    // Checks if conversation already exists, if it does, it just simply returns it
+    const existingConversation =
+      await conversationModel.findPrivateConversation(
+        currentUserId,
+        otherUserId,
+      );
+    if (existingConversation) {
+      await client.query('ROLLBACK'); // Rollback that unlocks users and stops transactions
+      return existingConversation;
+    }
+
     // Creates conversation
     const conversation = await conversationModel.create(
       'private',
@@ -381,11 +410,22 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
   return message;
 };
 
+// Marks conversation as read
 export const markConversationAsRead = async (conversationId, userId) => {
-  const wasMarkedAsRead = await markConversationAsReadByUserId(
-    conversationId,
-    userId,
-  );
+  // Parameter checks
+  checkRequired(conversationId, 'Conversation id');
+  checkRequired(userId, 'User id');
+
+  // Checks that conversation and user exists
+  await getConversationByIdOrThrow(conversationId);
+  await userService.getUserByUidOrThrow(userId);
+
+  // Marks conversation as read if it wasn't already
+  const wasMarkedAsRead =
+    await conversationParticipantModel.markConversationAsReadByUserId(
+      conversationId,
+      userId,
+    );
   if (!wasMarkedAsRead)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   return 0;

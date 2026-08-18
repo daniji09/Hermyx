@@ -29,7 +29,8 @@ import {
 /// Model access functions
 const getReportByRidOrThrow = async (reportId) => {
   const report = await reportModel.findById(reportId);
-  if (!report) throw new AppError(messages.REPORT_NOT_FOUND, 404);
+  if (!report)
+    throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
   return report;
 };
 
@@ -48,13 +49,29 @@ export const getUserDisputes = async (userId, pagination) => {
   };
 };
 
-export const hasActiveReport = async (reportData, client) =>
-  reportModel.checkActiveReport(reportData, client);
+// Checks active reports of a specified type
+export const hasActiveReport = async (reportData, client) => {
+  checkRequired(reportData, 'Report data');
+  return await reportModel.checkActiveReport(reportData, client);
+};
 
 // Creates report
 export const createReport = async (reportData, client) => {
   checkRequired(reportData, 'Report data');
   return await reportModel.create(reportData, client);
+};
+
+// Gets all active disputes of user
+export const getActiveDisputesByUid = async (uid, client) => {
+  checkRequired(uid, 'User id');
+  return await reportModel.findAllActiveDisputesByUid(uid, client);
+};
+
+// Updates status checking current one
+export const updateStatusIfCurrent = async (rid, status, client) => {
+  checkRequired(rid, 'Report id');
+  checkRequired(status, 'Report status');
+  return await reportModel.updateStatusIfCurrent(rid, status, client);
 };
 
 /// Complex endpoint functions
@@ -171,6 +188,17 @@ export const reportAdventurer = async ({
       messages.REPORT.REPORT_ADVENTURER.ACTIVE_REPORT,
       client,
     );
+
+    // Marks participation as disputed
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      missionId,
+      adventurer.uid,
+      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
+      client,
+    );
+
+    // Syncs mission
+    await missionService.syncMissionCompletionStatus(missionId, client);
 
     // Creates conversation between reporter and reported
     const participantIds = [sender.uid, adventurer.uid];
@@ -360,7 +388,7 @@ const createReportIfNotActive = async (
 };
 
 // Closes report and associated conversation in db
-const closeReportAndConversationInternal = async (
+export const closeReportAndConversation = async (
   reportId,
   decision,
   reason,
@@ -378,17 +406,9 @@ const closeReportAndConversationInternal = async (
   if (!report)
     throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
 
-  // If there is an active conversation associated, closes it
-  if (report.conversation_id) {
-    const participantIds =
-      await conversationService.getActiveConversationParticipantIds(
-        report.conversation_id,
-        client,
-      );
-    await conversationService.closeConversation(report.conversation_id, client);
-    return { participantIds, report };
-  }
-  return { participantIds: [], report };
+  // Closes associated conversation
+  const participantIds = await closeAssociatedConversation(report, client);
+  return { participantIds: participantIds || [], report };
 };
 
 // Accepts adventurer work
@@ -404,12 +424,38 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   let closedReport,
     participantIds,
     successfulPayment = true;
-  // First, status is changed outside of any transaction
-  await missionService.updateParticipationStatusByMidAndAdventurer(
-    mission.mid,
-    adventurer.uid,
-    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-  );
+
+  // Early transaction is made ensuring this admins is answering the report without another one doing the same at the same
+  // Time, causing two payments or some inconsistency
+  const earlyClient = await pool.connect();
+  try {
+    await earlyClient.query('BEGIN');
+
+    // Report is updated if it is possible, so is like a block
+    const reportLocked = await reportModel.updateStatusIfCurrent(
+      reportId,
+      REPORT_STATUS.ANSWERED.ID,
+      earlyClient,
+    );
+    if (!reportLocked)
+      throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
+    // Participation is updated
+    await missionService.updateParticipationStatusByMidAndAdventurer(
+      mission.mid,
+      adventurer.uid,
+      MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+      earlyClient,
+    );
+
+    await earlyClient.query('COMMIT');
+  } catch (error) {
+    await earlyClient.query('ROLLBACK');
+    throw error;
+  } finally {
+    earlyClient.release();
+  }
+
   // Creates Stripe transfer in its own try and with idempotency key
   try {
     let transfer;
@@ -474,7 +520,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
 
       // Closes report and associated conversation on db
       ({ report: closedReport, participantIds } =
-        await closeReportAndConversationInternal(
+        await closeReportAndConversation(
           reportId,
           REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID,
           reason,
@@ -494,6 +540,8 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
       client.release();
     }
   } catch (stripeError) {
+    // Report is updated to sent status only if Stripe has failed
+    await reportModel.updateStatusIfCurrent(reportId, REPORT_STATUS.SENT.ID);
     // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
     console.error(
       `Stripe Error while paying out vacancy ${vacancy.id}  after an admin accepted adventurer's:`,
@@ -593,6 +641,15 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
     );
   try {
     await client.query('BEGIN');
+    // Report is updated if it is possible, so is like a block
+    const reportLocked = await reportModel.updateStatusIfCurrent(
+      reportId,
+      REPORT_STATUS.ANSWERED.ID,
+      client,
+    );
+    if (!reportLocked)
+      throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
     // First, status is changed to in progress again
     await missionService.updateParticipationStatusByMidAndAdventurer(
       mission.mid,
@@ -606,7 +663,7 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
 
     // Report and associated conversation is closed
     ({ report: closedReport, participantIds } =
-      await closeReportAndConversationInternal(
+      await closeReportAndConversation(
         reportId,
         REPORT_DECISION.REJECT_ADVENTURERS_WORK.ID,
         reason,
@@ -699,7 +756,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     }
 
     // Gets adventurer info
-    const adventurer = await userService.getUserByUidOrThro(
+    const adventurer = await userService.getUserByUidOrThrow(
       vacancy.adventurer_id,
     );
 
@@ -732,9 +789,18 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
   let notificationId;
   try {
     await client.query('BEGIN');
+    // Report is updated if it is possible, so is like a block
+    const reportLocked = await reportModel.updateStatusIfCurrent(
+      reportId,
+      REPORT_STATUS.ANSWERED.ID,
+      client,
+    );
+    if (!reportLocked)
+      throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
     // Closes report and associated conversation on db
     ({ report: closedReport, participantIds } =
-      await closeReportAndConversationInternal(
+      await closeReportAndConversation(
         reportId,
         REPORT_DECISION.DISMISS.ID,
         reason,
@@ -825,7 +891,7 @@ const buildResolutionNotification = (
 });
 
 // Emits conversation closed
-const emitConversationClosed = (participantIds, report) => {
+export const emitConversationClosed = (participantIds, report) => {
   if (!report?.conversation_id) return;
   emitToAdmins('report:updated', { reportId: report.rid });
   const closedAt = new Date().toISOString();
@@ -838,31 +904,16 @@ const emitConversationClosed = (participantIds, report) => {
   }
 };
 
-// Closes report and conversation
-export const closeReportAndConversation = async (
-  reportId,
-  decision,
-  reason,
-  adminId,
-) => {
-  const client = await pool.connect();
-  let result;
-  try {
-    await client.query('BEGIN');
-    result = await closeReportAndConversationInternal(
-      reportId,
-      decision,
-      reason,
-      adminId,
-      client,
-    );
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK');
-    throw error;
-  } finally {
-    client.release();
+// Closes associated conversation
+const closeAssociatedConversation = async (report, client) => {
+  // If there is an active conversation associated, closes it
+  if (report.conversation_id) {
+    const participantIds =
+      await conversationService.getActiveConversationParticipantIds(
+        report.conversation_id,
+        client,
+      );
+    await conversationService.closeConversation(report.conversation_id, client);
+    return participantIds;
   }
-  emitConversationClosed(result.participantIds, result.report);
-  return result.report;
 };

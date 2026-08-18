@@ -53,6 +53,17 @@ export const findByMid = async (mid) => {
   return result.rows[0];
 };
 
+// Get mission by its mid for update
+export const findByMidForUpdate = async (mid, client = pool) => {
+  const query = `SELECT *,  
+    ST_Y(m.location::geometry) as latitude, 
+    ST_X(m.location::geometry) as longitude 
+    FROM mission m WHERE mid = $1
+    FOR UPDATE`;
+  const result = await client.query(query, [mid]);
+  return result.rows[0];
+};
+
 // Get mission by mid excluding an uid
 export const findByMidExcludingUid = async (id, uid) => {
   const query = `SELECT *, 
@@ -329,6 +340,39 @@ export const findPublicJoinedByUid = async (userId, pagination = null) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
+// Gets user active missions, created or joined
+export const findAllActiveByUid = async (uid) => {
+  const query = `
+  SELECT m.mid, 
+      m.publication_date, 
+      m.title, 
+      m.description, 
+      m.total_vacancies,
+      m.occupied_vacancies,
+      m.location,
+      m.total_payment,
+      m.completion_date,
+      ma.monetary_reward,
+      ma.amount_paid,
+      ma.payment_status,
+      ma.owner_review_id,
+      ma.adventurer_review_id,
+      m.owner_id, m.status AS status, ma.status AS participation_status, ma.id AS vacancy_id, COUNT(*) OVER() AS total_active
+  FROM mission m
+    LEFT JOIN mission_participation ma ON m.mid = ma.mid AND ma.adventurer_id = $1
+  WHERE m.status NOT IN ($2, $3, $4, $5)
+    AND (m.owner_id = $1 OR ma.adventurer_id = $1)
+  `;
+  const result = await pool.query(query, [
+    uid,
+    MISSION_STATUS.DELETED.ID,
+    MISSION_STATUS.CANCELLING.ID,
+    MISSION_STATUS.CANCELLED.ID,
+    MISSION_STATUS.FINISHED.ID,
+  ]);
+  return result.rows;
+};
+
 // Gets mission status summary
 export const getMissionStatusSummary = async (mid, client = pool) => {
   const summaryQuery = `
@@ -384,13 +428,22 @@ export const update = async (missionData, client = pool) => {
 
 // Update mission status
 export const updateStatusByMid = async (mid, status, client = pool) => {
+  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  const allowedPreviousStates = Object.values(MISSION_STATUS)
+    .filter((config) => config.VALID_NEXT_STATES.includes(status))
+    .map((config) => config.ID);
+
   const query = `
     UPDATE mission
     SET status = $1
-    WHERE mid = $2
+    WHERE mid = $2 AND status = ANY($3::text[])
     RETURNING *
   `;
-  const result = await client.query(query, [status, mid]);
+  const result = await client.query(query, [
+    status,
+    mid,
+    allowedPreviousStates,
+  ]);
   return result.rows[0];
 };
 
@@ -415,152 +468,9 @@ export const updateMissionPayment = async (mid, payment, client = pool) => {
   return result.rows[0] || null;
 };
 
-/// ......
-
-//Updates the Stripe Payment Intent ID and the mission status. Uses COALESCE to prevent overwriting the ID with null if only status needs update.
-export const updatePaymentInfo = async (mid, pi_id, status) => {
-  const query = `
-    UPDATE mission 
-    SET stripe_pi_id = COALESCE($1, stripe_pi_id), status = $2 
-    WHERE mid = $3
-  `;
-  await pool.query(query, [pi_id, status, mid]);
-};
-
-//Get all adventurers in a mission, essential for knowing who to send money to.
-export const getParticipantsForRelease = async (mid) => {
-  const query = `
-    SELECT
-      u.uid,
-      u.stripe_connected_id,
-      u.email,
-      mp.monetary_reward,
-      mp.transfer_id
-    FROM app_user u
-    JOIN mission_participation mp ON u.uid = mp.adventurer_id
-    WHERE mp.mid = $1
-  `;
-  const result = await pool.query(query, [mid]);
-  return result.rows;
-};
-
-//Tries to set status to "releasing" only if current status is 'accepted', this prevents double payments. Returns the row if successful.
-export const lockForRelease = async (mid, ownerId) => {
-  const query = `
-    UPDATE mission 
-    SET status = 'releasing' 
-    WHERE mid = $1 
-    AND owner_id = $2 
-    AND status = 'finished'
-    RETURNING *
-  `;
-  const result = await pool.query(query, [mid, ownerId]);
-  return result.rows[0];
-};
-
-//Tries to set status to 'refunding'. Validates that the mission is in a state where a refund is allowed.
-export const lockForRefund = async (mid, ownerId) => {
-  const query = `
-    UPDATE mission 
-    SET status = 'refunding' 
-    WHERE mid = $1 
-    AND owner_id = $2 
-    AND status IN ('funded', 'in_progress', 'finished', 'accepted')
-    RETURNING *
-  `;
-  const result = await pool.query(query, [mid, ownerId]);
-  return result.rows[0];
-};
-
-// Updates mission status and stores completion date for paid-out missions.
-export const updateReleaseStatus = async (mid, status) => {
-  const query = `
-    UPDATE mission
-    SET status = $1, completion_date = NOW()
-    WHERE mid = $2
-  `;
-  await pool.query(query, [status, mid]);
-};
-
-//Set the mission as 'refunded' and saves the Stripe Refund ID for reference.
-export const finalizeRefund = async (mid, refundId) => {
-  const query = `
-    UPDATE mission 
-    SET status = 'refunded', stripe_refund_id = $1 
-    WHERE mid = $2
-  `;
-  await pool.query(query, [refundId, mid]);
-};
-
-export const getAllMissionsInDraft = async () => {
-  const query = "SELECT * FROM mission WHERE status = 'draft'";
-  const result = await pool.query(query, []);
-  return result.rows;
-};
-
-export const countMissions = async () => {
-  const query = 'SELECT COUNT(*) FROM mission';
-  const result = await pool.query(query, []);
-  return parseInt(result.rows[0].count);
-};
-
-export const adventurerJoined = async (mid) => {
-  const query =
-    'UPDATE mission SET occupied_vacancies = occupied_vacancies + 1 WHERE mid = $1 RETURNING occupied_vacancies';
-  const result = await pool.query(query, [mid]);
-  return result.rowCount;
-};
-
-// Gets user active missions, created or joined
-export const getUserActiveMissions = async (uid) => {
-  const query = `
-  SELECT m.mid, 
-      m.publication_date, 
-      m.title, 
-      m.description, 
-      m.total_vacancies,
-      m.occupied_vacancies,
-      m.location,
-      m.total_payment,
-      m.completion_date,
-      ma.monetary_reward,
-      ma.amount_paid,
-      ma.payment_status,
-      ma.owner_review_id,
-      ma.adventurer_review_id,
-      m.owner_id, m.status AS status, ma.status AS participation_status, ma.id AS vacancy_id, COUNT(*) OVER() AS total_active
-  FROM mission m
-    LEFT JOIN mission_participation ma ON m.mid = ma.mid AND ma.adventurer_id = $1
-  WHERE m.status NOT IN ($2, $3, $4, $5)
-    AND (m.owner_id = $1 OR ma.adventurer_id = $1)
-  `;
-  const result = await pool.query(query, [
-    uid,
-    MISSION_STATUS.DELETED.ID,
-    MISSION_STATUS.CANCELLING.ID,
-    MISSION_STATUS.CANCELLED.ID,
-    MISSION_STATUS.FINISHED.ID,
-  ]);
-  return result.rows;
-};
-
-// Gets number of participants in mission
-export const getMissionParticipation = async (mid) => {
-  const query = `SELECT count(*) FROM mission_participation WHERE mid = $1`;
-  const result = await pool.query(query, [mid]);
-  return result.rows[0].count;
-};
-
 // Empties a mission
 export const emptyMission = async (mid) => {
   const query = `UPDATE mission SET occupied_vacancies = 0 WHERE mid = $1 RETURNING *`;
   const result = pool.query(query, [mid]);
-  return result.rowCount;
-};
-
-// Opens a mission again
-export const openMission = async (mid) => {
-  const query = `UPDATE mission SET status = $2 WHERE mid = $1 RETURNING *`;
-  const result = pool.query(query, [mid, MISSION_STATUS.OPENED.ID]);
   return result.rowCount;
 };

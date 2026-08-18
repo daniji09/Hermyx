@@ -2,6 +2,7 @@ import { consts, messages } from '@hermyx/shared';
 import { AppError } from '../utils/error.util.js';
 import multer from 'multer';
 
+// Middleware error handler
 // eslint-disable-next-line no-unused-vars
 export const errorHandler = (error, req, res, next) => {
   // Validation errors controlled by service

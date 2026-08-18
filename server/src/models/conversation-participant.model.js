@@ -128,6 +128,28 @@ export const isConversationParticipant = async (
   return result.rowCount > 0;
 };
 
+// Checks if user can send message to conversation
+export const canSendMessageToConversation = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
+  const query = `
+    SELECT 1
+    FROM conversation_participant cp
+    JOIN conversation c ON c.cid = cp.conversation_id
+    WHERE cp.conversation_id = $1
+      AND cp.user_id = $2
+      AND cp.left_at IS NULL
+      AND cp.can_send = TRUE
+      AND c.closed_at IS NULL
+    LIMIT 1
+  `;
+
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rowCount > 0;
+};
+
 /// UPDATES
 // Mission conversation left by user
 export const leaveMissionConversation = async (
@@ -209,25 +231,35 @@ export const disableConversationParticipants = async (
   return result.rows;
 };
 
-// ------
+// Removes a user from all conversations
+export const removeUserFromAll = async (uid, client = pool) => {
+  // User leaves all chats
+  await client.query(
+    `UPDATE conversation_participant SET left_at = NOW(), can_send = false WHERE user_id = $1 AND left_at IS NULL`,
+    [uid],
+  );
 
-export const canSendMessageToConversation = async (
-  conversationId,
-  userId,
-  client = pool,
-) => {
-  const query = `
-    SELECT 1
-    FROM conversation_participant cp
-    JOIN conversation c ON c.cid = cp.conversation_id
-    WHERE cp.conversation_id = $1
-      AND cp.user_id = $2
-      AND cp.left_at IS NULL
-      AND cp.can_send = TRUE
-      AND c.closed_at IS NULL
-    LIMIT 1
-  `;
+  // Writing for other person is blocked
+  await client.query(
+    `
+    UPDATE conversation_participant SET can_send = false
+    WHERE conversation_id IN (
+      SELECT cp.conversation_id FROM conversation_participant cp
+      JOIN conversation c ON c.cid = cp.conversation_id
+      WHERE cp.user_id = $1 AND c.type = 'private'
+    ) AND user_id <> $1 AND left_at IS NULL
+  `,
+    [uid],
+  );
 
-  const result = await client.query(query, [conversationId, userId]);
-  return result.rowCount > 0;
+  // Chat is closed
+  await client.query(
+    `
+    UPDATE conversation SET closed_at = NOW()
+    WHERE type = 'private' AND closed_at IS NULL AND cid IN (
+      SELECT conversation_id FROM conversation_participant WHERE user_id = $1
+    )
+  `,
+    [uid],
+  );
 };

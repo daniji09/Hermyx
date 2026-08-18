@@ -51,6 +51,32 @@ export const getConversationMessages = async (req, res, next) => {
   }
 };
 
+// Marks conversation as read
+export const markConversationAsRead = async (req, res, next) => {
+  try {
+    const unreadCount = await conversationService.markConversationAsRead(
+      req.params.cid,
+      req.user.uid,
+    );
+    return res.status(200).json({ unreadCount });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Marks conversation as read
+export const markConversationAsRead = async (req, res, next) => {
+  try {
+    const unreadCount = await conversationService.markConversationAsRead(
+      req.params.cid,
+      req.user.uid,
+    );
+    return res.status(200).json({ unreadCount });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Creates private conversation
 export const createPrivateConversation = async (req, res, next) => {
   try {
@@ -74,18 +100,6 @@ export const sendMessage = async (req, res, next) => {
       photo: req.file,
     });
     return res.status(201).json({ message });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const markConversationAsRead = async (req, res, next) => {
-  try {
-    const unreadCount = await conversationService.markConversationAsRead(
-      req.params.cid,
-      req.user.uid,
-    );
-    return res.status(200).json({ unreadCount });
   } catch (error) {
     next(error);
   }

@@ -78,7 +78,7 @@ export const signup = async (email, username, password) => {
       await authProvider.deleteFirebaseUser(firebaseUser.uid);
       throw new AppError(
         messages.AUTH.SIGNUP.COULD_NOT_CREATE_NEW_ACCOUNT,
-        400,
+        500,
         'general',
       );
     }
@@ -169,7 +169,7 @@ export const syncGoogle = async (email, username, firebaseUid) => {
 const buildEmailAlreadyExistsError = (email) => {
   return new AppError(
     messages.AUTH.SIGNUP.EMAIL_ALREADY_EXISTS(email),
-    400,
+    409,
     'email',
   );
 };
@@ -177,7 +177,7 @@ const buildEmailAlreadyExistsError = (email) => {
 const buildUsernameAlreadyExistsError = (username) => {
   return new AppError(
     messages.AUTH.SIGNUP.USERNAME_ALREADY_EXISTS(username),
-    400,
+    409,
     'username',
   );
 };
@@ -185,7 +185,7 @@ const buildUsernameAlreadyExistsError = (username) => {
 const buildCouldNotSignUpError = () => {
   return new AppError(
     messages.AUTH.SIGNUP.COULD_NOT_CREATE_NEW_ACCOUNT,
-    400,
+    500,
     'general',
   );
 };

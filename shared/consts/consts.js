@@ -113,7 +113,6 @@ export const consts = {
         status: 400,
       }),
     },
-    LOGIN: {},
   },
 
   /// User consts

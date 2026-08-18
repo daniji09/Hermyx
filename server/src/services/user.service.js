@@ -1,10 +1,21 @@
-import { consts, messages } from '@hermyx/shared';
+import {
+  consts,
+  messages,
+  REPORT_DECISION,
+  REPORT_STATUS,
+  USER_ROLE,
+  USER_STATUS,
+} from '@hermyx/shared';
 import { AppError, checkRequired } from '../utils/error.util.js';
 import * as missionService from './mission.service.js';
+import * as reportService from './report.service.js';
+import * as conversationService from './conversation.service.js';
+import * as notificationService from './notification.service.js';
 import * as userModel from '../models/user.model.js';
 import * as authProvider from '../providers/auth.provider.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
+import pool from '../config/db.config.js';
 
 /// Model access functions
 // Create user
@@ -19,18 +30,23 @@ export const createUser = async (email, username, firebaseUid) => {
 };
 
 // Gets user by uid
-export const getUserByUid = async (uid) => {
+const getUserByUid = async (uid, client) => {
   checkRequired(uid, 'User id');
 
   // Gets user by uid
-  const user = await userModel.findByUid(uid);
+  const user = await userModel.findByUid(uid, client);
   return user;
 };
 
-export const getUserByUidOrThrow = async (uid) => {
-  const user = await getUserByUid(uid);
+export const getUserByUidOrThrow = async (uid, client) => {
+  const user = await getUserByUid(uid, client);
   if (!user) throw new AppError(messages.USER.GENERAL.USER_NOT_FOUND, 404);
   return user;
+};
+
+export const getUsersByUidForUpdate = async (uids, client) => {
+  checkRequired(uids, 'User ids');
+  return await userModel.findAllByUidForUpdate(uids, client);
 };
 
 // Gets user by username
@@ -61,13 +77,6 @@ export const getUserByEmail = async (email) => {
   return user;
 };
 
-export const getUserByEmailOrThrow = async (email) => {
-  const user = await getUserByEmail(email);
-  if (!user)
-    throw new AppError(messages.USER.EMAIL.EMAIL_NOT_FOUND(email), 404);
-  return user;
-};
-
 // Gets user by firebaseUid
 export const getUserByFirebaseUid = async (firebaseUid) => {
   checkRequired(firebaseUid, 'User Firebase uid');
@@ -88,9 +97,6 @@ export const updateUserStripeCustomerIdByUid = async (
   // Updates user's Stripe customer id
   await userModel.updateStripeCustomerIdByUid(uid, stripeCustomerId);
 };
-
-export const getActiveAdmin = async (client) =>
-  userModel.getActiveAdmin(client);
 
 // Updates user's Stripe customer id
 export const updateUserStripeConnectedIdByUid = async (
@@ -463,6 +469,231 @@ export const addEmailAuthentication = async (user, email, password) => {
     if (firebaseChange)
       await authProvider.unlinkFirebaseProvider(user.firebase_uid);
     throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+};
+
+// Ban user
+export const banUser = async (uid, rid, reason, admin) => {
+  // Parameter checks
+  checkRequired(uid, 'User id');
+  checkRequired(rid, 'Report id');
+  checkRequired(reason, 'Report decision reason');
+  checkRequired(admin, 'Admin');
+
+  // Only admins can do this action
+  if (admin.role !== USER_ROLE.ADMIN.ID)
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+
+  // Finds user and checks if it has already been banned
+  const user = await userModel.findByUid(uid);
+  if (user.status === USER_STATUS.BANNED.ID)
+    throw new AppError(messages.REPORT.BAN_USER.USER_ALREADY_BANNED, 409);
+
+  // Finds report and checks if it has already been answered
+  const report = await reportService.getReport(rid);
+  if (report.status === REPORT_STATUS.ANSWERED.ID)
+    throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
+
+  // External deletions are made first
+  // First, rejects account on Stripe and their adventurer account is rejected so they cannot receive payments
+  // Not needed for applicant account, because being banned avoids any type of transaction
+  try {
+    if (user.stripe_connected_id) {
+      await paymentProvider.rejectAccount(user.stripe_connected_id);
+    }
+  } catch (e) {
+    console.error(`Error deleting Stripe account for ${user.uid}:`, e);
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+
+  // Then, Firebase
+  try {
+    await authProvider.disableUser(user.firebase_uid);
+    await authProvider.revokeTokens(user.firebase_uid);
+  } catch (e) {
+    console.error(`Error deleting Firebase account for ${user.uid}:`, e);
+    await authProvider.enableUser(user.firebase_uid).catch(console.error);
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+
+  // Deletes avatar
+  if (user.avatar) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    try {
+      if (isProduction) {
+        await storageProvider.deleteFromAzureBlob(user.avatar, 'avatars');
+      } else {
+        await storageProvider.deleteFromLocalStorage(user.avatar);
+      }
+    } catch (e) {
+      console.error(`Error deleting avatar for ${user.uid}:`, e);
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+
+  // Report is updated if it is possible, so is like a block
+  const reportLocked = await reportService.updateStatusIfCurrent(
+    rid,
+    REPORT_STATUS.ANSWERED.ID,
+  );
+  if (!reportLocked)
+    throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
+
+  // Then, mission info is cleared
+  try {
+    // Clears all active missions using a map of promises
+    const activeMissions = await missionService.getUserActiveMissions(uid);
+    const cleanupPromises = activeMissions.map((mission) => {
+      if (mission.owner_id === uid) {
+        // If user is owner, it just cancel them
+        return missionService.cancelMission(mission.mid, user, true);
+      } else {
+        // Otherwise, it expels them from the mission
+        return missionService.expelBannedAdventurerFromMission(
+          mission,
+          user,
+          admin,
+          rid,
+        );
+      }
+    });
+
+    // Then all promises are resolved
+    const results = await Promise.allSettled(cleanupPromises);
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.error(
+          `Error in mission ${activeMissions[index].mid}:`,
+          result.reason,
+        );
+      }
+    });
+    // Clears all active disputes
+  } catch (missionCleanupError) {
+    console.error(
+      `Error cleaning up missions for banned user ${uid}:`,
+      missionCleanupError,
+    );
+  }
+
+  // After user is unable to log in, they are banned in database and report is closed
+  const client = await pool.connect();
+  let reportClosed;
+  try {
+    await client.query('BEGIN');
+
+    // Banned from database
+    const banHermyx = await userModel.ban(uid, client);
+
+    if (banHermyx < 1) throw new Error('User not found during ban');
+
+    // Report is closed
+    reportClosed = await reportService.closeReportAndConversation(
+      rid,
+      REPORT_DECISION.BAN_USER.ID,
+      reason,
+      admin.uid,
+      client,
+    );
+    if (!reportClosed)
+      throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+
+    // All conversations are closed
+    await conversationService.removeUserFromAllConversations(uid, client);
+
+    await client.query('COMMIT');
+  } catch (e) {
+    console.error(e);
+    await client.query('ROLLBACK');
+    // Rollbacks auth ban
+    await authProvider.enableUser(user.firebase_uid).catch(console.error);
+    throw new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500);
+  } finally {
+    client.release();
+  }
+
+  // And conversation closure
+  reportService.emitConversationClosed(
+    reportClosed.participantIds,
+    reportClosed.report,
+  );
+
+  return;
+};
+
+// Deletes current user
+export const deleteMe = async (user) => {
+  // Parameter checks
+  checkRequired(user, 'User');
+
+  // First of all, checks if user has active missions, published or joined
+  const activeMissions = await missionService.getUserActiveMissions(user.uid);
+  if (activeMissions.length > 0)
+    throw new AppError(messages.USER.DELETE_ME.ACTIVE_MISSIONS, 409);
+
+  // Then, checks if it has active disputes
+  const activeDisputes = await reportService.getActiveDisputesByUid(user.uid);
+  if (activeDisputes.length > 0)
+    throw new AppError(messages.USER.DELETE_ME.ACTIVE_DISPUTES, 409);
+
+  // External deletions are made first
+  // Deletes user from Stripe
+  if (user.stripe_connected_id) {
+    try {
+      await paymentProvider.deleteConnectAccount(user.stripe_connected_id);
+    } catch (e) {
+      console.error(`Error deleting Stripe account for ${user.uid}:`, e);
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+
+  // Deletes user from Firebase
+  try {
+    await authProvider.deleteFirebaseUser(user.firebase_uid);
+  } catch (e) {
+    console.error(`Error deleting Firebase account for ${user.uid}:`, e);
+    throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+  }
+
+  // Deletes avatar
+  if (user.avatar) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    try {
+      if (isProduction) {
+        await storageProvider.deleteFromAzureBlob(user.avatar, 'avatars');
+      } else {
+        await storageProvider.deleteFromLocalStorage(user.avatar);
+      }
+    } catch (e) {
+      console.error(`Error deleting avatar for ${user.uid}:`, e);
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+  }
+
+  // Then, deletions are made inside a transaction
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    // First, removes user from all chats, setting its left_at attribute
+    // Also disallows writing for other person in private chats and closes chat
+    await conversationService.removeUserFromAllConversations(user.uid, client);
+
+    // Then deletes every notification that this user has ever received
+    await notificationService.deleteAllUserNotifications(user.uid, client);
+
+    // Finally, Anonymize user in db
+    const anonymize = await userModel.anonymize(user.uid, client);
+    if (anonymize < 1)
+      throw new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500);
+
+    await client.query('COMMIT');
+    return;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
 };
 

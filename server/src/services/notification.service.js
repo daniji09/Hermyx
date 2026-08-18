@@ -27,11 +27,13 @@ import * as paymentProvider from '../providers/payment.provider.js';
 import * as socketProvider from '../providers/socket.provider.js';
 
 /// Model access functions
-export const createNotification = async (notificationData, client) =>
-  notificationModel.create(notificationData, client);
+export const createNotification = async (notificationData, client) => {
+  checkRequired(notificationData, 'Notification data');
+  return await notificationModel.create(notificationData, client);
+};
 
 // Get notification by nid
-export const getNotificationByNid = async (nid, client) => {
+const getNotificationByNid = async (nid, client) => {
   checkRequired(nid, 'Notification id');
   return await notificationModel.findByNid(nid, client);
 };
@@ -126,6 +128,12 @@ export const countParticipationReviewAttempts = async (
     adventurerId,
     client,
   );
+};
+
+// Delete all user notifications
+export const deleteAllUserNotifications = async (uid, client) => {
+  checkRequired(uid, 'User id');
+  return await notificationModel.deleteAllByUid(uid, client);
 };
 
 /// Endpoint complex functions
@@ -373,13 +381,16 @@ const acceptParticipationReview = async ({
 
   // Checks that the adventurer has configured their account
   if (!adventurer.stripe_connected_id)
-    throw new AppError(messages.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED, 403);
+    throw new AppError(
+      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+      403,
+    );
 
   // Checks that the participation can be disputed on current state
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
-    messages.CANNOT_ACCEPT_PARTICIPATION_STATE,
+    messages.NOTIFICATION.GENERAL.CANNOT_ACCEPT_PARTICIPATION_STATE,
   );
 
   // Creates payment and modifies database
@@ -573,7 +584,7 @@ const respondToParticipationRejection = async ({
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
-    messages.CANNOT_REOPEN_PARTICIPATION_STATE,
+    messages.NOTIFICATION.GENERAL.CANNOT_REOPEN_PARTICIPATION_STATE,
   );
 
   // Reopens participation, syncs mission and responds to notification, all in a database transaction
@@ -696,46 +707,52 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
   // If join is accepted
   checkAcceptedResponse(response);
 
-  // Gets participation info
-  const vacancyId = notification.payload.associated_vacancy_id;
-  if (!vacancyId)
-    throw new AppError(
-      messages.NOTIFICATION.GENERAL.NOT_ASSOCIATED_WITH_VACANCY,
-      409,
-    );
-  const vacancy =
-    await missionService.getMissionParticipationByIdOrThrow(vacancyId);
-
-  // Checks if vacancy can be joined
-  checkParticipationTransition(
-    vacancy,
-    MISSION_PARTICIPATION_STATUS.JOINED.ID,
-    messages.CANNOT_JOIN_PARTICIPATION_STATE,
-  );
-
-  // Check if adventurer has already joined the mission
-  const adventurerId =
-    mission.owner_id === notification.sender_id
-      ? notification.recipient_id
-      : notification.sender_id;
-  const alreadyJoined =
-    await missionService.getMissionParticipationByMidAndAdventurerId(
-      mid,
-      adventurerId,
-    );
-  if (alreadyJoined)
-    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
-
-  // Gets adventurer info
-  const adventurer = await userService.getUserByUidOrThrow(adventurerId);
-  if (!adventurer.stripe_connected_id)
-    throw new AppError(
-      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
-      403,
-    );
-
   // Finally, joins mission in a transaction
   const events = await withTransaction(async (client) => {
+    // Gets participation info using pessimistic approach
+    const vacancyId = notification.payload.associated_vacancy_id;
+    if (!vacancyId)
+      throw new AppError(
+        messages.NOTIFICATION.GENERAL.NOT_ASSOCIATED_WITH_VACANCY,
+        409,
+      );
+    const vacancy =
+      await missionService.getMissionParticipationByIdForUpdateOrThrow(
+        vacancyId,
+        client,
+      );
+
+    // Checks if vacancy can be joined
+    checkParticipationTransition(
+      vacancy,
+      MISSION_PARTICIPATION_STATUS.JOINED.ID,
+      messages.NOTIFICATION.GENERAL.CANNOT_JOIN_PARTICIPATION_STATE,
+    );
+
+    // Check if adventurer has already joined the mission
+    const adventurerId =
+      mission.owner_id === notification.sender_id
+        ? notification.recipient_id
+        : notification.sender_id;
+    const alreadyJoined =
+      await missionService.getMissionParticipationByMidAndAdventurerId(
+        mid,
+        adventurerId,
+      );
+    if (alreadyJoined)
+      throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+
+    // Gets adventurer info
+    const adventurer = await userService.getUserByUidOrThrow(
+      adventurerId,
+      client,
+    );
+    if (!adventurer.stripe_connected_id)
+      throw new AppError(
+        messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+        403,
+      );
+
     // Updates participation to joined
     const joinedVacancy =
       await missionService.updateParticipationAdventurerAndStatus(
@@ -1151,13 +1168,6 @@ const persistNegotiationPaymentChanges = async (
 ) => {
   // If the new offer is lower than the reward, a refund is needed
   if (participation.monetary_reward > newOffer) {
-    // Updates participation payment status to partially refunded
-    await missionService.updateMissionParticipationPaymentStatus(
-      participation.id,
-      MISSION_PARTICIPATION_PAYMENT_STATUS.PARTIALLY_REFUNDED.ID,
-      client,
-    );
-
     // For every Stripe refund
     for (const { amount, payment, refund } of refunds) {
       // Updates payment refunded amount

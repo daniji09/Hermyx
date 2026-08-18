@@ -3,7 +3,7 @@
 Manages users conversations into the platform
 <br><br>
 
-## - Get all user's disputes: `GET /api/conversations`
+## - Get all user's conversations: `GET /api/conversations`
 
 Gets all current user's conversations from Hermyx.
 
@@ -56,6 +56,7 @@ Gets current user's conversations unread count.
 **Responses:**
 
 - `200 OK`: search done successfully.
+
   ```json
   {
     "unreadCount": ["<unreadCount>"]
@@ -181,6 +182,64 @@ Gets conversation's messages by its id
 <br>
 <br>
 
+## - Marks conversation as read: `PATCH /api/conversations/:cid/read`
+
+Marks a conversation as read
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `cid` | integer | Yes | Conversation identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: conversation marked as read successfully.
+
+  ```json
+  {
+    "unreadCount": 0
+  }
+  ```
+
+- `400 Bad Request`: path fields validation error, missing path fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: conversation or user not found.
+
+  ```json
+  {
+    "errors": {
+      "general": ["Conversation/User not found."]
+    }
+  }
+  ```
+
+- `409 Conflict`: logic error.
+
+  ```json
+  {
+    "errors": {
+      "general": ["<error>"]
+    }
+  }
+  ```
+
+  <br>
+
+**Workflow:** marks all conversation new messages as read, so the conversation now has 0 unread messages.
+<br>
+<br>
+
 ## - Create private conversation: `POST /api/conversations/private`
 
 Creates private conversation between two users
@@ -235,7 +294,7 @@ Creates private conversation between two users
 
   <br>
 
-**Workflow:** creates a conversation between current user and the one specified via request body. A database transaction is needed to create the conversation and add the participants.
+**Workflow:** creates a conversation between current user and the one specified via request body. A database transaction is needed to create the conversation and add the participants. Additionally, to avoid creating the same private conversation between to users at the same time, a pessimistic concurrency approach is taken, where both users are read in the same order and locked, dealing this way both with deadlocks and concurrency problems.
 <br>
 <br>
 

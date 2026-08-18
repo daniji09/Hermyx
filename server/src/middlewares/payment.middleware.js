@@ -3,6 +3,7 @@ import { AppError } from '../utils/error.util.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as userService from '../services/user.service.js';
 
+// Actions that require user to have a customer id
 export const requireStripeCustomerId = async (req, res, next) => {
   try {
     // Tries to get current's user data to check Stripe customer id state
@@ -17,6 +18,6 @@ export const requireStripeCustomerId = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Error in requireCustomer middleware:', error);
-    next(new AppError(messages.STRIPE_ONBOARDING_NOT_COMPLETED, 500));
+    next(new AppError(messages.GENERAL.STRIPE_ONBOARDING_NOT_COMPLETED, 500));
   }
 };
