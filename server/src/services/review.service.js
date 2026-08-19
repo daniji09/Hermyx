@@ -19,26 +19,10 @@ export const getUserReviews = async (uid, pagination) => {
       (consts.PAGINATION.DEFAULT_PAGE - 1) * consts.PAGINATION.DEFAULT_LIMIT,
   };
 
-  // Gets user by uid
-  const user = await userService.getUserByUidOrThrow(uid);
-
-  // Checks if reviews are visible
-  const reviewsVisible = user.configuration?.show_missions_to_others !== false;
-  if (!reviewsVisible) {
-    return {
-      averageRating: 0,
-      totalReviews: 0,
-      reviews: [],
-      reviewsVisible,
-      pagination: buildPagination(pageData, 0),
-    };
-  }
-
   // Then returns all reviews
   const result = await reviewModel.findByUserUid(uid, pageData);
   return {
     ...result,
-    reviewsVisible,
     pagination: buildPagination(pageData, result.totalReviews),
   };
 };
