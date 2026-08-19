@@ -92,6 +92,7 @@ export const payDefault = async (mid, user) => {
       customer: user.stripe_customer_id,
       payment_method: defaultPm,
       metadata: { mid, ownerId: user.uid },
+      transfer_group: `mission_${mid}`,
     },
     `pay_default_${mid}_${Date.now()}`,
   );
@@ -123,6 +124,7 @@ export const payNew = async (mid, user, saveCard) => {
       automatic_payment_methods: { enabled: true },
       ...(saveCard ? { setup_future_usage: 'off_session' } : {}),
       metadata: { mid, ownerId: user.uid },
+      transfer_group: `mission_${mid}`,
     },
     `pay_new_${mid}_${Date.now()}`,
   );
