@@ -6,6 +6,12 @@ export const messages = {
       MISSION_ENDED: `This mission has finished. You can view its message history.`,
       NO_EXISTING_USER: `This user doesn't belong anymore to Hermyx community.`,
     },
+    DISPUTE_DECISION: {
+      ACCEPT_ADVENTURERS_WORK: `This dispute has ended by accepting the adventurer's work.`,
+      REJECT_ADVENTURERS_WORK: `This dispute has ended by rejecting the adventurer's work.`,
+      KICK_ADVENTURER_OUT: `This dispute has ended by kicking the adventurer out of the mission`,
+      DISMISS: `This dispute has ended by dismissing the accusation.`,
+    },
   },
   SIGN_UP: {
     FORM_TITLE: 'Sign up',
