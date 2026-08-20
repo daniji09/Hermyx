@@ -28,6 +28,7 @@ import * as missionModel from '../models/mission.model.js';
 import * as missionParticipationModel from '../models/mission-participation.model.js';
 import * as missionPhotoModel from '../models/mission-photo.model.js';
 import * as missionPaymentModel from '../models/mission-payment.model.js';
+import { AZURE_CONN_STRING } from '../config/config.js';
 
 /// Model access functions
 // Get mission by id
@@ -515,7 +516,7 @@ export const publishMission = async (
   let uploadedPhotoUrls = [];
   if (photos.length > 0) {
     // Environment variable determines whether photos are uploaded locally or to Azure
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = !!AZURE_CONN_STRING;
     uploadedPhotoUrls = await Promise.all(
       photos.map(async (file) => {
         if (isProduction) {
@@ -2089,7 +2090,7 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
   );
 
   // Then external preparation (storage provider) is made
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = !!AZURE_CONN_STRING;
   const { uploadedPhotoUrls, photosToDelete } =
     await editMissionExternalPreparation(
       newPhotos,

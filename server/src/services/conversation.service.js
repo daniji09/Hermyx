@@ -11,6 +11,7 @@ import {
   buildPagination,
   withDefaultPagination,
 } from '../utils/pagination.util.js';
+import { AZURE_CONN_STRING } from '../config/config.js';
 
 /// Model access functions
 // Get conversation by id
@@ -466,7 +467,7 @@ const getConversationAccess = async (conversationId, user) => {
 // Saves attachment
 const saveAttachment = async (photo) => {
   if (!photo) return { attachmentUrl: null, attachmentType: null };
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = !!AZURE_CONN_STRING;
   const attachmentUrl = isProduction
     ? await storageProvider.uploadToAzureBlob(photo, 'conversation-photos')
     : await storageProvider.saveToLocalStorage(

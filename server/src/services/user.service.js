@@ -16,6 +16,7 @@ import * as authProvider from '../providers/auth.provider.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
 import pool from '../config/db.config.js';
+import { AZURE_CONN_STRING } from '../config/config.js';
 
 /// Model access functions
 // Create user
@@ -345,7 +346,7 @@ export const updateMyAvatar = async (uid, file) => {
   // Gets user
   const currentUser = await getUserByUidOrThrow(uid);
   const oldAvatarUrl = currentUser.avatar;
-  const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = !!AZURE_CONN_STRING;
 
   // New avatar is updated in storage
   let newAvatarUrl;
@@ -518,7 +519,7 @@ export const banUser = async (uid, rid, reason, admin) => {
 
   // Deletes avatar
   if (user.avatar) {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = !!AZURE_CONN_STRING;
     try {
       if (isProduction) {
         await storageProvider.deleteFromAzureBlob(user.avatar, 'avatars');
@@ -657,7 +658,7 @@ export const deleteMe = async (user) => {
 
   // Deletes avatar
   if (user.avatar) {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const isProduction = !!AZURE_CONN_STRING;
     try {
       if (isProduction) {
         await storageProvider.deleteFromAzureBlob(user.avatar, 'avatars');
