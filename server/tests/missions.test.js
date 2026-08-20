@@ -300,6 +300,24 @@ describe('Mission API', () => {
     ]);
   });
 
+  it.each([
+    ['has no adventurers', messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS],
+    [
+      'is in an incompatible state',
+      messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE,
+    ],
+  ])(
+    'returns a conflict when closing a mission that %s',
+    async (_case, message) => {
+      missionService.closeMission.mockRejectedValue(new AppError(message, 409));
+
+      const response = await request(app).post('/api/missions/6/close');
+
+      expect(response.status).toBe(409);
+      expect(response.body.errors.general).toEqual([message]);
+    },
+  );
+
   it('sends a join request', async () => {
     const response = await request(app).post('/api/missions/6/join').send({
       vacancyId: 9,
@@ -313,6 +331,21 @@ describe('Mission API', () => {
       'I can help.',
       9,
     );
+  });
+
+  it.each([
+    ['the mission is full', messages.MISSION.JOIN.FILLED],
+    ['a request was already sent', messages.MISSION.JOIN.REQUEST_ALREADY_SENT],
+  ])('returns a conflict when joining because %s', async (_case, message) => {
+    missionService.joinMission.mockRejectedValue(new AppError(message, 409));
+
+    const response = await request(app).post('/api/missions/6/join').send({
+      vacancyId: 9,
+      message: 'I can help.',
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([message]);
   });
 
   it('invites a user to a vacancy', async () => {
@@ -336,6 +369,34 @@ describe('Mission API', () => {
     );
   });
 
+  it.each([
+    [
+      'the owner invites themselves',
+      messages.MISSION.INVITE.CANNOT_INVITE_YOURSELF,
+    ],
+    [
+      'the vacancy is occupied',
+      messages.MISSION.INVITE.VACANCY_ALREADY_OCCUPIED,
+    ],
+    [
+      'the invitation was already sent',
+      messages.MISSION.INVITE.INVITATION_ALREADY_SENT,
+    ],
+  ])('returns a conflict when %s', async (_case, message) => {
+    missionService.inviteToMission.mockRejectedValue(
+      new AppError(message, 409),
+    );
+
+    const response = await request(app).post('/api/missions/6/invite').send({
+      receiverId: 22,
+      vacancyId: 9,
+      message: 'Join us.',
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([message]);
+  });
+
   it('unjoins a vacancy', async () => {
     const response = await request(app)
       .post('/api/missions/6/unjoin')
@@ -347,6 +408,21 @@ describe('Mission API', () => {
       9,
       currentUser,
     );
+  });
+
+  it('returns an internal error when unjoining fails unexpectedly', async () => {
+    missionService.unjoinMission.mockRejectedValue(
+      new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500),
+    );
+
+    const response = await request(app)
+      .post('/api/missions/6/unjoin')
+      .send({ vacancyId: 9 });
+
+    expect(response.status).toBe(500);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.UNEXPECTED_ERROR,
+    ]);
   });
 
   it('submits the current participation for review', async () => {

@@ -132,6 +132,28 @@ describe('Conversation API', () => {
     );
   });
 
+  it('returns a conflict when creating a conversation with yourself', async () => {
+    conversationService.createPrivateConversation.mockRejectedValue(
+      new AppError(
+        messages.CONVERSATION.GENERAL.CONVERSATION_WITH_YOURSELF,
+        409,
+      ),
+    );
+
+    const response = await request(app)
+      .post('/api/conversations/private')
+      .send({ otherUserId: currentUser.uid });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([
+      messages.CONVERSATION.GENERAL.CONVERSATION_WITH_YOURSELF,
+    ]);
+    expect(conversationService.createPrivateConversation).toHaveBeenCalledWith(
+      currentUser.uid,
+      currentUser.uid,
+    );
+  });
+
   it('sends a text message', async () => {
     const message = { id: 6, content: 'Ready for the mission.' };
     conversationService.sendMessage.mockResolvedValue(message);
@@ -180,6 +202,19 @@ describe('Conversation API', () => {
     expect(response.status).toBe(403);
     expect(response.body.errors.general).toEqual([
       messages.GENERAL.UNAUTHORIZED_ERROR,
+    ]);
+  });
+
+  it('returns not found when the conversation does not exist', async () => {
+    conversationService.getConversation.mockRejectedValue(
+      new AppError(messages.CONVERSATION.GENERAL.CONVERSATION_NOT_FOUND, 404),
+    );
+
+    const response = await request(app).get('/api/conversations/999');
+
+    expect(response.status).toBe(404);
+    expect(response.body.errors.general).toEqual([
+      messages.CONVERSATION.GENERAL.CONVERSATION_NOT_FOUND,
     ]);
   });
 });

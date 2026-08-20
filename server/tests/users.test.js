@@ -22,6 +22,8 @@ const userService = vi.hoisted(() => ({
   updateMyEmail: vi.fn(),
   updateMyConfiguration: vi.fn(),
   addEmailAuthentication: vi.fn(),
+  deleteMe: vi.fn(),
+  banUser: vi.fn(),
   getUserByUidOrThrow: vi.fn(),
   updateUserStripeCustomerIdByUid: vi.fn(),
 }));
@@ -236,6 +238,53 @@ describe('User API', () => {
       payload.email,
       payload.password,
     );
+  });
+
+  it.each([
+    ['active missions', messages.USER.DELETE_ME.ACTIVE_MISSIONS],
+    ['active disputes', messages.USER.DELETE_ME.ACTIVE_DISPUTES],
+  ])('prevents account deletion with %s', async (_case, message) => {
+    userService.deleteMe.mockRejectedValue(new AppError(message, 409));
+
+    const response = await request(app).delete('/api/users/me');
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([message]);
+    expect(userService.deleteMe).toHaveBeenCalledWith(currentUser);
+  });
+
+  it('forbids banning a user without sufficient permissions', async () => {
+    userService.banUser.mockRejectedValue(
+      new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403),
+    );
+
+    const response = await request(app)
+      .post('/api/users/12/ban')
+      .send({ rid: 7, reason: 'Administrative review.' });
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.UNAUTHORIZED_ERROR,
+    ]);
+    expect(userService.banUser).toHaveBeenCalledWith(
+      12,
+      7,
+      'Administrative review.',
+      currentUser,
+    );
+  });
+
+  it('returns an internal error when a user operation fails unexpectedly', async () => {
+    userService.getMyProfile.mockRejectedValue(
+      new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500),
+    );
+
+    const response = await request(app).get('/api/users/me/profile');
+
+    expect(response.status).toBe(500);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.UNEXPECTED_ERROR,
+    ]);
   });
 
   it('uses the shared error handler for service failures', async () => {

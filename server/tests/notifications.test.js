@@ -148,6 +148,29 @@ describe('Notification API', () => {
     });
   });
 
+  it.each([
+    [
+      'the mission no longer accepts submissions',
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
+        .CANNOT_SUBMIT_PARTICIPATION,
+    ],
+    [
+      'the participation was already reviewed',
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION.ALREADY_REVIEWED,
+    ],
+  ])('returns a conflict when %s', async (_case, message) => {
+    notificationService.respondToNotification.mockRejectedValue(
+      new AppError(message, 409),
+    );
+
+    const response = await request(app)
+      .post('/api/notifications/7/respond')
+      .send({ response: 'accepted' });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([message]);
+  });
+
   it('rejects an invalid notification id', async () => {
     const response = await request(app).post(
       '/api/notifications/not-a-number/seen',
@@ -167,6 +190,19 @@ describe('Notification API', () => {
     expect(response.status).toBe(404);
     expect(response.body.errors.general).toEqual([
       messages.NOTIFICATION.GENERAL.NOT_FOUND,
+    ]);
+  });
+
+  it('forbids changing a notification owned by another user', async () => {
+    notificationService.markMyNotificationAsSeen.mockRejectedValue(
+      new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403),
+    );
+
+    const response = await request(app).post('/api/notifications/7/seen');
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.UNAUTHORIZED_ERROR,
     ]);
   });
 });
