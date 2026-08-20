@@ -11,6 +11,7 @@ import {
   ArrowUp,
   MessageCircleDashed,
   PlusIcon,
+  User,
   Users,
   X,
 } from 'lucide-react';
@@ -58,6 +59,7 @@ import { getImageUrl } from '../utils/media';
 import { cn } from '@/lib/utils';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { messages as frontendMessages } from './../messages/messages';
+import { getInitials } from '../utils/avatar';
 
 const groupConsecutiveMessages = (messages) =>
   messages.reduce((groups, message) => {
@@ -75,15 +77,6 @@ const groupConsecutiveMessages = (messages) =>
 
     return groups;
   }, []);
-
-const getInitials = (username) =>
-  username
-    ?.trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || '?';
 
 const MessageBubbleContent = ({ message }) => (
   <BubbleContent className='space-y-2 whitespace-pre-line'>
@@ -172,7 +165,6 @@ export const ConversationThread = ({
     isLoading: isConversationLoading,
     isError: isConversationError,
   } = useQuery(getConversationQueryOptions(conversationId));
-  console.log('Conversation data: ', conversationData);
   const otherParticipant = conversationData?.participants?.find(
     (participant) => participant.uid !== currentUser?.id,
   );
@@ -455,6 +447,9 @@ export const ConversationThread = ({
                   <AvatarFallback>
                     {isMissionConversation ? (
                       <Users className='h-4 w-4 text-muted-foreground' />
+                    ) : conversation.type === 'private' &&
+                      conversationData.participants.length === 1 ? (
+                      <User className='h-5 w-5 text-muted-foreground' />
                     ) : (
                       getInitials(otherParticipant?.username)
                     )}
@@ -470,7 +465,7 @@ export const ConversationThread = ({
                       <Link
                         to={
                           isMissionConversation
-                            ? `/missions/${conversationData?.conversation?.mission_id}`
+                            ? `/missions/${conversation?.mission_id}`
                             : `/users/${conversationTitle}`
                         }
                         className='hover:underline'
@@ -505,10 +500,19 @@ export const ConversationThread = ({
             </div>
 
             {showBack && (
-              <Button asChild variant='ghost' className='shrink-0 gap-2 px-2'>
-                <Link to={backTo}>
+              <Button asChild variant='ghost' className='shrink-0 gap-2 px-2 '>
+                <Link
+                  to={backTo}
+                  aria-label={
+                    isDisputeConversation
+                      ? 'Back to disputes'
+                      : 'Back to conversations'
+                  }
+                >
                   <ArrowLeft className='h-4 w-4' aria-hidden='true' />
-                  {isDisputeConversation ? `To disputes` : `To conversations`}
+                  <span className='hidden sm:inline' aria-hidden='true'>
+                    {isDisputeConversation ? 'To disputes' : 'To conversations'}
+                  </span>
                 </Link>
               </Button>
             )}
@@ -609,8 +613,14 @@ export const ConversationThread = ({
                                         alt={`@${firstMessage.sender_username}`}
                                       />
                                       <AvatarFallback>
-                                        {getInitials(
-                                          firstMessage.sender_username,
+                                        {conversation.type === 'private' &&
+                                        conversationData.participants.length ===
+                                          1 ? (
+                                          <User className='h-5 w-5 text-muted-foreground' />
+                                        ) : (
+                                          getInitials(
+                                            otherParticipant?.username,
+                                          )
                                         )}
                                       </AvatarFallback>
                                     </Avatar>
@@ -661,6 +671,7 @@ export const ConversationThread = ({
                 ref={formRef}
                 onSubmit={handleSubmit}
                 className='w-full space-y-2'
+                noValidate
               >
                 {selectedPhotoPreview && (
                   <div className='flex items-center gap-3 rounded-xl border bg-muted/30 p-2'>
@@ -695,6 +706,7 @@ export const ConversationThread = ({
                   <input
                     ref={photoInputRef}
                     type='file'
+                    tabIndex={-1}
                     accept={consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
                       ',',
                     )}
@@ -704,6 +716,7 @@ export const ConversationThread = ({
                   />
                   <InputGroupTextarea
                     ref={messageInputRef}
+                    aria-label='Message content'
                     value={content}
                     onChange={(event) => {
                       setContent(event.target.value);
@@ -711,7 +724,7 @@ export const ConversationThread = ({
                     }}
                     onKeyDown={handleMessageKeyDown}
                     placeholder='Write a message'
-                    maxLength={1000}
+                    maxLength={consts.CONVERSATION.MESSAGES.TEXT_LIMIT}
                     className='min-h-14 max-h-32 px-3 py-2.5'
                   />
                   <InputGroupAddon align='block-end' className='pt-1'>
@@ -743,7 +756,9 @@ export const ConversationThread = ({
                   </InputGroupAddon>
                 </InputGroup>
                 {errorMessage && (
-                  <p className='text-sm text-destructive'>{errorMessage}</p>
+                  <p role='alert' className='text-sm text-destructive'>
+                    {errorMessage}
+                  </p>
                 )}
               </form>
             ) : (
