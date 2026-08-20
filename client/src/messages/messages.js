@@ -1,5 +1,12 @@
 // Frontend messages
 export const messages = {
+  CONVERSATION: {
+    HISTORY_ONLY: {
+      PARTICIPATION_FINISHED: `Your participation has finished. You can view the messages sent before it ended.`,
+      MISSION_ENDED: `This mission has finished. You can view its message history.`,
+      NO_EXISTING_USER: `This user doesn't belong anymore to Hermyx community.`,
+    },
+  },
   SIGN_UP: {
     FORM_TITLE: 'Sign up',
     USERNAME_DESCRIPTION:
