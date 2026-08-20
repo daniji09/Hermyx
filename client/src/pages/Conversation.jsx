@@ -406,21 +406,24 @@ export const ConversationThread = ({
 
   if (isConversationLoading) {
     return (
-      <section className='container mx-auto max-w-3xl p-4 sm:p-6'>
-        <div className='p-8 text-center text-muted-foreground'>
-          Loading conversation
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
+          Loading conversation...
         </div>
-      </section>
+      </main>
     );
   }
 
   if (isConversationError || !conversationData) {
     return (
-      <section className='container mx-auto max-w-3xl p-4 sm:p-6'>
-        <div className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'>
-          Conversation not found
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load conversation.
         </div>
-      </section>
+      </main>
     );
   }
 

@@ -105,11 +105,23 @@ export const Dispute = () => {
     );
 
   if (isLoading)
-    return <main className='p-8 text-center'>Loading dispute</main>;
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
+          Loading dispute...
+        </div>
+      </main>
+    );
+
   if (isError || !dispute) {
     return (
-      <main className='p-8 text-center text-destructive'>
-        Dispute not found or unavailable.
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load dispute.
+        </div>
       </main>
     );
   }
