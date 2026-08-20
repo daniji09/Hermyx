@@ -18,6 +18,8 @@ export const messages = {
     FIREBASE_AUTH_ERROR: `Firebase Auth error.`,
     FORBIDDEN: `Action is not authorized.`,
     FORBIDDEN_BAN_USER: `This user is banned from Hermyx.`,
+    IMAGE_INVALID_TYPE: `Only .jpeg, .png and .webp images are accepted.`,
+    IMAGE_TOO_BIG: `Photo must weight less than 5MB.`,
     INCOMPLETE_PAGINATION: `Pagination is incomplete. Please send both 'page' and 'limit'.`,
     INCOMPLETE_PETITION: (field1, field2) =>
       `Incomplete petition. Please send ${field1} and ${field2} together.`,
@@ -98,7 +100,7 @@ export const messages = {
       MIN_PAYMENT_GREATER_MAX_PAYMENT: `Min payment cannot be greater than max payment.`,
     },
     PUBLISH: {
-      MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB`,
+      MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB.`,
       MISSION_PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
       MISSION_WITH_SAME_TITLE: `You already have a mission titled like this.`,
       MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,

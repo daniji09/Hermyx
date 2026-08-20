@@ -338,9 +338,8 @@ export const updateStatusIfCurrent = async (rid, status, client = pool) => {
        WHERE rid = $2 AND status = $3
        RETURNING *`,
     [
-      REPORT_STATUS.ANSWERED.ID,
-      rid,
       status,
+      rid,
       status === REPORT_STATUS.ANSWERED.ID
         ? REPORT_STATUS.SENT.ID
         : REPORT_STATUS.ANSWERED.ID,

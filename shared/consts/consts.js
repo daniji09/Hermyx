@@ -187,6 +187,7 @@ export const consts = {
   CONVERSATION: {
     MESSAGES: {
       DEFAULT_LIMIT: 50,
+      TEXT_LIMIT: 1000,
     },
     PHOTOS: {
       MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
