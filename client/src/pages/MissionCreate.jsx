@@ -259,24 +259,28 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
         <Trash2 size={24} aria-hidden='true' />
       </Button>
 
-      <h3 className='font-semibold text-sm truncate min-h-5 mb-3 text-center mx-8'>
+      <h3 className='font-bold text-sm truncate min-h-5 mb-3 text-center mx-8'>
         {vacancy.title || 'Adventurer'}
       </h3>
 
       <div className='flex justify-center mb-4'>
-        <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed'>
-          <UserPlus size={24} aria-hidden='true' />
+        <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed  border-muted-foreground text-muted-foreground'>
+          <UserPlus
+            size={24}
+            aria-hidden='true'
+            className='text-muted-foreground'
+          />
         </div>
       </div>
 
-      <div className='flex justify-between items-center text-xs font-medium mb-2'>
+      <div className='flex justify-between items-center font-medium mb-2 -mt-4'>
         <span className='truncate w-2/3 italic'>Unassigned</span>
-        <span className='w-1/3 text-right text-primary font-bold text-sm'>
+        <span className='w-1/3 text-right text-primary text-sm'>
           {vacancy.reward}€
         </span>
       </div>
 
-      <p className='text-xs line-clamp-3 leading-relaxed grow'>
+      <p className='text-xs break-all line-clamp-2 leading-relaxed grow'>
         {vacancy.description || 'No additional description.'}
       </p>
     </Card>
@@ -352,9 +356,15 @@ const CreateVacanciesDialog = ({
             className='snap-start shrink-0 w-50 h-60 flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-primary/20 bg-background hover:bg-secondary hover:border-primary/50 hover:text-primary transition-all text-primary group cursor-pointer'
           >
             <div className='w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform'>
-              <Plus size={32} aria-hidden='true' />
+              <Plus
+                size={32}
+                aria-hidden='true'
+                className='text-muted-foreground'
+              />
             </div>
-            <span className='font-medium text-sm'>Add vacancies</span>
+            <span className='text-sm text-muted-foreground text-center'>
+              Add vacancies
+            </span>
           </Button>
         </DialogTrigger>
 

@@ -42,6 +42,8 @@ export const messages = {
   },
   EDIT_MISSION: {
     FORM_TITLE: 'Edit your mission',
+    FORM_DESCRIPTION:
+      'Edit your mission if you want to update or add more information, or if you want more adventurers to enter it!',
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
     VACANCIES_DESCRIPTION:
       'Define how many adventurers you need for this mission.',
