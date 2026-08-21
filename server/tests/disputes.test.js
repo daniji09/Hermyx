@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages } from '@hermyx/shared';
+import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
-const currentUser = vi.hoisted(() => ({ uid: 61, username: 'dispute_hero' }));
+const currentUser = vi.hoisted(() => ({
+  uid: 61,
+  username: 'dispute_hero',
+  role: 'USER',
+}));
 
 const disputeService = vi.hoisted(() => ({
   getMyDisputes: vi.fn(),
@@ -12,9 +16,11 @@ const disputeService = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/services/dispute.service.js', () => disputeService);
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -24,9 +30,20 @@ import app from '../src/app.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('Dispute API', () => {
+  it('forbids an administrator from listing personal disputes', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app).get('/api/disputes');
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(disputeService.getMyDisputes).not.toHaveBeenCalled();
+  });
+
   it('lists the current user disputes with pagination', async () => {
     const result = {
       disputes: [{ rid: 7, type: 'report_adventurer' }],

@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { consts, messages } from '@hermyx/shared';
+import { consts, messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
-const currentUser = vi.hoisted(() => ({ uid: 81, username: 'review_owner' }));
+const currentUser = vi.hoisted(() => ({
+  uid: 81,
+  username: 'review_owner',
+  role: 'USER',
+}));
 
 const reviewService = vi.hoisted(() => ({
   getUserReviews: vi.fn(),
@@ -12,9 +16,11 @@ const reviewService = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/services/review.service.js', () => reviewService);
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -24,9 +30,22 @@ import app from '../src/app.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('Review API', () => {
+  it('forbids an administrator from creating reviews', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app)
+      .post('/api/reviews/missions/6/owner')
+      .send({ rating: 5, comment: 'Administrative review.' });
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(reviewService.reviewOwner).not.toHaveBeenCalled();
+  });
+
   it('gets a paginated page of user reviews', async () => {
     const result = {
       averageRating: 4.5,

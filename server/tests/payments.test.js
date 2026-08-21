@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages } from '@hermyx/shared';
+import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({
@@ -9,6 +9,7 @@ const currentUser = vi.hoisted(() => ({
   username: 'payer',
   stripe_customer_id: 'cus_test',
   stripe_connected_id: 'acct_test',
+  role: 'USER',
 }));
 
 const paymentService = vi.hoisted(() => ({
@@ -38,9 +39,11 @@ vi.mock('../src/providers/payment.provider.js', async (importOriginal) => ({
   ...(await importOriginal()),
   ...paymentProvider,
 }));
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -51,10 +54,21 @@ import app from '../src/app.js';
 beforeEach(() => {
   vi.clearAllMocks();
   currentUser.stripe_customer_id = 'cus_test';
+  currentUser.role = USER_ROLE.USER.ID;
   userService.getUserByUidOrThrow.mockResolvedValue(currentUser);
 });
 
 describe('Payment API', () => {
+  it('forbids an administrator from accessing payment methods', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app).get('/api/stripe/cards');
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(paymentService.listCards).not.toHaveBeenCalled();
+  });
+
   it('lists cards and identifies the default card', async () => {
     const cards = { data: [{ id: 'pm_1' }, { id: 'pm_2' }] };
     const customer = {

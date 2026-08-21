@@ -130,7 +130,8 @@ const MissionPageContainer = ({
   isError,
   error,
 }) => {
-  const isCreator = currentUser?.id === mission?.owner_id;
+  const isCreator =
+    !currentUser?.isAdmin && currentUser?.id === mission?.owner_id;
   const isFull = mission?.total_vacancies === mission?.occupied_vacancies;
   return (
     <main className='p-4'>
@@ -247,88 +248,96 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                 )}
               </CardContent>
               <CardFooter>
-                <>
-                  {isCreator ? (
-                    mission.status === MISSION_STATUS.CLOSED.ID ||
-                    mission.waitingForPaymentVacancies.length > 0 ? (
-                      <PayMissionButton mission={mission}></PayMissionButton>
-                    ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID ? (
-                      <MissionOwnerStatusMessage status={mission.status} />
+                {currentUser?.isAdmin ? (
+                  <p className='text-muted-foreground'>
+                    Read-only administrator view
+                  </p>
+                ) : (
+                  <>
+                    {isCreator ? (
+                      mission.status === MISSION_STATUS.CLOSED.ID ||
+                      mission.waitingForPaymentVacancies.length > 0 ? (
+                        <PayMissionButton mission={mission}></PayMissionButton>
+                      ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID ? (
+                        <MissionOwnerStatusMessage status={mission.status} />
+                      ) : (
+                        <p className='text-muted-foreground bg-muted/20'>
+                          {messages.MISSION.MISSION_CLOSED}
+                        </p>
+                      )
+                    ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID &&
+                      currentParticipation ? (
+                      <SubmitParticipationButton
+                        missionId={mission.mid}
+                        participationStatus={currentParticipation.status}
+                      />
+                    ) : isFull ? (
+                      <p className='text-muted-foreground bg-muted/20'>
+                        {messages.MISSION.MISSION_FILLED}
+                      </p>
                     ) : (
                       <p className='text-muted-foreground bg-muted/20'>
-                        {messages.MISSION.MISSION_CLOSED}
+                        {messages.MISSION.MISSION_OPEN}
                       </p>
-                    )
-                  ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID &&
-                    currentParticipation ? (
-                    <SubmitParticipationButton
-                      missionId={mission.mid}
-                      participationStatus={currentParticipation.status}
-                    />
-                  ) : isFull ? (
-                    <p className='text-muted-foreground bg-muted/20'>
-                      {messages.MISSION.MISSION_FILLED}
-                    </p>
-                  ) : (
-                    <p className='text-muted-foreground bg-muted/20'>
-                      {messages.MISSION.MISSION_OPEN}
-                    </p>
-                  )}
-                  {isCreator &&
-                    (mission.status === MISSION_STATUS.OPENED.ID ||
-                      mission.status === MISSION_STATUS.REOPENED.ID) && (
-                      <CloseMissionButton
-                        mission={mission}
-                      ></CloseMissionButton>
                     )}
-                  {isCreator && MISSION_STATUS[mission.status].CAN_EDIT && (
-                    <Button asChild>
-                      <Link to={`/missions/${mission.mid}/edit`}>
-                        Edit mission
-                      </Link>
-                    </Button>
-                  )}
-                  {isCreator &&
-                    (MISSION_STATUS[mission.status].CAN_DELETE ||
-                      MISSION_STATUS[mission.status].CAN_CANCEL) && (
-                      <CancelMissionButton mission={mission} />
+                    {isCreator &&
+                      (mission.status === MISSION_STATUS.OPENED.ID ||
+                        mission.status === MISSION_STATUS.REOPENED.ID) && (
+                        <CloseMissionButton
+                          mission={mission}
+                        ></CloseMissionButton>
+                      )}
+                    {isCreator && MISSION_STATUS[mission.status].CAN_EDIT && (
+                      <Button asChild>
+                        <Link to={`/missions/${mission.mid}/edit`}>
+                          Edit mission
+                        </Link>
+                      </Button>
                     )}
-                  {isCreator &&
-                    MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-                      MISSION_STATUS.REOPENED.ID,
-                    ) && <ReopenMissionButton mission={mission} />}
-                  {isCreator &&
-                    mission.canFinish &&
-                    mission.status !== MISSION_STATUS.FINISHED.ID && (
-                      <FinishMissionButton mission={mission} />
+                    {isCreator &&
+                      (MISSION_STATUS[mission.status].CAN_DELETE ||
+                        MISSION_STATUS[mission.status].CAN_CANCEL) && (
+                        <CancelMissionButton mission={mission} />
+                      )}
+                    {isCreator &&
+                      MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
+                        MISSION_STATUS.REOPENED.ID,
+                      ) && <ReopenMissionButton mission={mission} />}
+                    {isCreator &&
+                      mission.canFinish &&
+                      mission.status !== MISSION_STATUS.FINISHED.ID && (
+                        <FinishMissionButton mission={mission} />
+                      )}
+                    {mission.conversation_id && (
+                      <Button asChild>
+                        <Link
+                          to={`/conversations/${mission.conversation_id}`}
+                          state={{ from: `/missions/${mission.mid}` }}
+                        >
+                          <MessageCircle aria-hidden='true' />
+                          Open mission chat
+                        </Link>
+                      </Button>
                     )}
-                  {mission.conversation_id && (
-                    <Button asChild>
-                      <Link
-                        to={`/conversations/${mission.conversation_id}`}
-                        state={{ from: `/missions/${mission.mid}` }}
-                      >
-                        <MessageCircle aria-hidden='true' />
-                        Open mission chat
-                      </Link>
-                    </Button>
-                  )}
-                  {!isCreator &&
-                    mission.status !== MISSION_STATUS.REPORTED.ID && (
-                      <ReportMissionButton mission={mission} />
-                    )}
-                </>
+                    {!isCreator &&
+                      mission.status !== MISSION_STATUS.REPORTED.ID && (
+                        <ReportMissionButton mission={mission} />
+                      )}
+                  </>
+                )}
               </CardFooter>
             </section>
           </Card>
-          <SearchAdventurerModal
-            missionId={mission.mid}
-            vacancies={(mission.participants || []).filter(
-              (vacancy) => !vacancy.adventurer_id,
-            )}
-            isOpen={isSearchModalOpen}
-            onClose={() => setIsSearchModalOpen(false)}
-          />
+          {!currentUser?.isAdmin && (
+            <SearchAdventurerModal
+              missionId={mission.mid}
+              vacancies={(mission.participants || []).filter(
+                (vacancy) => !vacancy.adventurer_id,
+              )}
+              isOpen={isSearchModalOpen}
+              onClose={() => setIsSearchModalOpen(false)}
+            />
+          )}
         </>
       )}
     </>
@@ -535,7 +544,7 @@ const ViewVacancyDialog = ({
             Close
           </Button>
 
-          {!isCreator && !isAssigned && (
+          {!currentUser?.isAdmin && !isCreator && !isAssigned && (
             <JoinMissionButton
               missionId={mission.mid}
               vacancyId={vacancy.vacancy_id}
@@ -543,7 +552,8 @@ const ViewVacancyDialog = ({
             />
           )}
 
-          {!isCreator &&
+          {!currentUser?.isAdmin &&
+            !isCreator &&
             isAssignedToUser &&
             mission.status !== MISSION_STATUS.IN_PROGRESS.ID && (
               <UnjoinMissionButton

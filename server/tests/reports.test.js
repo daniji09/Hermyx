@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages } from '@hermyx/shared';
+import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
-const currentUser = vi.hoisted(() => ({ uid: 71, username: 'report_hero' }));
+const currentUser = vi.hoisted(() => ({
+  uid: 71,
+  username: 'report_hero',
+  role: 'USER',
+}));
 
 const reportService = vi.hoisted(() => ({
   getReports: vi.fn(),
@@ -17,9 +21,11 @@ const reportService = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/services/report.service.js', () => reportService);
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -35,9 +41,20 @@ const reportPayload = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('Report API', () => {
+  it('forbids an administrator from creating user reports', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app).post('/api/reports/user').send({});
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(reportService.reportUser).not.toHaveBeenCalled();
+  });
+
   it('lists reports using filters and pagination', async () => {
     const reports = [{ rid: 7, status: 'pending' }];
     const pagination = { currentPage: 2, totalPages: 3 };

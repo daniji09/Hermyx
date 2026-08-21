@@ -39,7 +39,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { data: unreadMessageCount = 0 } = useQuery(
     getUnreadMessageCountQueryOptions({
-      enabled: !!currentUser,
+      enabled: !!currentUser && !currentUser.isAdmin,
       staleTime: 30000,
     }),
   );
@@ -75,41 +75,52 @@ export function Navbar() {
               />
             </section>
 
-            {currentUser && (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='outline'
-                      className='border-none bg-transparent gap-1.5 px-2 hover:bg-slate-200/50'
-                      aria-label='Missions menu'
-                    >
-                      Missions
-                      <ChevronDown
-                        className='h-4 w-4 opacity-50'
-                        aria-hidden='true'
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end' className='z-10000 w-48'>
-                    <DropdownMenuItem asChild className='cursor-pointer'>
-                      <Link to='/missions/new'>Create mission</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild className='cursor-pointer'>
-                      <Link to='/missions/mine'>My missions</Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+            {currentUser &&
+              (currentUser.isAdmin ? (
+                <>
+                  <Button asChild variant='ghost'>
+                    <Link to='/missions'>Missions</Link>
+                  </Button>
+                  <DisputesLink
+                    unreadCount={unreadDisputeCount}
+                    isAdmin={true}
+                  />
+                </>
+              ) : (
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant='outline'
+                        className='border-none bg-transparent gap-1.5 px-2 hover:bg-slate-200/50'
+                        aria-label='Missions menu'
+                      >
+                        Missions
+                        <ChevronDown
+                          className='h-4 w-4 opacity-50'
+                          aria-hidden='true'
+                        />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end' className='z-10000 w-48'>
+                      <DropdownMenuItem asChild className='cursor-pointer'>
+                        <Link to='/missions/new'>Create mission</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild className='cursor-pointer'>
+                        <Link to='/missions/mine'>My missions</Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-                <MessagesLink unreadMessageCount={unreadMessageCount} />
-                <DisputesLink
-                  unreadCount={unreadDisputeCount}
-                  isAdmin={currentUser.isAdmin}
-                />
-                <NotificationsButton />
-                <ProfileLink currentUser={currentUser} />
-              </>
-            )}
+                  <MessagesLink unreadMessageCount={unreadMessageCount} />
+                  <DisputesLink
+                    unreadCount={unreadDisputeCount}
+                    isAdmin={false}
+                  />
+                  <NotificationsButton />
+                  <ProfileLink currentUser={currentUser} />
+                </>
+              ))}
 
             <LogButton currentUser={currentUser} logout={logout} />
           </div>
@@ -141,76 +152,111 @@ export function Navbar() {
 
             {currentUser && (
               <div className='flex flex-col gap-1'>
-                <Link
-                  to='/profile'
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className='flex items-center gap-2 px-2 pt-2 pb-6 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
-                >
-                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-                    <User className='h-4 w-4' aria-hidden='true' />
-                  </span>
-                  {currentUser.username}
-                </Link>
-                <span className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-2'>
-                  Missions
-                </span>
-                <Link
-                  to='/missions/new'
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className='px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
-                >
-                  Create mission
-                </Link>
-                <Link
-                  to='/missions/mine'
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className='px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
-                >
-                  My missions
-                </Link>
-                <Link
-                  to='/notifications'
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
-                >
-                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
-                    <Bell className='h-4 w-4' aria-hidden='true' />
-                  </span>
-                  Notifications
-                </Link>
-                <Link
-                  to={currentUser.isAdmin ? '/reports' : '/disputes'}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
-                >
-                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
-                    <MessageSquareWarning
-                      className='h-4 w-4'
-                      aria-hidden='true'
-                    />
-                  </span>
-                  {currentUser.isAdmin ? 'Reports' : 'My disputes'}
-                  {unreadDisputeCount > 0 && (
-                    <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
-                      {unreadDisputeCount}
+                {currentUser.isAdmin ? (
+                  <>
+                    <span className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-2'>
+                      Administration
                     </span>
-                  )}
-                </Link>
-                <Link
-                  to='/conversations'
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
-                >
-                  <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
-                    <Mail className='h-4 w-4' aria-hidden='true' />
-                  </span>
-                  Messages
-                  {unreadMessageCount > 0 && (
-                    <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
-                      {unreadMessageCount}
+                    <Link
+                      to='/missions'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
+                    >
+                      View missions
+                    </Link>
+                    <Link
+                      to='/reports'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                    >
+                      <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                        <MessageSquareWarning
+                          className='h-4 w-4'
+                          aria-hidden='true'
+                        />
+                      </span>
+                      Reports
+                      {unreadDisputeCount > 0 && (
+                        <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+                          {unreadDisputeCount}
+                        </span>
+                      )}
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to='/profile'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='flex items-center gap-2 px-2 pt-2 pb-6 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
+                    >
+                      <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+                        <User className='h-4 w-4' aria-hidden='true' />
+                      </span>
+                      {currentUser.username}
+                    </Link>
+                    <span className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-2'>
+                      Missions
                     </span>
-                  )}
-                </Link>
+                    <Link
+                      to='/missions/new'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
+                    >
+                      Create mission
+                    </Link>
+                    <Link
+                      to='/missions/mine'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
+                    >
+                      My missions
+                    </Link>
+                    <Link
+                      to='/notifications'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                    >
+                      <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                        <Bell className='h-4 w-4' aria-hidden='true' />
+                      </span>
+                      Notifications
+                    </Link>
+                    <Link
+                      to='/disputes'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                    >
+                      <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                        <MessageSquareWarning
+                          className='h-4 w-4'
+                          aria-hidden='true'
+                        />
+                      </span>
+                      My disputes
+                      {unreadDisputeCount > 0 && (
+                        <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+                          {unreadDisputeCount}
+                        </span>
+                      )}
+                    </Link>
+                    <Link
+                      to='/conversations'
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className='flex items-center gap-2 px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors text-left'
+                    >
+                      <span className='flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700'>
+                        <Mail className='h-4 w-4' aria-hidden='true' />
+                      </span>
+                      Messages
+                      {unreadMessageCount > 0 && (
+                        <span className='ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[11px] font-semibold text-destructive-foreground'>
+                          {unreadMessageCount}
+                        </span>
+                      )}
+                    </Link>
+                  </>
+                )}
               </div>
             )}
 

@@ -118,7 +118,9 @@ export const PublicProfile = () => {
     });
 
   if (isOwnProfile) {
-    return <Navigate to='/profile' replace />;
+    return (
+      <Navigate to={currentUser?.isAdmin ? '/reports' : '/profile'} replace />
+    );
   }
 
   if (isProfileLoading) {
@@ -174,7 +176,9 @@ export const PublicProfile = () => {
               {reviewsData?.totalReviews || 0}{' '}
               {(reviewsData?.totalReviews || 0) === 1 ? 'review' : 'reviews'}
             </span>
-            <ReportUserButton user={user}></ReportUserButton>
+            {!currentUser?.isAdmin && (
+              <ReportUserButton user={user}></ReportUserButton>
+            )}
           </div>
 
           {user.location && (
@@ -190,20 +194,24 @@ export const PublicProfile = () => {
             </p>
           )}
 
-          <Button
-            type='button'
-            className='mt-5 gap-2'
-            onClick={() => {
-              setMessageError('');
-              openConversation();
-            }}
-            disabled={isOpeningConversation}
-          >
-            <MessageCircle className='h-4 w-4' aria-hidden='true' />
-            {isOpeningConversation ? 'Opening' : 'Message'}
-          </Button>
-          {messageError && (
-            <p className='mt-2 text-sm text-destructive'>{messageError}</p>
+          {!currentUser?.isAdmin && (
+            <>
+              <Button
+                type='button'
+                className='mt-5 gap-2'
+                onClick={() => {
+                  setMessageError('');
+                  openConversation();
+                }}
+                disabled={isOpeningConversation}
+              >
+                <MessageCircle className='h-4 w-4' aria-hidden='true' />
+                {isOpeningConversation ? 'Opening' : 'Message'}
+              </Button>
+              {messageError && (
+                <p className='mt-2 text-sm text-destructive'>{messageError}</p>
+              )}
+            </>
           )}
         </div>
       </section>

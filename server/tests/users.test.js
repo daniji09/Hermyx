@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages } from '@hermyx/shared';
+import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({
@@ -9,6 +9,7 @@ const currentUser = vi.hoisted(() => ({
   username: 'current_hero',
   firebase_uid: 'firebase-current',
   stripe_customer_id: 'cus_current',
+  role: 'USER',
 }));
 
 const userService = vi.hoisted(() => ({
@@ -29,9 +30,11 @@ const userService = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/services/user.service.js', () => userService);
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -41,9 +44,22 @@ import app from '../src/app.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('User API', () => {
+  it('forbids an administrator from editing an account profile', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app)
+      .patch('/api/users/me/profile')
+      .send({ description: 'Administrative profile edit.' });
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(userService.updateMyProfile).not.toHaveBeenCalled();
+  });
+
   it('searches users by partial username with pagination', async () => {
     const users = [{ uid: 12, username: 'current_friend' }];
     const pagination = { currentPage: 2, totalPages: 3 };

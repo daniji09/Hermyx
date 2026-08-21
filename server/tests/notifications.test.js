@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages } from '@hermyx/shared';
+import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
-const currentUser = vi.hoisted(() => ({ uid: 41, username: 'notified_hero' }));
+const currentUser = vi.hoisted(() => ({
+  uid: 41,
+  username: 'notified_hero',
+  role: 'USER',
+}));
 
 const notificationService = vi.hoisted(() => ({
   getMyNotifications: vi.fn(),
@@ -13,9 +17,11 @@ const notificationService = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/services/notification.service.js', () => notificationService);
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -25,9 +31,20 @@ import app from '../src/app.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('Notification API', () => {
+  it('forbids an administrator from using user notifications', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app).get('/api/notifications/me');
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(notificationService.getMyNotifications).not.toHaveBeenCalled();
+  });
+
   it('gets all notifications for the current user', async () => {
     const notifications = [{ nid: 1, seen: false }];
     const pagination = {
