@@ -229,7 +229,6 @@ export const getUserPublicProfile = async (username) => {
     name: user.name,
     surnames: user.surnames,
     description: user.description,
-    location: user.location,
     avatar: user.avatar,
   };
 
