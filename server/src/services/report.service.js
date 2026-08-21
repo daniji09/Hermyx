@@ -182,6 +182,7 @@ export const reportAdventurer = async ({
         payload: {
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
+          associated_user_id: adventurer.uid,
         },
         conversationId: conversation.cid,
       },

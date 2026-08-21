@@ -57,12 +57,12 @@ const ConversationCard = ({ conversation }) => {
 
       <div className='min-w-0 flex-1'>
         <div className='flex items-center justify-between gap-3'>
-          <h3 className='min-w-0 truncate font-semibold'>
+          <h2 className='min-w-0 truncate font-semibold'>
             {conversation.type === 'private' &&
             conversation.participant_count === 0
               ? 'Hermyx user'
               : conversationTitle || 'Conversation'}
-          </h3>
+          </h2>
           {conversation.last_message_created_at && (
             <time
               className={cn(
@@ -126,7 +126,7 @@ export const Conversations = () => {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
         <div role='status' className='p-8 text-center text-muted-foreground'>
-          Loading conversations
+          Loading conversations...
         </div>
       </main>
     );
@@ -139,7 +139,7 @@ export const Conversations = () => {
           role='alert'
           className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
         >
-          Could not load conversations
+          Could not load conversations.
         </div>
       </main>
     );
@@ -148,7 +148,7 @@ export const Conversations = () => {
   return (
     <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
       <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-        <span className='flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+        <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
           <MessageCircle className='h-6 w-6' aria-hidden='true' />
         </span>
         <div className='min-w-0'>

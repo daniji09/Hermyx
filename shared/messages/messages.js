@@ -1,4 +1,5 @@
 import { consts } from '../consts/consts.js';
+import { truncateText } from './../../server/src/utils/string.util.js';
 
 export const messages = {
   /// General messages
@@ -285,11 +286,11 @@ export const messages = {
     MISSION_RESTARTED: (title) =>
       `Mission ${title} has started for you! Talk to your team and start working.`,
     DISPUTE_PARTICIPATION: (title, username) =>
-      `A dispute was opened for "${title}" by applicant ${username}.`,
+      `A dispute was opened for "${truncateText(title, 20)}" by applicant ${username}.`,
     DISPUTE_REJECTED_PARTICIPATION: (title, username) =>
-      `Adventurer ${username} opened a dispute for "${title}".`,
+      `Adventurer ${username} opened a dispute for "${truncateText(title, 20)}".`,
     REJECT_PARTICIPATION: (title, username) =>
-      `Your participation in "${title}" was rejected by ${username}. Please accept the revision or open a dispute.`,
+      `Your participation in "${truncateText(title, 20)}" was rejected by ${username}. Please accept the revision or open a dispute.`,
     ACCEPT_PARTICIPATION: {
       AUTOMATIC: (title) =>
         `Your participation in "${title}" was approved automatically by the system after it wasn't reviewed on time (one week).`,
@@ -396,6 +397,6 @@ export const messages = {
     },
     // Conversation messages shown in a conversation
     REPORT_ADVENTURER: (username, vacancyTitle, missionTitle) =>
-      `A dispute was opened after ${username} was reported for the vacancy "${vacancyTitle}" in "${missionTitle}".`,
+      `A dispute was opened after ${username} was reported for the vacancy "${truncateText(vacancyTitle, 20)}" in "${truncateText(missionTitle, 20)}".`,
   },
 };

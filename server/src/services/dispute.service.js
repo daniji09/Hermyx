@@ -137,6 +137,10 @@ export const createDisputeTicket = async ({
         payload: {
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
+          associated_user_id:
+            reportType === REPORT_TYPE.REVIEW_DISPUTE.ID
+              ? adventurerId
+              : counterpartId,
         },
         conversationId: conversation.cid,
       },

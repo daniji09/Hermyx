@@ -153,7 +153,7 @@ export const editMissionAction = async (previousState, formData) => {
     // If it some controlled error found in server
     console.log(error.response.data);
     if (
-      [400, 500].includes(error.response?.status) &&
+      [400, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
