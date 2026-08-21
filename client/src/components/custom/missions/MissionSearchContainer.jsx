@@ -138,12 +138,14 @@ const MissionSearchCard = ({ mission }) => {
     <li className='list-none h-full'>
       <Card
         asChild
-        className='justify-between group relative transition-all hover:border-primary/50 hover:shadow-md overflow-hidden pt-0'
+        className='justify-between group relative transition-all hover:border-primary/50 hover:shadow-md overflow-hidden pt-0 focus-within:ring-1 focus-within:ring-secondary-foreground focus-within:ring-offset-2'
       >
         <article className='flex flex-col h-full'>
           <Link
             to={`/missions/${mission.mid}`}
             className='absolute inset-0 z-10'
+            target='_blank'
+            rel='noopener noreferrer'
           >
             <span className='sr-only'>See mission {mission.title}</span>
           </Link>
@@ -171,6 +173,8 @@ const MissionSearchCard = ({ mission }) => {
               <Link
                 to={`/users/${mission.username}`}
                 className='user-link relative z-20 font-medium hover:text-primary hover:underline transition-colors'
+                target='_blank'
+                rel='noopener noreferrer'
               >
                 {mission.username}
               </Link>
