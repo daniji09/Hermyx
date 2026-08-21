@@ -180,7 +180,10 @@ const SignUpForm = ({ state, action, isPending }) => {
             >
               {isPending ? 'Signing up...' : 'Sign up'}
             </Button>
-            <div className='grid grid-cols-3 grid-rows-1 justify-items-center'>
+            <div
+              className='grid grid-cols-3 grid-rows-1 justify-items-center'
+              aria-hidden='true'
+            >
               <Separator className='my-4 w-fit'></Separator>
               <span className='text-muted-foreground self-center-safe'>o</span>
               <Separator className='my-4 w-fit'></Separator>

@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   addVacanciesAction,
   editMissionAction,
@@ -112,11 +112,7 @@ export const EditMission = () => {
     );
   }
 
-  if (
-    isError ||
-    !MISSION_STATUS[mission?.status].CAN_EDIT ||
-    currentUser.id !== mission.owner_id
-  ) {
+  if (isError) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
         <div
@@ -128,6 +124,12 @@ export const EditMission = () => {
       </main>
     );
   }
+
+  if (
+    !MISSION_STATUS[mission?.status].CAN_EDIT ||
+    currentUser.id !== mission.owner_id
+  )
+    return <Navigate to={`/missions/${id}`} replace={true} />;
 
   return (
     <EditMissionPageContainer
@@ -407,7 +409,7 @@ const CreationVacancyCard = ({
     <Card
       className={`relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all group ${
         MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT
-          ? 'hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+          ? 'hover:shadow-lg hover:cursor-pointer focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50'
           : 'opacity-70 cursor-default'
       }`}
       onClick={() =>
@@ -1286,7 +1288,7 @@ export function MissionPhotoUpload({ files, setFiles }) {
                 variant='destructive'
                 size='icon'
                 aria-label={`Remove photo ${index + 1}`}
-                className='absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity'
+                className='absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity'
                 onClick={() => removeFile(file.name)}
               >
                 <X className='w-4 h-4' aria-hidden='true' />
