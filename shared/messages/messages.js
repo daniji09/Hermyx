@@ -1,4 +1,5 @@
 import { consts } from '../consts/consts.js';
+import { truncateText } from './../../server/src/utils/string.util.js';
 
 export const messages = {
   /// General messages
@@ -18,6 +19,8 @@ export const messages = {
     FIREBASE_AUTH_ERROR: `Firebase Auth error.`,
     FORBIDDEN: `Action is not authorized.`,
     FORBIDDEN_BAN_USER: `This user is banned from Hermyx.`,
+    IMAGE_INVALID_TYPE: `Only .jpeg, .png and .webp images are accepted.`,
+    IMAGE_TOO_BIG: `Photo must weight less than 5MB.`,
     INCOMPLETE_PAGINATION: `Pagination is incomplete. Please send both 'page' and 'limit'.`,
     INCOMPLETE_PETITION: (field1, field2) =>
       `Incomplete petition. Please send ${field1} and ${field2} together.`,
@@ -98,7 +101,7 @@ export const messages = {
       MIN_PAYMENT_GREATER_MAX_PAYMENT: `Min payment cannot be greater than max payment.`,
     },
     PUBLISH: {
-      MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB`,
+      MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB.`,
       MISSION_PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
       MISSION_WITH_SAME_TITLE: `You already have a mission titled like this.`,
       MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
@@ -283,11 +286,11 @@ export const messages = {
     MISSION_RESTARTED: (title) =>
       `Mission ${title} has started for you! Talk to your team and start working.`,
     DISPUTE_PARTICIPATION: (title, username) =>
-      `A dispute was opened for "${title}" by applicant ${username}.`,
+      `A dispute was opened for "${truncateText(title, 20)}" by applicant ${username}.`,
     DISPUTE_REJECTED_PARTICIPATION: (title, username) =>
-      `Adventurer ${username} opened a dispute for "${title}".`,
+      `Adventurer ${username} opened a dispute for "${truncateText(title, 20)}".`,
     REJECT_PARTICIPATION: (title, username) =>
-      `Your participation in "${title}" was rejected by ${username}. Please accept the revision or open a dispute.`,
+      `Your participation in "${truncateText(title, 20)}" was rejected by ${username}. Please accept the revision or open a dispute.`,
     ACCEPT_PARTICIPATION: {
       AUTOMATIC: (title) =>
         `Your participation in "${title}" was approved automatically by the system after it wasn't reviewed on time (one week).`,
@@ -394,6 +397,6 @@ export const messages = {
     },
     // Conversation messages shown in a conversation
     REPORT_ADVENTURER: (username, vacancyTitle, missionTitle) =>
-      `A dispute was opened after ${username} was reported for the vacancy "${vacancyTitle}" in "${missionTitle}".`,
+      `A dispute was opened after ${username} was reported for the vacancy "${truncateText(vacancyTitle, 20)}" in "${truncateText(missionTitle, 20)}".`,
   },
 };

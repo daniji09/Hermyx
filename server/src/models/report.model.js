@@ -38,6 +38,8 @@ export const findById = async (id, client = pool) => {
       r.*,
       m.title AS mission_title,
       mp.title AS vacancy_title,
+      u.username AS other_username,
+      s.username AS sender_username,
       (
         r.status = 'SENT'
         AND r.conversation_id IS NOT NULL
@@ -55,6 +57,10 @@ export const findById = async (id, client = pool) => {
       ON m.mid = NULLIF(r.payload->>'associated_mission_id', '')::int
     LEFT JOIN mission_participation mp
       ON mp.id = NULLIF(r.payload->>'associated_vacancy_id', '')::int
+    LEFT JOIN app_user u 
+      ON u.uid = NULLIF(r.payload->>'associated_user_id', '')::int
+    LEFT JOIN app_user s
+      on s.uid = r.sender_id
     WHERE r.rid = $1
   `;
   const result = await client.query(query, [id]);
@@ -338,9 +344,8 @@ export const updateStatusIfCurrent = async (rid, status, client = pool) => {
        WHERE rid = $2 AND status = $3
        RETURNING *`,
     [
-      REPORT_STATUS.ANSWERED.ID,
-      rid,
       status,
+      rid,
       status === REPORT_STATUS.ANSWERED.ID
         ? REPORT_STATUS.SENT.ID
         : REPORT_STATUS.ANSWERED.ID,

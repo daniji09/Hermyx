@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { BlobServiceClient } from '@azure/storage-blob';
+import { AZURE_CONN_STRING } from '../config/config.js';
 
 export const saveToLocalStorage = async (file, folder = 'uploads/missions') => {
   // Unique name is generated
@@ -21,21 +22,15 @@ export const saveToLocalStorage = async (file, folder = 'uploads/missions') => {
   return `/${folder}/${uniqueName}`;
 };
 
-// Añadimos el parámetro "containerName"
-export const uploadToAzureBlob = async (
-  file,
-  containerName = 'mission-photos',
-) => {
-  const AZURE_CONN_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
-
+export const uploadToAzureBlob = async (file, containerName) => {
   if (!AZURE_CONN_STRING) {
-    throw new Error('Azure Storage Connection string no configurada.');
+    throw new Error('Azure Storage Connection string not configured.');
   }
 
   const blobServiceClient =
     BlobServiceClient.fromConnectionString(AZURE_CONN_STRING);
 
-  // Usamos el contenedor dinámico
+  // Dynamic container is used
   const containerClient = blobServiceClient.getContainerClient(containerName);
 
   const uniqueName = `${uuidv4()}-${file.originalname.replace(/\s+/g, '_')}`;
@@ -47,6 +42,7 @@ export const uploadToAzureBlob = async (
 
   return blockBlobClient.url;
 };
+
 export const deleteFromLocalStorage = async (photoUrl) => {
   try {
     const filePath = path.join(process.cwd(), 'public', photoUrl);
@@ -56,21 +52,16 @@ export const deleteFromLocalStorage = async (photoUrl) => {
   }
 };
 
-// Añadimos el parámetro "containerName"
-export const deleteFromAzureBlob = async (
-  photoUrl,
-  containerName = 'mission-photos',
-) => {
+export const deleteFromAzureBlob = async (photoUrl, containerName) => {
   try {
-    const AZURE_CONN_STRING = process.env.AZURE_STORAGE_CONNECTION_STRING;
-
-    if (!AZURE_CONN_STRING)
-      throw new Error('Azure Storage Connection string no configurada.');
+    if (!AZURE_CONN_STRING) {
+      throw new Error('Azure Storage Connection string not configured.');
+    }
 
     const blobServiceClient =
       BlobServiceClient.fromConnectionString(AZURE_CONN_STRING);
 
-    // Usamos el contenedor dinámico
+    // Dynamic container is used
     const containerClient = blobServiceClient.getContainerClient(containerName);
 
     const urlObj = new URL(photoUrl);
@@ -80,6 +71,6 @@ export const deleteFromAzureBlob = async (
 
     await blockBlobClient.deleteIfExists();
   } catch (error) {
-    console.error(`No se pudo borrar el blob ${photoUrl}:`, error.message);
+    console.error(`Couldn't delete blob ${photoUrl}:`, error.message);
   }
 };

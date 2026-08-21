@@ -21,9 +21,10 @@ export const findByUid = async (uid, client = pool) => {
 
 // Get users by uid for update
 export const findAllByUidForUpdate = async (uids, client = pool) => {
+  const uidsArray = Array.isArray(uids) ? uids : [uids];
   const query =
     'SELECT uid FROM app_user WHERE uid = ANY($1::int[]) ORDER BY uid FOR UPDATE';
-  const result = await client.query(query, [uids]);
+  const result = await client.query(query, [uidsArray]);
   return result.rows;
 };
 
