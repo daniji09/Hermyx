@@ -77,15 +77,7 @@ export function Navbar() {
 
             {currentUser &&
               (currentUser.isAdmin ? (
-                <>
-                  <Button asChild variant='ghost'>
-                    <Link to='/missions'>Missions</Link>
-                  </Button>
-                  <DisputesLink
-                    unreadCount={unreadDisputeCount}
-                    isAdmin={true}
-                  />
-                </>
+                <DisputesLink unreadCount={unreadDisputeCount} isAdmin={true} />
               ) : (
                 <>
                   <DropdownMenu>
@@ -157,13 +149,6 @@ export function Navbar() {
                     <span className='text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 px-2'>
                       Administration
                     </span>
-                    <Link
-                      to='/missions'
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className='px-2 py-2 rounded-md hover:bg-slate-200/50 text-sm font-medium transition-colors'
-                    >
-                      View missions
-                    </Link>
                     <Link
                       to='/reports'
                       onClick={() => setIsMobileMenuOpen(false)}

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { REPORT_DECISION, REPORT_TYPE, REPORT_STATUS } from '@hermyx/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { getReportByIdQueryOptions } from '../queries/ReportQueries';
 import { timestampToDayMonthYear } from '../utils/date';
 import { Button } from '@/components/ui/button';
@@ -147,6 +147,13 @@ const ReportContent = ({ report }) => {
           </CardHeader>
           <CardContent className='flex flex-1 flex-col'>
             <div className='mb-4'>{report.message}</div>
+            {report.payload.associated_mission_id && (
+              <Button asChild variant='outline' className='w-fit'>
+                <Link to={`/missions/${report.payload.associated_mission_id}`}>
+                  View mission
+                </Link>
+              </Button>
+            )}
           </CardContent>
           <CardFooter>
             {report.status === REPORT_STATUS.ANSWERED.ID ? (

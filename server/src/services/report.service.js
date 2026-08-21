@@ -340,7 +340,7 @@ export const reportMission = async ({ message, mid, senderId }) => {
       senderId,
       message,
       type: REPORT_TYPE.REPORT_MISSION.ID,
-      lookupPayload: { mid },
+      lookupPayload: { missionId: mid },
       payload: { associated_mission_id: mid },
     },
     messages.REPORT.REPORT_MISSION.ACTIVE_REPORT,
