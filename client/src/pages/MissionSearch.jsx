@@ -1,11 +1,12 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { getMissionsInfiniteQueryOptions } from './../queries/MissionsQueries';
+import { getMissionsInfiniteQueryOptions } from '../queries/MissionsQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { useSearchParams } from 'react-router-dom';
-import { MissionSearchContainer } from './../components/custom/missions/MissionSearchContainer';
+import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { HandPlatter } from 'lucide-react';
 
 export const SearchMission = () => {
   // Search params, if they exists
@@ -47,6 +48,7 @@ export const SearchMission = () => {
   const missions = data?.pages.flatMap((page) => page.missions);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMinPaymentInput(minPayment);
     setMaxPaymentInput(maxPayment);
     setMaxDistanceInput(maxDistanceKm);
@@ -94,11 +96,26 @@ export const SearchMission = () => {
   return (
     <main>
       <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='mb-6 border-b pb-4'>
-          <h1 className='text-3xl font-bold tracking-tight'>Missions</h1>
-          <p className='text-muted-foreground'>
-            Results for &quot;{title.trim()}&quot;
-          </p>
+        <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <HandPlatter className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
+              Missions
+            </h1>
+            <p className='text-muted-foreground'>
+              {data?.pages[0]?.pagination?.totalItems} results for &quot;
+              {title.trim()}&quot;.
+            </p>
+          </div>
+        </div>
+      </section>
+      <section
+        className='w-full px-6 sm:px-8 lg:px-12 xl:px-16'
+        aria-label='Filters section'
+      >
+        <div className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
           <form
             onSubmit={handleFiltersSubmit}
             className='mt-4 flex flex-col gap-3 sm:flex-row sm:items-end'

@@ -6,7 +6,7 @@ import { ProtectedRoute } from './components/custom/routes/ProtectedRoute';
 import { Mission } from './pages/Mission';
 import { NewMission } from './pages/MissionCreate';
 import { Payment } from './pages/Payment';
-import { SearchMission } from './pages/SearchMission';
+import { SearchMission } from './pages/MissionSearch';
 import { UserMissions } from './pages/UserMissions';
 import TestDashboard from './pages/TestDashboard';
 import { Navbar } from './components/custom/Navbar';

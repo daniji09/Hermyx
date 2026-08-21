@@ -163,7 +163,7 @@ export const messages = {
   },
   SEARCH_MISSIONS: {
     LOADING: 'Searching missions...',
-    ERROR: 'Oops! Something went wrong while loading missions',
+    ERROR: 'Oops! Something went wrong while loading missions.',
     NO_MISSIONS: 'It seems there is no missions yet. Add one!',
   },
   PAYMENT: {

@@ -284,7 +284,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
             defaultValue={state.data?.title || mission?.title || ''}
             autoComplete='off'
             required
-            maxLength={consts.MISSION.TITLE_MAX_LENGTH}
+            maxLength={consts.MISSION.TITLE.MAX_LENGTH}
             aria-invalid={!clearedFields.title && !!state.errors?.title}
             disabled={isPending}
             onChange={handleFieldChange}
@@ -305,7 +305,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
             defaultValue={state.data?.description || mission?.description || ''}
             autoComplete='off'
             required
-            maxLength={consts.MISSION.DESCRIPTION_MAX_LENGTH}
+            maxLength={consts.MISSION.DESCRIPTION.MAX_LENGTH}
             aria-invalid={
               !clearedFields.description && !!state.errors?.description
             }
