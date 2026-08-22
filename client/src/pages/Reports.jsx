@@ -295,145 +295,93 @@ const ReportSearchCard = ({ report }) => {
   const linkClass =
     'user-link relative z-20 font-medium text-primary hover:underline transition-colors';
 
-  const title =
-    report?.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
-      <span className='text-sm leading-relaxed font-normal text-foreground'>
-        Adventurer{' '}
-        <Link
-          to={`/users/${report?.other_username}`}
-          className={linkClass}
-          title={report?.other_username}
-          aria-label={report?.other_username}
-        >
-          {truncateText(report?.other_username)}
-        </Link>{' '}
-        of mission{' '}
-        <Link
-          to={`/missions/${report?.payload?.associated_mission_id}`}
-          className={linkClass}
-          title={report?.mission_title}
-          aria-label={report?.mission_title}
-        >
-          {truncateText(report?.mission_title)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${report?.sender_username}`}
-          className={linkClass}
-          title={report?.sender_username}
-          aria-label={report?.sender_username}
-        >
-          {truncateText(report?.sender_username)}
-        </Link>
-        .
-      </span>
-    ) : report?.type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID ? (
-      <span className='text-sm leading-relaxed font-normal text-foreground'>
-        Applicant{' '}
-        <Link
-          to={`/users/${report?.other_username}`}
-          className={linkClass}
-          title={report?.other_username}
-          aria-label={report?.other_username}
-        >
-          {truncateText(report?.other_username)}
-        </Link>{' '}
-        of mission{' '}
-        <Link
-          to={`/missions/${report?.payload?.associated_mission_id}`}
-          className={linkClass}
-          title={report?.mission_title}
-          aria-label={report?.mission_title}
-        >
-          {truncateText(report?.mission_title)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${report?.sender_username}`}
-          className={linkClass}
-          title={report?.sender_username}
-          aria-label={report?.sender_username}
-        >
-          {truncateText(report?.sender_username)}
-        </Link>
-        .
-      </span>
-    ) : report?.type === REPORT_TYPE.REVIEW_DISPUTE.ID ? (
-      <span className='text-sm leading-relaxed font-normal text-foreground'>
-        Adventurer&lsquo;s{' '}
-        <Link
-          to={`/users/${report?.other_username}`}
-          className={linkClass}
-          title={report?.other_username}
-          aria-label={report?.other_username}
-        >
-          {truncateText(report?.other_username)}
-        </Link>{' '}
-        participation of mission{' '}
-        <Link
-          to={`/missions/${report?.payload?.associated_mission_id}`}
-          className={linkClass}
-          title={report?.mission_title}
-          aria-label={report?.mission_title}
-        >
-          {truncateText(report?.mission_title)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${report?.sender_username}`}
-          className={linkClass}
-          title={report?.sender_username}
-          aria-label={report?.sender_username}
-        >
-          {truncateText(report?.sender_username)}
-        </Link>
-        .
-      </span>
-    ) : report?.type === REPORT_TYPE.REPORT_MISSION.ID ? (
-      <span className='text-sm leading-relaxed font-normal text-foreground'>
-        Mission{' '}
-        <Link
-          to={`/missions/${report?.payload?.associated_mission_id}`}
-          className={linkClass}
-          title={report?.mission_title}
-          aria-label={report?.mission_title}
-        >
-          {truncateText(report?.mission_title)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${report?.sender_username}`}
-          className={linkClass}
-          title={report?.sender_username}
-          aria-label={report?.sender_username}
-        >
-          {truncateText(report?.sender_username)}
-        </Link>
-        .
-      </span>
-    ) : (
-      <span className='text-sm leading-relaxed font-normal text-foreground'>
-        User{' '}
-        <Link
-          to={`/users/${report?.other_username}`}
-          className={linkClass}
-          title={report?.other_username}
-          aria-label={report?.other_username}
-        >
-          {truncateText(report?.other_username)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${report?.sender_username}`}
-          className={linkClass}
-          title={report?.sender_username}
-          aria-label={report?.sender_username}
-        >
-          {truncateText(report?.sender_username)}
-        </Link>
-        .
-      </span>
+  const renderUserLink = (username) => {
+    if (!username) return null;
+    return (
+      <Link
+        to={`/users/${username}`}
+        className={linkClass}
+        title={username}
+        aria-label={username}
+        target='_blank'
+        rel='noopener noreferrer'
+      >
+        {truncateText(username)}
+      </Link>
     );
+  };
+
+  const renderMissionLink = () => {
+    const missionId = report?.payload?.associated_mission_id;
+    const title = report?.mission_title;
+    if (!missionId) return null;
+    return (
+      <Link
+        to={`/missions/${missionId}`}
+        className={linkClass}
+        title={title}
+        aria-label={title}
+        target='_blank'
+        rel='noopener noreferrer'
+      >
+        {truncateText(title)}
+      </Link>
+    );
+  };
+
+  const generateTitle = () => {
+    const { type, other_username, sender_username } = report || {};
+
+    const senderLink = renderUserLink(sender_username);
+    const otherUserLink = renderUserLink(other_username);
+    const missionLink = renderMissionLink();
+
+    switch (type) {
+      case REPORT_TYPE.REPORT_ADVENTURER.ID:
+        return (
+          <>
+            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
+        return (
+          <>
+            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REVIEW_DISPUTE.ID:
+        return (
+          <>
+            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
+            {missionLink} was reported by {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REPORT_MISSION.ID:
+        return (
+          <>
+            Mission {missionLink} was reported by {senderLink}.
+          </>
+        );
+
+      default: // REPORT_USER
+        return (
+          <>
+            User {otherUserLink} was reported by {senderLink}.
+          </>
+        );
+    }
+  };
+
+  const title = (
+    <span className='leading-relaxed font-normal text-foreground'>
+      {generateTitle()}
+    </span>
+  );
 
   return (
     <li className='h-full'>

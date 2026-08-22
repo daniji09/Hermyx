@@ -46,7 +46,7 @@ export const reportAdventurerAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -91,7 +91,7 @@ export const reportUserAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -136,7 +136,7 @@ export const reportMissionAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,

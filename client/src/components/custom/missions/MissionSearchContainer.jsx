@@ -131,6 +131,7 @@ const MissionSearchContent = ({
 };
 
 const MissionSearchCard = ({ mission }) => {
+  // TODO: falla el status en public profile si no está abierta?
   const missionPhoto = mission.photos?.[0]
     ? getImageUrl(mission.photos[0])
     : 'https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
@@ -199,7 +200,7 @@ const MissionSearchCard = ({ mission }) => {
               <div className='flex items-center gap-2'>
                 <span className='sr-only'>Status:</span>
                 <span className='italic text-muted-foreground'>
-                  {MISSION_STATUS[mission?.status].LABEL}
+                  {MISSION_STATUS[mission?.status]?.LABEL}
                 </span>
               </div>
             </div>

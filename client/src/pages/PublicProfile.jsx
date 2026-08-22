@@ -26,7 +26,7 @@ import { useAlert } from '../contexts/AlertContext';
 import { reportUserAction } from '../actions/ReportActions';
 import { messages } from '../messages/messages.js';
 import { FormTextareaField } from '../components/custom/form/FormTextareaField.jsx';
-import { consts } from '@hermyx/shared';
+import { consts, USER_ROLE } from '@hermyx/shared';
 import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
@@ -209,7 +209,9 @@ export const PublicProfile = () => {
         </div>
       </section>
 
-      {!missionsVisible ? (
+      {user.role === USER_ROLE.ADMIN.ID ? (
+        ``
+      ) : !missionsVisible ? (
         <section className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
           This user keeps their mission history private.
         </section>
@@ -250,14 +252,15 @@ export const PublicProfile = () => {
           </TabsContent>
         </Tabs>
       )}
-
-      <AdventurerReviewsSection
-        reviewsData={reviewsData}
-        isLoading={isReviewsLoading}
-        hasNextPage={hasNextReviewsPage}
-        isFetchingNextPage={isFetchingNextReviewsPage}
-        fetchNextPage={fetchNextReviewsPage}
-      />
+      {user.role !== USER_ROLE.ADMIN.ID && (
+        <AdventurerReviewsSection
+          reviewsData={reviewsData}
+          isLoading={isReviewsLoading}
+          hasNextPage={hasNextReviewsPage}
+          isFetchingNextPage={isFetchingNextReviewsPage}
+          fetchNextPage={fetchNextReviewsPage}
+        />
+      )}
     </main>
   );
 };
