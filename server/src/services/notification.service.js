@@ -851,23 +851,46 @@ const createJoinResolutionNotifications = async (
   client,
 ) => {
   const vacancyId = notification.payload.associated_vacancy_id;
-  const [vacancyNotifications, adventurerNotifications] = await Promise.all([
+  const pendingStatus = NOTIFICATION_STATUS.PENDING.ID;
+  const joinRequestAction = NOTIFICATION_ACTION.JOIN_REQUEST.ID;
+  const missionInviteAction = NOTIFICATION_ACTION.MISSION_INVITE.ID;
+  const [vacancyJoinRequests, vacancyInvitations] = await Promise.all([
     notificationModel.findByActionStatusAndMissionParticipationId(
-      NOTIFICATION_ACTION.JOIN_REQUEST.ID,
-      NOTIFICATION_STATUS.PENDING.ID,
+      joinRequestAction,
+      pendingStatus,
       vacancyId,
       client,
     ),
-    notificationModel.findByActionStatusSenderAndMission(
-      NOTIFICATION_ACTION.JOIN_REQUEST.ID,
-      NOTIFICATION_STATUS.PENDING.ID,
-      mission.mid,
-      notification.sender_id,
+    notificationModel.findByActionStatusAndMissionParticipationId(
+      missionInviteAction,
+      pendingStatus,
+      vacancyId,
       client,
     ),
   ]);
+
+  const adventurerNotifications =
+    notification.action === missionInviteAction
+      ? await notificationModel.findByActionStatusRecipientAndMission(
+          missionInviteAction,
+          pendingStatus,
+          mission.mid,
+          notification.recipient_id,
+          client,
+        )
+      : await notificationModel.findByActionStatusSenderAndMission(
+          joinRequestAction,
+          pendingStatus,
+          mission.mid,
+          notification.sender_id,
+          client,
+        );
   const events = [];
-  const notifications = [...vacancyNotifications, ...adventurerNotifications];
+  const notifications = [
+    ...vacancyJoinRequests,
+    ...vacancyInvitations,
+    ...adventurerNotifications,
+  ];
   const uniqueNotifications = [
     ...new Map(notifications.map((item) => [item.nid, item])).values(),
   ].filter((item) => item.nid !== notification.nid);
