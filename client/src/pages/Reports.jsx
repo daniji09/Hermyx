@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/combobox';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MessageSquareWarning } from 'lucide-react';
 
 // Comboboxes   options
 const DATE_OPTIONS = [
@@ -85,10 +86,26 @@ export const Reports = () => {
   return (
     <main>
       <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='mb-6 border-b pb-4'>
-          <h1 className='text-3xl font-bold tracking-tight'>Reports</h1>
+        <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <MessageSquareWarning className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
+              Reports
+            </h1>
+            <p className='text-muted-foreground'>
+              Oversee platform moderation. Review, filter, and take action on
+              community reports.
+            </p>
+          </div>
         </div>
-        <div className='flex flex-col sm:flex-row gap-4 mb-6'>
+      </section>
+      <section
+        className='w-full px-6 sm:px-8 lg:px-12 xl:px-16'
+        aria-label='Filters section'
+      >
+        <div className='mt-4 mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
           <FilterCombobox
             items={DATE_OPTIONS}
             value={searchFilters.sortByDate}
