@@ -200,6 +200,19 @@ export const updateParticipationStatusByMidAndAdventurer = async (
   );
 };
 
+// Restores participation after an acceptance failed before paying the adventurer
+export const restoreParticipationAfterFailedAcceptance = async (
+  mid,
+  adventurerId,
+) => {
+  checkRequired(mid, 'Mission id');
+  checkRequired(adventurerId, 'Adventurer user id');
+  return await missionParticipationModel.restoreSubmittedAfterFailedAcceptance(
+    mid,
+    adventurerId,
+  );
+};
+
 // Updates mission participation status by id an adventurer
 export const updateParticipationAdventurerAndStatus = async (
   id,
