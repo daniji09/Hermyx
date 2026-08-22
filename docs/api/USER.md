@@ -148,7 +148,7 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
   <br>
 
-**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query para. Pagination is used by default, although it is optional.
+**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query param. Pagination is used by default, although it is optional.
 <br>
 <br>
 <br>
@@ -256,7 +256,7 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
   <br>
 
-**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query para. Pagination is used by default, although it is optional. This endpoints exists due to the different information needed from the missions, compared to the endpoint that retrieves the missions of a user by their username (used for the current user).
+**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query param. Pagination is used by default, although it is optional. This endpoints exists due to the different information needed from the missions, compared to the endpoint that retrieves the missions of a user by their username (used for the current user).
 <br>
 <br>
 <br>

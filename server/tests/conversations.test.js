@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages } from '@hermyx/shared';
+import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
-const currentUser = vi.hoisted(() => ({ uid: 51, username: 'chat_hero' }));
+const currentUser = vi.hoisted(() => ({
+  uid: 51,
+  username: 'chat_hero',
+  role: 'USER',
+}));
 
 const conversationService = vi.hoisted(() => ({
   getMyConversations: vi.fn(),
@@ -16,9 +20,11 @@ const conversationService = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/services/conversation.service.js', () => conversationService);
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -28,9 +34,20 @@ import app from '../src/app.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('Conversation API', () => {
+  it('forbids an administrator from listing normal conversations', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app).get('/api/conversations');
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(conversationService.getMyConversations).not.toHaveBeenCalled();
+  });
+
   it('gets the current user conversations', async () => {
     const conversations = [{ cid: 1, type: 'private' }];
     const pagination = {
@@ -132,6 +149,28 @@ describe('Conversation API', () => {
     );
   });
 
+  it('returns a conflict when creating a conversation with yourself', async () => {
+    conversationService.createPrivateConversation.mockRejectedValue(
+      new AppError(
+        messages.CONVERSATION.GENERAL.CONVERSATION_WITH_YOURSELF,
+        409,
+      ),
+    );
+
+    const response = await request(app)
+      .post('/api/conversations/private')
+      .send({ otherUserId: currentUser.uid });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([
+      messages.CONVERSATION.GENERAL.CONVERSATION_WITH_YOURSELF,
+    ]);
+    expect(conversationService.createPrivateConversation).toHaveBeenCalledWith(
+      currentUser.uid,
+      currentUser.uid,
+    );
+  });
+
   it('sends a text message', async () => {
     const message = { id: 6, content: 'Ready for the mission.' };
     conversationService.sendMessage.mockResolvedValue(message);
@@ -180,6 +219,19 @@ describe('Conversation API', () => {
     expect(response.status).toBe(403);
     expect(response.body.errors.general).toEqual([
       messages.GENERAL.UNAUTHORIZED_ERROR,
+    ]);
+  });
+
+  it('returns not found when the conversation does not exist', async () => {
+    conversationService.getConversation.mockRejectedValue(
+      new AppError(messages.CONVERSATION.GENERAL.CONVERSATION_NOT_FOUND, 404),
+    );
+
+    const response = await request(app).get('/api/conversations/999');
+
+    expect(response.status).toBe(404);
+    expect(response.body.errors.general).toEqual([
+      messages.CONVERSATION.GENERAL.CONVERSATION_NOT_FOUND,
     ]);
   });
 });

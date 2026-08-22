@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { getMyConversationsInfiniteQueryOptions } from '../queries/ConversationsQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { getImageUrl } from '../utils/media';
+import { formatLastMessageTime } from '../utils/date';
+import { cn } from './../lib/utils';
 
 const getLastMessagePreview = (conversation) => {
   if (conversation.last_message_content) {
@@ -32,14 +34,16 @@ const ConversationCard = ({ conversation }) => {
   return (
     <Link
       to={`/conversations/${conversation.cid}`}
-      state={{ from: '/conversations' }}
-      className='flex items-center gap-4 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:bg-muted/40'
+      className='flex items-center gap-4 rounded-lg border bg-card p-4 shadow-sm transition-colors hover:bg-muted/40 min-w-0'
     >
       <div className='flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
         {isHistory ? (
-          <History className='h-5 w-5 text-muted-foreground' />
+          <History
+            className='h-5 w-5 text-muted-foreground'
+            aria-hidden='true'
+          />
         ) : isMissionConversation ? (
-          <Users className='h-5 w-5 text-muted-foreground' />
+          <Users className='h-5 w-5 text-muted-foreground' aria-hidden='true' />
         ) : conversation.other_avatar ? (
           <img
             src={getImageUrl(conversation.other_avatar)}
@@ -47,21 +51,29 @@ const ConversationCard = ({ conversation }) => {
             className='h-full w-full object-cover'
           />
         ) : (
-          <User className='h-5 w-5 text-muted-foreground' />
+          <User className='h-5 w-5 text-muted-foreground' aria-hidden='true' />
         )}
       </div>
 
       <div className='min-w-0 flex-1'>
         <div className='flex items-center justify-between gap-3'>
-          <h3 className='truncate font-semibold'>
-            {conversationTitle || 'Conversation'}
-          </h3>
+          <h2 className='min-w-0 truncate font-semibold'>
+            {conversation.type === 'private' &&
+            conversation.participant_count === 0
+              ? 'Hermyx user'
+              : conversationTitle || 'Conversation'}
+          </h2>
           {conversation.last_message_created_at && (
-            <span className='shrink-0 text-xs text-muted-foreground'>
-              {new Date(
-                conversation.last_message_created_at,
-              ).toLocaleDateString()}
-            </span>
+            <time
+              className={cn(
+                'shrink-0 text-xs',
+                conversation.unread_count > 0
+                  ? 'text-destructive font-semibold'
+                  : 'text-muted-foreground',
+              )}
+            >
+              {formatLastMessageTime(conversation.last_message_created_at)}
+            </time>
           )}
         </div>
 
@@ -79,16 +91,20 @@ const ConversationCard = ({ conversation }) => {
             )}
           </p>
         )}
-
-        <p className='mt-1 truncate text-sm text-muted-foreground'>
-          {getLastMessagePreview(conversation)}
-        </p>
+        <div className='flex justify-between'>
+          <p className='min-w-0 mt-1 truncate text-sm text-muted-foreground'>
+            {getLastMessagePreview(conversation)}
+          </p>
+          {conversation.unread_count > 0 && (
+            <span className='flex h-6 min-w-6 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground'>
+              <span className='sr-only'>
+                {conversation.unread_count} unread messages
+              </span>
+              <span aria-hidden='true'>{conversation.unread_count}</span>
+            </span>
+          )}
+        </div>
       </div>
-
-      <MessageCircle
-        className='h-5 w-5 shrink-0 text-muted-foreground'
-        aria-hidden='true'
-      />
     </Link>
   );
 };
@@ -105,16 +121,12 @@ export const Conversations = () => {
     getMyConversationsInfiniteQueryOptions(PAGINATION_LIMIT.CONVERSATIONS),
   );
   const conversations = data?.pages.flatMap((page) => page.conversations) || [];
-  const activeConversations = conversations.filter(
-    (conversation) => !isMissionHistory(conversation),
-  );
-  const missionHistory = conversations.filter(isMissionHistory);
 
   if (isLoading) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div className='p-8 text-center text-muted-foreground'>
-          Loading conversations
+        <div role='status' className='p-8 text-center text-muted-foreground'>
+          Loading conversations...
         </div>
       </main>
     );
@@ -123,8 +135,11 @@ export const Conversations = () => {
   if (isError) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'>
-          Could not load conversations
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load conversations.
         </div>
       </main>
     );
@@ -132,11 +147,18 @@ export const Conversations = () => {
 
   return (
     <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <section className='mb-6 border-b pb-4'>
-        <h1 className='text-3xl font-bold tracking-tight'>Conversations</h1>
-        <p className='text-muted-foreground'>
-          Your direct messages, active mission chats and mission history.
-        </p>
+      <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+        <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+          <MessageCircle className='h-6 w-6' aria-hidden='true' />
+        </span>
+        <div className='min-w-0'>
+          <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
+            Conversations
+          </h1>
+          <p className='text-muted-foreground'>
+            Your direct messages, active mission chats and mission history.
+          </p>
+        </div>
       </section>
 
       {conversations.length === 0 ? (
@@ -145,32 +167,9 @@ export const Conversations = () => {
         </div>
       ) : (
         <div className='space-y-8'>
-          {activeConversations.length > 0 && (
-            <section
-              className='grid gap-3'
-              aria-labelledby='active-chats-title'
-            >
-              <h2 id='active-chats-title' className='text-lg font-semibold'>
-                Active conversations
-              </h2>
-              {activeConversations.map((conversation) => (
-                <ConversationCard
-                  key={conversation.cid}
-                  conversation={conversation}
-                />
-              ))}
-            </section>
-          )}
-
-          {missionHistory.length > 0 && (
-            <section
-              className='grid gap-3'
-              aria-labelledby='mission-history-title'
-            >
-              <h2 id='mission-history-title' className='text-lg font-semibold'>
-                Mission history
-              </h2>
-              {missionHistory.map((conversation) => (
+          {conversations.length > 0 && (
+            <section className='grid gap-3' aria-label='List of conversations'>
+              {conversations.map((conversation) => (
                 <ConversationCard
                   key={conversation.cid}
                   conversation={conversation}

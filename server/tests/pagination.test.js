@@ -23,6 +23,7 @@ vi.mock('../src/middlewares/auth.middleware.js', () => ({
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
+  verifyRegularUser: (_req, _res, next) => next(),
 }));
 
 import app from '../src/app.js';

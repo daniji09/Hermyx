@@ -71,6 +71,21 @@ describe('Authentication API', () => {
         messages.AUTH.SIGNUP.EMAIL_ALREADY_EXISTS(validSignup.email),
       ]);
     });
+
+    it('returns an internal error when signup fails unexpectedly', async () => {
+      authService.signup.mockRejectedValue(
+        new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500),
+      );
+
+      const response = await request(app)
+        .post('/api/auth/signup')
+        .send(validSignup);
+
+      expect(response.status).toBe(500);
+      expect(response.body.errors.general).toEqual([
+        messages.GENERAL.UNEXPECTED_ERROR,
+      ]);
+    });
   });
 
   describe('POST /api/auth/login', () => {

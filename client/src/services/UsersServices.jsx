@@ -17,7 +17,6 @@ export const searchUsersByUsername = async (options) => {
     const { data } = await api.get('/users/search', {
       params: { page, limit, ...options.params },
     });
-    console.log(data);
     return data;
   }
 };
