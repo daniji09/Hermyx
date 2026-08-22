@@ -14,6 +14,7 @@ import {
   reviewOwnerBodySchema,
   reviewOwnerParamSchema,
 } from '@hermyx/shared';
+import { verifyRegularUser } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.get(
 // Reviews an adventurer after a completed mission
 router.post(
   '/missions/:mid/adventurers/:adventurerId',
+  verifyRegularUser,
   validateParamsSchema(reviewAdventurerParamSchema),
   validateBodySchema(reviewAdventurerBodySchema),
   reviewController.reviewAdventurer,
@@ -39,6 +41,7 @@ router.post(
 // Reviews an applicant after a completed participation
 router.post(
   '/missions/:mid/owner',
+  verifyRegularUser,
   validateParamsSchema(reviewOwnerParamSchema),
   validateBodySchema(reviewOwnerBodySchema),
   reviewController.reviewOwner,

@@ -18,7 +18,10 @@ import {
   validateParamsSchema,
   validateQuerySchema,
 } from '../middlewares/validation.middleware.js';
-import { verifyAdmin } from '../middlewares/auth.middleware.js';
+import {
+  verifyAdmin,
+  verifyRegularUser,
+} from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 const router = Router();
 
@@ -44,6 +47,7 @@ router.get(
 // Report adventurer
 router.post(
   '/adventurer',
+  verifyRegularUser,
   validateBodySchema(reportAdventurerValidation),
   reportController.reportAdventurer,
 );
@@ -51,6 +55,7 @@ router.post(
 // Report user
 router.post(
   '/user',
+  verifyRegularUser,
   validateBodySchema(reportUserValidation),
   reportController.reportUser,
 );
@@ -58,6 +63,7 @@ router.post(
 // Report mission
 router.post(
   '/mission',
+  verifyRegularUser,
   validateBodySchema(reportMissionValidation),
   reportController.reportMission,
 );

@@ -113,7 +113,9 @@ export const PublicProfile = () => {
     });
 
   if (isOwnProfile) {
-    return <Navigate to='/profile' replace />;
+    return (
+      <Navigate to={currentUser?.isAdmin ? '/reports' : '/profile'} replace />
+    );
   }
 
   if (isProfileLoading) {
