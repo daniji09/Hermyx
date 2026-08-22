@@ -10,7 +10,6 @@ import {
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -25,6 +24,7 @@ import {
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquareWarning } from 'lucide-react';
+import { truncateText } from '../../../server/src/utils/string.util';
 
 // Comboboxes   options
 const DATE_OPTIONS = [
@@ -111,18 +111,21 @@ export const Reports = () => {
             value={searchFilters.sortByDate}
             onChange={(val) => handleFilterChange('sortByDate', val)}
             placeholder='Sort by date...'
+            ariaLabel='Filter by date'
           />
           <FilterCombobox
             items={STATUS_OPTIONS}
             value={searchFilters.status}
             onChange={(val) => handleFilterChange('status', val)}
             placeholder='Sort by status...'
+            ariaLabel='Filter by status'
           />
           <FilterCombobox
             items={TYPE_OPTIONS}
             value={searchFilters.type}
             onChange={(val) => handleFilterChange('type', val)}
             placeholder='Sort by type...'
+            ariaLabel='Filter by type'
           />
         </div>
       </section>
@@ -138,7 +141,7 @@ export const Reports = () => {
   );
 };
 
-const FilterCombobox = ({ items, value, onChange, placeholder }) => {
+const FilterCombobox = ({ items, value, onChange, placeholder, ariaLabel }) => {
   const stringLabels = items.map((item) => item.label);
   const currentLabel = items.find((item) => item.value === value)?.label || '';
   const handleValueChange = (selectedLabel) => {
@@ -154,7 +157,10 @@ const FilterCombobox = ({ items, value, onChange, placeholder }) => {
         value={currentLabel}
         onValueChange={handleValueChange}
       >
-        <ComboboxInput placeholder={placeholder} />
+        <ComboboxInput
+          placeholder={placeholder}
+          aria-label={ariaLabel || placeholder}
+        />
         <ComboboxContent>
           <ComboboxEmpty>No results.</ComboboxEmpty>
           <ComboboxList>
@@ -207,7 +213,7 @@ const ReportsSearchLoading = ({ isLoading, children }) => {
   return (
     <>
       {isLoading && (
-        <div className='flex justify-center p-8 text-muted-foreground'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
           {children}
         </div>
       )}
@@ -219,7 +225,10 @@ const ReportsSearchError = ({ isError, children }) => {
   return (
     <>
       {isError && (
-        <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
           {children}
         </div>
       )}
@@ -231,7 +240,11 @@ const NoReportsSearch = ({ reports, children }) => {
   return (
     <>
       {reports?.length === 0 && (
-        <div className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'>
+        <div
+          role='status'
+          aria-live='polite'
+          className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'
+        >
           {children}
         </div>
       )}
@@ -249,7 +262,7 @@ const ReportsSearchContent = ({
     <>
       {reports?.length > 0 && (
         <>
-          <div
+          <ul
             className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
             aria-label='Reports list'
           >
@@ -259,7 +272,7 @@ const ReportsSearchContent = ({
                 report={report}
               ></ReportSearchCard>
             ))}
-          </div>
+          </ul>
           <div className='flex align-middle justify-center py-5'>
             <Button
               onClick={() => fetchNextPage()}
@@ -278,50 +291,203 @@ const ReportsSearchContent = ({
     </>
   );
 };
-
 const ReportSearchCard = ({ report }) => {
+  const linkClass =
+    'user-link relative z-20 font-medium text-primary hover:underline transition-colors';
+
+  const title =
+    report?.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
+      <span className='text-sm leading-relaxed font-normal text-foreground'>
+        Adventurer{' '}
+        <Link
+          to={`/users/${report?.other_username}`}
+          className={linkClass}
+          title={report?.other_username}
+          aria-label={report?.other_username}
+        >
+          {truncateText(report?.other_username)}
+        </Link>{' '}
+        of mission{' '}
+        <Link
+          to={`/missions/${report?.payload?.associated_mission_id}`}
+          className={linkClass}
+          title={report?.mission_title}
+          aria-label={report?.mission_title}
+        >
+          {truncateText(report?.mission_title)}
+        </Link>{' '}
+        was reported by{' '}
+        <Link
+          to={`/users/${report?.sender_username}`}
+          className={linkClass}
+          title={report?.sender_username}
+          aria-label={report?.sender_username}
+        >
+          {truncateText(report?.sender_username)}
+        </Link>
+        .
+      </span>
+    ) : report?.type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID ? (
+      <span className='text-sm leading-relaxed font-normal text-foreground'>
+        Applicant{' '}
+        <Link
+          to={`/users/${report?.other_username}`}
+          className={linkClass}
+          title={report?.other_username}
+          aria-label={report?.other_username}
+        >
+          {truncateText(report?.other_username)}
+        </Link>{' '}
+        of mission{' '}
+        <Link
+          to={`/missions/${report?.payload?.associated_mission_id}`}
+          className={linkClass}
+          title={report?.mission_title}
+          aria-label={report?.mission_title}
+        >
+          {truncateText(report?.mission_title)}
+        </Link>{' '}
+        was reported by{' '}
+        <Link
+          to={`/users/${report?.sender_username}`}
+          className={linkClass}
+          title={report?.sender_username}
+          aria-label={report?.sender_username}
+        >
+          {truncateText(report?.sender_username)}
+        </Link>
+        .
+      </span>
+    ) : report?.type === REPORT_TYPE.REVIEW_DISPUTE.ID ? (
+      <span className='text-sm leading-relaxed font-normal text-foreground'>
+        Adventurer&lsquo;s{' '}
+        <Link
+          to={`/users/${report?.other_username}`}
+          className={linkClass}
+          title={report?.other_username}
+          aria-label={report?.other_username}
+        >
+          {truncateText(report?.other_username)}
+        </Link>{' '}
+        participation of mission{' '}
+        <Link
+          to={`/missions/${report?.payload?.associated_mission_id}`}
+          className={linkClass}
+          title={report?.mission_title}
+          aria-label={report?.mission_title}
+        >
+          {truncateText(report?.mission_title)}
+        </Link>{' '}
+        was reported by{' '}
+        <Link
+          to={`/users/${report?.sender_username}`}
+          className={linkClass}
+          title={report?.sender_username}
+          aria-label={report?.sender_username}
+        >
+          {truncateText(report?.sender_username)}
+        </Link>
+        .
+      </span>
+    ) : report?.type === REPORT_TYPE.REPORT_MISSION.ID ? (
+      <span className='text-sm leading-relaxed font-normal text-foreground'>
+        Mission{' '}
+        <Link
+          to={`/missions/${report?.payload?.associated_mission_id}`}
+          className={linkClass}
+          title={report?.mission_title}
+          aria-label={report?.mission_title}
+        >
+          {truncateText(report?.mission_title)}
+        </Link>{' '}
+        was reported by{' '}
+        <Link
+          to={`/users/${report?.sender_username}`}
+          className={linkClass}
+          title={report?.sender_username}
+          aria-label={report?.sender_username}
+        >
+          {truncateText(report?.sender_username)}
+        </Link>
+        .
+      </span>
+    ) : (
+      <span className='text-sm leading-relaxed font-normal text-foreground'>
+        User{' '}
+        <Link
+          to={`/users/${report?.other_username}`}
+          className={linkClass}
+          title={report?.other_username}
+          aria-label={report?.other_username}
+        >
+          {truncateText(report?.other_username)}
+        </Link>{' '}
+        was reported by{' '}
+        <Link
+          to={`/users/${report?.sender_username}`}
+          className={linkClass}
+          title={report?.sender_username}
+          aria-label={report?.sender_username}
+        >
+          {truncateText(report?.sender_username)}
+        </Link>
+        .
+      </span>
+    );
+
   return (
-    <Card asChild className='justify-between'>
-      <article>
-        <CardHeader>
-          <CardTitle asChild>
-            <h2>
-              {report.type === REPORT_TYPE.REPORT_PROFILE.ID
-                ? `User ${report.payload.associated_user_id}`
-                : report.type === REPORT_TYPE.REPORT_MISSION.ID
-                  ? `Mission ${report.payload.associated_mission_id}`
-                  : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ||
-                      report.type === REPORT_TYPE.REVIEW_DISPUTE.ID
-                    ? `Adventurer of vacancy ${report.payload.associated_vacancy_id} on mission ${report.payload.associated_mission_id}`
-                    : `Applicant of mission ${report.payload.associated_mission_id}`}
-              {` was reported by ${report.sender_id}`}
-            </h2>
-          </CardTitle>
-          <CardDescription>{`Status: ${report.status}`}</CardDescription>
-          {report.needs_admin_attention && (
-            <CardDescription className='font-semibold text-destructive'>
-              Needs admin attention
-            </CardDescription>
-          )}
-          {report.unread_count > 0 && (
-            <CardDescription className='font-semibold text-destructive'>
-              {report.unread_count} unread message
-              {report.unread_count === 1 ? '' : 's'}
-            </CardDescription>
-          )}
-          <CardAction>
-            <p>{timestampToDayMonthYear(report.date)}</p>
-          </CardAction>
-        </CardHeader>
-        <CardContent className='flex flex-1 flex-col'>
-          <div className='mb-4 line-clamp-4'>{report.message}</div>
-        </CardContent>
-        <CardFooter>
-          <Button asChild>
-            <Link to={`/reports/${report.rid}`}>See report</Link>
-          </Button>
-        </CardFooter>
-      </article>
-    </Card>
+    <li className='h-full'>
+      <Card
+        asChild
+        className='justify-between group relative transition-all hover:border-primary/50 hover:shadow-md overflow-hidden focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2'
+      >
+        <article className='flex flex-col h-full'>
+          <Link
+            to={`/reports/${report.rid}`}
+            className='absolute inset-0 z-10'
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <span className='sr-only'>See details for report {report.rid}</span>
+          </Link>
+
+          <CardHeader>
+            <CardTitle asChild>
+              <h2 className='group-hover:underline group-has-[.user-link:hover]:no-underline transition-colors'>
+                {title}
+              </h2>
+            </CardTitle>
+
+            {report.needs_admin_attention && (
+              <CardDescription className='font-semibold text-destructive'>
+                Needs admin attention
+              </CardDescription>
+            )}
+
+            {report.unread_count > 0 && (
+              <CardDescription className='font-semibold text-destructive'>
+                {report.unread_count} unread message
+                {report.unread_count === 1 ? '' : 's'}
+              </CardDescription>
+            )}
+
+            <CardAction>
+              <p>{timestampToDayMonthYear(report.date)}</p>
+            </CardAction>
+          </CardHeader>
+
+          <CardContent className='flex flex-1 flex-col -mt-2'>
+            <div className='mb-5 break-all line-clamp-3'>{report.message}</div>
+
+            <div className='mt-auto flex items-center self-end gap-2'>
+              <span className='sr-only'>Status:</span>
+              <span className='italic text-muted-foreground text-sm'>
+                {REPORT_STATUS[report?.status].LABEL}
+              </span>
+            </div>
+          </CardContent>
+        </article>
+      </Card>
+    </li>
   );
 };
