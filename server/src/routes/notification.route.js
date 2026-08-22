@@ -13,9 +13,6 @@ import {
   paginationQuerySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
-import { verifyRegularUser } from '../middlewares/auth.middleware.js';
-
-router.use(verifyRegularUser);
 
 /// GETS
 // List current user notifications

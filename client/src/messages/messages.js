@@ -1,18 +1,5 @@
 // Frontend messages
 export const messages = {
-  CONVERSATION: {
-    HISTORY_ONLY: {
-      PARTICIPATION_FINISHED: `Your participation has finished. You can view the messages sent before it ended.`,
-      MISSION_ENDED: `This mission has finished. You can view its message history.`,
-      NO_EXISTING_USER: `This user doesn't belong anymore to Hermyx community.`,
-    },
-    DISPUTE_DECISION: {
-      ACCEPT_ADVENTURERS_WORK: `This dispute has ended by accepting the adventurer's work.`,
-      REJECT_ADVENTURERS_WORK: `This dispute has ended by rejecting the adventurer's work.`,
-      KICK_ADVENTURER_OUT: `This dispute has ended by kicking the adventurer out of the mission`,
-      DISMISS: `This dispute has ended by dismissing the accusation.`,
-    },
-  },
   SIGN_UP: {
     FORM_TITLE: 'Sign up',
     USERNAME_DESCRIPTION:
@@ -25,8 +12,6 @@ export const messages = {
   },
   NEW_MISSION: {
     FORM_TITLE: 'Create a mission',
-    FORM_DESCRIPTION:
-      'Create a mission by adding a title, description and vacancies! You can also use some photos to attract more adventurers or ping a location if needed.',
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
     PHOTOS_DESCRIPTION:
       'Each photo has to weight less than 5MB and the only types accepted are .jpeg, .png and .webp.',
@@ -42,8 +27,6 @@ export const messages = {
   },
   EDIT_MISSION: {
     FORM_TITLE: 'Edit your mission',
-    FORM_DESCRIPTION:
-      'Edit your mission if you want to update or add more information, or if you want more adventurers to enter it!',
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
     VACANCIES_DESCRIPTION:
       'Define how many adventurers you need for this mission.',
@@ -163,7 +146,7 @@ export const messages = {
   },
   SEARCH_MISSIONS: {
     LOADING: 'Searching missions...',
-    ERROR: 'Oops! Something went wrong while loading missions.',
+    ERROR: 'Oops! Something went wrong while loading missions',
     NO_MISSIONS: 'It seems there is no missions yet. Add one!',
   },
   PAYMENT: {

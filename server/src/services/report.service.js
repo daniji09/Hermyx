@@ -182,7 +182,6 @@ export const reportAdventurer = async ({
         payload: {
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
-          associated_user_id: adventurer.uid,
         },
         conversationId: conversation.cid,
       },
@@ -340,7 +339,7 @@ export const reportMission = async ({ message, mid, senderId }) => {
       senderId,
       message,
       type: REPORT_TYPE.REPORT_MISSION.ID,
-      lookupPayload: { missionId: mid },
+      lookupPayload: { mid },
       payload: { associated_mission_id: mid },
     },
     messages.REPORT.REPORT_MISSION.ACTIVE_REPORT,

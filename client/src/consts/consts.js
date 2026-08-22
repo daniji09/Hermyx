@@ -9,5 +9,4 @@ export const PAGINATION_LIMIT = {
   NOTIFICATIONS: 10,
   REVIEWS: 5,
   REPORTS: 10,
-  USERS: 8,
 };

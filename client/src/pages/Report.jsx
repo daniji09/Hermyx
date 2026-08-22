@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { REPORT_DECISION, REPORT_TYPE, REPORT_STATUS } from '@hermyx/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getReportByIdQueryOptions } from '../queries/ReportQueries';
 import { timestampToDayMonthYear } from '../utils/date';
 import { Button } from '@/components/ui/button';
@@ -22,8 +22,8 @@ import {
   dismiss,
   rejectAdventurersWork,
 } from '../services/ReportsServices';
+import { ConversationThread } from './Conversation';
 import { AnswerReportDialog } from '../components/custom/reports/AnswerReportDialog';
-import { truncateText } from '../../../server/src/utils/string.util';
 
 const invalidateResolvedReportQueries = (queryClient, report) =>
   Promise.all([
@@ -89,28 +89,25 @@ const ReportPageContainer = ({ report, isLoading, isError, error }) => {
 
 const ReportLoading = ({ isLoading, children }) => {
   return (
-    <>
+    <main>
       {isLoading && (
-        <div role='status' className='p-8 text-center text-muted-foreground'>
+        <div className='flex justify-center p-8 text-muted-foreground'>
           {children}
         </div>
       )}
-    </>
+    </main>
   );
 };
 
 const ReportError = ({ isError, children }) => {
   return (
-    <>
+    <main>
       {isError && (
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
+        <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
           {children}
         </div>
       )}
-    </>
+    </main>
   );
 };
 
@@ -120,199 +117,91 @@ const ReportContent = ({ report }) => {
     report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ||
     report.type === REPORT_TYPE.REVIEW_DISPUTE.ID ||
     report.type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID;
-
-  const linkClass =
-    'user-link relative z-20 font-medium text-primary hover:underline transition-colors';
-
-  const renderUserLink = (username) => {
-    if (!username) return null;
-    return (
-      <Link
-        to={`/users/${username}`}
-        className={linkClass}
-        title={username}
-        aria-label={username}
-        target='_blank'
-        rel='noopener noreferrer'
-      >
-        {truncateText(username)}
-      </Link>
-    );
-  };
-
-  const renderMissionLink = () => {
-    const missionId = report?.payload?.associated_mission_id;
-    const title = report?.mission_title;
-    if (!missionId) return null;
-    return (
-      <Link
-        to={`/missions/${missionId}`}
-        className={linkClass}
-        title={title}
-        aria-label={title}
-        target='_blank'
-        rel='noopener noreferrer'
-      >
-        {truncateText(title)}
-      </Link>
-    );
-  };
-
-  const generateTitle = () => {
-    const { type, other_username, sender_username } = report || {};
-
-    const senderLink = renderUserLink(sender_username);
-    const otherUserLink = renderUserLink(other_username);
-    const missionLink = renderMissionLink();
-
-    switch (type) {
-      case REPORT_TYPE.REPORT_ADVENTURER.ID:
-        return (
-          <>
-            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
-            {senderLink}.
-          </>
-        );
-
-      case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
-        return (
-          <>
-            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
-            {senderLink}.
-          </>
-        );
-
-      case REPORT_TYPE.REVIEW_DISPUTE.ID:
-        return (
-          <>
-            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
-            {missionLink} was reported by {senderLink}.
-          </>
-        );
-
-      case REPORT_TYPE.REPORT_MISSION.ID:
-        return (
-          <>
-            Mission {missionLink} was reported by {senderLink}.
-          </>
-        );
-
-      default: // REPORT_USER
-        return (
-          <>
-            User {otherUserLink} was reported by {senderLink}.
-          </>
-        );
-    }
-  };
-
-  const title = (
-    <span className='leading-10 font-normal text-foreground'>
-      {generateTitle()}
-    </span>
-  );
   return (
     <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
       <Card asChild className='justify-between'>
         <article>
           <CardHeader>
-            <CardTitle asChild className='text-3xl'>
-              <h1>{title}</h1>
+            <CardTitle asChild className='text-5xl'>
+              <h1>
+                {report.type === REPORT_TYPE.REPORT_PROFILE.ID
+                  ? `User ${report.payload.associated_user_id}`
+                  : report.type === REPORT_TYPE.REPORT_MISSION.ID
+                    ? `Mission ${report.payload.associated_mission_id}`
+                    : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ||
+                        report.type === REPORT_TYPE.REVIEW_DISPUTE.ID
+                      ? `Adventurer of vacancy ${report.payload.associated_vacancy_id} on mission ${report.payload.associated_mission_id}`
+                      : `Applicant of mission ${report.payload.associated_mission_id}`}
+                {` was reported by ${report.sender_id}`}
+              </h1>
             </CardTitle>
+            <CardDescription>{`Status: ${report.status}`}</CardDescription>
             {report.needs_admin_attention && (
-              <CardDescription className='font-semibold text-destructive text-lg'>
+              <CardDescription className='font-semibold text-destructive'>
                 Needs admin attention
               </CardDescription>
             )}
             <CardAction>
-              <p className='text-lg'>{timestampToDayMonthYear(report.date)}</p>
+              <p>{timestampToDayMonthYear(report.date)}</p>
             </CardAction>
           </CardHeader>
           <CardContent className='flex flex-1 flex-col'>
-            <div className='-mt-2 mb-5 break-all text-xl'>{report.message}</div>
-
-            <div className='mt-auto flex items-center self-end gap-2'>
-              <span className='sr-only'>Status:</span>
-              <span className='italic text-muted-foreground text-lg'>
-                {REPORT_STATUS[report?.status].LABEL}
-              </span>
-            </div>
+            <div className='mb-4'>{report.message}</div>
           </CardContent>
-          <CardFooter className='justify-between'>
-            {isDispute && (
-              <div>
-                <Button asChild variant='outline' size='lg' className='w-fit'>
-                  <Link
-                    to={`/disputes/${report.conversation_id}`}
-                    aria-label='View dispute conversation'
-                    target='_blank'
-                    rel='noopener noreferrer'
-                  >
-                    View conversation
-                  </Link>
-                </Button>
-              </div>
-            )}
-            <div className='ml-auto'>
-              {report.status === REPORT_STATUS.ANSWERED.ID ? (
-                <></>
-              ) : report.type === REPORT_TYPE.REPORT_PROFILE.ID ? (
-                <div className='flex gap-1'>
-                  <BanUserButton report={report} />
-                  <DismissButton report={report} />
-                </div>
-              ) : report.type === REPORT_TYPE.REPORT_MISSION.ID ? (
-                <div className='flex gap-1'>
-                  <BanMissionButton report={report} />
-                  <DismissButton report={report} />
-                </div>
-              ) : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
-                <div className='flex gap-1'>
+          <CardFooter>
+            {report.status === REPORT_STATUS.ANSWERED.ID ? (
+              'Report answered'
+            ) : report.type === REPORT_TYPE.REPORT_PROFILE.ID ? (
+              <>
+                <BanUserButton report={report} />
+                <DismissButton report={report} />
+              </>
+            ) : report.type === REPORT_TYPE.REPORT_MISSION.ID ? (
+              <>
+                <BanMissionButton report={report} />
+                <DismissButton report={report} />
+              </>
+            ) : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
+              <>
+                <KickAdventurerOutButton report={report} />
+                <DismissButton report={report} />
+              </>
+            ) : (
+              <>
+                <AcceptAdventurersWorkButton report={report} />
+                <RejectAdventurersWorkButton report={report} />
+                {report.type === REPORT_TYPE.REVIEW_DISPUTE.ID && (
                   <KickAdventurerOutButton report={report} />
-                  <DismissButton report={report} />
-                </div>
-              ) : (
-                <div className='flex gap-1'>
-                  <AcceptAdventurersWorkButton report={report} />
-                  <RejectAdventurersWorkButton report={report} />
-                  {report.type === REPORT_TYPE.REVIEW_DISPUTE.ID && (
-                    <KickAdventurerOutButton report={report} />
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </CardFooter>
         </article>
       </Card>
-
       {report.status === REPORT_STATUS.ANSWERED.ID && (
-        <Card asChild className='justify-between mt-4'>
+        <Card asChild className='justify-between'>
           <article>
             <CardHeader>
-              <CardTitle asChild className='text-3xl'>
-                <h2>
-                  Decision taken: {REPORT_DECISION[report.decision].LABEL}
-                </h2>
+              <CardTitle asChild className='text-5xl'>
+                <h1>
+                  {`Decision taken: ${REPORT_DECISION[report.decision].LABEL}`}
+                </h1>
               </CardTitle>
-              <CardDescription className='text-lg text-muted-foreground'>
-                Resolved by:{' '}
-                <Link
-                  to={`/users/${report.admin_username}`}
-                  className='font-medium hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm'
-                  target='_blank'
-                  rel='noopener noreferrer'
-                >
-                  {report.admin_username}
-                </Link>
-              </CardDescription>
+              <CardDescription>{`Resolved by: ${report.resolved_by}`}</CardDescription>
             </CardHeader>
-            <CardContent className='-mt-2 flex flex-1 flex-col'>
-              <div className='mb-4 text-xl wrap-break-words'>
-                {report.decision_reason}
-              </div>
+            <CardContent className='flex flex-1 flex-col'>
+              <div className='mb-4'>{report.decision_reason}</div>
             </CardContent>
           </article>
         </Card>
+      )}
+      {isDispute && report.conversation_id && (
+        <ConversationThread
+          conversationId={report.conversation_id}
+          showBack={false}
+          title='Dispute conversation'
+          description='Mission owner, adventurer and administration'
+        />
       )}
     </section>
   );
@@ -346,7 +235,7 @@ const BanUserButton = ({ report }) => {
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
-      <Button size='lg' type='button' id='banUserButton' disabled={isPending}>
+      <Button type='button' id='banUserButton' disabled={isPending}>
         {'Ban user'}
       </Button>
     </AnswerReportDialog>
@@ -381,12 +270,7 @@ const BanMissionButton = ({ report }) => {
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
-      <Button
-        size='lg'
-        type='button'
-        id='banMissionButton'
-        disabled={isPending}
-      >
+      <Button type='button' id='banMissionButton' disabled={isPending}>
         {'Ban mission'}
       </Button>
     </AnswerReportDialog>
@@ -426,12 +310,7 @@ const KickAdventurerOutButton = ({ report }) => {
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
-      <Button
-        size='lg'
-        type='button'
-        id='kickAdventurerOutButton'
-        disabled={isPending}
-      >
+      <Button type='button' id='kickAdventurerOutButton' disabled={isPending}>
         {'Kick adventurer out'}
       </Button>
     </AnswerReportDialog>
@@ -466,7 +345,6 @@ const AcceptAdventurersWorkButton = ({ report }) => {
       onConfirm={(reason) => mutate(reason)}
     >
       <Button
-        size='lg'
         type='button'
         id='acceptAdventurersWorkOutButton'
         disabled={isPending}
@@ -505,7 +383,6 @@ const RejectAdventurersWorkButton = ({ report }) => {
       onConfirm={(reason) => mutate(reason)}
     >
       <Button
-        size='lg'
         type='button'
         id='rejectAdventurersWorkOutButton'
         disabled={isPending}
@@ -543,7 +420,7 @@ const DismissButton = ({ report }) => {
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
-      <Button size='lg' type='button' id='dismissButton' disabled={isPending}>
+      <Button type='button' id='dismissButton' disabled={isPending}>
         {`Dismiss`}
       </Button>
     </AnswerReportDialog>

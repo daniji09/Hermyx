@@ -16,9 +16,6 @@ import {
   payNewParamSchema,
   setDefaultCardSchema,
 } from '@hermyx/shared';
-import { verifyRegularUser } from '../middlewares/auth.middleware.js';
-
-router.use(verifyRegularUser);
 
 /// GETS
 // List user's cards

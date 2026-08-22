@@ -5,21 +5,15 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUp,
   MessageCircleDashed,
   PlusIcon,
-  User,
-  Users,
   X,
 } from 'lucide-react';
-import {
-  consts,
-  messages as messagesShared,
-  REPORT_DECISION,
-} from '@hermyx/shared';
+import { consts } from '@hermyx/shared';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -62,8 +56,6 @@ import {
 import { getImageUrl } from '../utils/media';
 import { cn } from '@/lib/utils';
 import { PAGINATION_LIMIT } from '../consts/consts';
-import { messages as frontendMessages } from './../messages/messages';
-import { getInitials } from '../utils/avatar';
 
 const groupConsecutiveMessages = (messages) =>
   messages.reduce((groups, message) => {
@@ -81,6 +73,15 @@ const groupConsecutiveMessages = (messages) =>
 
     return groups;
   }, []);
+
+const getInitials = (username) =>
+  username
+    ?.trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || '?';
 
 const MessageBubbleContent = ({ message }) => (
   <BubbleContent className='space-y-2 whitespace-pre-line'>
@@ -147,14 +148,16 @@ const DisputeMessageCard = ({ message, isOwnMessage }) => (
 
 export const ConversationThread = ({
   conversationId: providedConversationId,
+  backTo: providedBackTo,
   showBack = true,
   title,
   description,
-  decision,
 }) => {
   const { conversationId: routeConversationId } = useParams();
   const conversationId = providedConversationId || routeConversationId;
+  const location = useLocation();
   const { currentUser, socket } = useContext(AuthContext);
+  const backTo = providedBackTo || location.state?.from || '/conversations';
   const [content, setContent] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [liveMessages, setLiveMessages] = useState([]);
@@ -170,6 +173,7 @@ export const ConversationThread = ({
     isLoading: isConversationLoading,
     isError: isConversationError,
   } = useQuery(getConversationQueryOptions(conversationId));
+
   const otherParticipant = conversationData?.participants?.find(
     (participant) => participant.uid !== currentUser?.id,
   );
@@ -188,7 +192,6 @@ export const ConversationThread = ({
       : otherParticipant?.username);
   const canSendMessages =
     !conversation?.closed_at && currentParticipant?.can_send !== false;
-  const backTo = isDisputeConversation ? '/disputes' : '/conversations';
 
   const {
     data: messagePages,
@@ -340,7 +343,17 @@ export const ConversationThread = ({
     },
     onSettled: () => {
       window.requestAnimationFrame(() => {
-        messageInputRef.current?.focus();
+        const activeElement = document.activeElement;
+        const shouldRestoreFocus =
+          shouldRestoreInputFocusRef.current &&
+          (activeElement === document.body ||
+            formRef.current?.contains(activeElement));
+
+        shouldRestoreInputFocusRef.current = false;
+
+        if (shouldRestoreFocus) {
+          messageInputRef.current?.focus();
+        }
       });
     },
   });
@@ -352,6 +365,7 @@ export const ConversationThread = ({
     );
 
     if (!content.trim() && !selectedPhoto) {
+      setErrorMessage('Message cannot be empty.');
       shouldRestoreInputFocusRef.current = false;
       messageInputRef.current?.focus();
       return;
@@ -368,13 +382,13 @@ export const ConversationThread = ({
 
     if (!consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(photo.type)) {
       setSelectedPhoto(null);
-      setErrorMessage(messagesShared.GENERAL.IMAGE_INVALID_TYPE);
+      setErrorMessage('Only .jpeg, .png and .webp images are accepted.');
       return;
     }
 
     if (photo.size > consts.MISSION.PHOTOS.MAX_FILE_SIZE) {
       setSelectedPhoto(null);
-      setErrorMessage(messagesShared.GENERAL.IMAGE_TOO_BIG);
+      setErrorMessage('Each photo has to weight less than 5MB.');
       return;
     }
 
@@ -400,417 +414,317 @@ export const ConversationThread = ({
     event.preventDefault();
 
     if (!isPending) {
-      formRef.current?.requestSubmit();
+      event.currentTarget.form?.requestSubmit();
     }
   };
 
   if (isConversationLoading) {
     return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div role='status' className='p-8 text-center text-muted-foreground'>
-          Loading conversation...
+      <section className='container mx-auto max-w-3xl p-4 sm:p-6'>
+        <div className='p-8 text-center text-muted-foreground'>
+          Loading conversation
         </div>
-      </main>
+      </section>
     );
   }
 
   if (isConversationError || !conversationData) {
     return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load conversation.
+      <section className='container mx-auto max-w-3xl p-4 sm:p-6'>
+        <div className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'>
+          Conversation not found
         </div>
-      </main>
+      </section>
     );
   }
 
   return (
-    <main>
-      <section
-        className={cn(
-          'container mx-auto flex flex-col gap-4 p-4 sm:p-6',
-          isDisputeConversation ? 'max-w-5xl' : 'max-w-3xl',
-        )}
-      >
-        <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
-          <Card
-            className={cn(
-              'mx-auto w-full gap-0 py-0 flex flex-col',
-              'h-[calc(100dvh-8rem)]',
-              isDisputeConversation ? 'max-w-5xl' : 'max-w-3xl',
+    <section
+      className={cn(
+        'container mx-auto flex flex-col gap-4 p-4 sm:p-6',
+        isDisputeConversation ? 'max-w-5xl' : 'max-w-3xl',
+      )}
+    >
+      {showBack && (
+        <Button asChild variant='ghost' className='w-fit gap-2 px-0'>
+          <Link to={backTo}>
+            <ArrowLeft className='h-4 w-4' aria-hidden='true' />
+            Back
+          </Link>
+        </Button>
+      )}
+
+      <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
+        <Card
+          className={cn(
+            'mx-auto w-full gap-0 py-0',
+            isDisputeConversation ? 'h-[42rem] max-w-5xl' : 'h-140 max-w-3xl',
+          )}
+        >
+          <CardHeader className='gap-1 border-b py-5'>
+            <CardTitle asChild>
+              <h1>{conversationTitle || 'Conversation'}</h1>
+            </CardTitle>
+            {(description || isMissionConversation) && (
+              <CardDescription>
+                {description ||
+                  (isHistoryView ? (
+                    <>
+                      Mission history:{' '}
+                      {isHistoryOnly
+                        ? 'messages up to the end of your participation'
+                        : 'mission finished'}
+                    </>
+                  ) : (
+                    <>
+                      Mission group · {conversationData.participants.length}{' '}
+                      {conversationData.participants.length === 1
+                        ? 'participant'
+                        : 'participants'}
+                    </>
+                  ))}
+              </CardDescription>
             )}
+          </CardHeader>
+
+          <CardContent
+            className='min-h-0 flex-1 overflow-hidden p-0'
+            aria-label='Conversation messages'
           >
-            <CardHeader className='border-b py-3 flex flex-row justify-between items-center gap-4'>
-              <div className='flex items-center gap-3 min-w-0'>
-                {!isDisputeConversation && (
-                  <Avatar className='size-10 shrink-0'>
-                    {!isMissionConversation && (
-                      <AvatarImage
-                        src={getImageUrl(otherParticipant?.avatar)}
-                        alt={`@${otherParticipant?.username}`}
-                      />
-                    )}
-                    <AvatarFallback>
-                      {isMissionConversation ? (
-                        <Users className='h-4 w-4 text-muted-foreground' />
-                      ) : conversation.type === 'private' &&
-                        conversationData.participants.length === 1 ? (
-                        <User className='h-5 w-5 text-muted-foreground' />
-                      ) : (
-                        getInitials(otherParticipant?.username)
-                      )}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div className='flex flex-col min-w-0'>
-                  <CardTitle asChild className='truncate text-base'>
-                    {isDisputeConversation ? (
-                      <h1> {conversationTitle || 'Conversation'}</h1>
-                    ) : (
-                      <h1>
-                        <Link
-                          to={
-                            isMissionConversation
-                              ? `/missions/${conversation?.mission_id}`
-                              : `/users/${conversationTitle}`
-                          }
-                          className='hover:underline'
-                        >
-                          {conversationTitle || 'Conversation'}
-                        </Link>
-                      </h1>
-                    )}
-                  </CardTitle>
-
-                  {(description || isMissionConversation) && (
-                    <CardDescription className='truncate text-xs'>
-                      {description ||
-                        (isHistoryView ? (
-                          <>
-                            Mission history:{' '}
-                            {isHistoryOnly
-                              ? 'messages up to the end of your participation'
-                              : 'mission finished'}
-                          </>
-                        ) : (
-                          <>
-                            Mission group ·{' '}
-                            {conversationData.participants.length}{' '}
-                            {conversationData.participants.length === 1
-                              ? 'participant'
-                              : 'participants'}
-                          </>
-                        ))}
-                    </CardDescription>
-                  )}
-                </div>
+            {isLoading ? (
+              <div className='flex h-full items-center justify-center'>
+                <p className='text-muted-foreground'>Loading messages</p>
               </div>
-
-              {showBack && (
-                <Button
-                  asChild
-                  variant='ghost'
-                  className='shrink-0 gap-2 px-2 '
-                >
-                  <Link
-                    to={backTo}
-                    aria-label={
-                      isDisputeConversation
-                        ? 'Back to disputes'
-                        : 'Back to conversations'
-                    }
-                  >
-                    <ArrowLeft className='h-4 w-4' aria-hidden='true' />
-                    <span className='hidden sm:inline' aria-hidden='true'>
-                      {isDisputeConversation
-                        ? 'To disputes'
-                        : 'To conversations'}
-                    </span>
-                  </Link>
-                </Button>
-              )}
-            </CardHeader>
-
-            <CardContent
-              className='min-h-0 flex-1 overflow-hidden p-0'
-              aria-label='Conversation messages'
-            >
-              {isLoading ? (
-                <div className='flex h-full items-center justify-center'>
-                  <p className='text-muted-foreground'>Loading messages</p>
-                </div>
-              ) : isError ? (
-                <div className='flex h-full items-center justify-center'>
-                  <p className='text-destructive'>Could not load messages.</p>
-                </div>
-              ) : messages.length === 0 ? (
-                <div className='flex h-full items-center justify-center'>
-                  <div className='flex flex-col items-center gap-3 text-center'>
-                    <div className='flex size-10 items-center justify-center rounded-xl bg-muted'>
-                      <MessageCircleDashed
-                        className='size-5'
-                        aria-hidden='true'
-                      />
-                    </div>
-                    <div>
-                      <p className='font-medium'>No messages yet</p>
-                      <p className='mt-1 text-sm text-muted-foreground'>
-                        Send a message to start the conversation.
-                      </p>
-                    </div>
+            ) : isError ? (
+              <div className='flex h-full items-center justify-center'>
+                <p className='text-destructive'>Could not load messages.</p>
+              </div>
+            ) : messages.length === 0 ? (
+              <div className='flex h-full items-center justify-center'>
+                <div className='flex flex-col items-center gap-3 text-center'>
+                  <div className='flex size-10 items-center justify-center rounded-xl bg-muted'>
+                    <MessageCircleDashed
+                      className='size-5'
+                      aria-hidden='true'
+                    />
+                  </div>
+                  <div>
+                    <p className='font-medium'>No messages yet</p>
+                    <p className='mt-1 text-sm text-muted-foreground'>
+                      Send a message to start the conversation.
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <MessageScroller>
-                  <MessageScrollerViewport>
-                    <MessageScrollerContent
-                      aria-busy={isPending}
-                      className={cn('p-5 flex flex-col min-h-full')}
-                    >
-                      <div
-                        className={cn(
-                          'mt-auto flex flex-col w-full',
-                          isDisputeConversation ? 'gap-4 bg-muted/10' : 'gap-4',
-                        )}
-                      >
-                        {hasOlderMessages && (
-                          <div className='flex justify-center pb-4'>
-                            <Button
-                              type='button'
-                              variant='outline'
-                              size='sm'
-                              onClick={() => fetchOlderMessages()}
-                              disabled={isFetchingOlderMessages}
-                            >
-                              {isFetchingOlderMessages
-                                ? 'Loading older messages'
-                                : 'Load older messages'}
-                            </Button>
-                          </div>
-                        )}
-                        {isDisputeConversation
-                          ? messages.map((message) => (
-                              <MessageScrollerItem
-                                key={message.mid}
-                                messageId={String(message.mid)}
-                                scrollAnchor={
-                                  message.sender_id === currentUser?.id
-                                }
-                              >
-                                <DisputeMessageCard
-                                  message={message}
-                                  isOwnMessage={
-                                    message.sender_id === currentUser?.id
-                                  }
-                                />
-                              </MessageScrollerItem>
-                            ))
-                          : messageGroups.map((group) => {
-                              const firstMessage = group.messages[0];
-                              const isOwnMessage =
-                                group.senderId === currentUser?.id;
+              </div>
+            ) : (
+              <MessageScroller>
+                <MessageScrollerViewport>
+                  <MessageScrollerContent
+                    aria-busy={isPending}
+                    className={cn(
+                      'p-5',
+                      isDisputeConversation && 'space-y-4 bg-muted/10',
+                    )}
+                  >
+                    {hasOlderMessages && (
+                      <div className='flex justify-center pb-4'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          size='sm'
+                          onClick={() => fetchOlderMessages()}
+                          disabled={isFetchingOlderMessages}
+                        >
+                          {isFetchingOlderMessages
+                            ? 'Loading older messages'
+                            : 'Load older messages'}
+                        </Button>
+                      </div>
+                    )}
+                    {isDisputeConversation
+                      ? messages.map((message) => (
+                          <MessageScrollerItem
+                            key={message.mid}
+                            messageId={String(message.mid)}
+                            scrollAnchor={message.sender_id === currentUser?.id}
+                          >
+                            <DisputeMessageCard
+                              message={message}
+                              isOwnMessage={
+                                message.sender_id === currentUser?.id
+                              }
+                            />
+                          </MessageScrollerItem>
+                        ))
+                      : messageGroups.map((group) => {
+                          const firstMessage = group.messages[0];
+                          const isOwnMessage =
+                            group.senderId === currentUser?.id;
 
-                              return (
-                                <MessageScrollerItem
-                                  key={firstMessage.mid}
-                                  messageId={String(firstMessage.mid)}
-                                  scrollAnchor={true}
-                                >
-                                  <Message
-                                    align={isOwnMessage ? 'end' : 'start'}
-                                  >
-                                    <MessageAvatar>
-                                      <Avatar className='size-8'>
-                                        <AvatarImage
-                                          src={getImageUrl(
-                                            firstMessage.sender_avatar,
-                                          )}
-                                          alt={`@${firstMessage.sender_username}`}
-                                        />
-                                        <AvatarFallback>
-                                          {conversation.type === 'private' &&
-                                          conversationData.participants
-                                            .length === 1 ? (
-                                            <User className='h-5 w-5 text-muted-foreground' />
-                                          ) : (
-                                            getInitials(
-                                              otherParticipant?.username,
-                                            )
-                                          )}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                    </MessageAvatar>
-                                    <MessageContent>
-                                      {group.messages.length === 1 ? (
+                          return (
+                            <MessageScrollerItem
+                              key={firstMessage.mid}
+                              messageId={String(firstMessage.mid)}
+                              scrollAnchor={isOwnMessage}
+                            >
+                              <Message align={isOwnMessage ? 'end' : 'start'}>
+                                <MessageAvatar>
+                                  <Avatar className='size-8'>
+                                    <AvatarImage
+                                      src={getImageUrl(
+                                        firstMessage.sender_avatar,
+                                      )}
+                                      alt={`@${firstMessage.sender_username}`}
+                                    />
+                                    <AvatarFallback>
+                                      {getInitials(
+                                        firstMessage.sender_username,
+                                      )}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </MessageAvatar>
+                                <MessageContent>
+                                  {group.messages.length === 1 ? (
+                                    <Bubble
+                                      variant={
+                                        isOwnMessage ? 'default' : 'muted'
+                                      }
+                                    >
+                                      <MessageBubbleContent
+                                        message={firstMessage}
+                                      />
+                                    </Bubble>
+                                  ) : (
+                                    <BubbleGroup className='w-full'>
+                                      {group.messages.map((message) => (
                                         <Bubble
+                                          key={message.mid}
                                           variant={
                                             isOwnMessage ? 'default' : 'muted'
                                           }
                                         >
                                           <MessageBubbleContent
-                                            message={firstMessage}
+                                            message={message}
                                           />
                                         </Bubble>
-                                      ) : (
-                                        <BubbleGroup className='w-full'>
-                                          {group.messages.map((message) => (
-                                            <Bubble
-                                              key={message.mid}
-                                              variant={
-                                                isOwnMessage
-                                                  ? 'default'
-                                                  : 'muted'
-                                              }
-                                            >
-                                              <MessageBubbleContent
-                                                message={message}
-                                              />
-                                            </Bubble>
-                                          ))}
-                                        </BubbleGroup>
-                                      )}
-                                    </MessageContent>
-                                  </Message>
-                                </MessageScrollerItem>
-                              );
-                            })}
-                      </div>
-                    </MessageScrollerContent>
-                  </MessageScrollerViewport>
-                  <MessageScrollerButton className='absolute bottom-4 left-1/2 -translate-x-1/2' />
-                </MessageScroller>
-              )}
-            </CardContent>
+                                      ))}
+                                    </BubbleGroup>
+                                  )}
+                                </MessageContent>
+                              </Message>
+                            </MessageScrollerItem>
+                          );
+                        })}
+                  </MessageScrollerContent>
+                </MessageScrollerViewport>
+                <MessageScrollerButton />
+              </MessageScroller>
+            )}
+          </CardContent>
 
-            <CardFooter className='flex-col gap-2 border-t-0 bg-card'>
-              {canSendMessages ? (
-                <form
-                  ref={formRef}
-                  onSubmit={handleSubmit}
-                  className='w-full space-y-2'
-                  noValidate
-                >
-                  {selectedPhotoPreview && (
-                    <div className='flex items-center gap-3 rounded-xl border bg-muted/30 p-2'>
-                      <img
-                        src={selectedPhotoPreview}
-                        alt='Selected attachment preview'
-                        className='size-14 rounded-lg object-cover'
-                      />
-                      <span className='min-w-0 flex-1 truncate text-sm text-muted-foreground'>
-                        {selectedPhoto?.name}
-                      </span>
-                      <Button
-                        type='button'
-                        variant='ghost'
-                        size='icon-sm'
-                        onClick={removeSelectedPhoto}
-                        disabled={isPending}
-                        aria-label='Remove selected photo'
-                      >
-                        <X className='h-4 w-4' aria-hidden='true' />
-                      </Button>
-                    </div>
-                  )}
-                  <InputGroup
-                    className={cn(
-                      'h-auto bg-input/50',
-                      isDisputeConversation
-                        ? 'rounded-lg border-input bg-background'
-                        : 'rounded-2xl border-transparent',
-                    )}
-                  >
-                    <input
-                      ref={photoInputRef}
-                      type='file'
-                      tabIndex={-1}
-                      accept={consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
-                        ',',
-                      )}
-                      className='sr-only'
-                      onChange={handlePhotoChange}
+          <CardFooter className='flex-col gap-2 border-t-0 bg-card'>
+            {canSendMessages ? (
+              <form
+                ref={formRef}
+                onSubmit={handleSubmit}
+                className='w-full space-y-2'
+              >
+                {selectedPhotoPreview && (
+                  <div className='flex items-center gap-3 rounded-xl border bg-muted/30 p-2'>
+                    <img
+                      src={selectedPhotoPreview}
+                      alt='Selected attachment preview'
+                      className='size-14 rounded-lg object-cover'
+                    />
+                    <span className='min-w-0 flex-1 truncate text-sm text-muted-foreground'>
+                      {selectedPhoto?.name}
+                    </span>
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='icon-sm'
+                      onClick={removeSelectedPhoto}
                       disabled={isPending}
-                    />
-                    <InputGroupTextarea
-                      ref={messageInputRef}
-                      autoFocus
-                      aria-label='Message content'
-                      value={content}
-                      onChange={(event) => {
-                        setContent(event.target.value);
-                        setErrorMessage('');
-                      }}
-                      onKeyDown={handleMessageKeyDown}
-                      placeholder='Write a message'
-                      maxLength={consts.CONVERSATION.MESSAGES.TEXT_LIMIT}
-                      className='min-h-14 max-h-32 px-3 py-2.5'
-                    />
-                    <InputGroupAddon align='block-end' className='pt-1'>
-                      <InputGroupButton
-                        type='button'
-                        variant='outline'
-                        size='icon-sm'
-                        onClick={() => photoInputRef.current?.click()}
-                        disabled={isPending}
-                        aria-label='Add photo'
-                      >
-                        <PlusIcon className='h-4 w-4' aria-hidden='true' />
-                      </InputGroupButton>
-                      <InputGroupButton
-                        type='submit'
-                        variant='default'
-                        size='icon-sm'
-                        className={cn(
-                          'ml-auto',
-                          isDisputeConversation ? 'rounded-lg' : 'rounded-2xl',
-                        )}
-                        disabled={isPending}
-                      >
-                        <ArrowUp className='h-4 w-4' aria-hidden='true' />
-                        <span className='sr-only'>
-                          {isPending ? 'Sending message' : 'Send message'}
-                        </span>
-                      </InputGroupButton>
-                    </InputGroupAddon>
-                  </InputGroup>
-                  {errorMessage && (
-                    <p role='alert' className='text-sm text-destructive'>
-                      {errorMessage}
-                    </p>
+                      aria-label='Remove selected photo'
+                    >
+                      <X className='h-4 w-4' aria-hidden='true' />
+                    </Button>
+                  </div>
+                )}
+                <InputGroup
+                  className={cn(
+                    'h-auto bg-input/50',
+                    isDisputeConversation
+                      ? 'rounded-lg border-input bg-background'
+                      : 'rounded-2xl border-transparent',
                   )}
-                </form>
-              ) : (
-                <p className='text-sm text-muted-foreground'>
-                  {isMissionConversation
-                    ? isHistoryOnly
-                      ? frontendMessages.CONVERSATION.HISTORY_ONLY
-                          .PARTICIPATION_FINISHED
-                      : frontendMessages.CONVERSATION.HISTORY_ONLY.MISSION_ENDED
-                    : isDisputeConversation
-                      ? decision === REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID
-                        ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                            .ACCEPT_ADVENTURERS_WORK
-                        : decision ===
-                            REPORT_DECISION.REJECT_ADVENTURERS_WORK.ID
-                          ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                              .REJECT_ADVENTURERS_WORK
-                          : decision === REPORT_DECISION.KICK_ADVENTURER_OUT.ID
-                            ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                                .KICK_ADVENTURER_OUT
-                            : frontendMessages.CONVERSATION.DISPUTE_DECISION
-                                .DISMISS
-                      : frontendMessages.CONVERSATION.HISTORY_ONLY
-                          .NO_EXISTING_USER}
-                </p>
-              )}
-            </CardFooter>
-          </Card>
-        </MessageScrollerProvider>
-      </section>
-    </main>
+                >
+                  <input
+                    ref={photoInputRef}
+                    type='file'
+                    accept={consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
+                      ',',
+                    )}
+                    className='sr-only'
+                    onChange={handlePhotoChange}
+                    disabled={isPending}
+                  />
+                  <InputGroupTextarea
+                    ref={messageInputRef}
+                    value={content}
+                    onChange={(event) => {
+                      setContent(event.target.value);
+                      setErrorMessage('');
+                    }}
+                    onKeyDown={handleMessageKeyDown}
+                    placeholder='Write a message'
+                    disabled={isPending}
+                    maxLength={1000}
+                    className='min-h-14 max-h-32 px-3 py-2.5'
+                  />
+                  <InputGroupAddon align='block-end' className='pt-1'>
+                    <InputGroupButton
+                      type='button'
+                      variant='outline'
+                      size='icon-sm'
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={isPending}
+                      aria-label='Add photo'
+                    >
+                      <PlusIcon className='h-4 w-4' aria-hidden='true' />
+                    </InputGroupButton>
+                    <InputGroupButton
+                      type='submit'
+                      variant='default'
+                      size='icon-sm'
+                      className={cn(
+                        'ml-auto',
+                        isDisputeConversation ? 'rounded-lg' : 'rounded-2xl',
+                      )}
+                      disabled={isPending}
+                    >
+                      <ArrowUp className='h-4 w-4' aria-hidden='true' />
+                      <span className='sr-only'>
+                        {isPending ? 'Sending message' : 'Send message'}
+                      </span>
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+                {errorMessage && (
+                  <p className='text-sm text-destructive'>{errorMessage}</p>
+                )}
+              </form>
+            ) : (
+              <p className='text-sm text-muted-foreground'>
+                {isHistoryOnly
+                  ? 'Your participation has finished. You can view the messages sent before it ended.'
+                  : 'This mission has finished. You can view its message history.'}
+              </p>
+            )}
+          </CardFooter>
+        </Card>
+      </MessageScrollerProvider>
+    </section>
   );
 };
 

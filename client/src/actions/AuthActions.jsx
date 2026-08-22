@@ -54,7 +54,7 @@ export const signUpAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -103,7 +103,7 @@ export const logInAction = async (previousState, formData) => {
     if (!success)
       throw {
         errors: {
-          general: [messages.AUTH.LOGIN.COULD_NOT_LOG_IN],
+          general: [messages.COULD_NOT_LOG_IN],
         },
       };
 
@@ -130,7 +130,7 @@ export const logInAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -163,7 +163,7 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
     if (!success)
       throw {
         errors: {
-          general: [messages.AUTH.EMAIL_AUTHENTICATION.COULD_NOT_ADD],
+          general: [messages.COULD_NOT_ADD_EMAIL_AUTHENTICATION],
         },
       };
 
@@ -183,7 +183,7 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
 
     return {
       success: false,

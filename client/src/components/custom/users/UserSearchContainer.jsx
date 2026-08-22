@@ -1,21 +1,17 @@
 import { Link } from 'react-router-dom';
+import { User } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { getImageUrl } from '../../../utils/media';
-import { getInitials } from '../../../utils/avatar';
 
 export const UserSearchContainer = ({
   users,
-  hasNextPage,
-  isFetchingNextPage,
-  fetchNextPage,
   isLoading,
   isLoadingMessage = 'Searching users...',
   isError,
@@ -32,12 +28,7 @@ export const UserSearchContainer = ({
 
       <NoUsersSearch users={users}>{noUsersMessage}</NoUsersSearch>
 
-      <UserSearchContent
-        users={users}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-      ></UserSearchContent>
+      <UserSearchContent users={users}></UserSearchContent>
     </section>
   );
 };
@@ -46,7 +37,7 @@ const UsersSearchLoading = ({ isLoading, children }) => {
   return (
     <>
       {isLoading && (
-        <div role='status' className='p-8 text-center text-muted-foreground'>
+        <div className='flex justify-center p-8 text-muted-foreground'>
           {children}
         </div>
       )}
@@ -58,10 +49,7 @@ const UsersSearchError = ({ isError, children }) => {
   return (
     <>
       {isError && (
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
+        <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
           {children}
         </div>
       )}
@@ -73,11 +61,7 @@ const NoUsersSearch = ({ users, children }) => {
   return (
     <>
       {users?.length === 0 && (
-        <div
-          role='status'
-          aria-live='polite'
-          className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'
-        >
+        <div className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'>
           {children}
         </div>
       )}
@@ -85,38 +69,18 @@ const NoUsersSearch = ({ users, children }) => {
   );
 };
 
-const UserSearchContent = ({
-  users,
-  hasNextPage,
-  isFetchingNextPage,
-  fetchNextPage,
-}) => {
+const UserSearchContent = ({ users }) => {
   return (
     <>
       {users?.length > 0 && (
-        <>
-          <ul
-            className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-            aria-label='Users list'
-          >
-            {users.map((foundUser) => (
-              <UserSearchCard key={foundUser.uid} foundUser={foundUser} />
-            ))}
-          </ul>
-          <div className='flex align-middle justify-center py-5'>
-            <Button
-              onClick={() => fetchNextPage()}
-              className='rounded-lg p-2 hover:cursor-pointer'
-              disabled={!hasNextPage || isFetchingNextPage}
-            >
-              {hasNextPage
-                ? isFetchingNextPage
-                  ? 'Loading'
-                  : 'More users'
-                : 'No more users to show'}
-            </Button>
-          </div>
-        </>
+        <div
+          className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
+          aria-label='Users list'
+        >
+          {users.map((foundUser) => (
+            <UserSearchCard key={foundUser.uid} foundUser={foundUser} />
+          ))}
+        </div>
       )}
     </>
   );
@@ -124,54 +88,34 @@ const UserSearchContent = ({
 
 const UserSearchCard = ({ foundUser }) => {
   return (
-    <li>
-      <Card
-        asChild
-        className='justify-between group relative transition-all hover:border-primary/50 hover:shadow-md overflow-hidden focus-within:ring-1 focus-within:ring-secondary-foreground focus-within:ring-offset-2'
-      >
-        <article className='flex flex-col h-full'>
-          <Link
-            to={`/users/${foundUser.username}`}
-            className='absolute inset-0 z-10'
-            target='_blank'
-            rel='noopener noreferrer'
-          >
-            <span className='sr-only'>See profile of {foundUser.username}</span>
-          </Link>
-
-          <CardHeader>
-            <div className='flex items-center gap-3'>
-              <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full'>
-                <Avatar className='size-10 shrink-0'>
-                  <AvatarImage src={getImageUrl(foundUser?.avatar)} alt='' />
-                  <AvatarFallback>
-                    {getInitials(foundUser?.username)}
-                  </AvatarFallback>
-                </Avatar>
-              </span>
-              <div className='min-w-0'>
-                <CardTitle asChild>
-                  <h2 className='break-all line-clamp-1 group-hover:underline group-hover:text-primary transition-colors'>
-                    {foundUser.name && foundUser.surnames
-                      ? `${foundUser.name} ${foundUser.surnames}`
-                      : foundUser.username}
-                  </h2>
-                </CardTitle>
-                <CardDescription className='truncate'>
-                  {foundUser.username || 'User profile'}
-                </CardDescription>
-              </div>
+    <Card asChild className='justify-between'>
+      <article>
+        <CardHeader>
+          <div className='flex items-center gap-3'>
+            <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+              <User className='h-5 w-5' aria-hidden='true' />
+            </span>
+            <div className='min-w-0'>
+              <CardTitle asChild>
+                <h2 className='truncate'>{foundUser.username}</h2>
+              </CardTitle>
+              <CardDescription className='truncate'>
+                {foundUser.email || 'User profile'}
+              </CardDescription>
             </div>
-          </CardHeader>
-
-          <CardContent className='flex flex-1 flex-col -mt-2 mb-1'>
-            <div className='break-all line-clamp-3 text-muted-foreground text-sm'>
-              {foundUser.description ||
-                `View this user profile and public information.`}
-            </div>
-          </CardContent>
-        </article>
-      </Card>
-    </li>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className='text-sm text-muted-foreground'>
+            View this user profile and public information.
+          </p>
+        </CardContent>
+        <CardFooter>
+          <Button asChild>
+            <Link to={`/users/${foundUser.username}`}>See profile</Link>
+          </Button>
+        </CardFooter>
+      </article>
+    </Card>
   );
 };

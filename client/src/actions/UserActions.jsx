@@ -50,7 +50,7 @@ export const updateEmailAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -95,7 +95,7 @@ export const updatePasswordAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -149,7 +149,7 @@ export const userConfigurationAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.UNEXPECTED_ERROR;
 
     return {
       success: false,

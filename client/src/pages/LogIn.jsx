@@ -73,7 +73,7 @@ const LogInForm = ({ state, action, isPending }) => {
             {`Don't have an account? `}
             <Link
               to={'/signup'}
-              className='text-foreground underline
+              className='text-black underline
             '
             >
               {'Sign up!'}
@@ -137,10 +137,7 @@ const LogInForm = ({ state, action, isPending }) => {
             >
               {isPending ? 'Logging in...' : 'Log in'}
             </Button>
-            <div
-              className='grid grid-cols-3 grid-rows-1 justify-items-center'
-              aria-hidden='true'
-            >
+            <div className='grid grid-cols-3 grid-rows-1 justify-items-center'>
               <Separator className='my-4 w-fit'></Separator>
               <span className='text-muted-foreground self-center-safe'>o</span>
               <Separator className='my-4 w-fit'></Separator>

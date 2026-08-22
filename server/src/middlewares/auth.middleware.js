@@ -60,13 +60,3 @@ export const verifyAdmin = async (req, res, next) => {
     .status(403)
     .json({ errors: { general: [messages.GENERAL.FORBIDDEN] } });
 };
-
-// Verifies that the authenticated account is a regular user
-export const verifyRegularUser = (req, res, next) => {
-  if (req.user?.role === USER_ROLE.USER.ID && req.firebaseToken?.admin !== true)
-    return next();
-
-  return res
-    .status(403)
-    .json({ errors: { general: [messages.GENERAL.FORBIDDEN] } });
-};

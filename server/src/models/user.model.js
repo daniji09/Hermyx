@@ -80,7 +80,7 @@ export const searchByUsername = async ({
   pagination,
 }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
-  let query = `SELECT uid, username, description, avatar, name, surnames, COUNT(*) OVER() AS total_count
+  let query = `SELECT uid, username, email, avatar, name, surnames, COUNT(*) OVER() AS total_count
     FROM app_user 
     WHERE uid <> $1 AND status = $2`;
   const values = [excludedUid, USER_STATUS.ACTIVE.ID];

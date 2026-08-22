@@ -21,10 +21,7 @@ import {
   addEmailAuthenticationSchema,
 } from '@hermyx/shared';
 import * as userController from '../controllers/user.controller.js';
-import {
-  verifyAdmin,
-  verifyRegularUser,
-} from '../middlewares/auth.middleware.js';
+import { verifyAdmin } from '../middlewares/auth.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { upload } from '../utils/file.utils.js';
 
@@ -72,7 +69,6 @@ router.get(
 // Updates profile
 router.patch(
   '/me/profile',
-  verifyRegularUser,
   validateBodySchema(updateMyProfileSchema),
   userController.updateMyProfile,
 );
@@ -80,7 +76,6 @@ router.patch(
 // Updates avatar
 router.patch(
   '/me/avatar',
-  verifyRegularUser,
   upload.single('avatar'), // Multer processes the file
   userController.updateMyAvatar,
 );
@@ -88,7 +83,6 @@ router.patch(
 // Updates email
 router.patch(
   '/me/email',
-  verifyRegularUser,
   validateBodySchema(updateMyEmailSchema),
   userController.updateMyEmail,
 );
@@ -96,7 +90,6 @@ router.patch(
 // Updates configuration
 router.patch(
   '/me/configuration',
-  verifyRegularUser,
   validateBodySchema(updateMyConfigurationSchema),
   userController.updateMyConfiguration,
 );
@@ -105,7 +98,6 @@ router.patch(
 // Adds email authentication
 router.post(
   '/me/credentials',
-  verifyRegularUser,
   validateBodySchema(addEmailAuthenticationSchema),
   userController.addEmailAuthentication,
 );
@@ -120,6 +112,6 @@ router.post(
 );
 
 /// DELETE
-router.delete('/me', verifyRegularUser, userController.deleteMe);
+router.delete('/me', userController.deleteMe);
 
 export default router;

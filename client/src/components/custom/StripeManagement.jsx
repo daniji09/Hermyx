@@ -1,15 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import {
-  CreditCard,
-  Info,
-  Plus,
-  Star,
-  Trash2,
-  SquareArrowOutUpRight,
-  X,
-} from 'lucide-react';
+import { CreditCard, Plus, Star, Trash2, WalletCards, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -24,16 +16,6 @@ import { useAlert } from '../../contexts/AlertContext';
 import { messages } from '../../messages/messages';
 import { messages as messagesShared } from '@hermyx/shared';
 import { connectOnBoard, goToDashboard } from '../../services/PaymentServices';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 
 const emptyCards = [];
 
@@ -183,9 +165,7 @@ export const StripeManagement = ({ user }) => {
   return (
     <Card asChild>
       <section id='payment-settings' className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold pb-2 border-b'>
-          Payment settings
-        </h2>
+        <h2 className='text-xl font-semibold'>Payment settings</h2>
         <div className='flex flex-col gap-y-2'>
           <h3 className='text-lg font-medium'>Payout methods</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
@@ -200,7 +180,7 @@ export const StripeManagement = ({ user }) => {
           </div>
 
           <h3 className='text-lg mt-3 font-medium'>Payment cards</h3>
-          <div className='flex flex-col md:flex-row md:items-center justify-between mb-1'>
+          <div className='flex flex-col md:flex-row md:items-center justify-between'>
             <p>
               Add a credit or debit card to fund your missions and pay
               adventurers.
@@ -213,9 +193,9 @@ export const StripeManagement = ({ user }) => {
                 disabled={processingId === 'add'}
               >
                 {isAdding ? (
-                  <X className='w-4 h-4' aria-hidden='true' />
+                  <X aria-hidden='true' />
                 ) : (
-                  <Plus className='w-4 h-4' aria-hidden='true' />
+                  <Plus aria-hidden='true' />
                 )}
                 {isAdding ? 'Cancel' : 'Add card'}
               </Button>
@@ -235,55 +215,80 @@ export const StripeManagement = ({ user }) => {
                     onClick={handleAddCard}
                     disabled={!stripe || processingId === 'add'}
                   >
-                    <Plus className='w-4 h-4' aria-hidden='true' />
+                    <Plus aria-hidden='true' />
                     Save card
                   </Button>
                 </div>
               </div>
             )}
+
             {isLoading ? (
-              <p className='text-sm text-muted-foreground'>Loading cards...</p>
+              <p className='text-sm text-muted-foreground'>Loading cards</p>
             ) : !hasCards ? (
               <div className='rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground'>
                 No saved cards yet.
               </div>
             ) : (
-              <>
-                <div className='space-y-4'>
-                  {sortedCards.slice(0, 3).map((paymentMethod) => (
-                    <PaymentCardRow
-                      key={paymentMethod.id}
-                      paymentMethod={paymentMethod}
-                      isDefault={paymentMethod.id === defaultPaymentMethodId}
-                      isProcessing={processingId === paymentMethod.id}
-                      onSetDefault={handleSetDefault}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
+              sortedCards.map((paymentMethod) => {
+                const card = paymentMethod.card;
+                const isDefault = paymentMethod.id === defaultPaymentMethodId;
 
-                {sortedCards.length > 3 && (
-                  <div>
-                    <div className='flex justify-center pt-2'>
-                      <AllCardsDialog
-                        cards={sortedCards}
-                        defaultPaymentMethodId={defaultPaymentMethodId}
-                        processingId={processingId}
-                        handleSetDefault={handleSetDefault}
-                        handleDelete={handleDelete}
-                      />
+                return (
+                  <div
+                    key={paymentMethod.id}
+                    className='flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between'
+                  >
+                    <div className='flex items-center gap-3'>
+                      <div className='flex h-10 w-10 items-center justify-center rounded-md bg-muted'>
+                        <CreditCard aria-hidden='true' />
+                      </div>
+
+                      <div>
+                        <p className='font-medium'>
+                          {card.brand.toUpperCase()} ending in {card.last4}
+                        </p>
+                        <p className='text-sm text-muted-foreground'>
+                          Expires {card.exp_month}/{card.exp_year}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className='flex items-center justify-end me-3 mt-2'>
-                      <Info className='w-4 h-4 mr-1' aria-hidden='true' />
-                      <small>
-                        Only showing 3 of your cards, click &quot;See all&quot;
-                        to view them all!
-                      </small>
+                    <div className='flex gap-2'>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        onClick={() => handleSetDefault(paymentMethod.id)}
+                        disabled={
+                          isDefault || processingId === paymentMethod.id
+                        }
+                        aria-label={
+                          isDefault ? 'Default card' : 'Set as default card'
+                        }
+                      >
+                        <Star
+                          aria-hidden='true'
+                          className={
+                            isDefault
+                              ? 'fill-yellow-400 text-yellow-500'
+                              : undefined
+                          }
+                        />
+                        Default
+                      </Button>
+
+                      <Button
+                        type='button'
+                        variant='destructive'
+                        onClick={() => handleDelete(paymentMethod.id)}
+                        disabled={processingId === paymentMethod.id}
+                      >
+                        <Trash2 aria-hidden='true' />
+                        Delete
+                      </Button>
                     </div>
                   </div>
-                )}
-              </>
+                );
+              })
             )}
             {message && !isAlertClosed && (
               <AlertStatic title='Saved' onClose={() => setIsAlertClosed(true)}>
@@ -313,7 +318,7 @@ const AddBankAccountButton = ({ user }) => {
       mutationFn: () => goToDashboard(),
       onSuccess: (data) => {
         queryClient.invalidateQueries(['getMyProfile']);
-        window.open(data.url, '_blank', 'noopener,noreferrer');
+        window.location.href = data.url;
       },
       // Backend error handling
       onError: (error) => {
@@ -360,117 +365,10 @@ const AddBankAccountButton = ({ user }) => {
       onClick={handleAttempt}
       disabled={isPendingLink || isPendingDashboard}
     >
-      <SquareArrowOutUpRight className='h-4 w-4 mr-2' aria-hidden='true' />
+      <WalletCards className='h-4 w-4 mr-2' />
       {hasStripeProvider && user.bank_account.isConfigured
         ? 'My earnings'
         : 'Add account'}
     </Button>
-  );
-};
-
-const AllCardsDialog = ({
-  cards,
-  defaultPaymentMethodId,
-  processingId,
-  handleSetDefault,
-  handleDelete,
-}) => {
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          variant='outline'
-          size='sm'
-          className='w-full sm:w-auto mt-2 sm:mt-0'
-        >
-          See all cards ({cards.length})
-        </Button>
-      </DialogTrigger>
-
-      <DialogContent className='sm:max-w-xl flex flex-col gap-0 max-h-[80vh] p-3 overflow-hidden'>
-        <DialogHeader className='px-6 py-4 border-b shrink-0'>
-          <DialogTitle>All payment cards</DialogTitle>
-          <DialogDescription>
-            Manage your saved credit and debit cards.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className='flex-1 overflow-y-auto px-6 py-4 space-y-4 bg-muted/10'>
-          {cards.map((paymentMethod) => (
-            <PaymentCardRow
-              key={paymentMethod.id}
-              paymentMethod={paymentMethod}
-              isDefault={paymentMethod.id === defaultPaymentMethodId}
-              isProcessing={processingId === paymentMethod.id}
-              onSetDefault={handleSetDefault}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-
-        <DialogFooter className='px-6 py-4 border-t shrink-0'>
-          <DialogClose asChild>
-            <Button variant='outline' type='button'>
-              Close
-            </Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
-const PaymentCardRow = ({
-  paymentMethod,
-  isDefault,
-  isProcessing,
-  onSetDefault,
-  onDelete,
-}) => {
-  const card = paymentMethod.card;
-
-  return (
-    <div className='flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between bg-card'>
-      <div className='flex items-center gap-3'>
-        <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted'>
-          <CreditCard className='w-4 h-4' aria-hidden='true' />
-        </div>
-        <div>
-          <p className='font-medium'>
-            {card.brand.toUpperCase()} ending in {card.last4}
-          </p>
-          <p className='text-sm text-muted-foreground'>
-            Expires {card.exp_month}/{card.exp_year}
-          </p>
-        </div>
-      </div>
-
-      <div className='flex flex-col gap-y-2 sm:gap-2 sm:gap-y-0 sm:flex-row sm:items-center justify-between '>
-        <Button
-          type='button'
-          variant='outline'
-          onClick={() => onSetDefault(paymentMethod.id)}
-          disabled={isDefault || isProcessing}
-          aria-label={isDefault ? 'Default card' : 'Set as default card'}
-        >
-          <Star
-            aria-hidden='true'
-            className={
-              isDefault ? 'fill-yellow-400 text-yellow-500 w-4 h-4' : 'w-4 h-4'
-            }
-          />
-          Default
-        </Button>
-        <Button
-          type='button'
-          variant='destructive'
-          onClick={() => onDelete(paymentMethod.id)}
-          disabled={isProcessing}
-        >
-          <Trash2 className='w-4 h-4' aria-hidden='true' />
-          Delete
-        </Button>
-      </div>
-    </div>
   );
 };

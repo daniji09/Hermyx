@@ -34,10 +34,7 @@ import {
   inviteToMissionBodySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
-import {
-  verifyAdmin,
-  verifyRegularUser,
-} from '../middlewares/auth.middleware.js';
+import { verifyAdmin } from '../middlewares/auth.middleware.js';
 import { upload } from '../utils/file.utils.js';
 import * as missionController from '../controllers/mission.controller.js';
 
@@ -69,7 +66,6 @@ router.get(
 // Publishes mission
 router.post(
   '/',
-  verifyRegularUser,
   upload.array('photos', 5),
   validateBodySchema(publishMissionSchema),
   validateFilesSchema(publishMissionFilesSchema),
@@ -79,7 +75,6 @@ router.post(
 // Closes a mission
 router.post(
   '/:mid/close',
-  verifyRegularUser,
   validateParamsSchema(closeMissionParamSchema),
   missionController.closeMission,
 );
@@ -87,7 +82,6 @@ router.post(
 // Joins an adventurer into a mission
 router.post(
   '/:mid/join',
-  verifyRegularUser,
   validateParamsSchema(joinMissionParamSchema),
   validateBodySchema(joinMissionBodySchema),
   missionController.joinMission,
@@ -96,7 +90,6 @@ router.post(
 // Invites user to mission
 router.post(
   '/:mid/invite',
-  verifyRegularUser,
   validateParamsSchema(inviteToMissionParamSchema),
   validateBodySchema(inviteToMissionBodySchema),
   missionController.inviteToMission,
@@ -105,7 +98,6 @@ router.post(
 // Unjoin adventurer from mission
 router.post(
   '/:mid/unjoin',
-  verifyRegularUser,
   validateParamsSchema(unjoinMissionParamSchema),
   validateBodySchema(unjoinMissionBodySchema),
   missionController.unjoinMission,
@@ -114,7 +106,6 @@ router.post(
 // Submits current adventurer participation for owner review
 router.post(
   '/:mid/submit',
-  verifyRegularUser,
   validateParamsSchema(submitMissionParticipationSchema),
   missionController.submitMissionParticipation,
 );
@@ -122,7 +113,6 @@ router.post(
 // Cancels a mission
 router.post(
   '/:mid/cancel',
-  verifyRegularUser,
   validateParamsSchema(cancelMissionParamSchema),
   missionController.cancelMission,
 );
@@ -130,7 +120,6 @@ router.post(
 // Reopens a mission
 router.post(
   '/:mid/finish',
-  verifyRegularUser,
   validateParamsSchema(finishMissionParamSchema),
   missionController.finishMission,
 );
@@ -138,7 +127,6 @@ router.post(
 // Reopens a mission
 router.post(
   '/:mid/reopen',
-  verifyRegularUser,
   validateParamsSchema(reopenMissionParamSchema),
   missionController.reopenMission,
 );
@@ -165,7 +153,6 @@ router.post(
 // Edits mission
 router.put(
   '/:mid',
-  verifyRegularUser,
   upload.array('photos', 5),
   validateParamsSchema(editMissionParamSchema),
   validateBodySchema(editMissionBodySchema),

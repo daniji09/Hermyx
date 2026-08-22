@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages, USER_ROLE } from '@hermyx/shared';
+import { messages } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({
@@ -9,7 +9,6 @@ const currentUser = vi.hoisted(() => ({
   username: 'current_hero',
   firebase_uid: 'firebase-current',
   stripe_customer_id: 'cus_current',
-  role: 'USER',
 }));
 
 const userService = vi.hoisted(() => ({
@@ -23,18 +22,14 @@ const userService = vi.hoisted(() => ({
   updateMyEmail: vi.fn(),
   updateMyConfiguration: vi.fn(),
   addEmailAuthentication: vi.fn(),
-  deleteMe: vi.fn(),
-  banUser: vi.fn(),
   getUserByUidOrThrow: vi.fn(),
   updateUserStripeCustomerIdByUid: vi.fn(),
 }));
 
 vi.mock('../src/services/user.service.js', () => userService);
-vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
-  ...(await importOriginal()),
+vi.mock('../src/middlewares/auth.middleware.js', () => ({
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
-    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -44,22 +39,9 @@ import app from '../src/app.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('User API', () => {
-  it('forbids an administrator from editing an account profile', async () => {
-    currentUser.role = USER_ROLE.ADMIN.ID;
-
-    const response = await request(app)
-      .patch('/api/users/me/profile')
-      .send({ description: 'Administrative profile edit.' });
-
-    expect(response.status).toBe(403);
-    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
-    expect(userService.updateMyProfile).not.toHaveBeenCalled();
-  });
-
   it('searches users by partial username with pagination', async () => {
     const users = [{ uid: 12, username: 'current_friend' }];
     const pagination = { currentPage: 2, totalPages: 3 };
@@ -254,53 +236,6 @@ describe('User API', () => {
       payload.email,
       payload.password,
     );
-  });
-
-  it.each([
-    ['active missions', messages.USER.DELETE_ME.ACTIVE_MISSIONS],
-    ['active disputes', messages.USER.DELETE_ME.ACTIVE_DISPUTES],
-  ])('prevents account deletion with %s', async (_case, message) => {
-    userService.deleteMe.mockRejectedValue(new AppError(message, 409));
-
-    const response = await request(app).delete('/api/users/me');
-
-    expect(response.status).toBe(409);
-    expect(response.body.errors.general).toEqual([message]);
-    expect(userService.deleteMe).toHaveBeenCalledWith(currentUser);
-  });
-
-  it('forbids banning a user without sufficient permissions', async () => {
-    userService.banUser.mockRejectedValue(
-      new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403),
-    );
-
-    const response = await request(app)
-      .post('/api/users/12/ban')
-      .send({ rid: 7, reason: 'Administrative review.' });
-
-    expect(response.status).toBe(403);
-    expect(response.body.errors.general).toEqual([
-      messages.GENERAL.UNAUTHORIZED_ERROR,
-    ]);
-    expect(userService.banUser).toHaveBeenCalledWith(
-      12,
-      7,
-      'Administrative review.',
-      currentUser,
-    );
-  });
-
-  it('returns an internal error when a user operation fails unexpectedly', async () => {
-    userService.getMyProfile.mockRejectedValue(
-      new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500),
-    );
-
-    const response = await request(app).get('/api/users/me/profile');
-
-    expect(response.status).toBe(500);
-    expect(response.body.errors.general).toEqual([
-      messages.GENERAL.UNEXPECTED_ERROR,
-    ]);
   });
 
   it('uses the shared error handler for service failures', async () => {
