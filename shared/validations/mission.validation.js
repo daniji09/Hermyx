@@ -254,6 +254,11 @@ export const getMissionSchema = z.object({
   mid: midBaseSchema,
 });
 
+// Get mission payment information
+export const getMissionPaymentInfoSchema = z.object({
+  mid: midBaseSchema,
+});
+
 // Publish mission
 export const publishMissionSchema = z.object({
   title: titleBaseSchema,

@@ -181,11 +181,11 @@ const ProfileHeader = ({ user }) => {
       <ProfileAvatar user={user}></ProfileAvatar>
 
       <div className='min-w-0 flex-1'>
-        <h1 className='break-all text-3xl font-bold tracking-tight sm:text-4xl'>
+        <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
           {displayName || user.username}
         </h1>
 
-        <p className='break-all mt-1 text-lg text-muted-foreground'>
+        <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
           @{user.username}
         </p>
       </div>
@@ -392,7 +392,7 @@ export const ReviewCard = ({ review, isClamped = false }) => (
 
     {review.comment && (
       <p
-        className={`whitespace-pre-line text-sm break-all leading-relaxed min-w-0 flex-1 ${
+        className={`whitespace-pre-line text-sm wrap-break-words wrap-anywhere leading-relaxed min-w-0 flex-1 ${
           isClamped ? 'line-clamp-3' : ''
         }`}
       >

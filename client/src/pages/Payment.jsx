@@ -1,329 +1,6 @@
-/*Import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  CardElement,
-  useElements,
-  useStripe,
-} from '@stripe/react-stripe-js';
-import api from '../config/api';
-
-const STRIPE_KEY =
-  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-
-const stripePromise = STRIPE_KEY ? loadStripe(STRIPE_KEY) : null;
-
-const CardElementBox = ({ disabled }) => (
-  <div
-    style={{
-      padding: '12px 14px',
-      border: '1px solid #d1d5db',
-      borderRadius: '6px',
-      backgroundColor: '#ffffff',
-      margin: '10px 0',
-    }}
-  >
-    <CardElement
-      options={{
-        hidePostalCode: true,
-        style: {
-          base: {
-            fontSize: '16px',
-            color: '#32325d',
-            fontFamily:
-              '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            fontSmoothing: 'antialiased',
-            '::placeholder': {
-              color: '#aab7c4',
-            },
-          },
-          invalid: {
-            color: '#fa755a',
-            iconColor: '#fa755a',
-          },
-        },
-      }}
-      disabled={disabled}
-    />
-  </div>
-);
-
-function MissionPayInner() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const stripe = useStripe();
-  const elements = useElements();
-
-  const [cards, setCards] = useState([]);
-  const [loadingCards, setLoadingCards] = useState(true);
-  const [selectedPmId, setSelectedPmId] = useState('new');
-  const [saveCard, setSaveCard] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState('');
-
-  const selectedCard = useMemo(
-    () => cards.find((c) => c.id === selectedPmId),
-    [cards, selectedPmId],
-  );
-
-  const errMsg = (e, fallback) =>
-    e?.response?.data?.error ||
-    e?.response?.data?.message ||
-    e?.message ||
-    fallback;
-
-  const fetchCards = useCallback(async () => {
-    setLoadingCards(true);
-    setError('');
-    try {
-      const { data } = await api.get('/stripe/cards');
-      const fetchedCards = data?.cards || [];
-      const defaultId = data?.defaultPaymentMethodId;
-
-      const processedCards = fetchedCards.map((card) => ({
-        ...card,
-        isDefault: card.id === defaultId,
-      }));
-
-      setCards(processedCards);
-
-      if (processedCards.length > 0) {
-        const def =
-          processedCards.find((c) => c.isDefault) || processedCards[0];
-        setSelectedPmId(def.id);
-      } else {
-        setSelectedPmId('new');
-      }
-    } catch (e) {
-      setError(errMsg(e, 'Error cargando tarjetas'));
-    } finally {
-      setLoadingCards(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCards();
-  }, [id, fetchCards]);
-
-  const setDefaultCard = async (paymentMethodId) => {
-    await api.post('/stripe/cards/default', { paymentMethodId });
-  };
-
-  const confirmMissionPayment = async (paymentIntentId) => {
-    await api.post(`/stripe/missions/${id}/confirm-payment`, {
-      paymentIntentId,
-    });
-  };
-
-  const payWithNewCard = async () => {
-    if (!stripe || !elements) throw new Error('Stripe no está listo todavía.');
-    const cardEl = elements.getElement(CardElement);
-    if (!cardEl) throw new Error('No se pudo leer la tarjeta.');
-
-    const { data } = await api.post('/stripe/pay/new', {
-      missionId: id.trim(),
-      saveCard,
-    });
-
-    if (!data?.clientSecret)
-      throw new Error('Backend no devolvió clientSecret.');
-
-    const result = await stripe.confirmCardPayment(data.clientSecret, {
-      payment_method: { card: cardEl },
-    });
-
-    if (result.error) throw new Error(result.error.message || 'Pago fallido');
-
-    const pi = result.paymentIntent;
-    if (!pi?.id) throw new Error('No se recibió PaymentIntent.');
-    if (pi.status !== 'succeeded')
-      throw new Error(`El pago no se completó (${pi.status}).`);
-
-    await confirmMissionPayment(pi.id);
-
-    if (saveCard && pi.payment_method) {
-      await setDefaultCard(pi.payment_method);
-      await fetchCards();
-    }
-  };
-
-  const payWithSavedCard = async () => {
-    if (!stripe) throw new Error('Stripe no está listo todavía.');
-    if (!selectedPmId || selectedPmId === 'new') {
-      throw new Error('Selecciona una tarjeta guardada.');
-    }
-
-    if (selectedCard && !selectedCard.isDefault) {
-      await setDefaultCard(selectedPmId);
-      await fetchCards();
-    }
-
-    const { data } = await api.post('/stripe/pay/default', {
-      missionId: id.trim(),
-    });
-
-    if (!data?.clientSecret)
-      throw new Error('Backend no devolvió clientSecret.');
-    if (!data?.paymentMethodId)
-      throw new Error('Backend no devolvió paymentMethodId.');
-
-    const result = await stripe.confirmCardPayment(data.clientSecret, {
-      payment_method: data.paymentMethodId,
-    });
-
-    if (result.error) throw new Error(result.error.message || 'Pago fallido');
-
-    const pi = result.paymentIntent;
-    if (!pi?.id) throw new Error('No se recibió PaymentIntent.');
-    if (pi.status !== 'succeeded')
-      throw new Error(`El pago no se completó (${pi.status}).`);
-
-    await confirmMissionPayment(pi.id);
-  };
-
-  const handlePay = async () => {
-    if (!id) {
-      setError('Falta id en la URL.');
-      return;
-    }
-    if (!STRIPE_KEY) {
-      setError('Falta la clave pública de Stripe en el frontend.');
-      return;
-    }
-
-    setProcessing(true);
-    setError('');
-
-    try {
-      if (selectedPmId === 'new') await payWithNewCard();
-      else await payWithSavedCard();
-
-      navigate('/');
-    } catch (e) {
-      setError(errMsg(e, 'Error de pago'));
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  return (
-    <div>
-      <h1>Pagar y publicar misión</h1>
-
-      {!STRIPE_KEY && (
-        <div>
-          Falta VITE_STRIPE_PUBLIC_KEY / VITE_STRIPE_PUBLISHABLE_KEY en el
-          frontend.
-        </div>
-      )}
-
-      {error && <div>{error}</div>}
-
-      <div>
-        <div>
-          <h2>Método de pago</h2>
-
-          {loadingCards ? (
-            <p>Cargando tarjetas…</p>
-          ) : (
-            <div>
-              {cards.map((c) => (
-                <label
-                  key={c.id}
-                  style={{ display: 'block', marginBottom: '10px' }}
-                >
-                  <div>
-                    <input
-                      type='radio'
-                      name='pm'
-                      value={c.id}
-                      checked={selectedPmId === c.id}
-                      onChange={() => setSelectedPmId(c.id)}
-                      disabled={processing}
-                    />
-                    <div
-                      style={{ display: 'inline-block', marginLeft: '10px' }}
-                    >
-                      <div>
-                        {c.card.brand.toUpperCase()} •••• {c.card.last4}
-                        {c.isDefault ? (
-                          <span
-                            title='Tarjeta predeterminada'
-                            style={{ marginLeft: '5px' }}
-                          >
-                            Por Defecto
-                          </span>
-                        ) : null}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>
-                        Expira en {c.card.exp_month}/{c.card.exp_year}
-                      </div>
-                    </div>
-                  </div>
-                </label>
-              ))}
-
-              <label style={{ display: 'block', marginTop: '20px' }}>
-                <div>
-                  <input
-                    type='radio'
-                    name='pm'
-                    value='new'
-                    checked={selectedPmId === 'new'}
-                    onChange={() => setSelectedPmId('new')}
-                    disabled={processing}
-                  />
-                  <span style={{ marginLeft: '10px', fontWeight: 'bold' }}>
-                    ➕ Pagar con tarjeta nueva
-                  </span>
-                </div>
-
-                {selectedPmId === 'new' && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ marginLeft: '25px', marginTop: '10px' }}
-                  >
-                    <CardElementBox disabled={processing || !STRIPE_KEY} />
-                    <label>
-                      <input
-                        type='checkbox'
-                        checked={saveCard}
-                        onChange={(e) => setSaveCard(e.target.checked)}
-                        disabled={processing}
-                      />
-                      <span style={{ marginLeft: '5px', fontSize: '14px' }}>
-                        Guardar esta tarjeta para próximos pagos
-                      </span>
-                    </label>
-                  </div>
-                )}
-              </label>
-            </div>
-          )}
-        </div>
-
-        <button
-          type='button'
-          onClick={handlePay}
-          disabled={processing || !STRIPE_KEY}
-          style={{
-            marginTop: '20px',
-            padding: '10px 20px',
-            cursor: processing ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {processing ? 'Procesando pago seguro…' : 'Pagar y publicar misión'}
-        </button>
-      </div>
-    </div>
-  );
-}
-*/
 import { initialStateUseStateAction } from '../consts/consts.js';
 import { useActionState, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CardForm } from '../components/custom/form/CardForm.jsx';
 import { FormAlert } from '../components/custom/form/FormAlert.jsx';
@@ -341,7 +18,24 @@ import {
   establishCardAsDefault,
   saveNewCard,
 } from '../services/PaymentServices.jsx';
-import { messages as sharedMessages } from '@hermyx/shared';
+import {
+  Card,
+  CardHeader,
+  CardDescription,
+  CardTitle,
+  CardContent,
+} from '@/components/ui/card';
+import {
+  HERMYX_FEE,
+  MISSION_STATUS,
+  messages as sharedMessages,
+} from '@hermyx/shared';
+import { useQuery } from '@tanstack/react-query';
+import { getMissionPaymentInfoByIdQueryOptions } from '../queries/MissionsQueries.jsx';
+import { BanknoteArrowUp } from 'lucide-react';
+import { getSavedCardsQueryOptions } from '../queries/PaymentQueries.jsx';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/Checkbox';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -351,16 +45,81 @@ const stripePromise = loadStripe(STRIPE_KEY || '');
 export const Payment = () => {
   const { id } = useParams();
 
+  // Query options
+  const enabledOption = !!id;
+  const retryOption = (failureCount, error) => {
+    if (error.response?.status === 404) return false; // So Axios won't try to search again the data if there is none
+    return failureCount < 3;
+  };
+
+  // API call using React Query (if the same query is used in more than one componente it should be isolated)
+  const {
+    data: missionPaymentInfo,
+    isLoading,
+    isError,
+  } = useQuery(
+    getMissionPaymentInfoByIdQueryOptions(id, {
+      enabled: enabledOption,
+      retry: retryOption,
+    }),
+  );
+
+  // API call using React Query (if the same query is used in more than one componente it should be isolated)
+  const {
+    data: cardsInfo,
+    isLoadingCards,
+    isErrorCards,
+  } = useQuery(
+    getSavedCardsQueryOptions({
+      enabled: enabledOption,
+      retry: retryOption,
+    }),
+  );
+
+  if (isLoading || isLoadingCards) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
+          Loading mission payment...
+        </div>
+      </main>
+    );
+  }
+
+  if (isError || isErrorCards || !missionPaymentInfo) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load mission payment.
+        </div>
+      </main>
+    );
+  }
+
+  if (missionPaymentInfo.missionPayment.length === 0) {
+    return (
+      <Navigate to={`/missions/${missionPaymentInfo.mission.mid}`} replace />
+    );
+  }
+
   return (
-    <main className='flex min-h-screen items-center justify-center p-4'>
+    <main className='flex justify-center p-4'>
       <Elements stripe={stripePromise} options={{ locale: 'en' }}>
-        <PaymentForm missionId={id} />
+        <PaymentForm
+          missionId={id}
+          mission={missionPaymentInfo?.mission}
+          missionPaymentInfo={missionPaymentInfo?.missionPayment}
+          cardsInfo={cardsInfo}
+        />
       </Elements>
     </main>
   );
 };
 
-const PaymentForm = ({ missionId }) => {
+const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -368,11 +127,12 @@ const PaymentForm = ({ missionId }) => {
   const [clearedFields, setClearedFields] = useState({});
   const [isAlertClosed, setIsAlertClosed] = useState(false);
 
-  // Payment workflow has to be orchestrated in an only component, that is why the action is here
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
+    cardsInfo?.defaultPaymentMethodId || 'new',
+  );
+
   const [state, paymentFormAction, isPending] = useActionState(
-    // eslint-disable-next-line no-unused-vars
     async (prevState, formData) => {
-      // Initial validations
       if (!stripe || !elements) {
         return {
           success: false,
@@ -387,57 +147,66 @@ const PaymentForm = ({ missionId }) => {
       }
 
       try {
-        const cardElement = elements.getElement(CardElement);
-        if (!cardElement) {
-          return {
-            success: false,
-            errors: { general: [messages.PAYMENT.CARD_NOT_READ] },
-          };
-        }
+        const paymentMethodId = formData.get('paymentMethodId');
+        const saveAsDefault = formData.get('saveAsDefault') === 'true';
 
-        // PaymentIntent is requested to backend
         const data = await saveNewCard(missionId);
-
         if (data.error) {
           return { success: false, errors: { general: [data.error] } };
         }
 
-        // Confirm payment with Stripe
-        const result = await stripe.confirmCardPayment(data.clientSecret, {
-          payment_method: { card: cardElement },
-        });
+        let confirmParams = {};
+
+        if (paymentMethodId && paymentMethodId !== 'new') {
+          confirmParams = { payment_method: paymentMethodId };
+        } else {
+          const cardElement = elements.getElement(CardElement);
+          if (!cardElement) {
+            return {
+              success: false,
+              errors: { general: [messages.PAYMENT.CARD_NOT_READ] },
+            };
+          }
+          confirmParams = { payment_method: { card: cardElement } };
+        }
+
+        const result = await stripe.confirmCardPayment(
+          data.clientSecret,
+          confirmParams,
+        );
 
         if (result.error) {
           return {
             success: false,
-            errors: { creditCard: [result.error.message] },
+            errors: { general: [result.error.message] },
           };
         }
 
-        // Confirm to server that payment was successful
         if (
           result.paymentIntent &&
           result.paymentIntent.status === 'succeeded'
         ) {
           await confirmPayment(missionId, result);
-
-          // Establish card as default on server
-          await establishCardAsDefault(result);
-
+          if (saveAsDefault) {
+            await establishCardAsDefault(result);
+          }
           return { success: true };
         }
+
         return {
           success: false,
-          errors: { general: [sharedMessages.UNEXPECTED_ERROR] },
+          errors: { general: [sharedMessages.GENERAL.UNEXPECTED_ERROR] },
         };
       } catch (e) {
+        console.log(e.response.data.errors.general[0]);
         return {
           success: false,
           errors: {
             general: [
-              e?.response?.data?.message ||
-                e.message ||
-                sharedMessages.UNEXPECTED_ERROR,
+              e?.response?.data?.errors?.general?.[0] ||
+                e?.response?.data?.message ||
+                e?.message ||
+                sharedMessages.GENERAL.UNEXPECTED_ERROR,
             ],
           },
         };
@@ -446,12 +215,10 @@ const PaymentForm = ({ missionId }) => {
     initialStateUseStateAction,
   );
 
-  // Effect for navigating to home
   useEffect(() => {
     if (state?.success) navigate(`/missions/${missionId}`);
   }, [state?.success, missionId, navigate]);
 
-  // Logic for cleaning errors in fields or alerts when modifications are done
   const [prevServerState, setPrevServerState] = useState(state);
   if (state !== prevServerState) {
     setPrevServerState(state);
@@ -466,39 +233,310 @@ const PaymentForm = ({ missionId }) => {
       : undefined;
   const isCardInvalid = !isCardCleared && !!state?.errors?.creditCard;
 
+  const groupedPayments = [];
+  const groupsMap = {};
+
+  (missionPaymentInfo || []).forEach((payment) => {
+    const title = payment.title || 'Adventurer';
+    const amountPaid = Number(payment.amount_paid || 0);
+    const totalReward = Number(payment.monetary_reward || 0);
+    const rewardToPay = totalReward - amountPaid;
+    if (rewardToPay <= 0) return;
+
+    const isRewardEdition = amountPaid > 0;
+    const isMissionFunding = mission?.status === MISSION_STATUS.CLOSED.ID;
+
+    const paymentType = isRewardEdition
+      ? 'Reward adjustment'
+      : isMissionFunding
+        ? 'Initial deposit'
+        : 'New adventurer deposit';
+
+    const key = `${title}_${paymentType}_${rewardToPay}`;
+
+    if (groupsMap[key]) {
+      groupsMap[key].quantity += 1;
+      groupsMap[key].lineTotal += rewardToPay;
+    } else {
+      groupsMap[key] = {
+        id: payment.id,
+        title,
+        paymentType,
+        unitPrice: rewardToPay,
+        quantity: 1,
+        lineTotal: rewardToPay,
+      };
+      groupedPayments.push(groupsMap[key]);
+    }
+  });
+
+  const subtotal = groupedPayments.reduce(
+    (acc, item) => acc + item.lineTotal,
+    0,
+  );
+  const hermyxFee = subtotal * HERMYX_FEE - subtotal; // 10% fee
+  const totalDue = subtotal + hermyxFee;
+
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(Number(value || 0));
+
+  const handleRadioKeyDown = (e, value) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setSelectedPaymentMethod(value);
+    }
+  };
+
   return (
-    <div className='flex flex-col w-full max-w-155 gap-4'>
-      <CardForm id='paymentForm' action={paymentFormAction}>
-        <CardForm.Header>
-          <CardForm.Title>{messages.PAYMENT.FORM_TITLE}</CardForm.Title>
-        </CardForm.Header>
+    <div className='flex flex-col w-full max-w-6xl gap-4'>
+      <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
+        <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <BanknoteArrowUp className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0 flex-1'>
+            <h1 className='text-3xl sm:text-4xl font-bold tracking-tight min-w-0 wrap-break-words wrap-anywhere'>
+              Mission payment
+            </h1>
+            <p className='text-muted-foreground mt-1'>
+              Pay all participations that are needed.
+            </p>
+          </div>
+        </div>
+      </section>
 
-        <CardForm.Content legend='Application payment form.'>
-          <FormCreditCardField
-            id='paymentCard'
-            label='Credit card (required):'
-            error={activeCardError}
-            invalid={isCardInvalid}
-          />
-        </CardForm.Content>
+      <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
+        <div className='flex flex-col order-2 lg:order-1'>
+          <Card className='h-fit border-primary/20 shadow-sm'>
+            <CardHeader className='pb-4 border-b bg-muted/20'>
+              <CardTitle className='min-w-0 wrap-break-words wrap-anywhere text-3xl'>
+                <Link
+                  to={`/missions/${missionId}`}
+                  className='hover:text-primary hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm'
+                  title='Go back to mission details'
+                >
+                  {mission?.title}
+                </Link>
+              </CardTitle>
+              <CardDescription>Order Summary</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className='space-y-5  ' aria-label='Payment breakdown'>
+                {groupedPayments.map((item) => (
+                  <li
+                    key={item.id}
+                    className='flex justify-between items-start gap-4'
+                  >
+                    <div className='flex flex-col min-w-0 flex-1'>
+                      <span className='font-lg text-lg text-foreground wrap-break-words'>
+                        <span className='text-muted-foreground mr-2 font-normal'>
+                          x{item.quantity}
+                        </span>
+                        {item.title}
+                      </span>
+                      <div className='flex flex-wrap gap-2 items-center italic -mt-0.5'>
+                        {item.paymentType}
 
-        <CardForm.Footer>
-          <Button
-            className='w-full'
-            id='sendPayment'
-            type='submit'
-            form='paymentForm'
-            disabled={isPending || !stripe}
-          >
-            {isPending ? 'Paying...' : 'Pay'}
-          </Button>
-        </CardForm.Footer>
-      </CardForm>
-      {state?.errors?.general && !isAlertClosed && (
-        <FormAlert onClose={() => setIsAlertClosed(true)}>
-          {state.errors.general[0]}
-        </FormAlert>
-      )}
+                        {item.quantity > 1 && (
+                          <span className='text-xs text-muted-foreground'>
+                            ({formatCurrency(item.unitPrice)} each)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className='font-semibold shrink-0 tabular-nums m-1'>
+                      {formatCurrency(item.lineTotal)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              <div
+                className='space-y-2 my-4 border-t pt-4'
+                aria-label='Totals breakdown'
+              >
+                <div className='flex justify-between items-center text-sm text-muted-foreground'>
+                  <span>Subtotal</span>
+                  <span className='tabular-nums font-semibold'>
+                    {formatCurrency(subtotal)}
+                  </span>
+                </div>
+                <div className='flex justify-between items-center text-sm text-muted-foreground'>
+                  <span>Hermyx Service Fee (10%)</span>
+                  <span className='tabular-nums font-semibold'>
+                    {formatCurrency(hermyxFee)}
+                  </span>
+                </div>
+              </div>
+
+              <div className='flex justify-between items-center w-full pt-3 border-t'>
+                <span className='text-lg font-bold text-foreground'>
+                  Total due
+                </span>
+                <span className='text-2xl font-bold text-primary tabular-nums'>
+                  {formatCurrency(totalDue)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className='order-1 lg:order-2'>
+          <CardForm id='paymentForm' action={paymentFormAction}>
+            <CardForm.Header>
+              <CardForm.Title>{messages.PAYMENT.FORM_TITLE}</CardForm.Title>
+            </CardForm.Header>
+
+            <CardForm.Content legend='Application payment form.'>
+              <input
+                type='hidden'
+                name='paymentMethodId'
+                value={selectedPaymentMethod}
+              />
+
+              <div className='space-y-4'>
+                {cardsInfo?.cards?.length > 0 && (
+                  <div className='space-y-3'>
+                    <Label
+                      id='payment-methods-label'
+                      className='text-muted-foreground'
+                    >
+                      Saved payment methods
+                    </Label>
+
+                    <div
+                      className='grid gap-2'
+                      role='radiogroup'
+                      aria-labelledby='payment-methods-label'
+                    >
+                      {cardsInfo.cards.map((pm) => (
+                        <div
+                          key={pm.id}
+                          role='radio'
+                          aria-checked={selectedPaymentMethod === pm.id}
+                          tabIndex={0}
+                          onClick={() => setSelectedPaymentMethod(pm.id)}
+                          onKeyDown={(e) => handleRadioKeyDown(e, pm.id)}
+                          className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                            selectedPaymentMethod === pm.id
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                              : 'hover:border-primary/50 bg-card'
+                          }`}
+                        >
+                          <div className='flex items-center gap-3'>
+                            <div
+                              className={`h-4 w-4 rounded-full border flex items-center justify-center ${selectedPaymentMethod === pm.id ? 'border-primary' : 'border-muted-foreground'}`}
+                              aria-hidden='true'
+                            >
+                              {selectedPaymentMethod === pm.id && (
+                                <div className='h-2 w-2 rounded-full bg-primary' />
+                              )}
+                            </div>
+                            <span className='font-medium capitalize text-sm'>
+                              {pm.card.brand} •••• {pm.card.last4}
+                            </span>
+                            <p className='text-xs text-muted-foreground'>
+                              {String(pm.card.exp_month).padStart(2, '0')}/
+                              {String(pm.card.exp_year).slice(-2)}
+                            </p>
+                          </div>
+                          {cardsInfo.defaultPaymentMethodId === pm.id && (
+                            <p className='italic text-sm text-muted-foreground'>
+                              Default
+                            </p>
+                          )}
+                        </div>
+                      ))}
+
+                      <div
+                        role='radio'
+                        aria-checked={selectedPaymentMethod === 'new'}
+                        tabIndex={0}
+                        onClick={() => setSelectedPaymentMethod('new')}
+                        onKeyDown={(e) => handleRadioKeyDown(e, 'new')}
+                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                          selectedPaymentMethod === 'new'
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'hover:border-primary/50 bg-card'
+                        }`}
+                      >
+                        <div
+                          className={`h-4 w-4 rounded-full border flex items-center justify-center ${selectedPaymentMethod === 'new' ? 'border-primary' : 'border-muted-foreground'}`}
+                          aria-hidden='true'
+                        >
+                          {selectedPaymentMethod === 'new' && (
+                            <div className='h-2 w-2 rounded-full bg-primary' />
+                          )}
+                        </div>
+                        <span className='font-medium text-sm'>
+                          Use a new credit card
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedPaymentMethod === 'new' && (
+                  <div className='pt-2 animate-in fade-in slide-in-from-top-2 duration-300'>
+                    <FormCreditCardField
+                      id='paymentCard'
+                      label={
+                        cardsInfo?.cards?.length > 0
+                          ? 'Card details:'
+                          : 'Credit card (required):'
+                      }
+                      error={activeCardError}
+                      invalid={isCardInvalid}
+                    />
+
+                    <div className='flex items-center space-x-2'>
+                      <Checkbox
+                        id='saveAsDefault'
+                        name='saveAsDefault'
+                        value='true'
+                        defaultChecked={true}
+                      />
+                      <Label
+                        htmlFor='saveAsDefault'
+                        className='text-sm font-normal text-muted-foreground leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+                      >
+                        Save as my default payment method
+                      </Label>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardForm.Content>
+
+            <CardForm.Footer>
+              <Button
+                className='w-full'
+                id='sendPayment'
+                type='submit'
+                form='paymentForm'
+                disabled={
+                  isPending || (!stripe && selectedPaymentMethod === 'new')
+                }
+              >
+                {isPending
+                  ? 'Processing payment...'
+                  : `Pay ${formatCurrency(totalDue)}`}
+              </Button>
+            </CardForm.Footer>
+          </CardForm>
+
+          {state?.errors?.general && !isAlertClosed && (
+            <div className='mt-4'>
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.general[0]}
+              </FormAlert>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

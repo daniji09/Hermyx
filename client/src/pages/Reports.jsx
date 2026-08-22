@@ -425,7 +425,9 @@ const ReportSearchCard = ({ report }) => {
           </CardHeader>
 
           <CardContent className='flex flex-1 flex-col -mt-2'>
-            <div className='mb-5 break-all line-clamp-3'>{report.message}</div>
+            <div className='mb-5 wrap-break-words wrap-anywhere line-clamp-3'>
+              {report.message}
+            </div>
 
             <div className='mt-auto flex items-center self-end gap-2'>
               <span className='sr-only'>Status:</span>

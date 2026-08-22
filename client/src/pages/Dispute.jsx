@@ -17,92 +17,81 @@ export const Dispute = () => {
     isError,
   } = useQuery(getDisputeQueryOptions(id));
 
-  const title =
-    dispute?.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
-      <p className='text-sm'>
-        Adventurer{' '}
-        <Link
-          to={`/users/${dispute?.other_username}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.other_username}
-        >
-          {truncateText(dispute?.other_username)}
-        </Link>{' '}
-        of mission{' '}
-        <Link
-          to={`/missions/${dispute?.payload?.associated_mission_id}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.mission_title}
-        >
-          {truncateText(dispute?.mission_title)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${dispute?.sender_username}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.sender_username}
-        >
-          {truncateText(dispute?.sender_username)}
-        </Link>
-        .
-      </p>
-    ) : dispute?.type === REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID ? (
-      <p className='text-sm'>
-        Applicant{' '}
-        <Link
-          to={`/users/${dispute?.other_username}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.other_username}
-        >
-          {truncateText(dispute?.other_username)}
-        </Link>{' '}
-        of mission{' '}
-        <Link
-          to={`/missions/${dispute?.payload?.associated_mission_id}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.mission_title}
-        >
-          {truncateText(dispute?.mission_title)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${dispute?.sender_username}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.sender_username}
-        >
-          {truncateText(dispute?.sender_username)}
-        </Link>
-        .
-      </p>
-    ) : (
-      <p className='text-sm'>
-        Adventurer&lsquo;s{' '}
-        <Link
-          to={`/users/${dispute?.other_username}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.other_username}
-        >
-          {truncateText(dispute?.other_username)}
-        </Link>{' '}
-        participation of mission{' '}
-        <Link
-          to={`/missions/${dispute?.payload?.associated_mission_id}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.mission_title}
-        >
-          {truncateText(dispute?.mission_title)}
-        </Link>{' '}
-        was reported by{' '}
-        <Link
-          to={`/users/${dispute?.sender_username}`}
-          className='font-medium text-primary hover:underline'
-          title={dispute?.sender_username}
-        >
-          {truncateText(dispute?.sender_username)}
-        </Link>
-        .
-      </p>
+  const linkClass =
+    'font-medium text-primary hover:underline transition-colors';
+  const renderUserLink = (username) => {
+    if (!username) return null;
+    return (
+      <Link
+        to={`/users/${username}`}
+        className={linkClass}
+        title={username}
+        aria-label={username} // 👈 Accesibilidad salvada
+        target='_blank'
+        rel='noopener noreferrer'
+      >
+        {truncateText(username)}
+      </Link>
     );
+  };
+
+  const renderMissionLink = () => {
+    const missionId = dispute?.payload?.associated_mission_id;
+    const title = dispute?.mission_title;
+    if (!missionId) return null;
+    return (
+      <Link
+        to={`/missions/${missionId}`}
+        className={linkClass}
+        title={title}
+        aria-label={title}
+        target='_blank'
+        rel='noopener noreferrer'
+      >
+        {truncateText(title)}
+      </Link>
+    );
+  };
+
+  const generateTitleText = () => {
+    const { type, other_username, sender_username } = dispute || {};
+
+    const otherUserLink = renderUserLink(other_username);
+    const senderLink = renderUserLink(sender_username);
+    const missionLink = renderMissionLink();
+
+    switch (type) {
+      case REPORT_TYPE.REPORT_ADVENTURER.ID:
+        return (
+          <>
+            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
+        return (
+          <>
+            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      default: // REVIEW_DISPUTE (El bloque final que tenías en el else)
+        return (
+          <>
+            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
+            {missionLink} was reported by {senderLink}.
+          </>
+        );
+    }
+  };
+
+  const title = (
+    <span className='text-sm leading-relaxed text-foreground'>
+      {generateTitleText()}
+    </span>
+  );
 
   if (isLoading)
     return (

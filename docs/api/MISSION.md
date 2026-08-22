@@ -145,6 +145,53 @@ Gets the mission specified by its identifier, mid.
 <br>
 <br>
 
+## - Get mission payment info by mid: `GET /api/missions/:mid/payment-info`
+
+Gets payment info of the mission specified by its identifier, mid.
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission obtain successfully.
+
+  ```json
+  {
+    "mission": "<mission>"
+  }
+  ```
+
+- `400 Bad Request`: path parameters fields validation error, missing path parameters fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission not found, mission with that mid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Mission not found."]
+    }
+  }
+  ```
+    <br>
+
+**Workflow:** application mission payment info is searched by its identifier, it retrieves all mission payment information, all participants that are in pending payment status.
+<br>
+<br>
+<br>
+
 ## - Publish mission: `POST /api/missions/`
 
 Publishes a new mission.
