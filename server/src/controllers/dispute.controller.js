@@ -28,10 +28,7 @@ export const getMyDisputeUnreadCount = async (req, res, next) => {
 // Get dispute by id
 export const getDispute = async (req, res, next) => {
   try {
-    const dispute = await disputeService.getDispute(
-      req.params.rid,
-      req.user.uid,
-    );
+    const dispute = await disputeService.getDispute(req.params.rid, req.user);
     return res.status(200).json({ dispute });
   } catch (error) {
     next(error);

@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import { corsOptions } from '../app.js';
 import { findByFirebaseUid } from '../models/user.model.js';
+import { findById as findConversationById } from '../models/conversation.model.js';
 import { verifyIdToken } from './auth.provider.js';
 import { canSendMessageToConversation } from '../models/conversation-participant.model.js';
 
@@ -54,12 +55,15 @@ export const initializeSocketServer = (httpServer) => {
 
     socket.on('conversation:join', async (conversationId) => {
       try {
+        const conversation = await findConversationById(conversationId);
+        const isAdminDisputePreview =
+          socket.user.role === 'ADMIN' && conversation?.type === 'dispute';
         const canReceiveLiveMessages = await canSendMessageToConversation(
           conversationId,
           socket.user.uid,
         );
 
-        if (!canReceiveLiveMessages) return;
+        if (!canReceiveLiveMessages && !isAdminDisputePreview) return;
 
         socket.join(`conversation:${conversationId}`);
       } catch (error) {

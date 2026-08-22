@@ -7,6 +7,7 @@ import {
   NOTIFICATION_STATUS,
   NOTIFICATION_TYPE,
   REPORT_TYPE,
+  USER_ROLE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import * as conversationService from './conversation.service.js';
@@ -39,7 +40,8 @@ export const getMyDisputeUnreadCount = async (userId) => {
 };
 
 // Gets dispute by rid
-export const getDispute = async (reportId, userId) => {
+export const getDispute = async (reportId, user) => {
+  checkRequired(user, 'Current user');
   const dispute = await reportService.getReport(reportId);
 
   // Checks if dispute actually exists and is correct type
@@ -51,10 +53,13 @@ export const getDispute = async (reportId, userId) => {
     throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
   }
 
-  // Checks if user is actually participating on that conversation
+  // Administrators can attend every dispute without joining as participants.
+  if (user.role === USER_ROLE.ADMIN.ID) return dispute;
+
+  // Regular users must participate in the dispute conversation.
   const isParticipant = await conversationService.isConversationParticipant(
     dispute.conversation_id,
-    userId,
+    user.uid,
   );
   if (!isParticipant) {
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);

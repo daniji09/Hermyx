@@ -99,7 +99,9 @@ Gets dispute by its report id
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot get dispute if current user is not in the conversation.
+- `403 Forbidden`: regular users are unauthorized if they are not in the
+  dispute conversation. Administrators can access dispute conversations to
+  review and attend them without being participants.
 
   ```json
   {

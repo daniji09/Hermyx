@@ -9,6 +9,10 @@ Gets all current user's conversations from Hermyx.
 
 **Requires authentication:** Yes
 
+Administrators cannot list regular conversations. They can access a
+conversation by id only when its type is `dispute`, as part of the report
+workflow.
+
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
@@ -102,7 +106,9 @@ Gets conversation by its id
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot get conversation if current user is not in it.
+- `403 Forbidden`: user is unauthorized to do this action: regular users must
+  belong to the conversation, and administrators can only access dispute
+  conversations.
 
   ```json
   {
@@ -158,7 +164,9 @@ Gets conversation's messages by its id
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot get conversation's messages if current user is not in it.
+- `403 Forbidden`: user is unauthorized to do this action: regular users must
+  belong to the conversation, and administrators can only read messages from
+  dispute conversations.
 
   ```json
   {
@@ -181,6 +189,10 @@ Gets conversation's messages by its id
 **Workflow:** gets application conversation's messages (TODO: paginación especial).
 <br>
 <br>
+
+Administrators can preview dispute messages without being inserted as a
+participant. This preview is read-only until the administrator sends a message
+through the endpoint below.
 
 ## - Marks conversation as read: `PATCH /api/conversations/:cid/read`
 
@@ -213,6 +225,10 @@ Marks a conversation as read
     }
   }
   ```
+
+- `403 Forbidden`: the user cannot access the conversation. An administrator
+  can mark a dispute preview as read; if they are not yet a participant, the
+  request succeeds without changing a participant row.
 
 - `404 Not Found`: conversation or user not found.
 
@@ -342,7 +358,9 @@ Sends a message to the conversation, it can be an image
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot send messages if current user is not in the conversation.
+- `403 Forbidden`: user is unauthorized to do this action. Regular users must
+  be active participants; administrators may send messages only to dispute
+  conversations.
 
   ```json
   {
@@ -374,6 +392,6 @@ Sends a message to the conversation, it can be an image
 
   <br>
 
-**Workflow:** creates a message conversation and sends it, being message or image. Images are handled by the `multer` (Azure TODO:)library.
+**Workflow:** creates a message conversation and sends it, being message or image. When an administrator sends the first message in a dispute, the backend adds the administrator to that conversation. Images are handled by the `multer` (Azure TODO:)library.
 <br>
 <br>
