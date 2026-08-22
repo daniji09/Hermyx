@@ -131,12 +131,12 @@ export const Map = ({
         </form>
       )}
 
-      <div className='relative w-full h-100 rounded-lg overflow-hidden border border-gray-300 z-0'>
+      <div className='relative w-full h-100 rounded-lg overflow-hidden border border-gray-300 z-0 focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-shadow'>
         {pin && !readOnly && (
           <button
             type='button'
             onClick={handleClearLocation}
-            className='absolute top-4 right-4 z-1000 flex items-center gap-2 bg-white text-red-600 px-3 py-2 rounded-md shadow-lg border border-gray-200 hover:bg-red-50 font-medium text-sm transition-colors'
+            className='absolute top-4 right-4 z-1000 flex items-center gap-2 bg-white text-red-600 px-3 py-2 rounded-md shadow-lg border border-gray-200 hover:bg-red-50 font-medium text-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2'
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'
@@ -148,15 +148,15 @@ export const Map = ({
               strokeWidth='2'
               strokeLinecap='round'
               strokeLinejoin='round'
+              aria-hidden='true'
             >
               <path d='M3 6h18' />
               <path d='M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6' />
               <path d='M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2' />
             </svg>
-            Quitar ubicación
+            Remove location
           </button>
         )}
-
         <MapContainer
           center={[mapCenter.lat, mapCenter.lng]}
           zoom={13}

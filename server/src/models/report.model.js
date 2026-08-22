@@ -40,6 +40,7 @@ export const findById = async (id, client = pool) => {
       mp.title AS vacancy_title,
       u.username AS other_username,
       s.username AS sender_username,
+      ad.username AS admin_username,
       (
         r.status = 'SENT'
         AND r.conversation_id IS NOT NULL
@@ -61,6 +62,8 @@ export const findById = async (id, client = pool) => {
       ON u.uid = NULLIF(r.payload->>'associated_user_id', '')::int
     LEFT JOIN app_user s
       on s.uid = r.sender_id
+    LEFT JOIN app_user ad
+      on ad.uid = r.resolved_by
     WHERE r.rid = $1
   `;
   const result = await client.query(query, [id]);
@@ -72,6 +75,10 @@ export const findAll = async ({ pagination, filters, userId }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT
       r.*,
+      m.title AS mission_title,
+      mp.title AS vacancy_title,
+      u.username AS other_username,
+      s.username AS sender_username,
       COALESCE((
         SELECT COUNT(*)::int
         FROM conversation_participant cp
@@ -97,7 +104,16 @@ export const findAll = async ({ pagination, filters, userId }) => {
       ) AS needs_admin_attention,
       COUNT(*) OVER() AS total_count
     FROM report AS r
+    LEFT JOIN mission m
+      ON m.mid = NULLIF(r.payload->>'associated_mission_id', '')::int
+    LEFT JOIN mission_participation mp
+      ON mp.id = NULLIF(r.payload->>'associated_vacancy_id', '')::int
+    LEFT JOIN app_user u 
+      ON u.uid = NULLIF(r.payload->>'associated_user_id', '')::int
+    LEFT JOIN app_user s
+      ON s.uid = r.sender_id
     WHERE 1=1`;
+
   const values = [userId];
 
   if (filters?.status) {

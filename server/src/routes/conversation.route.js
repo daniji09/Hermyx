@@ -19,6 +19,7 @@ import {
   validateQuerySchema,
 } from '../middlewares/validation.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
+import { verifyRegularUser } from '../middlewares/auth.middleware.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -27,13 +28,18 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Get all current user's conversations
 router.get(
   '/',
+  verifyRegularUser,
   validateQuerySchema(paginationQuerySchema),
   pagination(),
   conversationController.getMyConversations,
 );
 
 // Get current user's unread count
-router.get('/unread-count', conversationController.getMyUnreadMessageCount);
+router.get(
+  '/unread-count',
+  verifyRegularUser,
+  conversationController.getMyUnreadMessageCount,
+);
 
 // Get conversation by id
 router.get(
@@ -61,6 +67,7 @@ router.patch(
 // Create a private conversation
 router.post(
   '/private',
+  verifyRegularUser,
   validateBodySchema(privateConversationSchema),
   conversationController.createPrivateConversation,
 );

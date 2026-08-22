@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { consts, messages } from '@hermyx/shared';
+import { consts, messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({
   uid: 21,
   username: 'mission_owner',
+  role: 'USER',
 }));
 
 const missionService = vi.hoisted(() => ({
@@ -24,9 +25,11 @@ const missionService = vi.hoisted(() => ({
 }));
 
 vi.mock('../src/services/mission.service.js', () => missionService);
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -52,9 +55,20 @@ const missionPayload = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  currentUser.role = USER_ROLE.USER.ID;
 });
 
 describe('Mission API', () => {
+  it('forbids an administrator from publishing missions', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app).post('/api/missions').send({});
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(missionService.publishMission).not.toHaveBeenCalled();
+  });
+
   it('lists missions with title and pagination', async () => {
     const missions = [{ mid: 1, title: missionPayload.title }];
     const paginationData = {
@@ -300,6 +314,24 @@ describe('Mission API', () => {
     ]);
   });
 
+  it.each([
+    ['has no adventurers', messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS],
+    [
+      'is in an incompatible state',
+      messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE,
+    ],
+  ])(
+    'returns a conflict when closing a mission that %s',
+    async (_case, message) => {
+      missionService.closeMission.mockRejectedValue(new AppError(message, 409));
+
+      const response = await request(app).post('/api/missions/6/close');
+
+      expect(response.status).toBe(409);
+      expect(response.body.errors.general).toEqual([message]);
+    },
+  );
+
   it('sends a join request', async () => {
     const response = await request(app).post('/api/missions/6/join').send({
       vacancyId: 9,
@@ -313,6 +345,21 @@ describe('Mission API', () => {
       'I can help.',
       9,
     );
+  });
+
+  it.each([
+    ['the mission is full', messages.MISSION.JOIN.FILLED],
+    ['a request was already sent', messages.MISSION.JOIN.REQUEST_ALREADY_SENT],
+  ])('returns a conflict when joining because %s', async (_case, message) => {
+    missionService.joinMission.mockRejectedValue(new AppError(message, 409));
+
+    const response = await request(app).post('/api/missions/6/join').send({
+      vacancyId: 9,
+      message: 'I can help.',
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([message]);
   });
 
   it('invites a user to a vacancy', async () => {
@@ -336,6 +383,34 @@ describe('Mission API', () => {
     );
   });
 
+  it.each([
+    [
+      'the owner invites themselves',
+      messages.MISSION.INVITE.CANNOT_INVITE_YOURSELF,
+    ],
+    [
+      'the vacancy is occupied',
+      messages.MISSION.INVITE.VACANCY_ALREADY_OCCUPIED,
+    ],
+    [
+      'the invitation was already sent',
+      messages.MISSION.INVITE.INVITATION_ALREADY_SENT,
+    ],
+  ])('returns a conflict when %s', async (_case, message) => {
+    missionService.inviteToMission.mockRejectedValue(
+      new AppError(message, 409),
+    );
+
+    const response = await request(app).post('/api/missions/6/invite').send({
+      receiverId: 22,
+      vacancyId: 9,
+      message: 'Join us.',
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([message]);
+  });
+
   it('unjoins a vacancy', async () => {
     const response = await request(app)
       .post('/api/missions/6/unjoin')
@@ -347,6 +422,21 @@ describe('Mission API', () => {
       9,
       currentUser,
     );
+  });
+
+  it('returns an internal error when unjoining fails unexpectedly', async () => {
+    missionService.unjoinMission.mockRejectedValue(
+      new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500),
+    );
+
+    const response = await request(app)
+      .post('/api/missions/6/unjoin')
+      .send({ vacancyId: 9 });
+
+    expect(response.status).toBe(500);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.UNEXPECTED_ERROR,
+    ]);
   });
 
   it('submits the current participation for review', async () => {

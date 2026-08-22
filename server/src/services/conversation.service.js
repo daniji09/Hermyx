@@ -1,4 +1,4 @@
-import { consts, messages } from '@hermyx/shared';
+import { consts, messages, USER_ROLE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
 import * as conversationModel from '../models/conversation.model.js';
@@ -308,10 +308,16 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
   // Get conversation and check if its participant or if its not a read only conversation
   const senderId = sender.uid;
   const initialConversation = await getConversationByIdOrThrow(cid);
+  if (
+    sender.role === USER_ROLE.ADMIN.ID &&
+    initialConversation.type !== 'dispute'
+  )
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   const isParticipant =
     await conversationParticipantModel.isConversationParticipant(cid, senderId);
   const canInitiallyJoinAsAdmin =
-    sender.role === 'ADMIN' && initialConversation.type === 'dispute';
+    sender.role === USER_ROLE.ADMIN.ID &&
+    initialConversation.type === 'dispute';
   if (!isParticipant && !canInitiallyJoinAsAdmin) {
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
@@ -342,7 +348,7 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
       client,
     );
     const canJoinAsAdmin =
-      sender.role === 'ADMIN' && conversation.type === 'dispute';
+      sender.role === USER_ROLE.ADMIN.ID && conversation.type === 'dispute';
 
     // If its not participant, but is admin, it adds it to conversation
     if (!isParticipant && !canJoinAsAdmin)
@@ -386,7 +392,10 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
     'conversation:message-created',
     message,
   );
-  if (sender.role === 'ADMIN' && message.conversation_type === 'dispute') {
+  if (
+    sender.role === USER_ROLE.ADMIN.ID &&
+    message.conversation_type === 'dispute'
+  ) {
     socketProvider.emitToAdmins('report:updated', {
       reportId: message.report_id,
     });
@@ -451,6 +460,8 @@ export const closeConversation = async (conversationId, client) => {
 const getConversationAccess = async (conversationId, user) => {
   // Gets conversation
   const conversation = await getConversationByIdOrThrow(conversationId);
+  if (user.role === USER_ROLE.ADMIN.ID && conversation.type !== 'dispute')
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 
   // Checks if current user is actually participant
   const isParticipant = await isConversationParticipant(
@@ -458,7 +469,9 @@ const getConversationAccess = async (conversationId, user) => {
     user.uid,
   );
   const isAdminPreview =
-    !isParticipant && user.role === 'ADMIN' && conversation.type === 'dispute';
+    !isParticipant &&
+    user.role === USER_ROLE.ADMIN.ID &&
+    conversation.type === 'dispute';
   if (!isParticipant && !isAdminPreview)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   return { conversation, isAdminPreview, isParticipant };

@@ -176,9 +176,14 @@ export const findAllOpened = async ({
   }
 
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
-    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username${distanceSelect}, COUNT(*) OVER() AS total_count
+    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username${distanceSelect}, mph.photos, COUNT(*) OVER() AS total_count
     FROM mission AS m
-    JOIN app_user AS a ON (m.owner_id = a.uid)
+    JOIN app_user AS a ON (m.owner_id = a.uid) 
+    LEFT JOIN (
+      SELECT mid, ARRAY_AGG(url) AS photos 
+      FROM mission_photo
+      GROUP BY mid
+    ) AS mph ON (m.mid = mph.mid)
     ${requesterJoin}
     WHERE (m.status = $1 OR m.status = $2)`;
 

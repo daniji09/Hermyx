@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
-import { messages } from '@hermyx/shared';
+import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
 
 const currentUser = vi.hoisted(() => ({
@@ -9,6 +9,7 @@ const currentUser = vi.hoisted(() => ({
   username: 'payer',
   stripe_customer_id: 'cus_test',
   stripe_connected_id: 'acct_test',
+  role: 'USER',
 }));
 
 const paymentService = vi.hoisted(() => ({
@@ -38,9 +39,11 @@ vi.mock('../src/providers/payment.provider.js', async (importOriginal) => ({
   ...(await importOriginal()),
   ...paymentProvider,
 }));
-vi.mock('../src/middlewares/auth.middleware.js', () => ({
+vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
     req.user = { ...currentUser };
+    req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
@@ -51,10 +54,21 @@ import app from '../src/app.js';
 beforeEach(() => {
   vi.clearAllMocks();
   currentUser.stripe_customer_id = 'cus_test';
+  currentUser.role = USER_ROLE.USER.ID;
   userService.getUserByUidOrThrow.mockResolvedValue(currentUser);
 });
 
 describe('Payment API', () => {
+  it('forbids an administrator from accessing payment methods', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+
+    const response = await request(app).get('/api/stripe/cards');
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
+    expect(paymentService.listCards).not.toHaveBeenCalled();
+  });
+
   it('lists cards and identifies the default card', async () => {
     const cards = { data: [{ id: 'pm_1' }, { id: 'pm_2' }] };
     const customer = {
@@ -122,6 +136,21 @@ describe('Payment API', () => {
     expect(paymentService.payDefault).toHaveBeenCalledWith(42, currentUser);
   });
 
+  it('returns a conflict when paying without a default card', async () => {
+    paymentService.payDefault.mockRejectedValue(
+      new AppError(messages.PAYMENT.GENERAL.NO_DEFAULT_CARD, 409),
+    );
+
+    const response = await request(app).post(
+      '/api/stripe/missions/42/pay/default',
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([
+      messages.PAYMENT.GENERAL.NO_DEFAULT_CARD,
+    ]);
+  });
+
   it.each([true, false])(
     'creates a new-card payment intent with saveCard=%s',
     async (saveCard) => {
@@ -160,6 +189,20 @@ describe('Payment API', () => {
     );
   });
 
+  it('returns a conflict when the payment intent has not succeeded', async () => {
+    const paymentStatus = 'requires_payment_method';
+    const message =
+      messages.PAYMENT.GENERAL.PAYMENT_NOT_SUCCEEDED(paymentStatus);
+    paymentService.confirmPayment.mockRejectedValue(new AppError(message, 409));
+
+    const response = await request(app)
+      .post('/api/stripe/missions/42/confirm')
+      .send({ paymentIntentId: 'pi_failed' });
+
+    expect(response.status).toBe(409);
+    expect(response.body.errors.general).toEqual([message]);
+  });
+
   it('starts Stripe Connect onboarding', async () => {
     paymentService.connectOnBoard.mockResolvedValue({
       url: 'https://connect.stripe.test/onboard',
@@ -195,6 +238,21 @@ describe('Payment API', () => {
       url: 'https://dashboard.stripe.test/login',
     });
     expect(paymentService.getDashboardLink).toHaveBeenCalledWith(currentUser);
+  });
+
+  it('forbids dashboard access before Connect onboarding is complete', async () => {
+    paymentService.getDashboardLink.mockRejectedValue(
+      new AppError(messages.GENERAL.STRIPE_ONBOARDING_NOT_COMPLETED, 403),
+    );
+
+    const response = await request(app).post(
+      '/api/stripe/connect/dashboard-link',
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.STRIPE_ONBOARDING_NOT_COMPLETED,
+    ]);
   });
 
   it('deletes the card identified in the validated request body', async () => {
@@ -241,6 +299,19 @@ describe('Payment API', () => {
     expect(response.status).toBe(404);
     expect(response.body.errors.general).toEqual([
       messages.GENERAL.STRIPE_CUSTOMER_ERROR,
+    ]);
+  });
+
+  it('returns an internal error for an unexpected payment failure', async () => {
+    paymentService.listCards.mockRejectedValue(
+      new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500),
+    );
+
+    const response = await request(app).get('/api/stripe/cards');
+
+    expect(response.status).toBe(500);
+    expect(response.body.errors.general).toEqual([
+      messages.GENERAL.UNEXPECTED_ERROR,
     ]);
   });
 });
