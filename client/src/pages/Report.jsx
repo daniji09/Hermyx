@@ -89,19 +89,19 @@ const ReportPageContainer = ({ report, isLoading, isError, error }) => {
 
 const ReportLoading = ({ isLoading, children }) => {
   return (
-    <main>
+    <>
       {isLoading && (
         <div role='status' className='p-8 text-center text-muted-foreground'>
           {children}
         </div>
       )}
-    </main>
+    </>
   );
 };
 
 const ReportError = ({ isError, children }) => {
   return (
-    <main>
+    <>
       {isError && (
         <div
           role='alert'
@@ -110,7 +110,7 @@ const ReportError = ({ isError, children }) => {
           {children}
         </div>
       )}
-    </main>
+    </>
   );
 };
 
@@ -244,7 +244,7 @@ const ReportContent = ({ report }) => {
                 <Button asChild variant='outline' size='lg' className='w-fit'>
                   <Link
                     to={`/disputes/${report.conversation_id}`}
-                    aria-label={`Dispute conversation`}
+                    aria-label='View dispute conversation'
                     target='_blank'
                     rel='noopener noreferrer'
                   >

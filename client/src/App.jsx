@@ -46,6 +46,7 @@ function App() {
           <Route path='/missions' element={<SearchMission />}></Route>
           <Route path='/users/search' element={<SearchUsers />} />
           <Route path='/users/:username' element={<PublicProfile />} />
+          <Route path='/disputes/:id' element={<Dispute />} />
         </Route>
 
         {/* --- Regular user routes (administrators are read-only) --- */}
@@ -66,7 +67,6 @@ function App() {
             element={<Conversation />}
           />
           <Route path='/conversations' element={<Conversations />} />
-          <Route path='/disputes/:id' element={<Dispute />} />
           <Route path='/disputes' element={<Disputes />} />
         </Route>
 
