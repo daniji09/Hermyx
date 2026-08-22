@@ -245,7 +245,7 @@ const ReportContent = ({ report }) => {
               <div>
                 <Button asChild variant='outline' size='lg' className='w-fit'>
                   <Link
-                    to={`/disputes/${report.conversation_id}`}
+                    to={`/disputes/${report.rid}`}
                     aria-label='View dispute conversation'
                     target='_blank'
                     rel='noopener noreferrer'

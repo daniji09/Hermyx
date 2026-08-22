@@ -1,3 +1,4 @@
+import { consts } from '@hermyx/shared';
 import api from '../config/api';
 
 export const getOrCreatePrivateConversation = async (otherUserId) => {
@@ -29,7 +30,7 @@ export const sendMessage = async (conversationId, content, photo) => {
 export const getConversationMessages = async (
   conversationId,
   cursor,
-  limit,
+  limit = consts.PAGINATION.DEFAULT_LIMIT,
 ) => {
   const { data } = await api.get(`/conversations/${conversationId}/messages`, {
     params: { cursor, limit },
@@ -37,7 +38,10 @@ export const getConversationMessages = async (
   return data;
 };
 
-export const getMyConversations = async (page, limit) => {
+export const getMyConversations = async (
+  page = consts.PAGINATION.DEFAULT_PAGE,
+  limit = consts.PAGINATION.DEFAULT_LIMIT,
+) => {
   const { data } = await api.get('/conversations', {
     params: { page, limit },
   });

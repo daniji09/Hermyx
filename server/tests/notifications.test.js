@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
@@ -32,6 +32,10 @@ import app from '../src/app.js';
 beforeEach(() => {
   vi.clearAllMocks();
   currentUser.role = USER_ROLE.USER.ID;
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('Notification API', () => {
@@ -221,5 +225,83 @@ describe('Notification API', () => {
     expect(response.body.errors.general).toEqual([
       messages.GENERAL.UNAUTHORIZED_ERROR,
     ]);
+  });
+});
+
+describe('Notification automatic participation review', () => {
+  it('reports a Stripe payout failure without announcing a false approval', async () => {
+    const actualNotificationService = await vi.importActual(
+      '../src/services/notification.service.js',
+    );
+    const notificationModel = await vi.importActual(
+      '../src/models/notification.model.js',
+    );
+    const missionService = await vi.importActual(
+      '../src/services/mission.service.js',
+    );
+    const userService = await vi.importActual(
+      '../src/services/user.service.js',
+    );
+    const paymentProvider = await vi.importActual(
+      '../src/providers/payment.provider.js',
+    );
+    const stripeError = new Error('Stripe idempotency conflict');
+    const notification = {
+      nid: 5,
+      sender_id: 3,
+      payload: { associated_mission_id: 1 },
+    };
+    const mission = { mid: 1, title: 'Test mission' };
+    const participation = {
+      id: 1,
+      mid: 1,
+      adventurer_id: 3,
+      status: 'SUBMITTED',
+      monetary_reward: 22,
+    };
+    const adventurer = {
+      uid: 3,
+      username: 'adventurer',
+      stripe_connected_id: 'acct_test',
+    };
+
+    vi.spyOn(
+      notificationModel,
+      'findExpiredParticipationReviews',
+    ).mockResolvedValue([notification]);
+    vi.spyOn(missionService, 'getMissionByIdOrThrow').mockResolvedValue(
+      mission,
+    );
+    vi.spyOn(
+      missionService,
+      'getMissionParticipationByMidAndAdventurerIdOrThrow',
+    ).mockResolvedValue(participation);
+    vi.spyOn(userService, 'getUserByUidOrThrow').mockImplementation(
+      async (uid) =>
+        uid === adventurer.uid
+          ? adventurer
+          : { uid, username: 'Hermyx_system' },
+    );
+    vi.spyOn(
+      missionService,
+      'updateParticipationStatusByMidAndAdventurer',
+    ).mockResolvedValue({ ...participation, status: 'ACCEPTED' });
+    const restoreParticipation = vi
+      .spyOn(missionService, 'restoreParticipationAfterFailedAcceptance')
+      .mockResolvedValue({ ...participation, status: 'SUBMITTED' });
+    vi.spyOn(paymentProvider, 'createTransfer').mockRejectedValue(stripeError);
+    const createNotification = vi
+      .spyOn(notificationModel, 'create')
+      .mockResolvedValue(99);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await actualNotificationService.autoAcceptParticipation();
+
+    expect(result.successes).toEqual([]);
+    expect(result.errors).toEqual([
+      'Stripe idempotency conflict. Notification: 5.',
+    ]);
+    expect(restoreParticipation).toHaveBeenCalledWith(1, 3);
+    expect(createNotification).not.toHaveBeenCalled();
   });
 });

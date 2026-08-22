@@ -421,20 +421,27 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
 };
 
 // Marks conversation as read
-export const markConversationAsRead = async (conversationId, userId) => {
+export const markConversationAsRead = async (conversationId, user) => {
   // Parameter checks
   checkRequired(conversationId, 'Conversation id');
-  checkRequired(userId, 'User id');
+  checkRequired(user, 'Current user');
 
-  // Checks that conversation and user exists
-  await getConversationByIdOrThrow(conversationId);
-  await userService.getUserByUidOrThrow(userId);
+  // Checks that the user can access this conversation
+  const { isAdminPreview, isParticipant } = await getConversationAccess(
+    conversationId,
+    user,
+  );
+
+  // An administrator preview has no participant row to update.
+  // Treat it as a valid read operation.
+  // Report attention is tracked from administrator messages instead.
+  if (isAdminPreview && !isParticipant) return 0;
 
   // Marks conversation as read if it wasn't already
   const wasMarkedAsRead =
     await conversationParticipantModel.markConversationAsReadByUserId(
       conversationId,
-      userId,
+      user.uid,
     );
   if (!wasMarkedAsRead)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);

@@ -149,14 +149,14 @@ describe('User API', () => {
 
     const response = await request(app)
       .get('/api/users/public_hero/profile/missions')
-      .query({ type: 'published' });
+      .query({ type: 'published', page: 1, limit: 10 });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ missions, pagination });
     expect(userService.getUserPublicMissions).toHaveBeenCalledWith(
       'public_hero',
       'published',
-      undefined,
+      expect.objectContaining({ page: 1, limit: 10 }),
     );
   });
 

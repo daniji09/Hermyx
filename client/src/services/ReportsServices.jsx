@@ -1,3 +1,4 @@
+import { consts } from '@hermyx/shared';
 import api from '../config/api';
 
 // Reports an adventurer
@@ -35,12 +36,15 @@ export const getReportById = async (id) => {
 };
 
 // Finds all reports
-export const getReports = async (options) => {
-  const { page, limit } = options;
+export const getReports = async (options = {}) => {
+  const {
+    page = consts.PAGINATION.DEFAULT_PAGE,
+    limit = consts.PAGINATION.DEFAULT_LIMIT,
+    params = {},
+  } = options;
 
-  // API search
   const { data } = await api.get('/reports', {
-    params: { page, limit, ...options.params },
+    params: { ...params, page, limit },
   });
 
   return data;

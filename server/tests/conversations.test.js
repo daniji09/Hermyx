@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { messages, USER_ROLE } from '@hermyx/shared';
 import { AppError } from '../src/utils/error.util.js';
@@ -19,7 +19,45 @@ const conversationService = vi.hoisted(() => ({
   markConversationAsRead: vi.fn(),
 }));
 
+const conversationModel = vi.hoisted(() => ({
+  findById: vi.fn(),
+}));
+const conversationParticipantModel = vi.hoisted(() => ({
+  create: vi.fn(),
+  isConversationParticipant: vi.fn(),
+  canSendMessageToConversation: vi.fn(),
+  findActiveIdsByConversationId: vi.fn(),
+  markConversationAsReadByUserId: vi.fn(),
+}));
+const conversationMessageModel = vi.hoisted(() => ({
+  create: vi.fn(),
+  findByConversationId: vi.fn(),
+}));
+const socketProvider = vi.hoisted(() => ({
+  emitToConversation: vi.fn(),
+  emitToAdmins: vi.fn(),
+  emitToUser: vi.fn(),
+}));
+const dbPool = vi.hoisted(() => ({
+  connect: vi.fn(),
+}));
+
 vi.mock('../src/services/conversation.service.js', () => conversationService);
+vi.mock('../src/models/conversation.model.js', () => conversationModel);
+vi.mock(
+  '../src/models/conversation-participant.model.js',
+  () => conversationParticipantModel,
+);
+vi.mock(
+  '../src/models/conversation-message.model.js',
+  () => conversationMessageModel,
+);
+vi.mock('../src/config/db.config.js', () => ({
+  default: dbPool,
+}));
+vi.mock('../src/services/user.service.js', () => ({}));
+vi.mock('../src/providers/socket.provider.js', () => socketProvider);
+vi.mock('../src/providers/storage.provider.js', () => ({}));
 vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
   ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
@@ -31,6 +69,14 @@ vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
 }));
 
 import app from '../src/app.js';
+
+let actualConversationService;
+
+beforeAll(async () => {
+  actualConversationService = await vi.importActual(
+    '../src/services/conversation.service.js',
+  );
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -100,6 +146,47 @@ describe('Conversation API', () => {
     );
   });
 
+  it('allows administrators to read a dispute conversation', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+    const conversation = { cid: 8, type: 'dispute' };
+    const participants = [{ uid: 51 }, { uid: 52 }];
+    conversationService.getConversation.mockResolvedValue({
+      conversation,
+      participants,
+    });
+
+    const response = await request(app).get('/api/conversations/8');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ conversation, participants });
+    expect(conversationService.getConversation).toHaveBeenCalledWith(
+      8,
+      currentUser,
+    );
+  });
+
+  it('allows administrators to read dispute messages', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+    const messages = [{ mid: 9, content: 'Administrative follow-up.' }];
+    const pageInfo = { hasMore: false, nextCursor: null };
+    conversationService.getConversationMessages.mockResolvedValue({
+      messages,
+      pageInfo,
+    });
+
+    const response = await request(app)
+      .get('/api/conversations/8/messages')
+      .query({ limit: 20 });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ messages, pageInfo });
+    expect(conversationService.getConversationMessages).toHaveBeenCalledWith(
+      8,
+      currentUser,
+      { cursor: undefined, limit: 20 },
+    );
+  });
+
   it('gets the messages visible to a participant', async () => {
     const messages = [{ id: 1, content: 'Hello' }];
     const pageInfo = { hasMore: true, nextCursor: 80 };
@@ -121,13 +208,13 @@ describe('Conversation API', () => {
     );
   });
 
-  it('rejects incomplete conversation pagination', async () => {
+  it('rejects conversation pagination without a limit', async () => {
     const response = await request(app)
       .get('/api/conversations')
       .query({ page: 2 });
 
     expect(response.status).toBe(400);
-    expect(response.body.errors.page).toBeDefined();
+    expect(response.body.errors.limit).toBeDefined();
     expect(conversationService.getMyConversations).not.toHaveBeenCalled();
   });
 
@@ -198,8 +285,123 @@ describe('Conversation API', () => {
     expect(response.body).toEqual({ unreadCount: 0 });
     expect(conversationService.markConversationAsRead).toHaveBeenCalledWith(
       4,
-      currentUser.uid,
+      currentUser,
     );
+  });
+
+  it('lets an administrator acknowledge a dispute preview', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+    conversationService.markConversationAsRead.mockResolvedValue(0);
+
+    const response = await request(app).patch('/api/conversations/8/read');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ unreadCount: 0 });
+    expect(conversationService.markConversationAsRead).toHaveBeenCalledWith(
+      8,
+      currentUser,
+    );
+  });
+
+  it('lets an administrator preview dispute messages without joining first', async () => {
+    conversationModel.findById.mockResolvedValue({ cid: 8, type: 'dispute' });
+    conversationParticipantModel.isConversationParticipant.mockResolvedValue(
+      false,
+    );
+    conversationMessageModel.findByConversationId.mockResolvedValue({
+      messages: [],
+      pageInfo: { hasMore: false, nextCursor: null },
+    });
+
+    await actualConversationService.getConversationMessages(
+      8,
+      { uid: 99, role: USER_ROLE.ADMIN.ID },
+      {},
+    );
+
+    expect(conversationMessageModel.findByConversationId).toHaveBeenCalledWith(
+      8,
+      99,
+      true,
+      { cursor: undefined, limit: 50 },
+    );
+  });
+
+  it('lets an administrator send the first message in a dispute', async () => {
+    const client = {
+      query: vi.fn().mockResolvedValue({}),
+      release: vi.fn(),
+    };
+    currentUser.role = USER_ROLE.ADMIN.ID;
+    dbPool.connect.mockResolvedValue(client);
+    conversationModel.findById.mockResolvedValue({
+      cid: 8,
+      type: 'dispute',
+      closed_at: null,
+    });
+    conversationParticipantModel.isConversationParticipant.mockResolvedValue(
+      false,
+    );
+    conversationParticipantModel.create.mockResolvedValue({});
+    conversationParticipantModel.canSendMessageToConversation.mockResolvedValue(
+      true,
+    );
+    conversationParticipantModel.findActiveIdsByConversationId.mockResolvedValue(
+      [51],
+    );
+    conversationMessageModel.create.mockResolvedValue({
+      mid: 10,
+      conversation_type: 'dispute',
+      report_id: 7,
+    });
+
+    await actualConversationService.sendMessage({
+      cid: 8,
+      sender: { uid: 99, role: USER_ROLE.ADMIN.ID },
+      content: 'Administrative response.',
+    });
+
+    expect(conversationParticipantModel.create).toHaveBeenCalledWith(
+      8,
+      99,
+      client,
+    );
+    expect(conversationMessageModel.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: 8,
+        senderId: 99,
+        content: 'Administrative response.',
+      }),
+      client,
+    );
+  });
+
+  it('accepts read acknowledgement for an administrator dispute preview', async () => {
+    conversationModel.findById.mockResolvedValue({ cid: 8, type: 'dispute' });
+    conversationParticipantModel.isConversationParticipant.mockResolvedValue(
+      false,
+    );
+
+    await expect(
+      actualConversationService.markConversationAsRead(8, {
+        uid: 99,
+        role: USER_ROLE.ADMIN.ID,
+      }),
+    ).resolves.toBe(0);
+    expect(
+      conversationParticipantModel.markConversationAsReadByUserId,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('does not let an administrator preview a regular conversation', async () => {
+    conversationModel.findById.mockResolvedValue({ cid: 8, type: 'private' });
+
+    await expect(
+      actualConversationService.markConversationAsRead(8, {
+        uid: 99,
+        role: USER_ROLE.ADMIN.ID,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   it('rejects invalid conversation identifiers before service execution', async () => {

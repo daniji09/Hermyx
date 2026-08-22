@@ -56,7 +56,7 @@ export const markConversationAsRead = async (req, res, next) => {
   try {
     const unreadCount = await conversationService.markConversationAsRead(
       req.params.cid,
-      req.user.uid,
+      req.user,
     );
     return res.status(200).json({ unreadCount });
   } catch (error) {

@@ -220,6 +220,27 @@ export const updateStatusByMidAndAdventurer = async (
   return result.rows[0] || null;
 };
 
+// Restores a submitted participation when its acceptance failed before payment
+export const restoreSubmittedAfterFailedAcceptance = async (
+  mid,
+  adventurerId,
+  client = pool,
+) => {
+  const query = `
+    UPDATE mission_participation
+    SET status = $3
+    WHERE mid = $1 AND adventurer_id = $2 AND status = $4
+    RETURNING *
+  `;
+  const result = await client.query(query, [
+    mid,
+    adventurerId,
+    MISSION_PARTICIPATION_STATUS.SUBMITTED.ID,
+    MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
+  ]);
+  return result.rows[0] || null;
+};
+
 // Update payment status by id
 export const updatePaymentStatusById = async (id, status, client = pool) => {
   const query = `UPDATE mission_participation SET payment_status = $2 WHERE id = $1`;

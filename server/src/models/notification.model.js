@@ -145,6 +145,31 @@ export const findByActionStatusSenderAndMission = async (
   return result.rows;
 };
 
+// Find by action status, recipient id and mission id
+export const findByActionStatusRecipientAndMission = async (
+  action,
+  status,
+  associated_mission_id,
+  recipient_id,
+  client = pool,
+) => {
+  const query = `
+    SELECT *
+    FROM notification
+    WHERE action = $1
+      AND status = $2
+      AND payload->>'associated_mission_id' = $3::text
+      AND recipient_id = $4
+  `;
+  const result = await client.query(query, [
+    action,
+    status,
+    associated_mission_id,
+    recipient_id,
+  ]);
+  return result.rows;
+};
+
 // Finds all expired participation reviews: participations that have been send more than 7 days ago and haven't been responded
 export const findExpiredParticipationReviews = async () => {
   const query = `

@@ -89,7 +89,19 @@ describe('Dispute API', () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ dispute });
-    expect(disputeService.getDispute).toHaveBeenCalledWith(7, currentUser.uid);
+    expect(disputeService.getDispute).toHaveBeenCalledWith(7, currentUser);
+  });
+
+  it('allows an administrator to get a dispute without participating', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+    const dispute = { rid: 7, conversation_id: 20 };
+    disputeService.getDispute.mockResolvedValue(dispute);
+
+    const response = await request(app).get('/api/disputes/7');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ dispute });
+    expect(disputeService.getDispute).toHaveBeenCalledWith(7, currentUser);
   });
 
   it('rejects incomplete dispute pagination', async () => {
@@ -120,6 +132,6 @@ describe('Dispute API', () => {
 
     expect(response.status).toBe(status);
     expect(response.body.errors.general).toEqual([message]);
-    expect(disputeService.getDispute).toHaveBeenCalledWith(7, currentUser.uid);
+    expect(disputeService.getDispute).toHaveBeenCalledWith(7, currentUser);
   });
 });

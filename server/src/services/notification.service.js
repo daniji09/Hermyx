@@ -13,7 +13,11 @@ import {
   TRANSACTION_TYPE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { AppError, checkRequired } from '../utils/error.util.js';
+import {
+  AppError,
+  checkRequired,
+  isUniqueConstraintError,
+} from '../utils/error.util.js';
 import {
   buildPagination,
   withDefaultPagination,
@@ -29,7 +33,18 @@ import * as socketProvider from '../providers/socket.provider.js';
 /// Model access functions
 export const createNotification = async (notificationData, client) => {
   checkRequired(notificationData, 'Notification data');
-  return await notificationModel.create(notificationData, client);
+  try {
+    return await notificationModel.create(notificationData, client);
+  } catch (error) {
+    if (isUniqueConstraintError(error, 'unique_pending_join_notification')) {
+      const message =
+        notificationData.action === NOTIFICATION_ACTION.JOIN_REQUEST.ID
+          ? messages.MISSION.JOIN.REQUEST_ALREADY_SENT
+          : messages.MISSION.INVITE.INVITATION_ALREADY_SENT;
+      throw new AppError(message, 409);
+    }
+    throw error;
+  }
 };
 
 // Get notification by nid
@@ -403,17 +418,17 @@ const acceptParticipationReview = async ({
       MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
     );
 
-    // Creates participation transfer on Stripe outside of database transaction but in its own try
+    // Creates participation transfer on Stripe outside of database transaction
     const transfer = await createParticipationTransfer(
       mission.mid,
       participation,
       adventurer,
     );
+
     // Accept a participation needs a database transaction
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      // Completes participation approval
       await completeParticipationApproval({
         mission,
         participation,
@@ -430,7 +445,6 @@ const acceptParticipationReview = async ({
       );
 
       // If everything is ok, marks participation as released
-      // Updates participation status to accepted
       await missionService.updateParticipationStatusByMidAndAdventurer(
         mission.mid,
         adventurer.uid,
@@ -441,7 +455,7 @@ const acceptParticipationReview = async ({
       successfulPayment = true;
     } catch (dbError) {
       await client.query('ROLLBACK');
-      // If db fails but transfer was correct, a log should be created to fix that inconsistency as soon as possible
+      // If db fails but transfer was correct, log the inconsistency for recovery.
       console.error(
         `FATAL DB ERROR: Transfer ${transfer.id} sent to ${adventurer.uid} after participation accepted but DB failed`,
         dbError,
@@ -450,14 +464,31 @@ const acceptParticipationReview = async ({
       client.release();
     }
   } catch (stripeError) {
-    // If a Stripe payment fails error should be saved in a log to fix it as soon as possible
+    // Stripe did not move money, so participation can safely be retried.
+    try {
+      const restoredParticipation =
+        await missionService.restoreParticipationAfterFailedAcceptance(
+          mission.mid,
+          adventurer.uid,
+        );
+      if (!restoredParticipation)
+        console.error(
+          `FATAL DB ERROR: Participation ${participation.id} could not be restored after its payout failed`,
+        );
+    } catch (restoreError) {
+      console.error(
+        `FATAL DB ERROR: Participation ${participation.id} could not be restored after its payout failed`,
+        restoreError,
+      );
+    }
     console.error(
       `Stripe Error when paying out vacancy ${participation.id} due to participation accepted:`,
       stripeError.message,
     );
+    throw stripeError;
   }
 
-  // Notification is created outside the main transaction, because it always has to been send, even if monetary transaction fails
+  // Notification is created outside the main transaction, even if payment failed.
   const approvedMessage = isAutomatic
     ? messages.NOTIFICATION.ACCEPT_PARTICIPATION.AUTOMATIC(mission.title)
     : successfulPayment
@@ -820,23 +851,46 @@ const createJoinResolutionNotifications = async (
   client,
 ) => {
   const vacancyId = notification.payload.associated_vacancy_id;
-  const [vacancyNotifications, adventurerNotifications] = await Promise.all([
+  const pendingStatus = NOTIFICATION_STATUS.PENDING.ID;
+  const joinRequestAction = NOTIFICATION_ACTION.JOIN_REQUEST.ID;
+  const missionInviteAction = NOTIFICATION_ACTION.MISSION_INVITE.ID;
+  const [vacancyJoinRequests, vacancyInvitations] = await Promise.all([
     notificationModel.findByActionStatusAndMissionParticipationId(
-      NOTIFICATION_ACTION.JOIN_REQUEST.ID,
-      NOTIFICATION_STATUS.PENDING.ID,
+      joinRequestAction,
+      pendingStatus,
       vacancyId,
       client,
     ),
-    notificationModel.findByActionStatusSenderAndMission(
-      NOTIFICATION_ACTION.JOIN_REQUEST.ID,
-      NOTIFICATION_STATUS.PENDING.ID,
-      mission.mid,
-      notification.sender_id,
+    notificationModel.findByActionStatusAndMissionParticipationId(
+      missionInviteAction,
+      pendingStatus,
+      vacancyId,
       client,
     ),
   ]);
+
+  const adventurerNotifications =
+    notification.action === missionInviteAction
+      ? await notificationModel.findByActionStatusRecipientAndMission(
+          missionInviteAction,
+          pendingStatus,
+          mission.mid,
+          notification.recipient_id,
+          client,
+        )
+      : await notificationModel.findByActionStatusSenderAndMission(
+          joinRequestAction,
+          pendingStatus,
+          mission.mid,
+          notification.sender_id,
+          client,
+        );
   const events = [];
-  const notifications = [...vacancyNotifications, ...adventurerNotifications];
+  const notifications = [
+    ...vacancyJoinRequests,
+    ...vacancyInvitations,
+    ...adventurerNotifications,
+  ];
   const uniqueNotifications = [
     ...new Map(notifications.map((item) => [item.nid, item])).values(),
   ].filter((item) => item.nid !== notification.nid);

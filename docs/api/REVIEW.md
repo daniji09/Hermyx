@@ -17,9 +17,9 @@ Gets all reviews that user has received.
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -48,7 +48,8 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   ```
   <br>
 
-**Workflow:** user's received reviews are searched, with pagination used by default, although it is optional.
+**Workflow:** user's received reviews are always returned with pagination;
+both `page` and `limit` are required.
 <br>
 <br>
 <br>

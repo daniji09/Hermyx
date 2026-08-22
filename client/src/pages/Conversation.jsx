@@ -154,7 +154,7 @@ export const ConversationThread = ({
 }) => {
   const { conversationId: routeConversationId } = useParams();
   const conversationId = providedConversationId || routeConversationId;
-  const { currentUser, socket } = useContext(AuthContext);
+  const { currentUser, isAdmin, socket } = useContext(AuthContext);
   const [content, setContent] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [liveMessages, setLiveMessages] = useState([]);
@@ -179,6 +179,7 @@ export const ConversationThread = ({
   const conversation = conversationData?.conversation;
   const isMissionConversation = conversation?.type === 'mission';
   const isDisputeConversation = conversation?.type === 'dispute';
+  const canPreviewDispute = isAdmin && isDisputeConversation;
   const isHistoryOnly = Boolean(currentParticipant?.history_until);
   const isHistoryView = isHistoryOnly || Boolean(conversation?.closed_at);
   const conversationTitle =
@@ -187,7 +188,8 @@ export const ConversationThread = ({
       ? conversation?.mission_title
       : otherParticipant?.username);
   const canSendMessages =
-    !conversation?.closed_at && currentParticipant?.can_send !== false;
+    !conversation?.closed_at &&
+    (canPreviewDispute || currentParticipant?.can_send === true);
   const backTo = isDisputeConversation ? '/disputes' : '/conversations';
 
   const {
@@ -240,7 +242,12 @@ export const ConversationThread = ({
   }, [selectedPhotoPreview]);
 
   useEffect(() => {
-    if (!conversationData || !conversationId || !currentParticipant) return;
+    if (
+      !conversationData ||
+      !conversationId ||
+      (!currentParticipant && !canPreviewDispute)
+    )
+      return;
 
     const markCurrentConversationAsRead = async () => {
       try {
@@ -259,7 +266,13 @@ export const ConversationThread = ({
     };
 
     markCurrentConversationAsRead();
-  }, [conversationData, conversationId, currentParticipant, queryClient]);
+  }, [
+    canPreviewDispute,
+    conversationData,
+    conversationId,
+    currentParticipant,
+    queryClient,
+  ]);
 
   useEffect(() => {
     if (!socket || !conversationId || !canSendMessages) return;
