@@ -16,7 +16,7 @@ export const Dispute = () => {
     isLoading,
     isError,
   } = useQuery(getDisputeQueryOptions(id));
-  console.log(dispute);
+
   const title =
     dispute?.type === REPORT_TYPE.REPORT_ADVENTURER.ID ? (
       <p className='text-sm'>

@@ -45,7 +45,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { StripeManagement } from '../components/custom/StripeManagement';
 import { useAlert } from '../contexts/AlertContext';
 import { deleteUser } from '../services/UsersServices';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { messages } from '../messages/messages';
 import { Map } from '../components/custom/Map';
 import { getImageUrl } from '../utils/media';
@@ -331,7 +331,7 @@ const ProfileReviews = ({
             Reviews are hidden while your mission history is private.
           </p>
         ) : isLoading ? (
-          <p className='text-muted-foreground'>Loading reviews</p>
+          <p className='text-muted-foreground'>Loading reviews...</p>
         ) : reviews.length === 0 ? (
           <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
             No reviews yet.
@@ -370,11 +370,16 @@ const ProfileReviews = ({
   );
 };
 
-const ReviewCard = ({ review, isClamped = false }) => (
+export const ReviewCard = ({ review, isClamped = false }) => (
   <article className='rounded-lg border bg-card p-4 shadow-sm min-w-0 flex-1'>
     <div className='mb-1 flex flex-wrap items-center justify-between gap-2'>
       <span className='text-lg truncate min-w-0 flex-1 me-4'>
-        {review.mission_title}
+        <Link
+          to={`/missions/${review.mission_id}`}
+          className='hover:underline-offset-2 hover:underline transition-colors'
+        >
+          {review.mission_title}
+        </Link>
       </span>
       <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
         <Star
@@ -397,7 +402,13 @@ const ReviewCard = ({ review, isClamped = false }) => (
     <div className='mt-2 flex flex-wrap items-center justify-between gap-2'>
       <p className='text-xs text-muted-foreground'>
         By {review.reviewed_role === 'owner' ? 'adventurer' : 'applicant'}{' '}
-        {review.owner_username}.
+        <Link
+          to={`/users/${review.owner_username}`}
+          className='font-medium hover:underline-offset-2 hover:underline hover:text-primary transition-colors'
+        >
+          {review.owner_username}
+        </Link>
+        .
       </p>
       <span className='text-xs text-muted-foreground'>
         {new Date(review.created_at).toLocaleDateString()}
@@ -426,7 +437,7 @@ const AllReviewsDialog = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className='sm:max-w-xl flex flex-col gap-0 p-0 max-h-[80vh] sm:p-3 overflow-hidden'>
+      <DialogContent className='sm:max-w-xl flex flex-col gap-0 max-h-[80vh] p-3 overflow-hidden'>
         <DialogHeader className='px-6 py-4 border-b shrink-0'>
           <DialogTitle>All Reviews</DialogTitle>
           <DialogDescription>
@@ -582,7 +593,7 @@ const ProfileInformation = ({ data }) => {
                 isEditing ? form.username : profileForm.username,
                 isEditing,
               )}
-              maxLength={consts.USERNAME_MAX_LENGTH}
+              maxLength={consts.USER.USERNAME.MAX_LENGTH}
               disabled={!isEditing || isPending}
               invalid={!!errors.username}
               error={errors.username?.[0]}
@@ -596,7 +607,7 @@ const ProfileInformation = ({ data }) => {
                   isEditing ? form.name : profileForm.name,
                   isEditing,
                 )}
-                maxLength={consts.NAME_MAX_LENGTH}
+                maxLength={consts.USER.NAME.MAX_LENGTH}
                 disabled={!isEditing || isPending}
                 invalid={!!errors.name}
                 error={errors.name?.[0]}
@@ -610,7 +621,7 @@ const ProfileInformation = ({ data }) => {
                 isEditing ? form.surnames : profileForm.surnames,
                 isEditing,
               )}
-              maxLength={consts.SURNAMES_MAX_LENGTH}
+              maxLength={consts.USER.SURNAMES.MAX_LENGTH}
               disabled={!isEditing || isPending}
               invalid={!!errors.surnames}
               error={errors.surnames?.[0]}
@@ -625,7 +636,7 @@ const ProfileInformation = ({ data }) => {
                   isEditing ? form.description : profileForm.description,
                   isEditing,
                 )}
-                maxLength={consts.DESCRIPTION_MAX_LENGTH}
+                maxLength={consts.USER.DESCRIPTION.MAX_LENGTH}
                 disabled={!isEditing || isPending}
                 invalid={!!errors.description}
                 error={errors.description?.[0]}
@@ -844,7 +855,7 @@ const AddEmailAuthenticationButton = ({ hasPasswordProvider }) => {
           id='addEmailAuthenticationForm'
           noValidate
         >
-          <DialogHeader>
+          <DialogHeader className='border-b pb-3'>
             <DialogTitle>
               {messages.MY_PROFILE.ADD_EMAIL_AUTHENTICATION_DIALOG.TITLE}
             </DialogTitle>
@@ -1029,7 +1040,7 @@ const UpdateEmailButton = ({ currentEmail, hasPasswordProvider }) => {
 
       <DialogContent className='sm:max-w-sm'>
         <form action={updateEmailFormAction} id='updateEmailForm' noValidate>
-          <DialogHeader>
+          <DialogHeader className='border-b pb-3'>
             <DialogTitle>
               {messages.MY_PROFILE.CHANGE_EMAIL_DIALOG.TITLE}
             </DialogTitle>
@@ -1179,7 +1190,7 @@ const UpdatePasswordButton = ({ hasPasswordProvider }) => {
           id='updatePasswordForm'
           noValidate
         >
-          <DialogHeader>
+          <DialogHeader className='border-b pb-3'>
             <DialogTitle>
               {messages.MY_PROFILE.CHANGE_PASSWORD_DIALOG.TITLE}
             </DialogTitle>

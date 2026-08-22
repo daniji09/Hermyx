@@ -277,8 +277,8 @@ export const StripeManagement = ({ user }) => {
                     <div className='flex items-center justify-end me-3 mt-2'>
                       <Info className='w-4 h-4 mr-1' aria-hidden='true' />
                       <small>
-                        Only showing last 3 cards, click &quot;See all&quot; to
-                        view them all!
+                        Only showing 3 of your cards, click &quot;See all&quot;
+                        to view them all!
                       </small>
                     </div>
                   </div>
@@ -387,7 +387,7 @@ const AllCardsDialog = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className='sm:max-w-xl flex flex-col gap-0 p-0 max-h-[80vh] sm:p-3 overflow-hidden'>
+      <DialogContent className='sm:max-w-xl flex flex-col gap-0 max-h-[80vh] p-3 overflow-hidden'>
         <DialogHeader className='px-6 py-4 border-b shrink-0'>
           <DialogTitle>All payment cards</DialogTitle>
           <DialogDescription>
@@ -445,7 +445,7 @@ const PaymentCardRow = ({
         </div>
       </div>
 
-      <div className='flex gap-2 shrink-0'>
+      <div className='flex flex-col gap-y-2 sm:gap-2 sm:gap-y-0 sm:flex-row sm:items-center justify-between '>
         <Button
           type='button'
           variant='outline'

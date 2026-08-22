@@ -6,7 +6,7 @@ import { ProtectedRoute } from './components/custom/routes/ProtectedRoute';
 import { Mission } from './pages/Mission';
 import { NewMission } from './pages/MissionCreate';
 import { Payment } from './pages/Payment';
-import { SearchMission } from './pages/SearchMission';
+import { SearchMission } from './pages/MissionSearch';
 import { UserMissions } from './pages/UserMissions';
 import TestDashboard from './pages/TestDashboard';
 import { Navbar } from './components/custom/Navbar';
@@ -46,6 +46,7 @@ function App() {
           <Route path='/missions' element={<SearchMission />}></Route>
           <Route path='/users/search' element={<SearchUsers />} />
           <Route path='/users/:username' element={<PublicProfile />} />
+          <Route path='/disputes/:id' element={<Dispute />} />
         </Route>
 
         {/* --- Regular user routes (administrators are read-only) --- */}
@@ -66,7 +67,6 @@ function App() {
             element={<Conversation />}
           />
           <Route path='/conversations' element={<Conversations />} />
-          <Route path='/disputes/:id' element={<Dispute />} />
           <Route path='/disputes' element={<Disputes />} />
         </Route>
 

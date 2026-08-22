@@ -55,6 +55,9 @@ export const messages = {
         `Username ${username} already in use.`,
       COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
     },
+    EMAIL_AUTHENTICATION: {
+      COULD_NOT_ADD: `Couldn't add email authentication.`,
+    },
   },
 
   /// User messages

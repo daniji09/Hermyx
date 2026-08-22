@@ -46,7 +46,7 @@ export const createMissionAction = async (previousState, formData) => {
       throw {
         response: {
           status: 500,
-          data: { message: messages.UNEXPECTED_ERROR },
+          data: { message: messages.GENERAL.UNEXPECTED_ERROR },
         },
       };
     }
@@ -55,7 +55,7 @@ export const createMissionAction = async (previousState, formData) => {
       throw {
         response: {
           status: 500,
-          data: { message: messages.UNEXPECTED_ERROR },
+          data: { message: messages.GENERAL.UNEXPECTED_ERROR },
         },
       };
     }
@@ -81,7 +81,7 @@ export const createMissionAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -164,7 +164,7 @@ export const editMissionAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
