@@ -199,7 +199,12 @@ export const updateStatusByMidAndAdventurer = async (
   const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
     .filter((config) => config.VALID_NEXT_STATES.includes(status))
     .map((config) => config.ID);
-
+  console.log(
+    'Next status:',
+    status,
+    'Allowed previous:',
+    allowedPreviousStates,
+  );
   const query = `
     UPDATE mission_participation
     SET status = $3

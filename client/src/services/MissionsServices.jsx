@@ -53,6 +53,12 @@ export const getMissionsOpened = async (options) => {
   }
 };
 
+// Finds mission payment info by id
+export const getMissionPaymentInfoById = async (id) => {
+  const { data } = await api.get(`/missions/${id}/payment-info`);
+  return data;
+};
+
 // Create a mission in data base
 export const createMission = async (missionData) => {
   // Creates a formData object

@@ -488,6 +488,24 @@ export const getMissionByMid = async (mid, uid) => {
   };
 };
 
+// Get mission payment info by mid
+export const getMissionPaymentInfo = async (mid) => {
+  // Parameter checks
+  checkRequired(mid, 'Mission id');
+
+  // Searches mission by id
+  const [mission, missionPayment] = await Promise.all([
+    missionModel.findByMid(mid),
+    missionParticipationModel.findAllWaitingForPaymentByMid(mid),
+  ]);
+
+  // Returns success or error
+  if (!mission || !missionPayment) throw buildMissionNotFoundError();
+
+  // Mission can be finished if all vacancies are empty or finished
+  return { mission, missionPayment };
+};
+
 // Publish mission
 export const publishMission = async (
   uid,
@@ -594,6 +612,7 @@ export const publishMission = async (
 
 // Close mission
 export const closeMission = async (mid, user) => {
+  console.log('QUE CIERRO QUE CIERRO');
   // Parameter checks
   checkRequired(mid, 'Mission id');
   checkRequired(user, 'Current user');

@@ -51,6 +51,17 @@ export const getMissionByMid = async (req, res, next) => {
   }
 };
 
+// Get mission payment info
+export const getMissionPaymentInfo = async (req, res, next) => {
+  try {
+    const { mid } = req.params;
+    const result = await missionService.getMissionPaymentInfo(mid);
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Publishes mission
 export const publishMission = async (req, res, next) => {
   try {

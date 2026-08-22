@@ -151,7 +151,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'In progress',
     CAN_EDIT: true,
     CAN_INTERACT: true,
-    VALID_NEXT_STATES: ['SUBMITTED'],
+    VALID_NEXT_STATES: ['SUBMITTED', 'PENDING_PAYMENT'],
   },
   SUBMITTED: {
     ID: 'SUBMITTED',

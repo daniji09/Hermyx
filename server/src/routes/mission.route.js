@@ -32,6 +32,7 @@ import {
   getOpenedMissionsQuerySchema,
   inviteToMissionParamSchema,
   inviteToMissionBodySchema,
+  getMissionPaymentInfoSchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import {
@@ -63,6 +64,13 @@ router.get(
   '/:mid',
   validateParamsSchema(getMissionSchema),
   missionController.getMissionByMid,
+);
+
+// Get mission's payment information
+router.get(
+  '/:mid/payment-info',
+  validateParamsSchema(getMissionPaymentInfoSchema),
+  missionController.getMissionPaymentInfo,
 );
 
 /// POST
