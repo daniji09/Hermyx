@@ -134,7 +134,7 @@ describe('Mission API', () => {
   it('rejects an inverted payment range', async () => {
     const response = await request(app)
       .get('/api/missions/opened')
-      .query({ minPayment: 100, maxPayment: 10 });
+      .query({ minPayment: 100, maxPayment: 10, page: 1, limit: 10 });
 
     expect(response.status).toBe(400);
     expect(missionService.getOpenedMissions).not.toHaveBeenCalled();

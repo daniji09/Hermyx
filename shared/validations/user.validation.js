@@ -3,7 +3,6 @@ import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
 import * as paginationValidation from './pagination.validation.js';
-import * as helperValidation from './helper.validation.js';
 import * as missionValidation from './mission.validation.js';
 
 /// Base validations, raw logic
@@ -137,13 +136,7 @@ export const searchUsersByUsernameQueryBaseSchema = z.object({
   limit: paginationValidation.limitBaseSchema,
 });
 
-export const searchUsersByUsernameQuerySchema =
-  helperValidation.requireBothOrNeither(
-    searchUsersByUsernameQueryBaseSchema,
-    'page',
-    'limit',
-    messages.GENERAL.INCOMPLETE_PAGINATION,
-  );
+export const searchUsersByUsernameQuerySchema = searchUsersByUsernameQueryBaseSchema;
 
 // Get missions from user
 export const getUserMissionsParamSchema = z.object({
@@ -156,12 +149,7 @@ export const getUserMissionsBaseQuerySchema = z.object({
   limit: paginationValidation.limitBaseSchema,
 });
 
-export const getUserMissionsQuerySchema = helperValidation.requireBothOrNeither(
-  getUserMissionsBaseQuerySchema,
-  'page',
-  'limit',
-  messages.GENERAL.INCOMPLETE_PAGINATION,
-);
+export const getUserMissionsQuerySchema = getUserMissionsBaseQuerySchema;
 
 // Get user public profile
 export const getUserPublicProfileParamSchema = z.object({
@@ -176,12 +164,7 @@ export const getUserPublicProfileMissionsBaseQuerySchema = z.object({
 });
 
 export const getUserPublicProfileMissionsQuerySchema =
-  helperValidation.requireBothOrNeither(
-    getUserPublicProfileMissionsBaseQuerySchema,
-    'page',
-    'limit',
-    messages.GENERAL.INCOMPLETE_PAGINATION,
-  );
+  getUserPublicProfileMissionsBaseQuerySchema;
 
 // Update current users profile
 export const updateMyProfileSchema = z.object({

@@ -12,9 +12,9 @@ Gets all current user's disputes from Hermyx.
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -43,7 +43,8 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   ```
   <br>
 
-**Workflow:** application disputes with pagination used by default. (TODO: pagination)
+**Workflow:** application disputes are always returned with pagination. The
+client must provide both `page` and `limit`.
 <br>
 <br>
 

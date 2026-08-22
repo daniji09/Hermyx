@@ -16,9 +16,9 @@ workflow.
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -47,7 +47,9 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   ```
   <br>
 
-**Workflow:** application conversations with pagination used by default. (TODO: pagination)
+**Workflow:** application conversations are always returned with pagination. The
+client must provide both `page` and `limit`, and the response includes the
+pagination metadata.
 <br>
 <br>
 
@@ -81,6 +83,13 @@ Gets conversation by its id
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `cid` | integer | Yes | Conversation identifier. |
+<br>
+
+**Query parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `cursor` | integer | No | Message identifier used to fetch the next page. Omit it for the first page. |
+| `limit` | integer | Yes | Maximum number of messages to return. |
 <br>
 
 **Responses:**
@@ -150,7 +159,11 @@ Gets conversation's messages by its id
 
   ```json
   {
-    "messages": "<messages>"
+    "messages": ["<messages>"],
+    "pageInfo": {
+      "hasMore": "<hasMore>",
+      "nextCursor": "<nextCursor>"
+    }
   }
   ```
 
@@ -186,7 +199,9 @@ Gets conversation's messages by its id
   ```
   <br>
 
-**Workflow:** gets application conversation's messages (TODO: paginación especial).
+**Workflow:** conversation messages use cursor pagination. `limit` is always
+required; `cursor` is omitted for the first page and then set to the returned
+`nextCursor` value.
 <br>
 <br>
 

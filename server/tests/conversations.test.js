@@ -174,14 +174,16 @@ describe('Conversation API', () => {
       pageInfo,
     });
 
-    const response = await request(app).get('/api/conversations/8/messages');
+    const response = await request(app)
+      .get('/api/conversations/8/messages')
+      .query({ limit: 20 });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ messages, pageInfo });
     expect(conversationService.getConversationMessages).toHaveBeenCalledWith(
       8,
       currentUser,
-      { cursor: undefined, limit: undefined },
+      { cursor: undefined, limit: 20 },
     );
   });
 
@@ -206,13 +208,13 @@ describe('Conversation API', () => {
     );
   });
 
-  it('rejects incomplete conversation pagination', async () => {
+  it('rejects conversation pagination without a limit', async () => {
     const response = await request(app)
       .get('/api/conversations')
       .query({ page: 2 });
 
     expect(response.status).toBe(400);
-    expect(response.body.errors.page).toBeDefined();
+    expect(response.body.errors.limit).toBeDefined();
     expect(conversationService.getMyConversations).not.toHaveBeenCalled();
   });
 

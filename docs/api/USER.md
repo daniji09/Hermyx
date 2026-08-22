@@ -13,9 +13,9 @@ Searches Hermyx users by username partial matches.
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `username` | string | Yes | Username to search. |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -44,7 +44,11 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   ```
   <br>
 
-**Workflow:** application users are searched by their username, with pagination used by default, although it is optional. The database search is performed using the PostgreSQL `unaccent` extension, which removes accents and diacritics from a text string, transforming them into their base equivalent, so that text strings are compared in a way that is insensitive to accents.
+**Workflow:** application users are searched by their username with mandatory
+pagination. The database search is performed using the PostgreSQL `unaccent`
+extension, which removes accents and diacritics from a text string, transforming
+them into their base equivalent, so that text strings are compared in a way
+that is insensitive to accents.
 <br>
 <br>
 <br>
@@ -115,9 +119,9 @@ Searches missions from the user specified, either joined or published.
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `type` | string | Yes | Type of mission to search: joined or published. |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -148,7 +152,9 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
   <br>
 
-**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query param. Pagination is used by default, although it is optional.
+**Workflow:** user missions are searched by their uid, being the joined or
+published ones which is decided by the type query param. Both `page` and
+`limit` are required.
 <br>
 <br>
 <br>
@@ -223,9 +229,9 @@ Searches missions from the user specified by username, either joined or publishe
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `type` | string | Yes | Type of mission to search: joined or published. |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -256,7 +262,11 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
 
   <br>
 
-**Workflow:** user missions are searched by their uid, being the joined or published ones which is decided by the type query param. Pagination is used by default, although it is optional. This endpoints exists due to the different information needed from the missions, compared to the endpoint that retrieves the missions of a user by their username (used for the current user).
+**Workflow:** user missions are searched by their uid, being the joined or
+published ones which is decided by the type query param. Both `page` and
+`limit` are required. This endpoint exists due to the different information
+needed from the missions, compared to the endpoint that retrieves the missions
+of a user by their username (used for the current user).
 <br>
 <br>
 <br>
