@@ -30,7 +30,9 @@ export const UserSearchContainer = ({
 
       <UsersSearchError isError={isError}>{isErrorMessage}</UsersSearchError>
 
-      <NoUsersSearch users={users}>{noUsersMessage}</NoUsersSearch>
+      <NoUsersSearch users={users} isLoading={isLoading}>
+        {noUsersMessage}
+      </NoUsersSearch>
 
       <UserSearchContent
         users={users}
@@ -69,10 +71,10 @@ const UsersSearchError = ({ isError, children }) => {
   );
 };
 
-const NoUsersSearch = ({ users, children }) => {
+const NoUsersSearch = ({ users, children, isLoading }) => {
   return (
     <>
-      {users?.length === 0 && (
+      {!isLoading && users?.length === 0 && (
         <div
           role='status'
           aria-live='polite'
