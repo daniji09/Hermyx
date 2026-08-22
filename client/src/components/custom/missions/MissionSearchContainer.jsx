@@ -25,9 +25,10 @@ export const MissionSearchContainer = ({
   isError,
   isErrorMessage = messages.SEARCH_MISSIONS.ERROR,
   noMissionsMessage = messages.SEARCH_MISSIONS.NO_MISSIONS,
+  sectionClassName = 'w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16',
 }) => {
   return (
-    <section className='w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16'>
+    <section className={sectionClassName}>
       <MissionsSearchLoading isLoading={isLoading}>
         {isLoadingMessage}
       </MissionsSearchLoading>
@@ -36,7 +37,7 @@ export const MissionSearchContainer = ({
         {isErrorMessage}
       </MissionsSearchError>
 
-      <NoMissionsSearch missions={missions}>
+      <NoMissionsSearch missions={missions} isLoading={isLoading}>
         {noMissionsMessage}
       </NoMissionsSearch>
 
@@ -77,10 +78,10 @@ const MissionsSearchError = ({ isError, children }) => {
   );
 };
 
-const NoMissionsSearch = ({ missions, children }) => {
+const NoMissionsSearch = ({ missions, isLoading, children }) => {
   return (
     <>
-      {missions?.length === 0 && (
+      {!isLoading && missions?.length === 0 && (
         <div
           role='status'
           aria-live='polite'
@@ -186,7 +187,7 @@ const MissionSearchCard = ({ mission }) => {
           </CardHeader>
 
           <CardContent className='flex flex-1 flex-col -mt-2'>
-            <div className='mb-5 break-all line-clamp-3'>
+            <div className='mb-5 wrap-break-words wrap-anywhere line-clamp-3'>
               {mission.description}
             </div>
             <div className='mt-auto flex items-center justify-between gap-6'>

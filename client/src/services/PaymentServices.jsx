@@ -5,7 +5,7 @@ export const saveNewCard = async (id) => {
   const { data } = await api.post(`/stripe/missions/${id.trim()}/pay/new`, {
     saveCard: true,
   });
-
+  console.log(data);
   return data;
 };
 

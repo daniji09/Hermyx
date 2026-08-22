@@ -3,9 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, MessageSquareWarning, Star, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
-import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { AuthContext } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/media';
 import {
@@ -31,6 +29,7 @@ import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 import { ReviewCard } from './MyProfile.jsx';
+import { UserMissionsTable } from './UserMissions.jsx';
 
 export const PublicProfile = () => {
   const { username } = useParams();
@@ -146,12 +145,12 @@ export const PublicProfile = () => {
   return (
     <main className='container mx-auto max-w-5xl p-4 sm:p-6'>
       <section className='mb-8 gap-6 border-b pb-8 flex-row items-center'>
-        <div className='flex gap-6 pb-8 flex-row items-center'>
+        <div className='flex flex-col gap-6 pb-8 sm:flex-row sm:items-center'>
           <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
             {user.avatar ? (
               <img
                 src={getImageUrl(user.avatar)}
-                alt={`${user.username} avatar`}
+                alt=''
                 className='h-full w-full object-cover'
               />
             ) : (
@@ -160,11 +159,11 @@ export const PublicProfile = () => {
           </div>
 
           <div className='min-w-0 flex-1'>
-            <h1 className='break-all text-3xl font-bold tracking-tight sm:text-4xl'>
+            <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
               {displayName || user.username}
             </h1>
 
-            <p className='break-all mt-1 text-lg text-muted-foreground'>
+            <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
               @{user.username}
             </p>
 
@@ -183,18 +182,23 @@ export const PublicProfile = () => {
               <p className='mt-2 text-sm text-destructive'>{messageError}</p>
             )}
 
-            <div className='mt-5 grid w-full grid-cols-2 gap-4'>
+            <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
               <Button
                 type='button'
-                className='w-full gap-2'
+                className='w-full'
                 onClick={() => {
                   setMessageError('');
                   openConversation();
                 }}
                 disabled={isOpeningConversation}
               >
-                <MessageCircle className='h-4 w-4' aria-hidden='true' />
-                {isOpeningConversation ? 'Opening' : 'Message'}
+                <MessageCircle
+                  className='h-4 w-4 mr-1 shrink-0'
+                  aria-hidden='true'
+                />
+                <span className='truncate'>
+                  {isOpeningConversation ? 'Opening...' : 'Message'}
+                </span>
               </Button>
               <ReportUserButton user={user}></ReportUserButton>
             </div>
@@ -202,7 +206,7 @@ export const PublicProfile = () => {
         </div>
         <div>
           {user.description && (
-            <p className=' break-all text-sm leading-6 sm:text-base'>
+            <p className='wrap-break-words wrap-anywhere text-sm leading-6 sm:text-base'>
               {user.description}
             </p>
           )}
@@ -216,41 +220,17 @@ export const PublicProfile = () => {
           This user keeps their mission history private.
         </section>
       ) : (
-        <Tabs
-          defaultValue='published'
-          value={filter}
-          onValueChange={setFilter}
-          className='w-full'
-        >
-          <TabsList className='mb-8 grid w-full max-w-100 grid-cols-2'>
-            <TabsTrigger value='published'>Published</TabsTrigger>
-            <TabsTrigger value='joined'>Joined</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value='published' className='mt-0'>
-            <MissionSearchContainer
-              missions={missions}
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              fetchNextPage={fetchNextPage}
-              isLoading={isMissionsLoading}
-              isError={isMissionsError}
-              noMissionsMessage='This user has not published missions yet.'
-            />
-          </TabsContent>
-
-          <TabsContent value='joined' className='mt-0'>
-            <MissionSearchContainer
-              missions={missions}
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              fetchNextPage={fetchNextPage}
-              isLoading={isMissionsLoading}
-              isError={isMissionsError}
-              noMissionsMessage='This user has not joined missions yet.'
-            />
-          </TabsContent>
-        </Tabs>
+        <UserMissionsTable
+          missions={missions}
+          filter={filter}
+          setFilter={setFilter}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+          isLoading={isMissionsLoading}
+          isError={isMissionsError}
+          sectionClassName={''}
+        ></UserMissionsTable>
       )}
       {user.role !== USER_ROLE.ADMIN.ID && (
         <AdventurerReviewsSection
@@ -285,13 +265,13 @@ const AdventurerReviewsSection = ({
   const reviews = reviewsData?.reviews || [];
 
   return (
-    <section className='mt-10 border-t pt-8'>
-      <div className='mb-5 flex items-center justify-between gap-4'>
+    <section className='mt-10 border-t pt-5'>
+      <div className='mb-5 flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4'>
         <h2 className='text-2xl font-bold tracking-tight'>Reviews</h2>
         {!isLoading && (
           <p className='text-sm text-muted-foreground'>
             {Number(reviewsData?.averageRating || 0).toFixed(1)}/5 from{' '}
-            {reviewsData?.totalReviews || 0}
+            {reviewsData?.totalReviews || 0} reviews
           </p>
         )}
       </div>
@@ -390,10 +370,14 @@ const ReportUserButton = ({ user }) => {
           variant='destructive'
           type='button'
           disabled={isPending}
-          className='me-2'
+          className='
+           w-full'
         >
-          <MessageSquareWarning className='w-4 h-4 mr-2' aria-hidden='true' />
-          {'Report user'}
+          <MessageSquareWarning
+            className='w-4 h-4 mr-1 shrink-0'
+            aria-hidden='true'
+          />
+          <span className='truncate'>{'Report user'}</span>
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>

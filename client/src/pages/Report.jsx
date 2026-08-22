@@ -229,7 +229,9 @@ const ReportContent = ({ report }) => {
             </CardAction>
           </CardHeader>
           <CardContent className='flex flex-1 flex-col'>
-            <div className='-mt-2 mb-5 break-all text-xl'>{report.message}</div>
+            <div className='-mt-2 mb-5 wrap-break-words wrap-anywhere text-xl'>
+              {report.message}
+            </div>
 
             <div className='mt-auto flex items-center self-end gap-2'>
               <span className='sr-only'>Status:</span>

@@ -1,6 +1,7 @@
 import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
 import {
   getMissionById,
+  getMissionPaymentInfoById,
   getMissionsOpened,
   getUserMissions,
   inviteToMission,
@@ -53,4 +54,12 @@ export const inviteToMissionMutationOptions = (options) => {
     mutationFn: inviteToMission,
     ...options,
   };
+};
+
+export const getMissionPaymentInfoByIdQueryOptions = (params, options) => {
+  return queryOptions({
+    queryKey: ['getMissionPaymentInfo', params],
+    queryFn: () => getMissionPaymentInfoById(params),
+    ...options,
+  });
 };
