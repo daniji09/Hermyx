@@ -16,7 +16,11 @@ import {
   USER_ROLE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { AppError, checkRequired } from '../utils/error.util.js';
+import {
+  AppError,
+  checkRequired,
+  isUniqueConstraintError,
+} from '../utils/error.util.js';
 import * as conversationService from '../services/conversation.service.js';
 import * as notificationService from '../services/notification.service.js';
 import * as userService from '../services/user.service.js';
@@ -206,12 +210,19 @@ export const updateParticipationAdventurerAndStatus = async (
   checkRequired(id, 'Mission participation id');
   checkRequired(adventurerId, 'Adventurer user id');
   checkRequired(status, 'Mission participation status id');
-  return await missionParticipationModel.updateAdventurerAndStatus(
-    id,
-    adventurerId,
-    status,
-    client,
-  );
+  try {
+    return await missionParticipationModel.updateAdventurerAndStatus(
+      id,
+      adventurerId,
+      status,
+      client,
+    );
+  } catch (error) {
+    if (isUniqueConstraintError(error, 'unique_mission_adventurer')) {
+      throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+    }
+    throw error;
+  }
 };
 
 // Updates occupied vacancies
@@ -585,6 +596,9 @@ export const publishMission = async (
   } catch (error) {
     // Transaction rollbacks
     await client.query('ROLLBACK');
+    if (isUniqueConstraintError(error, 'unique_mission_owner_title')) {
+      throw buildMissionWithSameTitleError();
+    }
     throw error;
   } finally {
     // Either way, connection is always released
@@ -2286,6 +2300,9 @@ const editMissionInternalUpdates = async (
     return { notificationsToSend, updatedMission };
   } catch (error) {
     await client.query('ROLLBACK');
+    if (isUniqueConstraintError(error, 'unique_mission_owner_title')) {
+      throw buildMissionWithSameTitleError();
+    }
     throw error;
   } finally {
     client.release();
@@ -2685,6 +2702,14 @@ const buildTooManyFilesError = () => {
   return new AppError(messages.GENERAL.TOO_MANY_FILES, 400);
 };
 
+const buildMissionWithSameTitleError = () => {
+  return new AppError(
+    messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
+    409,
+    'title',
+  );
+};
+
 /// Helper functions
 const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
   // Checks if user has a mission already with the same title
@@ -2693,12 +2718,7 @@ const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
     title,
     mid,
   );
-  if (hasDuplicate)
-    throw new AppError(
-      messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
-      409,
-      'title',
-    );
+  if (hasDuplicate) throw buildMissionWithSameTitleError();
 };
 
 const checkMissionBelongsToUser = (missionOwnerUid, currentUserUid) => {

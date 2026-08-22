@@ -13,7 +13,11 @@ import {
   TRANSACTION_TYPE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { AppError, checkRequired } from '../utils/error.util.js';
+import {
+  AppError,
+  checkRequired,
+  isUniqueConstraintError,
+} from '../utils/error.util.js';
 import {
   buildPagination,
   withDefaultPagination,
@@ -29,7 +33,18 @@ import * as socketProvider from '../providers/socket.provider.js';
 /// Model access functions
 export const createNotification = async (notificationData, client) => {
   checkRequired(notificationData, 'Notification data');
-  return await notificationModel.create(notificationData, client);
+  try {
+    return await notificationModel.create(notificationData, client);
+  } catch (error) {
+    if (isUniqueConstraintError(error, 'unique_pending_join_notification')) {
+      const message =
+        notificationData.action === NOTIFICATION_ACTION.JOIN_REQUEST.ID
+          ? messages.MISSION.JOIN.REQUEST_ALREADY_SENT
+          : messages.MISSION.INVITE.INVITATION_ALREADY_SENT;
+      throw new AppError(message, 409);
+    }
+    throw error;
+  }
 };
 
 // Get notification by nid

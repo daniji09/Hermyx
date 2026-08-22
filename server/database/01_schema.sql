@@ -37,12 +37,14 @@ CREATE TABLE APP_USER (
 	location geography(Point, 4326),
 	avatar TEXT,
 	configuration JSONB NOT NULL DEFAULT '{"show_missions_to_others": true}'::jsonb,
-	rating NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating >= 0 AND rating <= 5),
+	rating NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating >= 0 AND rating <= 5), -- Cached aggregate for profile reads
 	stripe_customer_id VARCHAR(255),
   	stripe_connected_id VARCHAR(255)
 );
 CREATE UNIQUE INDEX unique_username_lower ON app_user (LOWER(username));
 CREATE UNIQUE INDEX unique_email_lower ON app_user (LOWER(email));
+CREATE UNIQUE INDEX unique_stripe_customer_id ON app_user (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+CREATE UNIQUE INDEX unique_stripe_connected_id ON app_user (stripe_connected_id) WHERE stripe_connected_id IS NOT NULL;
 
 CREATE TABLE PAYMENT_METHOD (
 	payment_method VARCHAR(100) NOT NULL,
@@ -56,10 +58,10 @@ CREATE TABLE MISSION (
 	publication_date TIMESTAMP NOT NULL,
 	title VARCHAR(100) NOT NULL,
 	description VARCHAR(1000) NOT NULL,
-	total_vacancies INT NOT NULL,
-	occupied_vacancies INT NOT NULL,
+	total_vacancies INT NOT NULL CHECK (total_vacancies > 0),
+	occupied_vacancies INT NOT NULL CHECK (occupied_vacancies >= 0 AND occupied_vacancies <= total_vacancies), -- Cached counter
 	location geography(Point, 4326),
-	total_payment NUMERIC NOT NULL,
+	total_payment NUMERIC NOT NULL CHECK (total_payment >= 0), -- Cached sum of vacancy rewards
 	status VARCHAR(30) NOT NULL CHECK (status IN (
 		'OPENED',
 		'CLOSED',
@@ -75,13 +77,18 @@ CREATE TABLE MISSION (
 	owner_id INT NOT NULL,
 	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX unique_mission_owner_title ON mission (owner_id, LOWER(BTRIM(title)));
+CREATE INDEX idx_mission_owner_publication_date ON mission (owner_id, publication_date DESC);
+CREATE INDEX idx_mission_status_publication_date ON mission (status, publication_date DESC);
+CREATE INDEX idx_mission_location ON mission USING GIST (location) WHERE location IS NOT NULL;
 
 CREATE TABLE MISSION_PHOTO (
 	id SERIAL PRIMARY KEY,
 	mid INT NOT NULL,
 	url TEXT NOT NULL,
-	FOREIGN KEY (mid) REFERENCES MISSION(mid)
+	FOREIGN KEY (mid) REFERENCES MISSION(mid) ON DELETE CASCADE
 );
+CREATE INDEX idx_mission_photo_mid ON mission_photo (mid);
 
 CREATE TABLE CONVERSATION (
 	cid SERIAL PRIMARY KEY,
@@ -104,6 +111,7 @@ CREATE TABLE CONVERSATION_PARTICIPANT (
 	FOREIGN KEY (conversation_id) REFERENCES CONVERSATION(cid) ON DELETE CASCADE,
 	FOREIGN KEY (user_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
 );
+CREATE INDEX idx_conversation_participant_user ON conversation_participant (user_id, conversation_id);
 
 CREATE TABLE CONVERSATION_MESSAGE (
 	mid SERIAL PRIMARY KEY,
@@ -120,6 +128,8 @@ CREATE TABLE CONVERSATION_MESSAGE (
 	FOREIGN KEY (conversation_id) REFERENCES CONVERSATION(cid) ON DELETE CASCADE,
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
 );
+CREATE INDEX idx_conversation_message_conversation_mid ON conversation_message (conversation_id, mid DESC);
+CREATE INDEX idx_conversation_message_sender ON conversation_message (sender_id);
 
 CREATE TABLE REVIEW (
 	id SERIAL PRIMARY KEY,
@@ -134,8 +144,8 @@ CREATE TABLE MISSION_PARTICIPATION (
 	adventurer_id INT,
 	title VARCHAR(50),
 	description VARCHAR(500),
-  	monetary_reward NUMERIC NOT NULL,
-	amount_paid NUMERIC NOT NULL,
+	monetary_reward NUMERIC NOT NULL CHECK (monetary_reward >= 0),
+	amount_paid NUMERIC NOT NULL CHECK (amount_paid >= 0), -- Cached amount from the payment ledger
 	payment_status VARCHAR(20) DEFAULT 'UNPAID' CHECK (payment_status IN (
 		'UNPAID', 
 		'PAID', 
@@ -157,11 +167,15 @@ CREATE TABLE MISSION_PARTICIPATION (
 	)),
 	owner_review_id INT UNIQUE,
 	adventurer_review_id INT UNIQUE,
+	UNIQUE (id, mid), -- Supports the payment composite foreign key
 	FOREIGN KEY (mid) REFERENCES MISSION(mid) ON DELETE CASCADE,
 	FOREIGN KEY (adventurer_id) REFERENCES APP_USER(uid) ON DELETE CASCADE,
 	FOREIGN KEY (owner_review_id) REFERENCES REVIEW(id) ON DELETE CASCADE,
 	FOREIGN KEY (adventurer_review_id) REFERENCES REVIEW(id) ON DELETE CASCADE
 );
+CREATE INDEX idx_mission_participation_mid ON mission_participation (mid);
+CREATE INDEX idx_mission_participation_adventurer ON mission_participation (adventurer_id, mid) WHERE adventurer_id IS NOT NULL;
+CREATE UNIQUE INDEX unique_mission_adventurer ON mission_participation (mid, adventurer_id) WHERE adventurer_id IS NOT NULL;
 
 CREATE TABLE MISSION_PAYMENT (
 	pid SERIAL PRIMARY KEY,
@@ -180,15 +194,15 @@ CREATE TABLE MISSION_PAYMENT (
 		'ADVENTURER_KICKED_OUT_COMPENSATION',
 		'PAYOUT'
 	)),
-	amount_paid NUMERIC NOT NULL,
-	amount_refunded NUMERIC NOT NULL,
+	amount_paid NUMERIC NOT NULL CHECK (amount_paid >= 0),
+	amount_refunded NUMERIC NOT NULL CHECK (amount_refunded >= 0 AND amount_refunded <= amount_paid),
 	status VARCHAR(25) NOT NULL DEFAULT 'SUCCEEDED' CHECK (status IN ('SUCCEEDED', 'PARTIALLY_REFUNDED', 'REFUNDED')),
 	created_at TIMESTAMP NOT NULL,
-	FOREIGN KEY (mid) REFERENCES MISSION(mid) ON DELETE CASCADE,
-	FOREIGN KEY (vacancy_id) REFERENCES MISSION_PARTICIPATION(id) ON DELETE CASCADE,
+	FOREIGN KEY (vacancy_id, mid) REFERENCES MISSION_PARTICIPATION(id, mid) ON DELETE CASCADE,
 	FOREIGN KEY (sender_id) REFERENCES APP_USER(uid) ON DELETE CASCADE,
 	FOREIGN KEY (receiver_id) REFERENCES APP_USER (uid) ON DELETE CASCADE
 );
+CREATE INDEX idx_mission_payment_vacancy_created_at ON mission_payment (vacancy_id, created_at DESC);
 
 
 CREATE TABLE NOTIFICATION (
@@ -229,10 +243,14 @@ CREATE TABLE NOTIFICATION (
 	FOREIGN KEY (recipient_id) REFERENCES APP_USER (uid) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX unique_pending_join 
+CREATE UNIQUE INDEX unique_pending_join_notification
 	ON notification 
-	(sender_id, recipient_id, (payload->>'associated_mission_id'), (payload->>'associated_vacancy_id')) 
-	WHERE status = 'PENDING' AND action = 'JOIN_REQUEST'; -- To avoid users sending the same notification twice due to a double click
+	(action, sender_id, recipient_id, (payload->>'associated_mission_id'), (payload->>'associated_vacancy_id'))
+	WHERE status = 'PENDING' AND action IN ('JOIN_REQUEST', 'MISSION_INVITE'); -- Prevents duplicate actionable requests due to retries or double clicks
+CREATE INDEX idx_notification_recipient_date ON notification (recipient_id, date DESC);
+CREATE INDEX idx_notification_action_status_vacancy ON notification (action, status, ((payload->>'associated_vacancy_id')::int));
+CREATE INDEX idx_notification_action_status_mission_sender ON notification (action, status, ((payload->>'associated_mission_id')::int), sender_id);
+CREATE INDEX idx_notification_action_status_date ON notification (action, status, date DESC);
 
 CREATE TABLE REPORT (
 	rid SERIAL PRIMARY KEY,
@@ -262,6 +280,17 @@ CREATE TABLE REPORT (
 	FOREIGN KEY (resolved_by) REFERENCES APP_USER(uid) ON DELETE CASCADE,
 	FOREIGN KEY (conversation_id) REFERENCES CONVERSATION(cid) ON DELETE SET NULL
 );
+CREATE UNIQUE INDEX unique_active_profile_report
+	ON report (sender_id, (payload->>'associated_user_id'))
+	WHERE status = 'SENT' AND type = 'REPORT_PROFILE';
+CREATE UNIQUE INDEX unique_active_mission_report
+	ON report (sender_id, (payload->>'associated_mission_id'))
+	WHERE status = 'SENT' AND type = 'REPORT_MISSION';
+CREATE UNIQUE INDEX unique_active_vacancy_report
+	ON report (sender_id, type, (payload->>'associated_mission_id'), (payload->>'associated_vacancy_id'))
+	WHERE status = 'SENT' AND type IN ('REPORT_ADVENTURER', 'REVIEW_DISPUTE', 'REJECTED_REVIEW_DISPUTE');
+CREATE INDEX idx_report_status_date ON report (status, date DESC);
+CREATE INDEX idx_report_sender ON report (sender_id);
 
 INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames, status)
 VALUES('Hermyx_system', 'system@hermyx.com', 'firebase-system-uid', 'SYSTEM', 'Hermyx system account.', 'Hermyx', 'system', 'ACTIVE');
