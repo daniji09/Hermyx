@@ -499,7 +499,7 @@ const CreationVacancyCard = ({
           </span>
           <span className='text-primary text-sm'>{vacancy.reward}€</span>
         </div>
-        <p className='text-xs break-all line-clamp-2 leading-relaxed grow text-left'>
+        <p className='text-xs wrap-break-words wrap-anywhere line-clamp-2 leading-relaxed grow text-left'>
           {vacancy.description || 'No additional description.'}
         </p>
       </div>

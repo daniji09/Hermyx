@@ -151,7 +151,7 @@ const UserSearchCard = ({ foundUser }) => {
               </span>
               <div className='min-w-0'>
                 <CardTitle asChild>
-                  <h2 className='break-all line-clamp-1 group-hover:underline group-hover:text-primary transition-colors'>
+                  <h2 className='wrap-break-words wrap-anywhere line-clamp-1 group-hover:underline group-hover:text-primary transition-colors'>
                     {foundUser.name && foundUser.surnames
                       ? `${foundUser.name} ${foundUser.surnames}`
                       : foundUser.username}
@@ -165,7 +165,7 @@ const UserSearchCard = ({ foundUser }) => {
           </CardHeader>
 
           <CardContent className='flex flex-1 flex-col -mt-2 mb-1'>
-            <div className='break-all line-clamp-3 text-muted-foreground text-sm'>
+            <div className='wrap-break-words wrap-anywhere line-clamp-3 text-muted-foreground text-sm'>
               {foundUser.description ||
                 `View this user profile and public information.`}
             </div>

@@ -160,11 +160,11 @@ export const PublicProfile = () => {
           </div>
 
           <div className='min-w-0 flex-1'>
-            <h1 className='break-all text-3xl font-bold tracking-tight sm:text-4xl'>
+            <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
               {displayName || user.username}
             </h1>
 
-            <p className='break-all mt-1 text-lg text-muted-foreground'>
+            <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
               @{user.username}
             </p>
 
@@ -202,7 +202,7 @@ export const PublicProfile = () => {
         </div>
         <div>
           {user.description && (
-            <p className=' break-all text-sm leading-6 sm:text-base'>
+            <p className='wrap-break-words wrap-anywhere text-sm leading-6 sm:text-base'>
               {user.description}
             </p>
           )}

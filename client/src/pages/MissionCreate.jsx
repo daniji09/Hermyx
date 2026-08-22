@@ -280,7 +280,7 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
         </span>
       </div>
 
-      <p className='text-xs break-all line-clamp-2 leading-relaxed grow'>
+      <p className='text-xs wrap-break-words wrap-anywhere line-clamp-2 leading-relaxed grow'>
         {vacancy.description || 'No additional description.'}
       </p>
     </Card>
