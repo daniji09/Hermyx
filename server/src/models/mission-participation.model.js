@@ -410,22 +410,25 @@ export const unjoinParticipant = async (mid, uid, client = pool) => {
 };
 
 /// DELETES
-export const deleteAllUnoccupied = async (mid, existingIds, client = pool) => {
-  let query, result;
+// Deletes vacancies removed from the mission edit form
+export const deleteAllUnoccupied = async (
+  mid,
+  existingIds,
+  canDeleteAdventurers,
+  client = pool,
+) => {
+  let query = 'DELETE FROM mission_participation WHERE mid = $1';
+  const values = [mid];
+
   if (existingIds.length > 0) {
-    // Vacancies that are deleted have to be unoccupied
-    query = `
-      DELETE FROM mission_participation 
-      WHERE mid = $1 AND id != ALL($2::int[]) AND adventurer_id IS NULL
-    `;
-    result = await client.query(query, [mid, existingIds]);
-  } else {
-    // If there is no vacancies that stayed the same, all of them are deleted
-    query = `
-      DELETE FROM mission_participation 
-      WHERE mid = $1 AND adventurer_id IS NULL
-    `;
-    result = await client.query(query, [mid]);
+    query += ' AND id != ALL($2::int[])';
+    values.push(existingIds);
   }
+
+  const canDeleteAdventurersParameter = values.length + 1;
+  query += ` AND ($${canDeleteAdventurersParameter} = TRUE OR adventurer_id IS NULL)`;
+  values.push(canDeleteAdventurers);
+
+  const result = await client.query(query, values);
   return result.rowCount;
 };

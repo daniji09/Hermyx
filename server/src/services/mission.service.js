@@ -2385,6 +2385,7 @@ const internalUpdates = async (
   await missionParticipationModel.deleteAllUnoccupied(
     mission.mid,
     existingIds,
+    MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS,
     client,
   );
 
