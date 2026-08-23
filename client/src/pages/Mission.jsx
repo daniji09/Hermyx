@@ -148,7 +148,7 @@ const MissionPageContainer = ({
     !currentUser?.isAdmin && currentUser?.id === mission?.owner_id;
   const isFull = mission?.total_vacancies === mission?.occupied_vacancies;
   return (
-    <main className='p-4'>
+    <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
       <MissionLoading isLoading={isLoading}>
         {'Seeking mission...'}
       </MissionLoading>
@@ -206,7 +206,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
   return (
     <div className='mx-auto max-w-7xl animate-in fade-in duration-500 pb-16 space-y-8 mt-4'>
       <div className='flex justify-between items-start gap-4'>
-        <h1 className='text-4xl sm:text-5xl font-extrabold tracking-tight wrap-break-words wrap-anywhere'>
+        <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words wrap-anywhere'>
           {mission?.title}
         </h1>
         {mission?.status !== MISSION_STATUS.CANCELLED.ID &&
@@ -314,7 +314,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   </AvatarFallback>
                 </Avatar>
                 <div className='min-w-0'>
-                  <p className='text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1'>
+                  <p className='text-lg font-semibold text-muted-foreground'>
                     Mission Owner
                   </p>
                   <p className='font-bold text-xl truncate'>

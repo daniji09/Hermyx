@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { HandPlatter } from 'lucide-react';
+import { Map } from 'lucide-react';
 
 export const SearchMission = () => {
   // Search params, if they exists
@@ -94,14 +94,14 @@ export const SearchMission = () => {
   };
 
   return (
-    <main>
-      <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
+    <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+      <section className='w-full'>
         <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
           <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-            <HandPlatter className='h-6 w-6' aria-hidden='true' />
+            <Map className='h-6 w-6' aria-hidden='true' />
           </span>
           <div className='min-w-0'>
-            <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
+            <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
               Missions
             </h1>
             <p className='text-muted-foreground'>
@@ -111,10 +111,7 @@ export const SearchMission = () => {
           </div>
         </div>
       </section>
-      <section
-        className='w-full px-6 sm:px-8 lg:px-12 xl:px-16'
-        aria-label='Filters section'
-      >
+      <section className='w-full' aria-label='Filters section'>
         <div className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
           <form
             onSubmit={handleFiltersSubmit}

@@ -26,7 +26,15 @@ import {
 } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, UploadCloud, User, UserPlus, X } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  UploadCloud,
+  User,
+  UserPlus,
+  X,
+  Map as MapIcon,
+} from 'lucide-react';
 import {
   Dialog,
   DialogTrigger,
@@ -95,7 +103,7 @@ export const EditMission = () => {
 
   if (isLoading) {
     return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
         <div role='status' className='p-8 text-center text-muted-foreground'>
           Loading mission...
         </div>
@@ -105,7 +113,7 @@ export const EditMission = () => {
 
   if (isError) {
     return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
         <div
           role='alert'
           className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
@@ -145,7 +153,7 @@ const EditMissionPageContainer = ({
   mission,
 }) => {
   return (
-    <main className='flex min-h-screen items-center justify-center p-4'>
+    <main className='flex container mx-auto max-w-6xl p-4 sm:p-6 min-h-screen items-center justify-center'>
       <EditMissionLoading isLoading={isLoading}>
         {'Seeking mission...'}
       </EditMissionLoading>
@@ -248,11 +256,22 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         action={handleFormAction}
         encType='multipart/form-data'
       >
-        <CardForm.Header>
-          <CardForm.Title>{messages.EDIT_MISSION.FORM_TITLE}</CardForm.Title>
-          <CardForm.Description>
-            {messages.EDIT_MISSION.FORM_DESCRIPTION}
-          </CardForm.Description>
+        <CardForm.Header
+          className={
+            'flex flex-col items-start gap-4 sm:flex-row sm:items-center'
+          }
+        >
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <MapIcon className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <CardForm.Title className={'min-w-0'}>
+              {messages.EDIT_MISSION.FORM_TITLE}
+            </CardForm.Title>
+            <CardForm.Description className={'ms-0.5'}>
+              {messages.EDIT_MISSION.FORM_DESCRIPTION}
+            </CardForm.Description>
+          </div>
         </CardForm.Header>
         <div className='px-8'>
           <Separator />
@@ -764,13 +783,10 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
   useEffect(() => {
     if (state.success && processedState.current !== state) {
       onConfirm({
-        id: vacancy.id,
-        adventurer_id: vacancy.adventurer_id || undefined,
-        username: vacancy.username || undefined,
+        ...vacancy,
         reward: state.data.vacanciesReward,
         title: state.data.vacanciesTitle,
         description: state.data.vacanciesDescription,
-        status: vacancy.status,
       });
       processedState.current = state;
       onClose();

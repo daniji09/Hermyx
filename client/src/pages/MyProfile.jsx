@@ -311,7 +311,7 @@ const ProfileReviews = ({
     <Card asChild>
       <section className='mb-6 p-4 sm:p-6 mt-6 '>
         <div className='mb-3 flex items-center justify-between gap-4 pb-2 border-b'>
-          <h2 className='text-xl font-semibold'>Reviews</h2>
+          <h2 className='text-2xl font-bold tracking-tight'>Reviews</h2>
           {!isLoading && (
             <div className='flex gap-3'>
               <p className='flex text-sm text-muted-foreground items-center gap-1'>
@@ -556,7 +556,9 @@ const ProfileInformation = ({ data }) => {
       <section className='p-4 sm:p-6'>
         <form>
           <div className='flex gap-3 items-start justify-between pb-2 border-b'>
-            <h2 className='text-xl font-semibold'>Profile information</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              Profile information
+            </h2>
 
             <div className='flex justify-end gap-2'>
               {isEditing && (
@@ -713,7 +715,9 @@ const ProfileAccessMethods = ({ user }) => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6 '>
-        <h2 className='text-xl font-semibold pb-2 border-b'>Access methods</h2>
+        <h2 className='text-2xl font-bold tracking-tight pb-2 border-b'>
+          Access methods
+        </h2>
         <div className='flex flex-col gap-y-2'>
           <h3 className='text-lg font-medium'>E-mail & password</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
@@ -1405,7 +1409,9 @@ const ProfileConfiguration = ({ user }) => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold pb-2 border-b'>Configuration</h2>
+        <h2 className='text-2xl font-bold tracking-tight pb-2 border-b'>
+          Configuration
+        </h2>
         <div className='flex flex-col gap-4'>
           <form
             id='userConfigurationForm'
@@ -1465,7 +1471,7 @@ const ProfileDangerZone = () => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold text-destructive pb-2 border-b'>
+        <h2 className='text-2xl font-bold tracking-tight text-destructive pb-2 border-b'>
           Danger zone
         </h2>
         <div className='flex flex-col'>

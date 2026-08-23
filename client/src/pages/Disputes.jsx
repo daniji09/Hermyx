@@ -57,7 +57,7 @@ export const Disputes = () => {
           <MessageSquareWarning className='h-6 w-6' aria-hidden='true' />
         </span>
         <div className='min-w-0'>
-          <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
+          <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
             Disputes
           </h1>
           <p className='text-muted-foreground'>
@@ -83,7 +83,7 @@ export const Disputes = () => {
               </span>
               <div className='min-w-0 flex-1'>
                 <div className='flex items-center justify-between gap-3'>
-                  <h2 className='min-w-0 truncate font-semibold'>
+                  <h2 className='text-xl font-bold min-w-0 truncate'>
                     {dispute.mission_title ||
                       `Mission ${dispute.payload.associated_mission_id}`}
                   </h2>

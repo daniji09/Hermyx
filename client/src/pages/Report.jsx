@@ -77,7 +77,7 @@ export const Report = () => {
 
 const ReportPageContainer = ({ report, isLoading, isError, error }) => {
   return (
-    <main className='p-4'>
+    <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
       <ReportLoading isLoading={isLoading}>{'Seeking report...'}</ReportLoading>
 
       <ReportError isError={isError}>{`${error}`}</ReportError>
@@ -216,8 +216,10 @@ const ReportContent = ({ report }) => {
       <Card asChild className='justify-between'>
         <article>
           <CardHeader>
-            <CardTitle asChild className='text-3xl'>
-              <h1>{title}</h1>
+            <CardTitle asChild>
+              <h1 className='text-3xl sm:text-4xl font-bold tracking-tight'>
+                {title}
+              </h1>
             </CardTitle>
             {report.needs_admin_attention && (
               <CardDescription className='font-semibold text-destructive text-lg'>
@@ -291,7 +293,10 @@ const ReportContent = ({ report }) => {
         <Card asChild className='justify-between mt-4'>
           <article>
             <CardHeader>
-              <CardTitle asChild className='text-3xl'>
+              <CardTitle
+                asChild
+                className='min-w-0 wrap-break-words text-2xl text-bold'
+              >
                 <h2>
                   Decision taken: {REPORT_DECISION[report.decision].LABEL}
                 </h2>

@@ -35,14 +35,14 @@ export const SearchUsers = () => {
   const users = data?.pages.flatMap((page) => page.users); // TODO: pagination must be done with infinite scroll
 
   return (
-    <main>
-      <section className='w-full px-6 pt-4 pb-8 sm:px-8 lg:px-12 xl:px-16'>
+    <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+      <section className='w-full'>
         <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
           <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
             <Users className='h-6 w-6' aria-hidden='true' />
           </span>
           <div className='min-w-0'>
-            <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
+            <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
               Users
             </h1>
             <p className='text-muted-foreground'>

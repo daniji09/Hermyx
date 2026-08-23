@@ -25,7 +25,7 @@ export const MissionSearchContainer = ({
   isError,
   isErrorMessage = messages.SEARCH_MISSIONS.ERROR,
   noMissionsMessage = messages.SEARCH_MISSIONS.NO_MISSIONS,
-  sectionClassName = 'w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16',
+  sectionClassName = 'w-full',
 }) => {
   return (
     <section className={sectionClassName}>
@@ -132,8 +132,6 @@ const MissionSearchContent = ({
 };
 
 export const MissionSearchCard = ({ mission }) => {
-  console.log(mission);
-  // TODO: falla el status en public profile si no está abierta?
   const missionPhoto = mission.photos?.[0]
     ? getImageUrl(mission.photos[0])
     : 'https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
@@ -166,8 +164,8 @@ export const MissionSearchCard = ({ mission }) => {
           </div>
 
           <CardHeader>
-            <CardTitle asChild>
-              <h2 className='truncate me-3 group-hover:underline group-has-[.user-link:hover]:no-underline group-hover:text-primary group-has-[.user-link:hover]:text-foreground transition-colors'>
+            <CardTitle asChild className='text-2xl font-bold'>
+              <h2 className='tracking-tight truncate me-3 group-hover:underline group-has-[.user-link:hover]:no-underline group-hover:text-primary group-has-[.user-link:hover]:text-foreground transition-colors'>
                 {mission.title}
               </h2>
             </CardTitle>

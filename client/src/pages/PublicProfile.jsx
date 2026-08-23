@@ -143,7 +143,7 @@ export const PublicProfile = () => {
   const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
 
   return (
-    <main className='container mx-auto max-w-5xl p-4 sm:p-6'>
+    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
       <section className='mb-8 gap-6 border-b pb-8 flex-row items-center'>
         <div className='flex flex-col gap-6 pb-8 sm:flex-row sm:items-center'>
           <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>

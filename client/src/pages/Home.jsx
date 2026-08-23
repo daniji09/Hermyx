@@ -22,7 +22,14 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { getImageUrl } from '../utils/media';
-import { Compass, Plus, Map, Users, ShieldCheck } from 'lucide-react';
+import {
+  Compass,
+  Plus,
+  Map,
+  Users,
+  ShieldCheck,
+  MessageSquareWarning,
+} from 'lucide-react';
 
 export const Home = () => {
   const { currentUser } = useContext(AuthContext);
@@ -41,7 +48,7 @@ export const Home = () => {
         PAGINATION_LIMIT.MISSIONS,
         {
           retry: retryOption,
-          enabled: !!currentUser?.id,
+          enabled: !!currentUser?.id && !currentUser?.isAdmin,
         },
       ),
     );
@@ -56,7 +63,7 @@ export const Home = () => {
       PAGINATION_LIMIT.MISSIONS,
       {
         retry: retryOption,
-        enabled: !!currentUser?.id,
+        enabled: !!currentUser?.id && !currentUser?.isAdmin,
       },
     ),
   );
@@ -110,7 +117,7 @@ export const Home = () => {
         <section className='grid grid-cols-1 md:grid-cols-3 gap-8 py-8'>
           <div className='flex flex-col items-center text-center p-6 rounded-2xl bg-muted/20 border'>
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
-              <Map className='h-7 w-7' />
+              <Map className='h-7 w-7' aria-hidden='true' />
             </div>
             <h3 className='text-xl font-bold mb-2'>1. Post a mission</h3>
             <p className='text-muted-foreground'>
@@ -119,7 +126,7 @@ export const Home = () => {
           </div>
           <div className='flex flex-col items-center text-center p-6 rounded-2xl bg-muted/20 border'>
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
-              <Users className='h-7 w-7' />
+              <Users className='h-7 w-7' aria-hidden='true' />
             </div>
             <h3 className='text-xl font-bold mb-2'>2. Choose adventurers</h3>
             <p className='text-muted-foreground'>
@@ -128,7 +135,7 @@ export const Home = () => {
           </div>
           <div className='flex flex-col items-center text-center p-6 rounded-2xl bg-muted/20 border'>
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
-              <ShieldCheck className='h-7 w-7' />
+              <ShieldCheck className='h-7 w-7' aria-hidden='true' />
             </div>
             <h3 className='text-xl font-bold mb-2'>3. Pay securely</h3>
             <p className='text-muted-foreground'>
@@ -141,7 +148,7 @@ export const Home = () => {
         <section id='missions' className='scroll-mt-8 space-y-6 pt-8'>
           <div className='flex flex-col sm:flex-row justify-between items-end gap-4'>
             <div>
-              <h2 className='text-3xl font-bold tracking-tight'>
+              <h2 className='text-2xl font-bold tracking-tight'>
                 Guild Board Sneak Peek
               </h2>
               <p className='mt-1 text-muted-foreground'>
@@ -188,6 +195,64 @@ export const Home = () => {
     );
   }
 
+  // Admin page
+  if (currentUser?.isAdmin) {
+    return (
+      <main className='container mx-auto max-w-6xl space-y-12 p-4 sm:p-6 mb-12 overflow-hidden'>
+        <section className='flex flex-col gap-6 rounded-2xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8'>
+          <div className='flex flex-col sm:flex-row items-center gap-5'>
+            <div className='h-16 w-16 shrink-0 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 text-primary'>
+              <ShieldCheck className='h-8 w-8' aria-hidden='true' />
+            </div>
+            <div className='min-w-0 text-center sm:text-left'>
+              <h1 className='wrap-break-words text-3xl font-bold tracking-tight sm:text-4xl'>
+                Admin Dashboard
+              </h1>
+              <p className='ms-1 text-muted-foreground'>
+                Welcome back, {currentUser?.username}.
+              </p>
+            </div>
+          </div>
+          <div className='flex w-full shrink-0 flex-col gap-3 sm:w-auto'>
+            <Button asChild size='lg' className='w-full sm:w-auto truncate'>
+              <Link to='/reports'>
+                <MessageSquareWarning
+                  className='mr-2 h-5 w-5 truncate'
+                  aria-hidden='true'
+                />
+                Manage platform reports
+              </Link>
+            </Button>
+          </div>
+        </section>
+
+        <Separator />
+
+        <section className='space-y-4'>
+          <div>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              All Platform Missions
+            </h2>
+            <p className='mt-1 text-muted-foreground'>
+              Browse and moderate all active missions on Hermyx.
+            </p>
+          </div>
+
+          <MissionSearchContainer
+            missions={interestMissions}
+            hasNextPage={interestHasNextPage}
+            isFetchingNextPage={interestIsFetchingNextPage}
+            fetchNextPage={interestFetchNextPage}
+            isLoading={interestIsLoading}
+            isError={interestIsError}
+            noMissionsMessage='There are no missions available right now.'
+            sectionClassName=''
+          />
+        </section>
+      </main>
+    );
+  }
+
   // Logged page
   return (
     <main className='container mx-auto max-w-6xl space-y-12 p-4 sm:p-6 mb-12 overflow-hidden'>
@@ -200,10 +265,10 @@ export const Home = () => {
             </AvatarFallback>
           </Avatar>
           <div className='min-w-0 text-center sm:text-left'>
-            <h1 className='wrap-break-words text-2xl font-bold tracking-tight sm:text-3xl'>
+            <h1 className='wrap-break-words text-3xl font-bold tracking-tight sm:text-4xl'>
               Welcome back, {currentUser?.username || 'Adventurer'}!
             </h1>
-            <p className='mt-1 text-muted-foreground'>
+            <p className='ms-1 text-muted-foreground'>
               Ready for your next great adventure?
             </p>
           </div>
@@ -229,7 +294,7 @@ export const Home = () => {
       </section>
 
       <section className='space-y-10'>
-        <div className='space-y-4 relative'>
+        <div className='relative'>
           <h2 className='text-2xl font-bold tracking-tight'>
             Your joined missions
           </h2>
@@ -238,7 +303,7 @@ export const Home = () => {
               Loading your joined missions...
             </p>
           ) : joinedMissions.length === 0 ? (
-            <div className='rounded-xl border border-dashed bg-muted/10 p-8 text-center text-muted-foreground'>
+            <div className='rounded-xl border border-dashed bg-muted/10 p-8 mt-4 text-center text-muted-foreground'>
               You haven&lsquo;t joined any active missions yet. Check out the
               missions of interest below!
             </div>
@@ -263,7 +328,7 @@ export const Home = () => {
           )}
         </div>
 
-        <div className='space-y-4 relative'>
+        <div className='relative'>
           <h2 className='text-2xl font-bold tracking-tight'>
             Your published missions
           </h2>
@@ -272,7 +337,7 @@ export const Home = () => {
               Loading your published missions...
             </p>
           ) : publishedMissions.length === 0 ? (
-            <div className='rounded-xl border border-dashed bg-muted/10 p-8 text-center text-muted-foreground'>
+            <div className='rounded-xl border border-dashed mt-4 bg-muted/10 p-8 text-center text-muted-foreground'>
               You don&lsquo;t have any published missions. Need help? Post a new
               one!
             </div>
@@ -299,9 +364,9 @@ export const Home = () => {
 
       <Separator />
 
-      <section id='quest-board' className='scroll-mt-8 space-y-6'>
+      <section id='quest-board' className='scroll-mt-8 space-y-4'>
         <div>
-          <h2 className='text-3xl font-bold tracking-tight'>
+          <h2 className='text-2xl font-bold tracking-tight'>
             Missions of interest
           </h2>
           <p className='mt-1 text-muted-foreground'>

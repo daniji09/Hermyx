@@ -78,7 +78,7 @@ export const Payment = () => {
 
   if (isLoading || isLoadingCards) {
     return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
         <div role='status' className='p-8 text-center text-muted-foreground'>
           Loading mission payment...
         </div>
@@ -88,7 +88,7 @@ export const Payment = () => {
 
   if (isError || isErrorCards || !missionPaymentInfo) {
     return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
         <div
           role='alert'
           className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
@@ -106,7 +106,7 @@ export const Payment = () => {
   }
 
   return (
-    <main className='flex justify-center p-4'>
+    <main className='container mx-auto max-w-6xl sm:p-6 flex justify-center p-4'>
       <Elements stripe={stripePromise} options={{ locale: 'en' }}>
         <PaymentForm
           missionId={id}

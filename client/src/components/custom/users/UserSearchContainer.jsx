@@ -23,7 +23,7 @@ export const UserSearchContainer = ({
   noUsersMessage = 'It seems there are no users matching this search.',
 }) => {
   return (
-    <section className='w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16'>
+    <section className='w-full mt-8'>
       <UsersSearchLoading isLoading={isLoading}>
         {isLoadingMessage}
       </UsersSearchLoading>
@@ -152,7 +152,7 @@ const UserSearchCard = ({ foundUser }) => {
                 </Avatar>
               </span>
               <div className='min-w-0'>
-                <CardTitle asChild>
+                <CardTitle asChild className='text-2xl font-bold'>
                   <h2 className='wrap-break-words wrap-anywhere line-clamp-1 group-hover:underline group-hover:text-primary transition-colors'>
                     {foundUser.name && foundUser.surnames
                       ? `${foundUser.name} ${foundUser.surnames}`

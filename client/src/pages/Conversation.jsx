@@ -429,12 +429,7 @@ export const ConversationThread = ({
 
   return (
     <main>
-      <section
-        className={cn(
-          'container mx-auto flex flex-col gap-4 p-4 sm:p-6',
-          isDisputeConversation ? 'max-w-5xl' : 'max-w-3xl',
-        )}
-      >
+      <section className='container mx-auto flex flex-col gap-4 p-4 sm:p-6 max-w-4xl'>
         <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
           <Card
             className={cn(
