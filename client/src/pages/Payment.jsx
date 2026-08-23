@@ -309,7 +309,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
       </section>
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='flex flex-col order-2 lg:order-1'>
+        <div className='flex flex-col'>
           <Card className='h-fit border-primary/20 shadow-sm'>
             <CardHeader className='pb-4 border-b bg-muted/20'>
               <CardTitle className='min-w-0 wrap-break-words wrap-anywhere text-3xl'>
@@ -384,7 +384,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
           </Card>
         </div>
 
-        <div className='order-1 lg:order-2'>
+        <div>
           <CardForm id='paymentForm' action={paymentFormAction}>
             <CardForm.Header>
               <CardForm.Title>{messages.PAYMENT.FORM_TITLE}</CardForm.Title>
@@ -420,7 +420,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
                           tabIndex={0}
                           onClick={() => setSelectedPaymentMethod(pm.id)}
                           onKeyDown={(e) => handleRadioKeyDown(e, pm.id)}
-                          className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                             selectedPaymentMethod === pm.id
                               ? 'border-primary bg-primary/5 ring-1 ring-primary'
                               : 'hover:border-primary/50 bg-card'
