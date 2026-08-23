@@ -5,7 +5,10 @@ import {
   userConfigurationValidation,
 } from '@hermyx/shared';
 import { updateUserEmail, userConfiguration } from '../services/UsersServices';
-import { updateUserPassword } from '../services/AuthServices';
+import {
+  sendVerificationEmailToCurrentUser,
+  updateUserPassword,
+} from '../services/AuthServices';
 
 // Update email action
 export const updateEmailAction = async (previousState, formData) => {
@@ -34,6 +37,8 @@ export const updateEmailAction = async (previousState, formData) => {
         },
       };
 
+    await sendVerificationEmailToCurrentUser();
+
     // Success
     return { success: true, data: null, errors: {} };
   } catch (error) {
@@ -45,6 +50,13 @@ export const updateEmailAction = async (previousState, formData) => {
       return {
         success: false,
         errors: error.response.data.errors,
+        data: fieldsData,
+      };
+
+    if (error.errors)
+      return {
+        success: false,
+        errors: error.errors,
         data: fieldsData,
       };
 

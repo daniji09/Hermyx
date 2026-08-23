@@ -45,6 +45,16 @@ export const messages = {
       NO_EMAIL_OR_USERNAME: `You must provide an e-mail or a username.`,
       INVALID_CREDENTIALS: `Invalid credentials.`,
       COULD_NOT_LOG_IN: `Could not log in.`,
+      EMAIL_NOT_VERIFIED: `Please verify your e-mail before logging in.`,
+    },
+    EMAIL_VERIFICATION: {
+      COULD_NOT_SEND: `Could not send the e-mail verification message.`,
+      INVALID_CODE: `This e-mail verification link is invalid or has expired.`,
+    },
+    PASSWORD_RESET: {
+      COULD_NOT_SEND: `Could not send the password reset email.`,
+      INVALID_CODE: `This password reset link is invalid or has expired.`,
+      COULD_NOT_CHANGE: `Could not change the password.`,
     },
     SIGNUP: {
       CONFIRM_PASSWORD: 'Please, confirm password.',

@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import { SignUp } from './pages/SignUp';
 import { LogIn } from './pages/LogIn';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { AuthAction } from './pages/AuthAction';
 import { Home } from './pages/Home';
 import { ProtectedRoute } from './components/custom/routes/ProtectedRoute';
 import { Mission } from './pages/Mission';
@@ -31,12 +33,14 @@ function App() {
         {/* --- Public routes --- */}
         {/* Home */}
         <Route path='/' element={<Home />}></Route>
+        <Route path='/auth/action' element={<AuthAction />}></Route>
 
         {/* --- Authentication routes (not log in needed) --- */}
         <Route element={<ProtectedRoute reverseLogic />}>
           {/* Authentication */}
           <Route path='/signup' element={<SignUp />}></Route>
           <Route path='/login' element={<LogIn />}></Route>
+          <Route path='/forgot-password' element={<ForgotPassword />}></Route>
         </Route>
 
         {/* --- Protected routes (log in needed) --- */}

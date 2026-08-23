@@ -23,7 +23,8 @@ export const SignUp = () => {
   // Effect for navigating to login
   const navigate = useNavigate();
   useEffect(() => {
-    if (state.success) navigate('/login');
+    if (state.success)
+      navigate('/login', { state: { verificationEmailSent: true } });
   }, [state.success, navigate]);
 
   return (
