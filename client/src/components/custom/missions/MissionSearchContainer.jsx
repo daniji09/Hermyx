@@ -132,6 +132,7 @@ const MissionSearchContent = ({
 };
 
 export const MissionSearchCard = ({ mission }) => {
+  console.log(mission);
   // TODO: falla el status en public profile si no está abierta?
   const missionPhoto = mission.photos?.[0]
     ? getImageUrl(mission.photos[0])

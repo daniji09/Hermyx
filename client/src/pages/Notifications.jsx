@@ -291,8 +291,6 @@ export const Notifications = () => {
                         className={linkClass}
                         title={username}
                         aria-label={username}
-                        target='_blank'
-                        rel='noopener noreferrer'
                       >
                         {truncateText(username)}
                       </Link>
@@ -312,8 +310,6 @@ export const Notifications = () => {
                       className={linkClass}
                       title={title}
                       aria-label={title}
-                      target='_blank'
-                      rel='noopener noreferrer'
                     >
                       {truncateText(title)}
                     </Link>
@@ -456,8 +452,6 @@ export const Notifications = () => {
                               <Button asChild variant='outline'>
                                 <Link
                                   to={`/disputes/${notification.payload.associated_report_id}`}
-                                  target='_blank'
-                                  rel='noopener noreferrer'
                                 >
                                   Open dispute
                                 </Link>
@@ -473,8 +467,6 @@ export const Notifications = () => {
                               <Button asChild variant='outline'>
                                 <Link
                                   to={`/disputes/${notification.payload.associated_report_id}`}
-                                  target='_blank'
-                                  rel='noopener noreferrer'
                                 >
                                   Open dispute
                                 </Link>

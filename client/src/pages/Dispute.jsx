@@ -26,7 +26,7 @@ export const Dispute = () => {
         to={`/users/${username}`}
         className={linkClass}
         title={username}
-        aria-label={username} // 👈 Accesibilidad salvada
+        aria-label={username}
         target='_blank'
         rel='noopener noreferrer'
       >

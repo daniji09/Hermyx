@@ -5,19 +5,11 @@ import {
   inviteToMissionMutationOptions,
 } from './../queries/MissionsQueries';
 import { searchUsersByUsernameInfiniteQueryOptions } from '../queries/UsersQueries';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { timestampToDayMonthYear } from './../utils/date';
 import {
   Users,
   HandCoins,
-  Plus,
   Search,
   Star,
   User,
@@ -74,7 +66,10 @@ import {
   MISSION_PARTICIPATION_STATUS,
 } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
-import { reportMissionAction } from '../actions/ReportActions';
+import {
+  reportAdventurerAction,
+  reportMissionAction,
+} from '../actions/ReportActions';
 import {
   initialStateUseStateAction,
   PAGINATION_LIMIT,
@@ -83,6 +78,24 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { FormAlert } from '../components/custom/form/FormAlert';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
+import { MoreVertical } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { getInitials } from '../utils/avatar';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 export const Mission = () => {
   // Mission id
@@ -108,6 +121,7 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
+  console.log(mission);
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
@@ -153,25 +167,28 @@ const MissionPageContainer = ({
 
 const MissionLoading = ({ isLoading, children }) => {
   return (
-    <main>
+    <>
       {isLoading && (
-        <div className='flex justify-center p-8 text-muted-foreground'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
           {children}
         </div>
       )}
-    </main>
+    </>
   );
 };
 
 const MissionError = ({ isError, children }) => {
   return (
-    <main>
+    <>
       {isError && (
-        <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
           {children}
         </div>
       )}
-    </main>
+    </>
   );
 };
 
@@ -181,170 +198,380 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
     (participant) => participant.adventurer_id === currentUser?.id,
   );
 
+  const isParticipant = !!currentParticipation;
+  const canAccessMissionChat =
+    (isCreator || isParticipant) &&
+    currentParticipation?.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID;
+
   return (
-    <>
-      {mission && (
-        <>
-          <Card asChild className='m-4'>
-            <section>
-              <CardHeader>
-                <CardTitle asChild className='text-5xl'>
-                  <h1>{mission.title}</h1>
-                </CardTitle>
-                <CardDescription className='text-xl'>
-                  <p>{timestampToDayMonthYear(mission.publication_date)}</p>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className='flex flex-1 flex-col text-lg'>
-                <div className='mb-4'>{mission.description}</div>
-                <div className='mt-auto flex flex-col gap-2'>
-                  <div className='flex items-center gap-2'>
-                    <span>Vacancies:</span>
-                    <span>
-                      {mission.occupied_vacancies}/{mission.total_vacancies}
-                    </span>
-                    <Users className='h-6 w-6' aria-hidden='true' />
-                  </div>
-                  <ParticipantSection
-                    mission={mission}
-                    isCreator={isCreator}
-                    onAddAdventurer={() => setIsSearchModalOpen(true)}
-                  />
-                  <div className='flex items-center gap-2'>
-                    <span>Total payment:</span>
-                    <span>{Number(mission.total_payment).toFixed(2)}$</span>
-                    <HandCoins className='h-6 w-6' aria-hidden='true' />
-                  </div>
-                  {mission.status}
-                </div>
-                <MissionVacancies
-                  mission={mission}
-                  isCreator={isCreator}
-                  currentUser={currentUser}
-                ></MissionVacancies>
-                {mission.location && (
-                  <Map
-                    readOnly={true}
-                    initialLocation={
-                      mission?.latitude &&
-                      mission?.longitude && {
-                        lat: mission?.latitude,
-                        lng: mission?.longitude,
-                      }
-                    }
-                  ></Map>
+    <div className='mx-auto max-w-7xl animate-in fade-in duration-500 pb-16 space-y-8 mt-4'>
+      <div className='flex justify-between items-start gap-4'>
+        <h1 className='text-4xl sm:text-5xl font-extrabold tracking-tight wrap-break-words wrap-anywhere'>
+          {mission?.title}
+        </h1>
+        {mission?.status !== MISSION_STATUS.CANCELLED.ID &&
+          mission?.status !== MISSION_STATUS.DELETED.ID && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant='outline'
+                  size='icon'
+                  className='shrink-0 rounded-full h-10 w-10'
+                >
+                  <MoreVertical className='h-5 w-5 text-muted-foreground' />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end' className='w-56'>
+                {isCreator && MISSION_STATUS[mission?.status].CAN_EDIT && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to={`/missions/${mission?.mid}/edit`}
+                      className='w-full justify-start font-normal h-auto px-2 py-1.5 cursor-default'
+                    >
+                      Edit mission
+                    </Link>
+                  </DropdownMenuItem>
                 )}
-                {mission.photos && (
-                  <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
-                    {mission.photos.map((photo, index) => (
-                      <img
-                        key={index}
-                        src={getImageUrl(photo.url)}
-                        alt={`Mission ${mission.title} - Photo ${index + 1}`}
-                        className='w-full h-48 object-cover rounded-lg shadow-md border border-gray-200'
+                {isCreator &&
+                  MISSION_STATUS[mission?.status].VALID_NEXT_STATES.includes(
+                    MISSION_STATUS.REOPENED.ID,
+                  ) && (
+                    <DropdownMenuItem asChild>
+                      <ReopenMissionButton
+                        mission={mission}
+                        variant='ghost'
+                        className='w-full justify-start font-normal h-auto px-2 py-1.5 cursor-default'
                       />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter>
-                {currentUser?.isAdmin ? (
-                  <p className='text-muted-foreground'>
-                    Read-only administrator view
-                  </p>
-                ) : (
-                  <>
-                    {isCreator ? (
-                      mission.status === MISSION_STATUS.CLOSED.ID ||
-                      mission.waitingForPaymentVacancies.length > 0 ? (
-                        <PayMissionButton mission={mission}></PayMissionButton>
-                      ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID ? (
-                        <MissionOwnerStatusMessage status={mission.status} />
-                      ) : (
-                        <p className='text-muted-foreground bg-muted/20'>
-                          {messages.MISSION.MISSION_CLOSED}
-                        </p>
-                      )
-                    ) : mission.status === MISSION_STATUS.IN_PROGRESS.ID &&
-                      currentParticipation ? (
-                      <SubmitParticipationButton
-                        missionId={mission.mid}
-                        participationStatus={currentParticipation.status}
+                    </DropdownMenuItem>
+                  )}
+                {isCreator &&
+                  (MISSION_STATUS[mission?.status].CAN_DELETE ||
+                    MISSION_STATUS[mission?.status].CAN_CANCEL) && (
+                    <DropdownMenuItem asChild>
+                      <CancelMissionButton
+                        mission={mission}
+                        variant='ghost'
+                        className='w-full justify-start font-normal h-auto px-2 py-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-default'
                       />
-                    ) : isFull ? (
-                      <p className='text-muted-foreground bg-muted/20'>
-                        {messages.MISSION.MISSION_FILLED}
-                      </p>
-                    ) : (
-                      <p className='text-muted-foreground bg-muted/20'>
-                        {messages.MISSION.MISSION_OPEN}
-                      </p>
-                    )}
-                    {isCreator &&
-                      (mission.status === MISSION_STATUS.OPENED.ID ||
-                        mission.status === MISSION_STATUS.REOPENED.ID) && (
-                        <CloseMissionButton
-                          mission={mission}
-                        ></CloseMissionButton>
-                      )}
-                    {isCreator && MISSION_STATUS[mission.status].CAN_EDIT && (
-                      <Button asChild>
-                        <Link to={`/missions/${mission.mid}/edit`}>
-                          Edit mission
-                        </Link>
-                      </Button>
-                    )}
-                    {isCreator &&
-                      (MISSION_STATUS[mission.status].CAN_DELETE ||
-                        MISSION_STATUS[mission.status].CAN_CANCEL) && (
-                        <CancelMissionButton mission={mission} />
-                      )}
-                    {isCreator &&
-                      MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
-                        MISSION_STATUS.REOPENED.ID,
-                      ) && <ReopenMissionButton mission={mission} />}
-                    {isCreator &&
-                      mission.canFinish &&
-                      mission.status !== MISSION_STATUS.FINISHED.ID && (
-                        <FinishMissionButton mission={mission} />
-                      )}
-                    {mission.conversation_id && (
-                      <Button asChild>
-                        <Link
-                          to={`/conversations/${mission.conversation_id}`}
-                          state={{ from: `/missions/${mission.mid}` }}
-                        >
-                          <MessageCircle aria-hidden='true' />
-                          Open mission chat
-                        </Link>
-                      </Button>
-                    )}
-                    {!isCreator &&
-                      mission.status !== MISSION_STATUS.REPORTED.ID && (
-                        <ReportMissionButton mission={mission} />
-                      )}
-                  </>
-                )}
-              </CardFooter>
-            </section>
-          </Card>
-          {!currentUser?.isAdmin && (
-            <SearchAdventurerModal
-              missionId={mission.mid}
-              vacancies={(mission.participants || []).filter(
-                (vacancy) => !vacancy.adventurer_id,
-              )}
-              isOpen={isSearchModalOpen}
-              onClose={() => setIsSearchModalOpen(false)}
-            />
+                    </DropdownMenuItem>
+                  )}
+                {!isCreator &&
+                  mission?.status !== MISSION_STATUS.REPORTED.ID && (
+                    <DropdownMenuItem asChild>
+                      <ReportMissionButton
+                        mission={mission}
+                        variant='ghost'
+                        className='w-full justify-start font-normal h-auto px-2 py-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-default'
+                      />
+                    </DropdownMenuItem>
+                  )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
-        </>
+      </div>
+
+      <div className='flex flex-col lg:flex-row gap-8'>
+        <div className='w-full lg:w-2/3'>
+          {mission?.photos?.length > 0 ? (
+            <Carousel className='w-full rounded-2xl overflow-hidden border bg-muted/20'>
+              <CarouselContent>
+                {mission?.photos?.map((photo, index) => (
+                  <CarouselItem key={index}>
+                    <img
+                      src={getImageUrl(photo.url)}
+                      alt={`Mission ${mission?.title} - Photo ${index + 1}`}
+                      className='w-full aspect-video object-cover'
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              {mission?.photos?.length > 1 && (
+                <>
+                  <CarouselPrevious className='left-4 bg-background/80 backdrop-blur-sm' />
+                  <CarouselNext className='right-4 bg-background/80 backdrop-blur-sm' />
+                </>
+              )}
+            </Carousel>
+          ) : (
+            <div className='w-full rounded-2xl overflow-hidden border bg-muted/20 shadow-sm'>
+              <img
+                src='https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+                alt='Mission placeholder'
+                className='w-full aspect-video object-cover'
+              />
+            </div>
+          )}
+        </div>
+
+        <div className='w-full lg:w-1/3'>
+          <Card className='sticky top-24 shadow-lg border-primary/10 overflow-hidden'>
+            <CardHeader className='bg-muted/30 border-b pb-5'>
+              <div className='flex items-center gap-4'>
+                <Avatar className='h-16 w-16 border-2 border-background shadow-sm'>
+                  <AvatarImage src={getImageUrl(mission?.avatar)} />
+                  <AvatarFallback className='bg-primary/5 text-primary text-xl'>
+                    {getInitials(mission?.username)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className='min-w-0'>
+                  <p className='text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1'>
+                    Mission Owner
+                  </p>
+                  <p className='font-bold text-xl truncate'>
+                    <Link
+                      to={`/users/${mission?.username}`}
+                      className='user-link relative z-20 hover:text-primary hover:underline transition-colors'
+                    >
+                      @{mission?.username || 'unknown'}
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className='pt-1 space-y-4'>
+              {canAccessMissionChat && mission?.conversation_id ? (
+                <Button asChild className='w-full' size='lg'>
+                  <Link
+                    to={`/conversations/${mission?.conversation_id}`}
+                    state={{ from: `/missions/${mission?.mid}` }}
+                  >
+                    <MessageCircle
+                      className='mr-2 h-5 w-5'
+                      aria-hidden='true'
+                    />
+                    Open mission chat
+                  </Link>
+                </Button>
+              ) : !isCreator ? (
+                <Button
+                  asChild
+                  className='w-full border border-muted-foreground/30'
+                  variant='secondary'
+                  size='lg'
+                >
+                  <Link to={`/users/${mission?.username}`}>
+                    <MessageCircle
+                      className='mr-2 h-5 w-5'
+                      aria-hidden='true'
+                    />
+                    Chat with owner
+                  </Link>
+                </Button>
+              ) : null}
+
+              {isCreator ? (
+                <>
+                  {(mission?.status === MISSION_STATUS.CLOSED.ID ||
+                    mission?.waitingForPaymentVacancies?.length > 0) && (
+                    <PayMissionButton
+                      mission={mission}
+                      className='w-full bg-green-700 border border-green-200 hover:bg-green-800'
+                      size='lg'
+                    />
+                  )}
+
+                  {(mission?.status === MISSION_STATUS.OPENED.ID ||
+                    mission?.status === MISSION_STATUS.REOPENED.ID) && (
+                    <CloseMissionButton
+                      mission={mission}
+                      className='w-full'
+                      variant='outline'
+                    />
+                  )}
+
+                  {mission?.canFinish &&
+                    mission?.status !== MISSION_STATUS.FINISHED.ID && (
+                      <FinishMissionButton
+                        mission={mission}
+                        className='w-full'
+                      />
+                    )}
+
+                  {(mission?.status === MISSION_STATUS.IN_PROGRESS.ID ||
+                    mission?.status === MISSION_STATUS.IN_DISPUTE.ID ||
+                    mission?.status === MISSION_STATUS.CANCELLED.ID ||
+                    mission?.status === MISSION_STATUS.DELETED.ID ||
+                    mission?.status === MISSION_STATUS.REPORTED.ID) && (
+                    <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
+                      <MissionOwnerStatusMessage
+                        status={mission?.status}
+                        canFinish={mission?.canFinish}
+                      />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  {mission?.status === MISSION_STATUS.IN_PROGRESS.ID ||
+                  (mission?.status === MISSION_STATUS.REOPENED.ID &&
+                    currentParticipation) ? (
+                    <SubmitParticipationButton
+                      missionId={mission?.mid}
+                      participationStatus={currentParticipation.status}
+                      className='w-full '
+                      size='lg'
+                    />
+                  ) : currentParticipation?.status ===
+                    MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID ? (
+                    <p className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
+                      {'Your participation has been disputed.'}
+                    </p>
+                  ) : mission?.status === MISSION_STATUS.CANCELLED.ID ||
+                    mission?.status === MISSION_STATUS.DELETED.ID ||
+                    mission?.status === MISSION_STATUS.REPORTED.ID ? (
+                    <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
+                      <EndedStatusMessage
+                        status={mission?.status}
+                      ></EndedStatusMessage>
+                    </div>
+                  ) : currentParticipation ? (
+                    <div className='text-center text-sm font-medium text-muted-foreground bg-muted/20 border py-2 rounded-lg'>
+                      {messages.MISSION.MISSION_JOINED}
+                    </div>
+                  ) : isFull ? (
+                    <div className='text-center text-sm font-medium text-destructive bg-destructive/10 py-2 rounded-lg'>
+                      {messages.MISSION.MISSION_FILLED}
+                    </div>
+                  ) : (
+                    <div className='text-center text-sm font-medium text-green-700 bg-green-50 border border-green-200 py-2 rounded-lg'>
+                      {messages.MISSION.MISSION_OPEN}
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 border-t'>
+        <div className='lg:col-span-2 space-y-10'>
+          <section className='bg-muted/10 p-6 rounded-2xl border'>
+            <div className='flex flex-wrap items-center justify-between gap-4 mb-4 px-2'>
+              <div>
+                <h2 className='text-2xl font-bold tracking-tight'>
+                  Mission Party
+                </h2>
+                <p className='text-sm text-muted-foreground mt-1'>
+                  Check out the available slots and current adventurers.
+                </p>
+              </div>
+              <div className='flex items-center gap-2 text-primary bg-primary/10 px-4 py-1.5 rounded-full text-sm font-bold'>
+                <Users className='h-4 w-4' aria-hidden='true' />
+                {mission?.occupied_vacancies}/{mission?.total_vacancies} filled
+              </div>
+            </div>
+
+            {isCreator &&
+              MISSION_STATUS[mission?.status].CAN_ACCEPT_ADVENTURERS && (
+                <div className='mb-3 px-2'>
+                  <Button
+                    onClick={() => setIsSearchModalOpen(true)}
+                    variant='secondary'
+                  >
+                    <UserPlus className='mr-2 h-4 w-4' aria-hidden='true' />{' '}
+                    Invite an adventurer
+                  </Button>
+                </div>
+              )}
+
+            <MissionVacancies
+              mission={mission}
+              isCreator={isCreator}
+              currentUser={currentUser}
+            />
+          </section>
+
+          <section>
+            <h2 className='text-2xl font-bold tracking-tight mb-4'>
+              Mission details
+            </h2>
+            <p className='text-lg leading-relaxed whitespace-pre-wrap text-muted-foreground wrap-break-words wrap-anywhere'>
+              {mission?.description}
+            </p>
+          </section>
+        </div>
+
+        <div className='lg:col-span-1 space-y-8'>
+          <Card className='bg-card shadow-sm'>
+            <CardHeader>
+              <CardTitle className='text-2xl font-bold tracking-tight'>
+                Quick Info
+              </CardTitle>
+            </CardHeader>
+            <CardContent className='space-y-5'>
+              <div>
+                <p className='text-sm text-muted-foreground mb-1'>
+                  Total Reward Pool
+                </p>
+                <p className='text-3xl font-black text-primary flex items-center gap-2 tabular-nums'>
+                  {Number(mission?.total_payment).toFixed(2)}€
+                  <HandCoins
+                    className='h-7 w-7 text-primary/80'
+                    aria-hidden='true'
+                  />
+                </p>
+              </div>
+              <Separator />
+              <div>
+                <p className='text-sm text-muted-foreground mb-1'>
+                  Current Status
+                </p>
+                <p className='font-semibold italic text-muted-foreground'>
+                  {MISSION_STATUS[mission?.status]?.LABEL}
+                </p>
+              </div>
+              <Separator />
+              <div>
+                <p className='text-sm text-muted-foreground mb-1'>Posted on</p>
+                <p className='font-medium'>
+                  {timestampToDayMonthYear(mission?.publication_date)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {mission?.location && mission?.latitude && mission?.longitude && (
+            <div>
+              <h2 className='text-2xl font-bold tracking-tight p-2'>
+                Location
+              </h2>
+              <div className='rounded-2xl overflow-hidden border h-64 shadow-sm'>
+                <Map
+                  readOnly={true}
+                  initialLocation={{
+                    lat: mission?.latitude,
+                    lng: mission?.longitude,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {!currentUser?.isAdmin && (
+        <SearchAdventurerModal
+          missionId={mission?.mid}
+          vacancies={(mission?.participants || []).filter(
+            (vacancy) => !vacancy.adventurer_id,
+          )}
+          isOpen={isSearchModalOpen}
+          onClose={() => setIsSearchModalOpen(false)}
+        />
       )}
-    </>
+    </div>
   );
 };
 
-const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
+const VacancyCard = ({
+  mission,
+  vacancy,
+  isCreator,
+  currentUser,
+  onClick,
+  onReport,
+}) => {
   const isAssigned = !!vacancy.adventurer_id;
   const [reviewDialogType, setReviewDialogType] = useState(null);
   const isAssignedToUser = vacancy.adventurer_id === currentUser?.id;
@@ -354,6 +581,15 @@ const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
     isAssignedToUser && MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_REVIEW;
   const hasOwnerReview = !!vacancy.owner_review_id;
   const hasAdventurerReview = !!vacancy.adventurer_review_id;
+
+  const canReportAdventurer =
+    isCreator &&
+    vacancy.adventurer_id &&
+    ![
+      MISSION_PARTICIPATION_STATUS.JOINED.ID,
+      MISSION_PARTICIPATION_STATUS.EMPTY.ID,
+      MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+    ].includes(vacancy.status);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -375,6 +611,23 @@ const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
       onClick={() => onClick(vacancy.vacancy_id)}
       onKeyDown={handleKeyDown}
     >
+      {canReportAdventurer && (
+        <Button
+          type='button'
+          variant='ghost'
+          size='icon'
+          className='absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 z-10 border border-muted'
+          onClick={(e) => {
+            e.stopPropagation();
+            onReport(vacancy.vacancy_id);
+          }}
+          title='Report adventurer'
+          aria-label='Report adventurer'
+        >
+          <MessageSquareWarning className='h-4 w-4' aria-hidden='true' />
+        </Button>
+      )}
+
       <h3 className='font-semibold text-sm truncate min-h-5 mb-3 text-center mx-8'>
         {vacancy.vacancy_title || 'Adventurer'}
       </h3>
@@ -389,71 +642,99 @@ const VacancyCard = ({ mission, vacancy, isCreator, currentUser, onClick }) => {
                 className='h-full w-full object-cover'
               />
               <AvatarFallback>
-                <User className='h-12 w-12 text-muted-foreground' />
+                <User
+                  className='h-12 w-12 text-muted-foreground'
+                  aria-hidden='true'
+                />
               </AvatarFallback>
             </Avatar>
           </div>
         ) : (
           <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>
-            <UserPlus size={24} />
+            <UserPlus size={24} aria-hidden='true' />
           </div>
         )}
       </div>
 
-      <div className='flex justify-between items-center text-xs font-medium mb-2'>
+      <div className='text-center -mt-3'>
         <span
-          className={`truncate w-2/3 ${isAssigned ? 'text-primary font-bold' : 'italic '}`}
+          className={`truncate w-2/3 ${isAssigned ? 'text-primary font-semibold' : 'italic '}`}
         >
           {isAssigned ? vacancy.username : 'Unassigned'}
         </span>
-        <span className='w-1/3 text-right text-primary font-bold text-sm'>
-          {vacancy.reward}€
-        </span>
+
+        <div className='flex justify-between items-center font-medium mt-4 mb-3'>
+          <span className='text-primary truncate text-sm'>
+            {MISSION_PARTICIPATION_STATUS[vacancy.status].LABEL}
+          </span>
+          <span className='text-primary text-sm'>{vacancy.reward}€</span>
+        </div>
+        <p className='text-xs wrap-break-words wrap-anywhere line-clamp-2 leading-relaxed grow text-left'>
+          {vacancy.description || 'No additional description.'}
+        </p>
       </div>
 
-      <p className='text-xs line-clamp-2 leading-relaxed'>
-        {vacancy.vacancy_description || 'No additional description.'}
-      </p>
-      <div className='mt-4'>
-        {hasOwnerReview ? (
-          <div className='inline-flex w-full items-center justify-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm font-medium text-amber-700'>
-            <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
-            {Number(vacancy.owner_review_rating).toFixed(1)}
+      <div className='mt-1 pt-2 space-y-2'>
+        {(hasOwnerReview || hasAdventurerReview) && (
+          <div className='space-y-1.5'>
+            {hasOwnerReview && (
+              <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 px-2.5 py-1.5 rounded-md'>
+                <span className='text-xs font-medium text-muted-foreground'>
+                  Adventurer rating
+                </span>
+                <div className='flex items-center gap-1 text-sm font-bold text-amber-700'>
+                  <Star
+                    className='h-3.5 w-3.5 fill-amber-400 text-amber-400'
+                    aria-hidden='true'
+                  />
+                  {Number(vacancy.owner_review_rating).toFixed(1)}
+                </div>
+              </div>
+            )}
+
+            {hasAdventurerReview && (
+              <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 px-2.5 py-1.5 rounded-md'>
+                <span className='text-xs font-medium text-muted-foreground'>
+                  Owner rating
+                </span>
+                <div className='flex items-center gap-1 text-sm font-bold text-amber-700'>
+                  <Star
+                    className='h-3.5 w-3.5 fill-amber-400 text-amber-400'
+                    aria-hidden='true'
+                  />
+                  {Number(vacancy.adventurer_review_rating).toFixed(1)}
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          canReviewAdventurer && (
-            <Button
-              type='button'
-              size='sm'
-              variant='outline'
-              className='w-full'
-              onClick={(event) => handleReviewClick(event, 'adventurer')}
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              <Star className='h-4 w-4' aria-hidden='true' />
-              Review adventurer
-            </Button>
-          )
         )}
-        {canReviewOwner &&
-          (hasAdventurerReview ? (
-            <div className='mt-2 inline-flex w-full items-center justify-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm font-medium text-amber-700'>
-              <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
-              {Number(vacancy.adventurer_review_rating).toFixed(1)}
-            </div>
-          ) : (
-            <Button
-              type='button'
-              size='sm'
-              variant='outline'
-              className='mt-2 w-full'
-              onClick={(event) => handleReviewClick(event, 'owner')}
-              onKeyDown={(event) => event.stopPropagation()}
-            >
-              <Star className='h-4 w-4' aria-hidden='true' />
-              Review owner
-            </Button>
-          ))}
+        {canReviewAdventurer && !hasOwnerReview && (
+          <Button
+            type='button'
+            size='sm'
+            variant='outline'
+            className='w-full'
+            onClick={(event) => handleReviewClick(event, 'adventurer')}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Star className='h-4 w-4 mr-1.5' aria-hidden='true' />
+            Review adventurer
+          </Button>
+        )}
+
+        {canReviewOwner && !hasAdventurerReview && (
+          <Button
+            type='button'
+            size='sm'
+            variant='outline'
+            className='w-full'
+            onClick={(event) => handleReviewClick(event, 'owner')}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Star className='h-4 w-4 mr-1.5' aria-hidden='true' />
+            Review owner
+          </Button>
+        )}
       </div>
       <ReviewAdventurerDialog
         mission={mission}
@@ -478,112 +759,330 @@ const ViewVacancyDialog = ({
   isCreator,
   currentUser,
 }) => {
-  if (!vacancy) return null;
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const [isApplying, setIsApplying] = useState(false);
+  const [joinMessage, setJoinMessage] = useState('');
 
+  const { isPending: isJoining, mutate: joinMutate } = useMutation({
+    mutationFn: () => joinMission(mission.mid, vacancy.vacancy_id, joinMessage),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(mission.mid)],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', mission.mid],
+      });
+      showAlert({
+        title: 'Request sent',
+        description:
+          'The mission owner received your request. You will join the mission only if they accept it.',
+      });
+      handleClose();
+    },
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.JOIN_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  const handleClose = () => {
+    setIsApplying(false);
+    setJoinMessage('');
+    onClose();
+  };
+
+  if (!vacancy) return null;
   const isAssigned = !!vacancy.adventurer_id;
   const isAssignedToUser = vacancy.adventurer_id === currentUser?.id;
+  const hasOwnerReview = !!vacancy.owner_review_id;
+  const hasAdventurerReview = !!vacancy.adventurer_review_id;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent
-        className='sm:max-w-md'
+        className='sm:max-w-lg max-h-[80vh] overflow-y-auto'
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <DialogHeader>
-          <DialogTitle className='text-xl'>
-            {vacancy.vacancy_title || 'Adventurer needed'}
-          </DialogTitle>
-          <DialogDescription>
-            Vacancy details can be seen below.
-          </DialogDescription>
+        <DialogHeader className='pb-4 border-b'>
+          <div className='flex justify-between items-start gap-4 pr-6'>
+            <DialogTitle className='text-2xl font-bold tracking-tight wrap-break-words wrap-anywhere'>
+              {vacancy.vacancy_title || 'Adventurer needed'}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
-        <div className='space-y-4'>
-          <div className='space-y-2'>
-            <h4 className='text-sm font-semibold'>Monetary reward</h4>
-            <div className='flex justify-between items-center p-3 rounded-lg border'>
-              <span className='text-sm font-bold text-primary'>
+        <div className='space-y-6 py-2'>
+          <div className='grid grid-cols-2 gap-4'>
+            <div className='bg-muted/20 p-4 rounded-xl border'>
+              <h4 className='text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1'>
+                Monetary reward
+              </h4>
+              <p className='text-2xl font-bold text-primary'>
                 {vacancy.reward}€
-              </span>
+              </p>
+            </div>
+
+            <div className='bg-muted/20 p-4 rounded-xl border flex flex-col justify-center'>
+              <h4 className='text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1'>
+                Current status
+              </h4>
+              <p className='text-sm font-medium'>
+                {getParticipationStatusLabel(vacancy.status)}
+              </p>
             </div>
           </div>
 
-          <div className='space-y-2'>
-            <h4 className='text-sm font-semibold'>Vacancy description</h4>
-            <p className='text-sm leading-relaxed p-3 rounded-lg border'>
-              {vacancy.vacancy_description || 'No additional description.'}
+          <div>
+            <h4 className='font-semibold text-sm mb-2'>Vacancy Details</h4>
+            <p className='text-sm text-muted-foreground leading-relaxed bg-muted/10 p-4 rounded-xl border wrap-break-words wrap-anywhere min-h-24'>
+              {vacancy.vacancy_description ||
+                'No additional description provided for this vacancy.'}
             </p>
           </div>
 
-          <div className='space-y-2'>
-            <h4 className='text-sm font-semibold'>Current state</h4>
-            {isAssigned ? (
-              <div className='flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm'>
-                <User size={16} />
-                <span>
-                  Assigned to{' '}
-                  <strong>
-                    {vacancy.adventurer_id === currentUser?.id
-                      ? 'you!'
-                      : vacancy.username}
-                  </strong>
-                </span>
+          {isAssigned && (
+            <div>
+              <h4 className='font-semibold text-sm mb-2'>
+                Assigned Adventurer
+              </h4>
+              <div className='flex items-center gap-3 p-3 bg-muted/10 border rounded-xl'>
+                <Avatar className='h-10 w-10 border border-primary/10'>
+                  <AvatarImage src={getImageUrl(vacancy.avatar)} />
+                  <AvatarFallback>
+                    <User
+                      className='h-5 w-5 text-muted-foreground'
+                      aria-hidden='true'
+                    />
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className='text-sm font-semibold'>
+                    {isAssignedToUser
+                      ? 'You (Assigned)'
+                      : `@${vacancy.username}`}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm font-medium'>
-                This vacancy is open and seeking for an adventurer!
-              </div>
-            )}
-          </div>
-        </div>
-
-        <DialogFooter className='sm:justify-end gap-2'>
-          <Button variant='outline' onClick={onClose}>
-            Close
-          </Button>
-
-          {!currentUser?.isAdmin && !isCreator && !isAssigned && (
-            <JoinMissionButton
-              missionId={mission.mid}
-              vacancyId={vacancy.vacancy_id}
-              isJoined={mission.is_joined}
-            />
+            </div>
           )}
 
-          {!currentUser?.isAdmin &&
-            !isCreator &&
-            isAssignedToUser &&
-            mission.status !== MISSION_STATUS.IN_PROGRESS.ID && (
-              <UnjoinMissionButton
-                missionId={mission.mid}
-                vacancyId={vacancy.vacancy_id}
+          {(hasOwnerReview || hasAdventurerReview) && (
+            <div>
+              <h4 className='font-semibold text-sm mb-2'>Mission Reviews</h4>
+              <div className='space-y-3'>
+                {hasOwnerReview && (
+                  <div className='bg-amber-50/50 border border-amber-100 p-4 rounded-xl'>
+                    <div className='flex items-center justify-between mb-2'>
+                      <span className='font-bold  text-amber-800/70'>
+                        Adventurer Rating
+                      </span>
+                      <div className='flex items-center gap-1 font-bold text-amber-700'>
+                        <Star
+                          className='h-4 w-4 fill-amber-400 text-amber-400'
+                          aria-hidden='true'
+                        />
+                        {Number(vacancy.owner_review_rating).toFixed(1)}
+                      </div>
+                    </div>
+                    {vacancy.owner_review_comment ? (
+                      <p className='text-sm text-amber-900/80 italic wrap-break-words'>
+                        &quot;{vacancy.owner_review_comment}&quot;
+                      </p>
+                    ) : (
+                      <p className='text-sm text-amber-900/50 italic'>
+                        No written comment.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {hasAdventurerReview && (
+                  <div className='bg-amber-50/50 border border-amber-100 p-4 rounded-xl'>
+                    <div className='flex items-center justify-between mb-2'>
+                      <span className='font-bold text-amber-800/70'>
+                        Owner Rating
+                      </span>
+                      <div className='flex items-center gap-1 font-bold text-amber-700'>
+                        <Star
+                          className='h-4 w-4 fill-amber-400 text-amber-400'
+                          aria-hidden='true'
+                        />
+                        {Number(vacancy.adventurer_review_rating).toFixed(1)}
+                      </div>
+                    </div>
+                    {vacancy.adventurer_review_comment ? (
+                      <p className='text-sm text-amber-900/80 italic wrap-break-words'>
+                        &quot;{vacancy.adventurer_review_comment}&quot;
+                      </p>
+                    ) : (
+                      <p className='text-sm text-amber-900/50 italic'>
+                        No written comment.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isApplying && (
+            <div className='animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 p-4 bg-primary/5 border border-primary/20 rounded-xl mt-4'>
+              <Label
+                htmlFor='joinMessage'
+                className='text-sm font-semibold text-primary'
+              >
+                Why are you the best fit?
+              </Label>
+              <Textarea
+                id='joinMessage'
+                value={joinMessage}
+                onChange={(e) => setJoinMessage(e.target.value)}
+                placeholder='Write a short message to the owner...'
+                maxLength={consts.NOTIFICATION.MESSAGE.MAX_LENGTH}
+                className='bg-background resize-none'
+                rows={4}
+                autoFocus
               />
-            )}
+              <p className='text-xs text-muted-foreground text-right'>
+                {joinMessage.length}/{consts.NOTIFICATION.MESSAGE.MAX_LENGTH}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className='pt-2'>
+          {!isApplying ? (
+            <>
+              <Button variant='outline' onClick={handleClose}>
+                Close
+              </Button>
+
+              {!currentUser?.isAdmin &&
+                !isCreator &&
+                !isAssigned &&
+                (mission.is_joined ? (
+                  <Button disabled>Already in mission</Button>
+                ) : mission.has_pending_join_request ? (
+                  <Button disabled>Request pending</Button>
+                ) : (
+                  <Button onClick={() => setIsApplying(true)}>
+                    Apply for vacancy
+                  </Button>
+                ))}
+
+              {!currentUser?.isAdmin &&
+                !isCreator &&
+                isAssignedToUser &&
+                mission.status !== MISSION_STATUS.IN_PROGRESS.ID && (
+                  <UnjoinMissionButton
+                    missionId={mission.mid}
+                    vacancyId={vacancy.vacancy_id}
+                  />
+                )}
+            </>
+          ) : (
+            <>
+              <Button
+                variant='outline'
+                onClick={() => setIsApplying(false)}
+                disabled={isJoining}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => joinMutate()}
+                disabled={isJoining || joinMessage.trim().length === 0}
+              >
+                {isJoining ? 'Sending...' : 'Send application'}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
 
+const UnjoinMissionButton = ({
+  missionId,
+  vacancyId,
+  className,
+  variant,
+  size,
+}) => {
+  const { showAlert } = useAlert();
+  const queryClient = useQueryClient();
+  const { isPending, mutate } = useMutation({
+    mutationFn: () => unjoinMission(missionId, vacancyId),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['getMissions']);
+    },
+
+    // Backend error handling
+    onError: (error) => {
+      showAlert({
+        title: messages.MISSION.UNJOIN_MISSION_ALERT.ERROR_TITLE,
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.errors?.general?.[0],
+      });
+    },
+  });
+
+  // Interceptor
+  const handleAttempt = () => {
+    // This action needs confirmation
+    showAlert({
+      title: messages.MISSION.UNJOIN_MISSION_ALERT.TITLE,
+      description: messages.MISSION.UNJOIN_MISSION_ALERT.DESCRIPTION,
+      variant: 'warning',
+      confirmText: messages.MISSION.UNJOIN_MISSION_ALERT.CONFIRM_TEXT,
+      onConfirm: mutate,
+    });
+  };
+
+  return (
+    <Button
+      type='button'
+      id='unjoinMissionButton'
+      onClick={handleAttempt}
+      disabled={isPending}
+      className={className}
+      variant={variant}
+      size={size}
+    >
+      {'Unjoin mission'}
+    </Button>
+  );
+};
+
 const MissionVacancies = ({ mission, isCreator, currentUser }) => {
   const [selectedVacancyId, setSelectedVacancyId] = useState(null);
+  const [reportingVacancyId, setReportingVacancyId] = useState(null);
 
   const handleClickVacancy = useCallback((id) => {
     setSelectedVacancyId(id);
   }, []);
 
-  const selectedVacancy = mission.participants.find(
+  const handleReportVacancy = useCallback((id) => {
+    setReportingVacancyId(id);
+  }, []);
+
+  const selectedVacancy = mission?.participants.find(
     (v) => v.vacancy_id === selectedVacancyId,
   );
 
   return (
     <div className='w-full space-y-2'>
-      <h3 className='font-semibold text-lg'>Mission vacancies</h3>
-
-      <div className='flex overflow-x-auto gap-4 p-2 snap-x snap-mandatory hide-scrollbar items-center'>
-        {mission.participants.map((vac) => (
+      <div className='flex overflow-x-auto gap-4 p-2 snap-x snap-mandatory hide-scrollbar items-center ms-2'>
+        {mission?.participants.map((vac) => (
           <div key={vac.vacancy_id} className='snap-start'>
             <VacancyCard
               mission={mission}
@@ -591,6 +1090,7 @@ const MissionVacancies = ({ mission, isCreator, currentUser }) => {
               isCreator={isCreator}
               currentUser={currentUser}
               onClick={handleClickVacancy}
+              onReport={handleReportVacancy}
             />
           </div>
         ))}
@@ -605,62 +1105,128 @@ const MissionVacancies = ({ mission, isCreator, currentUser }) => {
         mission={mission}
         currentUser={currentUser}
       />
+
+      <ReportAdventurerDialog
+        vacancyId={reportingVacancyId}
+        mid={mission?.mid}
+        isOpen={!!reportingVacancyId}
+        onClose={() => setReportingVacancyId(null)}
+      />
     </div>
   );
 };
 
-const AddAdventurerButton = ({ onClick }) => {
-  return (
-    <Button type='button' onClick={onClick}>
-      <Plus className='h-4 w-4' aria-hidden='true' />
-      Add adventurer
-    </Button>
+const ReportAdventurerDialog = ({ mid, vacancyId, isOpen, onClose }) => {
+  const [state, reportVacancyFormAction, isPending] = useActionState(
+    reportAdventurerAction,
+    initialStateUseStateAction,
   );
-};
 
-const ParticipantSection = ({ mission, isCreator, onAddAdventurer }) => {
-  if (!isCreator) {
-    return null;
+  const [clearedFields, setClearedFields] = useState({});
+  const [prevServerState, setPrevServerState] = useState(state);
+  const [isAlertClosed, setIsAlertClosed] = useState(false);
+  const processedState = useRef(null);
+  const { showAlert } = useAlert();
+
+  if (state !== prevServerState) {
+    setPrevServerState(state);
+    setClearedFields({});
+    setIsAlertClosed(false);
   }
 
-  return (
-    <div className='flex flex-wrap items-center gap-2 pt-1'>
-      {isCreator && MISSION_STATUS[mission.status].CAN_ACCEPT_ADVENTURERS && (
-        <AddAdventurerButton onClick={onAddAdventurer} />
-      )}
-      {(mission.participants || []).map((participant) => (
-        <ParticipantRow
-          key={participant.vacancy_id}
-          participant={participant}
-        />
-      ))}
-    </div>
-  );
-};
+  const handleFieldChange = (e) => {
+    const fieldName = e.target.name;
+    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
+  };
 
-const ParticipantRow = ({ participant }) => {
+  useEffect(() => {
+    if (state.success && processedState.current !== state) {
+      processedState.current = state;
+      onClose();
+      showAlert({
+        title: messages.REPORT.SUCCESS_ALERT.TITLE,
+        description: messages.REPORT.SUCCESS_ALERT.DESCRIPTION,
+      });
+    }
+  }, [state, onClose, showAlert]);
+
+  const handleOpenChange = (open) => {
+    if (!open) {
+      setIsAlertClosed(true);
+      onClose();
+    }
+  };
+
   return (
-    <div className='flex items-center gap-2 rounded-full border border-slate-200 bg-white p-1 shadow-sm'>
-      <div className='inline-flex max-w-full items-center gap-2 rounded-full border border-slate-900 bg-slate-900 px-3 py-1 text-white'>
-        <span className='flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full'>
-          {participant.avatar ? (
-            <img
-              src={getImageUrl(participant.avatar)}
-              alt={`${participant.username} avatar`}
-              className='h-full w-full object-cover'
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
+        <DialogHeader className='pb-3 border-b'>
+          <DialogTitle>
+            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE ||
+              'Report adventurer'}
+          </DialogTitle>
+          <DialogDescription>
+            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION ||
+              'Please provide details about the issue with this adventurer.'}
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          action={reportVacancyFormAction}
+          id='reportAdventurerForm'
+          noValidate
+        >
+          <div className='space-y-4 py-4'>
+            <div className='space-y-2'>
+              <FormTextareaField
+                id='reportVacancyMessage'
+                name='message'
+                label='Message (required):'
+                type='text'
+                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                defaultValue={state.data?.message || ''}
+                error={
+                  !clearedFields.message && state.errors?.message
+                    ? state.errors.message[0]
+                    : undefined
+                }
+                invalid={!clearedFields.message && !!state.errors?.message}
+                aria-invalid={!clearedFields.message && !!state.errors?.message}
+                required
+                autoComplete='off'
+                disabled={isPending}
+                onChange={handleFieldChange}
+              />
+            </div>
+            <input
+              type='hidden'
+              id='vacancyId'
+              name='vacancyId'
+              value={vacancyId || ''}
             />
-          ) : (
-            <User className='h-3.5 w-3.5' aria-hidden='true' />
-          )}
-        </span>
-        <span className='max-w-24 truncate text-sm font-medium'>
-          {participant.username}
-        </span>
-        <span className='rounded-full bg-white/15 px-2 py-0.5 text-xs text-white/90'>
-          {getParticipationStatusLabel(participant.status)}
-        </span>
-      </div>
-    </div>
+            <input type='hidden' id='mid' name='mid' value={mid} />
+            {state.errors?.general && !isAlertClosed && (
+              <FormAlert onClose={() => setIsAlertClosed(true)}>
+                {state.errors.general[0]}
+              </FormAlert>
+            )}
+          </div>
+        </form>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant='outline' type='button' onClick={onClose}>
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            type='submit'
+            disabled={isPending}
+            form='reportAdventurerForm'
+          >
+            {isPending ? 'Reporting...' : 'Report adventurer'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -672,7 +1238,7 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const { isPending, mutate } = useMutation({
     mutationFn: () =>
-      reviewAdventurer(mission.mid, participant.adventurer_id, {
+      reviewAdventurer(mission?.mid, participant.adventurer_id, {
         rating,
         comment,
       }),
@@ -732,7 +1298,7 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
         onKeyDown={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <DialogHeader>
+        <DialogHeader className='pb-3 border-b'>
           <DialogTitle>Review {participant.username}</DialogTitle>
           <DialogDescription>
             This review will be linked to this completed mission.
@@ -865,7 +1431,7 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
         onKeyDown={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
       >
-        <DialogHeader>
+        <DialogHeader className='pb-3 border-b'>
           <DialogTitle>Review mission owner</DialogTitle>
           <DialogDescription>
             This review will be linked to this completed mission.
@@ -975,7 +1541,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
     try {
       const data = await queryClient.fetchInfiniteQuery(
         searchUsersByUsernameInfiniteQueryOptions(
-          PAGINATION_LIMIT.MISSIONS,
+          PAGINATION_LIMIT.USERS,
           { username: trimmedUsername },
           {
             retry: retryOption,
@@ -1012,7 +1578,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className='w-[min(92vw,42rem)] max-w-2xl'>
-        <AlertDialogHeader>
+        <AlertDialogHeader className='pb-3 border-b'>
           <AlertDialogTitle>Search adventurer</AlertDialogTitle>
           <AlertDialogDescription>
             Find the adventurer by username before sending the invitation.
@@ -1053,11 +1619,11 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
               )}
 
               {foundUsers.length > 0 && (
-                <div className='flex flex-col gap-3'>
+                <div className='flex flex-col gap-3 max-h-80 overflow-y-auto pr-2'>
                   {foundUsers.map((foundUser) => (
                     <div
                       key={foundUser.uid}
-                      className='rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4'
+                      className='rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 shrink-0'
                     >
                       <div className='flex items-center justify-between gap-4'>
                         <div className='flex min-w-0 items-center gap-3'>
@@ -1189,7 +1755,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
               </Button>
             </>
           ) : (
-            <Button type='button' variant='ghost' onClick={handleClose}>
+            <Button type='button' variant='outline' onClick={handleClose}>
               Close
             </Button>
           )}
@@ -1199,180 +1765,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
   );
 };
 
-const JoinMissionButton = ({
-  missionId,
-  vacancyId,
-  isJoined,
-  hasPendingJoinRequest = false,
-}) => {
-  const { showAlert } = useAlert();
-  const [hasRequestedToJoin, setHasRequestedToJoin] = useState(
-    hasPendingJoinRequest,
-  );
-  const [isJoinDialogOpen, setIsJoinDialogOpen] = useState(false);
-  const joinRequestMessageRef = useRef(null);
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationFn: (message) => joinMission(missionId, vacancyId, message),
-    onSuccess: () => {
-      setHasRequestedToJoin(true);
-      setIsJoinDialogOpen(false);
-      queryClient.invalidateQueries({
-        queryKey: ['getMission', String(missionId)],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['getMission', missionId],
-      });
-      if (joinRequestMessageRef.current) {
-        joinRequestMessageRef.current.value = '';
-      }
-      showAlert({
-        title: 'Request sent',
-        description:
-          'The mission owner received your request. You will join the mission only if they accept it.',
-      });
-    },
-    // Backend error handling
-    onError: (error) => {
-      showAlert({
-        title: messages.MISSION.JOIN_MISSION_ALERT.ERROR_TITLE,
-        description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
-      });
-    },
-  });
-
-  let buttonText = 'Join mission';
-  let isDisabled = false;
-
-  if (isJoined) {
-    buttonText = 'Joined mission';
-    isDisabled = true;
-  } else if (hasRequestedToJoin) {
-    buttonText = 'Request sent';
-    isDisabled = true;
-  } else if (isPending) {
-    buttonText = 'Sending request...';
-    isDisabled = true;
-  }
-
-  // Interceptor
-  const handleAttempt = () => {
-    setIsJoinDialogOpen(true);
-  };
-
-  return (
-    <>
-      <Button
-        type='button'
-        id='joinMissionButton'
-        onClick={handleAttempt}
-        disabled={isDisabled || isPending}
-      >
-        {buttonText}
-      </Button>
-
-      <AlertDialog
-        open={isJoinDialogOpen}
-        onOpenChange={(open) => {
-          setIsJoinDialogOpen(open);
-          if (!open && joinRequestMessageRef.current) {
-            joinRequestMessageRef.current.value = '';
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {messages.MISSION.JOIN_MISSION_ALERT.TITLE}
-            </AlertDialogTitle>
-          </AlertDialogHeader>
-
-          <div>
-            <label htmlFor='joinMissionMessage'>
-              Message for the mission owner
-            </label>
-            <Textarea
-              id='joinMissionMessage'
-              ref={joinRequestMessageRef}
-              placeholder='Write a short message explaining why you want to join'
-              maxLength={consts.NOTIFICATION.MESSAGE_MAX_LENGTH}
-              rows={5}
-            />
-          </div>
-
-          <AlertDialogFooter>
-            <Button
-              type='button'
-              variant='outline'
-              onClick={() => {
-                setIsJoinDialogOpen(false);
-                if (joinRequestMessageRef.current) {
-                  joinRequestMessageRef.current.value = '';
-                }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type='button'
-              onClick={() => mutate(joinRequestMessageRef.current?.value || '')}
-              disabled={isPending}
-            >
-              {messages.MISSION.JOIN_MISSION_ALERT.CONFIRM_TEXT}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
-  );
-};
-
-const UnjoinMissionButton = ({ missionId, vacancyId }) => {
-  const { showAlert } = useAlert();
-  const queryClient = useQueryClient();
-  const { isPending, mutate } = useMutation({
-    mutationFn: () => unjoinMission(missionId, vacancyId),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
-    },
-    // Backend error handling
-    onError: (error) => {
-      showAlert({
-        title: messages.MISSION.UNJOIN_MISSION_ALERT.ERROR_TITLE,
-        description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
-      });
-    },
-  });
-
-  // Interceptor
-  const handleAttempt = () => {
-    // This action needs confirmation
-    showAlert({
-      title: messages.MISSION.UNJOIN_MISSION_ALERT.TITLE,
-      description: messages.MISSION.UNJOIN_MISSION_ALERT.DESCRIPTION,
-      variant: 'warning',
-      confirmText: messages.MISSION.UNJOIN_MISSION_ALERT.CONFIRM_TEXT,
-      onConfirm: mutate,
-    });
-  };
-
-  return (
-    <Button
-      type='button'
-      id='unjoinMissionButton'
-      onClick={handleAttempt}
-      disabled={isPending}
-    >
-      {'Unjoin mission'}
-    </Button>
-  );
-};
-
-const CloseMissionButton = ({ mission }) => {
+const CloseMissionButton = ({ mission, className, variant, size }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
@@ -1429,13 +1822,22 @@ const CloseMissionButton = ({ mission }) => {
       id='closeMissionButton'
       onClick={handleAttempt}
       disabled={isPending}
+      className={className}
+      variant={variant}
+      size={size}
     >
       {'Close mission'}
     </Button>
   );
 };
 
-const SubmitParticipationButton = ({ missionId, participationStatus }) => {
+const SubmitParticipationButton = ({
+  missionId,
+  participationStatus,
+  className,
+  variant,
+  size,
+}) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
@@ -1476,6 +1878,10 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
     participationStatus !== MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID
       ? getParticipationStatusLabel(participationStatus)
       : 'Submit my part';
+  const classNameButton =
+    participationStatus === MISSION_PARTICIPATION_STATUS.REJECTED.ID
+      ? 'bg-destructive/80'
+      : 'bg-green-700 border border-green-200 hover:bg-green-800';
 
   return (
     <Button
@@ -1483,37 +1889,62 @@ const SubmitParticipationButton = ({ missionId, participationStatus }) => {
       id='submitParticipationButton'
       onClick={handleAttempt}
       disabled={isPending || isSubmitted}
+      className={cn(classNameButton, className)}
+      variant={variant}
+      size={size}
     >
       {buttonLabel}
     </Button>
   );
 };
 
-const MissionOwnerStatusMessage = ({ status }) => {
+const MissionOwnerStatusMessage = ({ status, canFinish }) => {
+  if (canFinish) {
+    return (
+      <p className='p-1'>
+        Finish this mission for the records or add some more adventurers if
+        needed!
+      </p>
+    );
+  }
+
   if (status === MISSION_STATUS.IN_PROGRESS.ID) {
     return (
-      <p className='text-muted-foreground bg-muted/20'>
+      <p className='p-1'>
         Waiting for adventurers to submit their participation.
       </p>
     );
   }
 
-  if (status === 'in_dispute') {
-    return (
-      <p className='text-muted-foreground bg-muted/20'>
-        {messages.MISSION.MISSION_IN_DISPUTE}
-      </p>
-    );
+  if (status === MISSION_STATUS.IN_DISPUTE.ID) {
+    return <p className='p-1'>{messages.MISSION.MISSION_IN_DISPUTE}</p>;
   }
 
-  return (
-    <p className='text-muted-foreground bg-muted/20'>
-      {messages.MISSION.MISSION_CLOSED}
-    </p>
-  );
+  if (
+    status === MISSION_STATUS.CANCELLED.ID ||
+    status === MISSION_STATUS.DELETED.ID ||
+    status === MISSION_STATUS.REPORTED.ID
+  )
+    return <EndedStatusMessage status={status}></EndedStatusMessage>;
+
+  return <p className='p-1'>{messages.MISSION.MISSION_CLOSED}</p>;
 };
 
-const PayMissionButton = ({ mission }) => {
+const EndedStatusMessage = ({ status }) => {
+  if (status === MISSION_STATUS.CANCELLED.ID) {
+    return <p className='p-1 '>This mission has been cancelled.</p>;
+  }
+
+  if (status === MISSION_STATUS.DELETED.ID) {
+    return <p className='p-1'>This mission has been deleted.</p>;
+  }
+
+  if (status === MISSION_STATUS.REPORTED.ID) {
+    return <p className='p-1'>This mission has been reported.</p>;
+  }
+};
+
+const PayMissionButton = ({ mission, className, variant, size }) => {
   const { showAlert } = useAlert();
   const navigate = useNavigate();
   const text =
@@ -1538,13 +1969,20 @@ const PayMissionButton = ({ mission }) => {
   };
 
   return (
-    <Button type='button' id='payMissionButton' onClick={handleAttempt}>
+    <Button
+      type='button'
+      id='payMissionButton'
+      onClick={handleAttempt}
+      className={className}
+      variant={variant}
+      size={size}
+    >
       {text}
     </Button>
   );
 };
 
-const CancelMissionButton = ({ mission }) => {
+const CancelMissionButton = ({ mission, className, variant, size }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
@@ -1583,13 +2021,16 @@ const CancelMissionButton = ({ mission }) => {
       id='cancelMissionButton'
       onClick={handleAttempt}
       disabled={isPending}
+      className={className}
+      variant={variant}
+      size={size}
     >
       {'Cancel mission'}
     </Button>
   );
 };
 
-const ReopenMissionButton = ({ mission }) => {
+const ReopenMissionButton = ({ mission, className, variant, size }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
@@ -1599,6 +2040,7 @@ const ReopenMissionButton = ({ mission }) => {
     },
     // Backend error handling
     onError: (error) => {
+      console.log(error);
       showAlert({
         title: messages.MISSION.REOPEN_MISSION_ALERT.ERROR_TITLE,
         description:
@@ -1618,7 +2060,7 @@ const ReopenMissionButton = ({ mission }) => {
           : messages.MISSION.REOPEN_MISSION_ALERT.TITLE,
       description:
         mission.occupied_vacancies === mission.total_vacancies
-          ? messagesShared.CANNOT_REOPEN_MISSION_WITHOUT_EMPTY_VACANCIES
+          ? messagesShared.MISSION.REOPEN.CANNOT_WITHOUT_EMPTY_VACANCIES
           : messages.MISSION.REOPEN_MISSION_ALERT.DESCRIPTION,
       variant: 'error',
       confirmText:
@@ -1636,13 +2078,16 @@ const ReopenMissionButton = ({ mission }) => {
       id='reopenMissionButton'
       onClick={handleAttempt}
       disabled={isPending}
+      className={className}
+      variant={variant}
+      size={size}
     >
       {'Reopen mission'}
     </Button>
   );
 };
 
-const FinishMissionButton = ({ mission }) => {
+const FinishMissionButton = ({ mission, className, variant, size }) => {
   const { showAlert } = useAlert();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
@@ -1679,13 +2124,16 @@ const FinishMissionButton = ({ mission }) => {
       id='finishMissionButton'
       onClick={handleAttempt}
       disabled={isPending}
+      className={className}
+      variant={variant}
+      size={size}
     >
       {'Finish mission'}
     </Button>
   );
 };
 
-const ReportMissionButton = ({ mission }) => {
+const ReportMissionButton = ({ mission, className, variant, size }) => {
   // Action handling for update email form
   const [state, reportMissionFormAction, isPending] = useActionState(
     reportMissionAction,
@@ -1740,17 +2188,18 @@ const ReportMissionButton = ({ mission }) => {
       <DialogTrigger asChild>
         <Button
           id='reportMissionButton'
-          variant='destructive'
           type='button'
           disabled={isPending}
-          className='me-2'
+          className={className}
+          variant={variant}
+          size={size}
         >
           <MessageSquareWarning className='w-4 h-4 mr-2' aria-hidden='true' />
           {'Report mission'}
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
-        <DialogHeader>
+        <DialogHeader className='pb-3 border-b'>
           <DialogTitle>
             {messages.PUBLIC_PROFILE.REPORT_MISSION_DIALOG.TITLE}
           </DialogTitle>
@@ -1818,5 +2267,9 @@ const getParticipationStatusLabel = (status) => {
     return messages.MISSION.MISSION_JOINED;
   }
 
-  return messages.MISSION.STATUS_LABELS[status] || status.replaceAll('_', ' ');
+  return (
+    MISSION_PARTICIPATION_STATUS[status].LABEL ||
+    messages.MISSION.STATUS_LABELS[status] ||
+    status.replaceAll('_', ' ')
+  );
 };

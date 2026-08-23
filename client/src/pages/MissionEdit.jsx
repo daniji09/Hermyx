@@ -26,15 +26,7 @@ import {
 } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
-import {
-  MessageSquareWarning,
-  Plus,
-  Trash2,
-  UploadCloud,
-  User,
-  UserPlus,
-  X,
-} from 'lucide-react';
+import { Plus, Trash2, UploadCloud, User, UserPlus, X } from 'lucide-react';
 import {
   Dialog,
   DialogTrigger,
@@ -48,7 +40,6 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
 import { useAlert } from '../contexts/AlertContext';
-import { reportAdventurerAction } from '../actions/ReportActions';
 import { useDropzone } from 'react-dropzone';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
@@ -343,7 +334,6 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         <div className='px-8'>
           <MissionVacanciesCreator
             initialVacancies={mission?.participants || []}
-            canDelete={MISSION_STATUS[mission.status].CAN_DELETE_ADVENTURERS}
             mid={mission.mid}
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
@@ -397,14 +387,13 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
   );
 };
 
-const CreationVacancyCard = ({
-  vacancy,
-  onDelete,
-  onReport,
-  onClick,
-  canDelete,
-}) => {
+const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
   const isAssigned = !!vacancy.adventurer_id;
+  console.log(vacancy);
+  const isDeletable =
+    vacancy.status === MISSION_PARTICIPATION_STATUS.JOINED.ID ||
+    vacancy.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID;
+
   return (
     <Card
       className={`relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all group ${
@@ -425,7 +414,7 @@ const CreationVacancyCard = ({
         Edit vacancy {vacancy.title}
       </button>
 
-      {canDelete ? (
+      {isDeletable && (
         <Button
           id={`deleteVacancy${vacancy.id}`}
           type='button'
@@ -434,28 +423,14 @@ const CreationVacancyCard = ({
             e.stopPropagation();
             onDelete(vacancy.id);
           }}
-          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
+          className='absolute top-2 right-2 hover:text-red-500 transition-colors z-10'
           title='Delete vacancy'
           aria-label='Delete vacancy'
         >
-          <Trash2 size={24} aria-hidden='true' />
-        </Button>
-      ) : (
-        <Button
-          id={`reportVacancy${vacancy.id}`}
-          type='button'
-          variant='outline'
-          onClick={(e) => {
-            e.stopPropagation();
-            onReport(vacancy.id);
-          }}
-          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
-          title='Report vacancy'
-          aria-label='Report vacancy'
-        >
-          <MessageSquareWarning size={24} aria-hidden='true' />
+          <Trash2 size={20} aria-hidden='true' />
         </Button>
       )}
+
       <h3 className='font-bold text-sm truncate min-h-5 mb-1 text-center mx-8'>
         {vacancy.title || 'Adventurer'}
       </h3>
@@ -513,7 +488,6 @@ const CreateVacanciesDialog = ({
   handleClickVacancy,
   handleReportVacancy,
   onConfirm,
-  canDelete,
 }) => {
   // Action handling for create vacancy form
   const [state, addVacanciesFormAction, isPending] = useActionState(
@@ -598,7 +572,6 @@ const CreateVacanciesDialog = ({
               onDelete={handleDeleteVacancy}
               onReport={handleReportVacancy}
               onClick={handleClickVacancy}
-              canDelete={canDelete}
             />
           </div>
         ))}
@@ -925,12 +898,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
     </Dialog>
   );
 };
-
-export const MissionVacanciesCreator = ({
-  initialVacancies,
-  canDelete,
-  mid,
-}) => {
+export const MissionVacanciesCreator = ({ initialVacancies }) => {
   const { showAlert } = useAlert();
   const formattedVacancies = initialVacancies.map((vac) => ({
     adventurer_id: vac.adventurer_id,
@@ -945,7 +913,6 @@ export const MissionVacanciesCreator = ({
 
   const [vacancies, setVacancies] = useState(formattedVacancies);
   const [editingVacancyId, setEditingVacancyId] = useState(null);
-  const [reportingVacancyId, setReportingVacancyId] = useState(null);
 
   const handleAddVacancies = useCallback(
     ({ quantity, reward, title, description, status }) => {
@@ -957,7 +924,6 @@ export const MissionVacanciesCreator = ({
           description,
           status,
         }));
-
         return [...prevVacancies, ...newVacancies];
       });
     },
@@ -973,10 +939,6 @@ export const MissionVacanciesCreator = ({
     },
     [editingVacancyId],
   );
-
-  const handleReportVacancy = useCallback((id) => {
-    setReportingVacancyId(id);
-  }, []);
 
   const handleClickVacancy = useCallback(
     (id) => {
@@ -1014,7 +976,6 @@ export const MissionVacanciesCreator = ({
         form='editMissionForm'
         value={vacancies.length}
       />
-
       <input
         type='hidden'
         name='vacanciesData'
@@ -1026,9 +987,7 @@ export const MissionVacanciesCreator = ({
         onConfirm={handleAddVacancies}
         handleDeleteVacancy={handleDeleteVacancy}
         handleClickVacancy={handleClickVacancy}
-        handleReportVacancy={handleReportVacancy}
         vacancies={vacancies}
-        canDelete={canDelete}
       />
 
       <EditVacancyDialog
@@ -1039,135 +998,10 @@ export const MissionVacanciesCreator = ({
         onConfirm={handleConfirmEdit}
       />
 
-      <ReportVacancyDialog
-        vacancyId={reportingVacancyId}
-        mid={mid}
-        isOpen={!!reportingVacancyId}
-        onClose={() => setReportingVacancyId(null)}
-      />
-
       <p className='text-left text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5'>
         You have added {vacancies.length} vacancies.
       </p>
     </div>
-  );
-};
-
-const ReportVacancyDialog = ({ mid, vacancyId, isOpen, onClose }) => {
-  // Action handling for update email form
-  const [state, reportVacancyFormAction, isPending] = useActionState(
-    reportAdventurerAction,
-    initialStateUseStateAction,
-  );
-
-  // Logic for cleaning errors in fields or alerts when modifications are done
-  const [clearedFields, setClearedFields] = useState({});
-  const [prevServerState, setPrevServerState] = useState(state);
-  const [isAlertClosed, setIsAlertClosed] = useState(false);
-  const processedState = useRef(null);
-  const { showAlert } = useAlert();
-
-  // If the state has changed, field errors should be cleared
-  if (state !== prevServerState) {
-    setPrevServerState(state);
-    setClearedFields({});
-    setIsAlertClosed(false);
-  }
-
-  // When user changes field's value, the error is not shown until the form is sent again
-  const handleFieldChange = (e) => {
-    const fieldName = e.target.name;
-    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
-  };
-
-  // Effect for success handling
-  useEffect(() => {
-    if (state.success && processedState.current !== state) {
-      processedState.current = state;
-      onClose();
-      showAlert({
-        title: messages.REPORT.SUCCESS_ALERT.TITLE,
-        description: messages.REPORT.SUCCESS_ALERT.DESCRIPTION,
-      });
-    }
-  }, [state, onClose, showAlert]);
-
-  // Handle manual dialog close to reset visual errors
-  const handleOpenChange = (open) => {
-    if (!open) {
-      setIsAlertClosed(true);
-      onClose();
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
-        <DialogHeader>
-          <DialogTitle>
-            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE}
-          </DialogTitle>
-          <DialogDescription>
-            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION}
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          action={reportVacancyFormAction}
-          id='reportAdventurerForm'
-          noValidate
-        >
-          <div className='space-y-4 py-4'>
-            <div className='space-y-2'>
-              <FormTextareaField
-                id='reportVacancyMessage'
-                name='message'
-                label='Message (required):'
-                type='text'
-                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
-                defaultValue={state.data?.message || ''}
-                error={
-                  !clearedFields.message && state.errors?.message
-                    ? state.errors.message[0]
-                    : undefined
-                }
-                invalid={!clearedFields.message && !!state.errors?.message}
-                aria-invalid={!clearedFields.message && !!state.errors?.message}
-                required
-                autoComplete='off'
-                disabled={isPending}
-                onChange={handleFieldChange}
-              />
-            </div>
-            <input
-              type='hidden'
-              id='vacancyId'
-              name='vacancyId'
-              value={vacancyId || ''}
-            />
-            <input type='hidden' id='mid' name='mid' value={mid} />
-            {state.errors?.general && !isAlertClosed && (
-              <FormAlert onClose={() => setIsAlertClosed(true)}>
-                {state.errors.general[0]}
-              </FormAlert>
-            )}
-          </div>
-        </form>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant='outline' type='button' onClick={onClose}>
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button
-            type='submit'
-            disabled={isPending}
-            form='reportAdventurerForm'
-          >
-            {isPending ? 'Reporting...' : 'Report adventurer'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 };
 
