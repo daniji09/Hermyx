@@ -141,7 +141,7 @@ export const MISSION_PARTICIPATION_STATUS = {
   PENDING_PAYMENT: {
     ID: 'PENDING_PAYMENT',
     LABEL: 'Pending payment',
-    CAN_EDIT: true,
+    CAN_EDIT: false,
     CAN_INTERACT: true,
     CAN_REVIEW: false,
     VALID_NEXT_STATES: ['IN_PROGRESS', 'IN_DISPUTE'],

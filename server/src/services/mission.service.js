@@ -2144,6 +2144,8 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
       mission.mid,
       isProduction,
     );
+  const photosChanged =
+    uploadedPhotoUrls.length > 0 || photosToDelete.length > 0;
 
   // Then, database transaction is made
   const { notificationsToSend, updatedMission } =
@@ -2156,15 +2158,25 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
       existingVacancies,
       originalVacancies,
       newVacancies,
+      photosChanged,
       user,
     );
+
+  // Notify adventurers immediately after the database commit. Cleanup of old
+  // Photos is external work and must not delay or prevent real-time delivery.
+  for (const notification of notificationsToSend) {
+    socketProvider.emitToUser(
+      notification.receiverId,
+      notification.event,
+      notification.payload,
+    );
+  }
 
   // Lastly, after database commit, storage provider deletion is done
   await editMissionExternalUpdates(
     photosToDelete,
     existingPhotos,
     isProduction,
-    notificationsToSend,
   );
 
   return updatedMission;
@@ -2295,6 +2307,7 @@ const editMissionInternalUpdates = async (
   existingVacancies,
   originalVacancies,
   newVacancies,
+  photosChanged,
   user,
 ) => {
   const client = await pool.connect();
@@ -2320,6 +2333,7 @@ const editMissionInternalUpdates = async (
       mission,
       updatedMission,
       originalMission,
+      photosChanged,
       existingIds,
       user,
       vacanciesToNotify,
@@ -2414,6 +2428,7 @@ const internalNotifications = async (
   mission,
   updatedMission,
   originalMission,
+  photosChanged,
   existingIds,
   user,
   vacanciesToNotify,
@@ -2428,6 +2443,7 @@ const internalNotifications = async (
     mission,
     updatedMission,
     originalMission,
+    photosChanged,
     existingIds,
     user,
     notificationsToSend,
@@ -2469,6 +2485,7 @@ const missionChangedNotifications = async (
   mission,
   updatedMission,
   originalMission,
+  photosChanged,
   existingIds,
   user,
   notificationsToSend,
@@ -2486,6 +2503,7 @@ const missionChangedNotifications = async (
       changes.push(key);
     }
   });
+  if (photosChanged) changes.push('photos');
 
   if (changes.length > 0) {
     for (const vacancyId of existingIds) {
@@ -2642,16 +2660,37 @@ const monetaryRewardChangedNotifications = async (
             .monetary_reward,
           vacancy.reward,
         );
-      await notificationService.updateNotification({
-        nid: notification[0].nid,
-        type: notification[0].type,
-        kind: notification[0].kind,
-        action: notification[0].action,
-        status: notification[0].status,
-        message: notification[0].message,
-        senderId: notification[0].sender_id,
-        recipientId: notification[0].recipient_id,
-        payload: notification[0].payload,
+      await notificationService.updateNotification(
+        {
+          nid: notification[0].nid,
+          type: notification[0].type,
+          kind: notification[0].kind,
+          action: notification[0].action,
+          status: notification[0].status,
+          message: notification[0].message,
+          senderId: notification[0].sender_id,
+          recipientId: notification[0].recipient_id,
+          payload: notification[0].payload,
+        },
+        client,
+      );
+
+      // The notification already exists, but its content changed. Emit the
+      // Updated notification so connected adventurers see the new offer.
+      notificationsToSend.push({
+        receiverId: vacancy.adventurer_id,
+        event: 'mission:edited',
+        payload: {
+          notificationId: notification[0].nid,
+          missionId: mission.mid,
+          vacancyId: vacancy.id,
+          missionTitle: updatedMission.title,
+          senderId: user.uid,
+          senderUsername: user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: notification[0].message,
+        },
       });
     } else {
       // If not, the new notification is send
@@ -2662,20 +2701,23 @@ const monetaryRewardChangedNotifications = async (
             .monetary_reward,
           vacancy.reward,
         );
-        const notificationId = await notificationService.createNotification({
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-          action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
-          status: NOTIFICATION_STATUS.PENDING.ID,
-          message: message,
-          senderId: user.uid,
-          receiverId: vacancy.adventurer_id,
-          payload: {
-            associated_mission_id: mission.mid,
-            associated_vacancy_id: vacancy.id,
-            new_offer: vacancy.reward,
+        const notificationId = await notificationService.createNotification(
+          {
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+            action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+            status: NOTIFICATION_STATUS.PENDING.ID,
+            message: message,
+            senderId: user.uid,
+            receiverId: vacancy.adventurer_id,
+            payload: {
+              associated_mission_id: mission.mid,
+              associated_vacancy_id: vacancy.id,
+              new_offer: vacancy.reward,
+            },
           },
-        });
+          client,
+        );
         notificationsToSend.push({
           receiverId: vacancy.adventurer_id,
           event: 'mission:edited',
@@ -2700,7 +2742,6 @@ const editMissionExternalUpdates = async (
   photosToDelete,
   existingPhotos,
   isProduction,
-  notificationsToSend,
 ) => {
   for (const dbPhoto of photosToDelete) {
     if (!existingPhotos.includes(dbPhoto.url)) {
@@ -2713,15 +2754,6 @@ const editMissionExternalUpdates = async (
         await storageProvider.deleteFromLocalStorage(dbPhoto.url);
       }
     }
-  }
-
-  // And notifications are sent
-  for (const notification of notificationsToSend) {
-    socketProvider.emitToUser(
-      notification.receiverId,
-      notification.event,
-      notification.payload,
-    );
   }
 };
 
