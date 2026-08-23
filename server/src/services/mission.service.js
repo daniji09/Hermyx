@@ -1972,6 +1972,13 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
     if (unjoin < 1)
       throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
 
+    // Adventurer leaves the mission conversation
+    await conversationService.leaveMissionConversation(
+      mission.mid,
+      vacancy.adventurer_id,
+      client,
+    );
+
     // Updates mission
     const unjoinMission = await missionModel.updateOccupiedVacancies(
       mission.mid,
@@ -2381,13 +2388,36 @@ const internalUpdates = async (
     await missionPhotoModel.deleteById(dbPhoto.id, client);
   }
 
-  // First operation, deleting vacancies that are not occupied from the original mission
+  // First, remove adventurers deleted from the mission conversation
+  const removedVacancies = originalVacancies.filter(
+    (vacancy) => !existingIds.includes(vacancy.id),
+  );
+  for (const vacancy of removedVacancies) {
+    await conversationService.leaveMissionConversation(
+      mission.mid,
+      vacancy.adventurer_id,
+      client,
+    );
+  }
+
+  // Then, delete vacancies removed from the mission
+  const canDeleteAdventurers =
+    MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS;
   await missionParticipationModel.deleteAllUnoccupied(
     mission.mid,
     existingIds,
-    MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS,
+    canDeleteAdventurers,
     client,
   );
+
+  // Keep the occupied vacancies counter in sync with removed adventurers
+  if (canDeleteAdventurers && removedVacancies.length > 0) {
+    await missionModel.updateOccupiedVacancies(
+      mission.mid,
+      -removedVacancies.length,
+      client,
+    );
+  }
 
   const vacanciesToNotify = [];
   // After that, updating existing vacancies

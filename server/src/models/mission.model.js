@@ -89,6 +89,15 @@ export const findByMidExcludingUid = async (id, uid) => {
         AND c.type = 'mission'
         AND cp.user_id = $2
         AND cp.left_at IS NULL
+        AND (
+          m.owner_id = $2
+          OR EXISTS (
+            SELECT 1
+            FROM mission_participation mp
+            WHERE mp.mid = m.mid
+              AND mp.adventurer_id = $2
+          )
+        )
       LIMIT 1
     ) AS conversation_id,
     EXISTS (
