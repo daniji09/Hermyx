@@ -186,327 +186,338 @@ export const Notifications = () => {
   }
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-        <span className='flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-          <Bell className='h-6 w-6' aria-hidden='true' />
-        </span>
-        <div className='min-w-0'>
-          <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
-            Notifications
-          </h1>
-          <p className='text-muted-foreground'>
-            {unseenCount > 0
-              ? `You have ${unseenCount} unread notification${unseenCount > 1 ? 's' : ''}.`
-              : actionableCount > 0
-                ? `You have ${actionableCount} notification${actionableCount > 1 ? 's' : ''} waiting for your response.`
-                : 'You have no unread notifications right now.'}
-          </p>
-        </div>
-      </section>
+    <>
+      <title>{`Notifications | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`User's notifications in Hermyx.`}
+      ></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+          <span className='flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <Bell className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+              Notifications
+            </h1>
+            <p className='text-muted-foreground'>
+              {unseenCount > 0
+                ? `You have ${unseenCount} unread notification${unseenCount > 1 ? 's' : ''}.`
+                : actionableCount > 0
+                  ? `You have ${actionableCount} notification${actionableCount > 1 ? 's' : ''} waiting for your response.`
+                  : 'You have no unread notifications right now.'}
+            </p>
+          </div>
+        </section>
 
-      {notifications.length === 0 ? (
-        <Card>
-          <CardContent className='p-8 text-center text-muted-foreground'>
-            No notifications yet.
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          <Tabs
-            value={filter}
-            onValueChange={setFilter}
-            className='mb-8 w-full'
-          >
-            <TabsList className='flex h-auto w-full flex-col items-stretch gap-2 bg-transparent p-0 sm:grid sm:grid-cols-3 sm:gap-0 sm:bg-muted sm:p-1 my-4 sm:my-0'>
-              <TabsTrigger
-                value='all'
-                className='w-full justify-center px-3 text-sm'
-              >
-                All
-              </TabsTrigger>
-              <TabsTrigger
-                value='accepted'
-                className='w-full justify-center px-3 text-sm'
-              >
-                Accepted
-              </TabsTrigger>
-              <TabsTrigger
-                value='rejected'
-                className='w-full justify-center px-3 text-sm'
-              >
-                Rejected
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        {notifications.length === 0 ? (
+          <Card>
+            <CardContent className='p-8 text-center text-muted-foreground'>
+              No notifications yet.
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            <Tabs
+              value={filter}
+              onValueChange={setFilter}
+              className='mb-8 w-full'
+            >
+              <TabsList className='flex h-auto w-full flex-col items-stretch gap-2 bg-transparent p-0 sm:grid sm:grid-cols-3 sm:gap-0 sm:bg-muted sm:p-1 my-4 sm:my-0'>
+                <TabsTrigger
+                  value='all'
+                  className='w-full justify-center px-3 text-sm'
+                >
+                  All
+                </TabsTrigger>
+                <TabsTrigger
+                  value='accepted'
+                  className='w-full justify-center px-3 text-sm'
+                >
+                  Accepted
+                </TabsTrigger>
+                <TabsTrigger
+                  value='rejected'
+                  className='w-full justify-center px-3 text-sm'
+                >
+                  Rejected
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-          {filteredNotifications.length === 0 ? (
-            <Card>
-              <CardContent className='p-8 text-center text-muted-foreground'>
-                No notifications for this filter.
-              </CardContent>
-            </Card>
-          ) : (
-            <ul className='space-y-4' aria-label='Notifications list'>
-              {filteredNotifications.map((notification) => {
-                const isSeen = notification.seen;
-                const isMissionNotification =
-                  notification.type === NOTIFICATION_TYPE.MISSION.ID;
-                const isPendingAction =
-                  notification.kind === NOTIFICATION_KIND.ACTIONABLE.ID &&
-                  notification.status === NOTIFICATION_STATUS.PENDING.ID;
-                const isPendingMissionReview =
-                  notification.action ===
-                    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID &&
-                  isPendingAction;
-                const isPendingRevisionResponse =
-                  notification.action ===
-                    NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID &&
-                  isPendingAction;
-                const canOwnerDispute =
-                  isPendingMissionReview &&
-                  Number(notification.payload?.attempt || 1) > 1;
-                const isCurrentNotificationPending =
-                  isPending && variables?.notificationId === notification.nid;
+            {filteredNotifications.length === 0 ? (
+              <Card>
+                <CardContent className='p-8 text-center text-muted-foreground'>
+                  No notifications for this filter.
+                </CardContent>
+              </Card>
+            ) : (
+              <ul className='space-y-4' aria-label='Notifications list'>
+                {filteredNotifications.map((notification) => {
+                  const isSeen = notification.seen;
+                  const isMissionNotification =
+                    notification.type === NOTIFICATION_TYPE.MISSION.ID;
+                  const isPendingAction =
+                    notification.kind === NOTIFICATION_KIND.ACTIONABLE.ID &&
+                    notification.status === NOTIFICATION_STATUS.PENDING.ID;
+                  const isPendingMissionReview =
+                    notification.action ===
+                      NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID &&
+                    isPendingAction;
+                  const isPendingRevisionResponse =
+                    notification.action ===
+                      NOTIFICATION_ACTION.PARTICIPATION_REJECTION_RESPONSE.ID &&
+                    isPendingAction;
+                  const canOwnerDispute =
+                    isPendingMissionReview &&
+                    Number(notification.payload?.attempt || 1) > 1;
+                  const isCurrentNotificationPending =
+                    isPending && variables?.notificationId === notification.nid;
 
-                const linkClass =
-                  'font-medium font-semibold text-primary hover:underline transition-colors';
+                  const linkClass =
+                    'font-medium font-semibold text-primary hover:underline transition-colors';
 
-                const renderSenderLink = () => {
-                  const username = notification?.sender_username;
-                  if (!username) return null;
+                  const renderSenderLink = () => {
+                    const username = notification?.sender_username;
+                    if (!username) return null;
 
-                  return (
-                    <span className='wrap-break-words wrap-anywhere'>
+                    return (
+                      <span className='wrap-break-words wrap-anywhere'>
+                        <Link
+                          to={`/users/${username}`}
+                          className={linkClass}
+                          title={username}
+                          aria-label={username}
+                        >
+                          {truncateText(username)}
+                        </Link>
+                      </span>
+                    );
+                  };
+
+                  const renderMissionLink = () => {
+                    const missionId =
+                      notification?.payload?.associated_mission_id;
+                    const title = notification?.mission_title;
+                    if (!missionId) return null;
+
+                    return (
                       <Link
-                        to={`/users/${username}`}
+                        to={`/missions/${missionId}`}
                         className={linkClass}
-                        title={username}
-                        aria-label={username}
+                        title={title}
+                        aria-label={title}
                       >
-                        {truncateText(username)}
+                        {truncateText(title)}
                       </Link>
+                    );
+                  };
+
+                  const getNotificationPrefix = () => {
+                    const missionLink = renderMissionLink();
+
+                    // Lógica si ES una notificación de misión
+                    if (isMissionNotification) {
+                      if (isPendingMissionReview)
+                        return <>Participation review of {missionLink}</>;
+                      if (isPendingRevisionResponse)
+                        return <>Revision request of {missionLink}</>;
+                      return <>Mission {missionLink} update</>;
+                    }
+
+                    const action = notification?.action;
+                    if (action === NOTIFICATION_ACTION.MISSION_INVITE.ID) {
+                      return <>Mission {missionLink} invitation</>;
+                    }
+                    if (action === NOTIFICATION_ACTION.JOIN_REQUEST.ID) {
+                      return <>Join mission {missionLink} request</>;
+                    }
+
+                    return <>Message</>;
+                  };
+
+                  const title = (
+                    <span className='leading-relaxed text-foreground'>
+                      {getNotificationPrefix()} from {renderSenderLink()}.
                     </span>
                   );
-                };
-
-                const renderMissionLink = () => {
-                  const missionId =
-                    notification?.payload?.associated_mission_id;
-                  const title = notification?.mission_title;
-                  if (!missionId) return null;
 
                   return (
-                    <Link
-                      to={`/missions/${missionId}`}
-                      className={linkClass}
-                      title={title}
-                      aria-label={title}
-                    >
-                      {truncateText(title)}
-                    </Link>
-                  );
-                };
+                    <li key={notification.nid}>
+                      <Card
+                        className={isSeen ? 'opacity-80' : 'border-primary/40'}
+                      >
+                        <CardHeader className='pb-3'>
+                          <div className='flex flex-col gap-3 text-lg sm:flex-row sm:items-start sm:justify-between sm:gap-4'>
+                            <div className='flex min-w-0 items-center gap-3'>
+                              <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+                                <Avatar className='size-10 shrink-0'>
+                                  <AvatarImage
+                                    src={getImageUrl(
+                                      notification?.sender_avatar,
+                                    )}
+                                    alt=''
+                                  />
+                                  <AvatarFallback>
+                                    {getInitials(notification?.sender_username)}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </div>
 
-                const getNotificationPrefix = () => {
-                  const missionLink = renderMissionLink();
-
-                  // Lógica si ES una notificación de misión
-                  if (isMissionNotification) {
-                    if (isPendingMissionReview)
-                      return <>Participation review of {missionLink}</>;
-                    if (isPendingRevisionResponse)
-                      return <>Revision request of {missionLink}</>;
-                    return <>Mission {missionLink} update</>;
-                  }
-
-                  const action = notification?.action;
-                  if (action === NOTIFICATION_ACTION.MISSION_INVITE.ID) {
-                    return <>Mission {missionLink} invitation</>;
-                  }
-                  if (action === NOTIFICATION_ACTION.JOIN_REQUEST.ID) {
-                    return <>Join mission {missionLink} request</>;
-                  }
-
-                  return <>Message</>;
-                };
-
-                const title = (
-                  <span className='leading-relaxed text-foreground'>
-                    {getNotificationPrefix()} from {renderSenderLink()}.
-                  </span>
-                );
-
-                return (
-                  <li key={notification.nid}>
-                    <Card
-                      className={isSeen ? 'opacity-80' : 'border-primary/40'}
-                    >
-                      <CardHeader className='pb-3'>
-                        <div className='flex flex-col gap-3 text-lg sm:flex-row sm:items-start sm:justify-between sm:gap-4'>
-                          <div className='flex min-w-0 items-center gap-3'>
-                            <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-                              <Avatar className='size-10 shrink-0'>
-                                <AvatarImage
-                                  src={getImageUrl(notification?.sender_avatar)}
-                                  alt=''
-                                />
-                                <AvatarFallback>
-                                  {getInitials(notification?.sender_username)}
-                                </AvatarFallback>
-                              </Avatar>
+                              <CardTitle
+                                asChild
+                                className='min-w-0 wrap-break-words text-2xl text-bold'
+                              >
+                                <h2>{title}</h2>
+                              </CardTitle>
                             </div>
 
-                            <CardTitle
-                              asChild
-                              className='min-w-0 wrap-break-words text-2xl text-bold'
-                            >
-                              <h2>{title}</h2>
-                            </CardTitle>
+                            <span className='self-start text-left text-sm font-normal text-muted-foreground sm:self-auto sm:text-right'>
+                              {formatLastMessageTime(notification.date)}
+                            </span>
+                          </div>
+                        </CardHeader>
+                        <CardContent className='space-y-4'>
+                          <div className='flex -mt-4 justify-between '>
+                            {notification.message ? (
+                              <p className='wrap-break-words wrap-anywhere whitespace-pre-line text-sm leading-6'>
+                                {notification.message}
+                              </p>
+                            ) : (
+                              <p className='text-sm text-muted-foreground'>
+                                No message included.
+                              </p>
+                            )}
+                            {!isSeen && (
+                              <div className='ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
+                                New
+                              </div>
+                            )}
                           </div>
 
-                          <span className='self-start text-left text-sm font-normal text-muted-foreground sm:self-auto sm:text-right'>
-                            {formatLastMessageTime(notification.date)}
-                          </span>
-                        </div>
-                      </CardHeader>
-                      <CardContent className='space-y-4'>
-                        <div className='flex -mt-4 justify-between '>
-                          {notification.message ? (
-                            <p className='wrap-break-words wrap-anywhere whitespace-pre-line text-sm leading-6'>
-                              {notification.message}
-                            </p>
-                          ) : (
-                            <p className='text-sm text-muted-foreground'>
-                              No message included.
-                            </p>
-                          )}
-                          {!isSeen && (
-                            <div className='ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary'>
-                              New
-                            </div>
-                          )}
-                        </div>
-
-                        {isPendingAction ? (
-                          <div className='flex flex-wrap gap-2'>
-                            <Button
-                              type='button'
-                              onClick={() =>
-                                mutate({
-                                  notificationId: notification.nid,
-                                  response: 'accepted',
-                                })
-                              }
-                              disabled={isCurrentNotificationPending}
-                            >
-                              <Check aria-hidden='true' />
-                              {isPendingMissionReview
-                                ? 'Approve'
-                                : isPendingRevisionResponse
-                                  ? 'Accept revision'
-                                  : 'Accept'}
-                            </Button>
-                            <Button
-                              type='button'
-                              variant='outline'
-                              onClick={() => {
-                                if (isPendingRevisionResponse) {
-                                  openDisputeDialog(notification.nid);
-                                } else {
-                                  mutate({
-                                    notificationId: notification.nid,
-                                    response: 'rejected',
-                                  });
-                                }
-                              }}
-                              disabled={isCurrentNotificationPending}
-                            >
-                              <X aria-hidden='true' />
-                              {isPendingRevisionResponse ? 'Dispute' : 'Reject'}
-                            </Button>
-                            {canOwnerDispute && (
+                          {isPendingAction ? (
+                            <div className='flex flex-wrap gap-2'>
                               <Button
                                 type='button'
-                                variant='destructive'
                                 onClick={() =>
-                                  openDisputeDialog(notification.nid)
+                                  mutate({
+                                    notificationId: notification.nid,
+                                    response: 'accepted',
+                                  })
                                 }
                                 disabled={isCurrentNotificationPending}
                               >
-                                <ShieldAlert aria-hidden='true' />
-                                Dispute
+                                <Check aria-hidden='true' />
+                                {isPendingMissionReview
+                                  ? 'Approve'
+                                  : isPendingRevisionResponse
+                                    ? 'Accept revision'
+                                    : 'Accept'}
                               </Button>
-                            )}
-                          </div>
-                        ) : notification.status ? (
-                          <div className='flex flex-wrap justify-between items-center gap-3'>
-                            {notification.payload?.associated_report_id && (
-                              <Button asChild variant='outline'>
-                                <Link
-                                  to={`/disputes/${notification.payload.associated_report_id}`}
+                              <Button
+                                type='button'
+                                variant='outline'
+                                onClick={() => {
+                                  if (isPendingRevisionResponse) {
+                                    openDisputeDialog(notification.nid);
+                                  } else {
+                                    mutate({
+                                      notificationId: notification.nid,
+                                      response: 'rejected',
+                                    });
+                                  }
+                                }}
+                                disabled={isCurrentNotificationPending}
+                              >
+                                <X aria-hidden='true' />
+                                {isPendingRevisionResponse
+                                  ? 'Dispute'
+                                  : 'Reject'}
+                              </Button>
+                              {canOwnerDispute && (
+                                <Button
+                                  type='button'
+                                  variant='destructive'
+                                  onClick={() =>
+                                    openDisputeDialog(notification.nid)
+                                  }
+                                  disabled={isCurrentNotificationPending}
                                 >
-                                  Open dispute
-                                </Link>
-                              </Button>
-                            )}
-                            <p className='font-large ml-auto text-muted-foreground italic'>
-                              {NOTIFICATION_STATUS[notification.status].LABEL}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className='flex flex-wrap justify-end items-center gap-3'>
-                            {notification.payload?.associated_report_id && (
-                              <Button asChild variant='outline'>
-                                <Link
-                                  to={`/disputes/${notification.payload.associated_report_id}`}
-                                >
-                                  Open dispute
-                                </Link>
-                              </Button>
-                            )}
-                            <p className='font-large ml-auto text-muted-foreground italic'>
-                              Informational notification
-                            </p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </li>
-                );
-              })}
-              {hasNextPage && (
-                <div className='flex justify-center pt-3'>
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                  >
-                    {isFetchingNextPage
-                      ? 'Loading notifications'
-                      : 'Load more notifications'}
-                  </Button>
-                </div>
-              )}
-            </ul>
-          )}
-        </>
-      )}
-      {disputeNotificationId && (
-        <AnswerReportDialog
-          key={disputeNotificationId}
-          open
-          onOpenChange={(open) => {
-            if (!open) setDisputeNotificationId(null);
-          }}
-          title='Open dispute'
-          description='Explain why you disagree. This will be the first message visible to the other participant and the administrator.'
-          confirmText='Open dispute'
-          isPending={isPending}
-          onConfirm={submitDispute}
-        />
-      )}
-    </main>
+                                  <ShieldAlert aria-hidden='true' />
+                                  Dispute
+                                </Button>
+                              )}
+                            </div>
+                          ) : notification.status ? (
+                            <div className='flex flex-wrap justify-between items-center gap-3'>
+                              {notification.payload?.associated_report_id && (
+                                <Button asChild variant='outline'>
+                                  <Link
+                                    to={`/disputes/${notification.payload.associated_report_id}`}
+                                  >
+                                    Open dispute
+                                  </Link>
+                                </Button>
+                              )}
+                              <p className='font-large ml-auto text-muted-foreground italic'>
+                                {NOTIFICATION_STATUS[notification.status].LABEL}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className='flex flex-wrap justify-end items-center gap-3'>
+                              {notification.payload?.associated_report_id && (
+                                <Button asChild variant='outline'>
+                                  <Link
+                                    to={`/disputes/${notification.payload.associated_report_id}`}
+                                  >
+                                    Open dispute
+                                  </Link>
+                                </Button>
+                              )}
+                              <p className='font-large ml-auto text-muted-foreground italic'>
+                                Informational notification
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </li>
+                  );
+                })}
+                {hasNextPage && (
+                  <div className='flex justify-center pt-3'>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                    >
+                      {isFetchingNextPage
+                        ? 'Loading notifications'
+                        : 'Load more notifications'}
+                    </Button>
+                  </div>
+                )}
+              </ul>
+            )}
+          </>
+        )}
+        {disputeNotificationId && (
+          <AnswerReportDialog
+            key={disputeNotificationId}
+            open
+            onOpenChange={(open) => {
+              if (!open) setDisputeNotificationId(null);
+            }}
+            title='Open dispute'
+            description='Explain why you disagree. This will be the first message visible to the other participant and the administrator.'
+            confirmText='Open dispute'
+            isPending={isPending}
+            onConfirm={submitDispute}
+          />
+        )}
+      </main>
+    </>
   );
 };

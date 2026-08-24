@@ -27,13 +27,20 @@ export const LogIn = () => {
   }, [state.success, navigate]);
 
   return (
-    <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
-      <LogInForm
-        state={state}
-        action={logInFormAction}
-        isPending={isPending}
-      ></LogInForm>
-    </main>
+    <>
+      <title>{`Log in | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx log in via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
+        <LogInForm
+          state={state}
+          action={logInFormAction}
+          isPending={isPending}
+        ></LogInForm>
+      </main>
+    </>
   );
 };
 

@@ -59,13 +59,20 @@ export const NewMission = () => {
   }, [state.success, state.redirectTo, navigate]);
 
   return (
-    <main className='container mx-auto max-w-6xl sm:p-6 flex min-h-screen items-center justify-center p-4'>
-      <NewMissionForm
-        state={state}
-        action={newMissionFormAction}
-        isPending={isPending}
-      ></NewMissionForm>
-    </main>
+    <>
+      <title>{`Mission creation | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Form to create and publish a mission into Hermyx.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl sm:p-6 flex min-h-screen items-center justify-center p-4'>
+        <NewMissionForm
+          state={state}
+          action={newMissionFormAction}
+          isPending={isPending}
+        ></NewMissionForm>
+      </main>
+    </>
   );
 };
 

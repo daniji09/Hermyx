@@ -137,22 +137,26 @@ export const MyProfile = () => {
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <ProfileHeader user={user}></ProfileHeader>
-      <ProfileInformation data={data}></ProfileInformation>
-      <ProfileReviews
-        reviewsData={reviewsData}
-        isLoading={isReviewsLoading}
-        isPrivate={!reviewsEnabled}
-        hasNextPage={hasNextReviewsPage}
-        isFetchingNextPage={isFetchingNextReviewsPage}
-        fetchNextPage={fetchNextReviewsPage}
-      />
-      <ProfileAccessMethods user={user}></ProfileAccessMethods>
-      <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
-      <ProfileConfiguration user={user}></ProfileConfiguration>
-      <ProfileDangerZone></ProfileDangerZone>
-    </main>
+    <>
+      <title>{`My profile | Hermyx`}</title>
+      <meta name='description' content={`Hermyx user's profile.`}></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <ProfileHeader user={user}></ProfileHeader>
+        <ProfileInformation data={data}></ProfileInformation>
+        <ProfileReviews
+          reviewsData={reviewsData}
+          isLoading={isReviewsLoading}
+          isPrivate={!reviewsEnabled}
+          hasNextPage={hasNextReviewsPage}
+          isFetchingNextPage={isFetchingNextReviewsPage}
+          fetchNextPage={fetchNextReviewsPage}
+        />
+        <ProfileAccessMethods user={user}></ProfileAccessMethods>
+        <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
+        <ProfileConfiguration user={user}></ProfileConfiguration>
+        <ProfileDangerZone></ProfileDangerZone>
+      </main>
+    </>
   );
 };
 

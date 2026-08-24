@@ -85,57 +85,64 @@ export const Reports = () => {
   };
 
   return (
-    <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
-      <section className='w-full'>
-        <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-            <MessageSquareWarning className='h-6 w-6' aria-hidden='true' />
-          </span>
-          <div className='min-w-0'>
-            <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
-              Reports
-            </h1>
-            <p className='text-muted-foreground'>
-              Oversee platform moderation. Review, filter, and take action on
-              community reports.
-            </p>
+    <>
+      <title>{`Reports | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`All Hermyx's reports made by users.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <section className='w-full'>
+          <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+              <MessageSquareWarning className='h-6 w-6' aria-hidden='true' />
+            </span>
+            <div className='min-w-0'>
+              <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+                Reports
+              </h1>
+              <p className='text-muted-foreground'>
+                Oversee platform moderation. Review, filter, and take action on
+                community reports.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
-      <section className='w-full' aria-label='Filters section'>
-        <div className='mt-4 mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-          <FilterCombobox
-            items={DATE_OPTIONS}
-            value={searchFilters.sortByDate}
-            onChange={(val) => handleFilterChange('sortByDate', val)}
-            placeholder='Sort by date...'
-            ariaLabel='Filter by date'
-          />
-          <FilterCombobox
-            items={STATUS_OPTIONS}
-            value={searchFilters.status}
-            onChange={(val) => handleFilterChange('status', val)}
-            placeholder='Sort by status...'
-            ariaLabel='Filter by status'
-          />
-          <FilterCombobox
-            items={TYPE_OPTIONS}
-            value={searchFilters.type}
-            onChange={(val) => handleFilterChange('type', val)}
-            placeholder='Sort by type...'
-            ariaLabel='Filter by type'
-          />
-        </div>
-      </section>
-      <ReportsSearchContainer
-        reports={reports}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-        isLoading={isLoading}
-        isError={isError}
-      ></ReportsSearchContainer>
-    </main>
+        </section>
+        <section className='w-full' aria-label='Filters section'>
+          <div className='mt-4 mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <FilterCombobox
+              items={DATE_OPTIONS}
+              value={searchFilters.sortByDate}
+              onChange={(val) => handleFilterChange('sortByDate', val)}
+              placeholder='Sort by date...'
+              ariaLabel='Filter by date'
+            />
+            <FilterCombobox
+              items={STATUS_OPTIONS}
+              value={searchFilters.status}
+              onChange={(val) => handleFilterChange('status', val)}
+              placeholder='Sort by status...'
+              ariaLabel='Filter by status'
+            />
+            <FilterCombobox
+              items={TYPE_OPTIONS}
+              value={searchFilters.type}
+              onChange={(val) => handleFilterChange('type', val)}
+              placeholder='Sort by type...'
+              ariaLabel='Filter by type'
+            />
+          </div>
+        </section>
+        <ReportsSearchContainer
+          reports={reports}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+          isLoading={isLoading}
+          isError={isError}
+        ></ReportsSearchContainer>
+      </main>
+    </>
   );
 };
 

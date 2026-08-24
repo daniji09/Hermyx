@@ -27,13 +27,20 @@ export const SignUp = () => {
   }, [state.success, navigate]);
 
   return (
-    <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
-      <SignUpForm
-        state={state}
-        action={signUpFormAction}
-        isPending={isPending}
-      ></SignUpForm>
-    </main>
+    <>
+      <title>{`Sign up | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx sign up via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
+        <SignUpForm
+          state={state}
+          action={signUpFormAction}
+          isPending={isPending}
+        ></SignUpForm>
+      </main>
+    </>
   );
 };
 

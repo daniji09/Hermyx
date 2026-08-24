@@ -78,13 +78,22 @@ export const Report = () => {
 
 const ReportPageContainer = ({ report, isLoading, isError, error }) => {
   return (
-    <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
-      <ReportLoading isLoading={isLoading}>{'Seeking report...'}</ReportLoading>
+    <>
+      <title>{`Report information | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Report information and actions.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <ReportLoading isLoading={isLoading}>
+          {'Seeking report...'}
+        </ReportLoading>
 
-      <ReportError isError={isError}>{`${error}`}</ReportError>
+        <ReportError isError={isError}>{`${error}`}</ReportError>
 
-      <ReportContent report={report}></ReportContent>
-    </main>
+        <ReportContent report={report}></ReportContent>
+      </main>
+    </>
   );
 };
 

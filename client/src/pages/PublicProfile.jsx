@@ -135,106 +135,115 @@ export const PublicProfile = () => {
   const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <section className='mb-8 gap-6 border-b pb-8 flex-row items-center'>
-        <div className='flex flex-col gap-6 pb-8 sm:flex-row sm:items-center'>
-          <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
-            {user.avatar ? (
-              <img
-                src={getImageUrl(user.avatar)}
-                alt=''
-                className='h-full w-full object-cover'
-              />
-            ) : (
-              <User className='h-12 w-12 text-muted-foreground' />
-            )}
-          </div>
-
-          <div className='min-w-0 flex-1'>
-            <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
-              {displayName || user.username}
-            </h1>
-
-            <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
-              @{user.username}
-            </p>
-
-            <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-              <span className='inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-600'>
-                <Star className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500' />
-                {`${Number(reviewsData?.averageRating || 0).toFixed(1)}/5`}
-              </span>
-              <span>
-                from {reviewsData?.totalReviews || 0}{' '}
-                {(reviewsData?.totalReviews || 0) === 1 ? 'review' : 'reviews'}
-              </span>
+    <>
+      <title>{`${user?.username} profile | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`${user?.username}'s public Hermyx profile.`}
+      ></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <section className='mb-8 gap-6 border-b pb-8 flex-row items-center'>
+          <div className='flex flex-col gap-6 pb-8 sm:flex-row sm:items-center'>
+            <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
+              {user.avatar ? (
+                <img
+                  src={getImageUrl(user.avatar)}
+                  alt=''
+                  className='h-full w-full object-cover'
+                />
+              ) : (
+                <User className='h-12 w-12 text-muted-foreground' />
+              )}
             </div>
 
-            {messageError && (
-              <p className='mt-2 text-sm text-destructive'>{messageError}</p>
-            )}
-            {!currentUser?.isAdmin && (
-              <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
-                <Button
-                  type='button'
-                  className='w-full'
-                  onClick={() => {
-                    setMessageError('');
-                    openConversation();
-                  }}
-                  disabled={isOpeningConversation}
-                >
-                  <MessageCircle
-                    className='h-4 w-4 mr-1 shrink-0'
-                    aria-hidden='true'
-                  />
-                  <span className='truncate'>
-                    {isOpeningConversation ? 'Opening...' : 'Message'}
-                  </span>
-                </Button>
-                <ReportUserButton user={user}></ReportUserButton>
+            <div className='min-w-0 flex-1'>
+              <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
+                {displayName || user.username}
+              </h1>
+
+              <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
+                @{user.username}
+              </p>
+
+              <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
+                <span className='inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-600'>
+                  <Star className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500' />
+                  {`${Number(reviewsData?.averageRating || 0).toFixed(1)}/5`}
+                </span>
+                <span>
+                  from {reviewsData?.totalReviews || 0}{' '}
+                  {(reviewsData?.totalReviews || 0) === 1
+                    ? 'review'
+                    : 'reviews'}
+                </span>
               </div>
+
+              {messageError && (
+                <p className='mt-2 text-sm text-destructive'>{messageError}</p>
+              )}
+              {!currentUser?.isAdmin && (
+                <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
+                  <Button
+                    type='button'
+                    className='w-full'
+                    onClick={() => {
+                      setMessageError('');
+                      openConversation();
+                    }}
+                    disabled={isOpeningConversation}
+                  >
+                    <MessageCircle
+                      className='h-4 w-4 mr-1 shrink-0'
+                      aria-hidden='true'
+                    />
+                    <span className='truncate'>
+                      {isOpeningConversation ? 'Opening...' : 'Message'}
+                    </span>
+                  </Button>
+                  <ReportUserButton user={user}></ReportUserButton>
+                </div>
+              )}
+            </div>
+          </div>
+          <div>
+            {user.description && (
+              <p className='wrap-break-words wrap-anywhere text-sm leading-6 sm:text-base'>
+                {user.description}
+              </p>
             )}
           </div>
-        </div>
-        <div>
-          {user.description && (
-            <p className='wrap-break-words wrap-anywhere text-sm leading-6 sm:text-base'>
-              {user.description}
-            </p>
-          )}
-        </div>
-      </section>
-
-      {user.role === USER_ROLE.ADMIN.ID ? (
-        ``
-      ) : !missionsVisible ? (
-        <section className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
-          This user keeps their mission history private.
         </section>
-      ) : (
-        <UserMissionsTable
-          missions={missions}
-          filter={filter}
-          setFilter={setFilter}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          fetchNextPage={fetchNextPage}
-          isLoading={isMissionsLoading}
-          isError={isMissionsError}
-          sectionClassName={''}
-        ></UserMissionsTable>
-      )}
-      {user.role !== USER_ROLE.ADMIN.ID && (
-        <AdventurerReviewsSection
-          reviewsData={reviewsData}
-          isLoading={isReviewsLoading}
-          hasNextPage={hasNextReviewsPage}
-          isFetchingNextPage={isFetchingNextReviewsPage}
-          fetchNextPage={fetchNextReviewsPage}
-        />
-      )}
-    </main>
+
+        {user.role === USER_ROLE.ADMIN.ID ? (
+          ``
+        ) : !missionsVisible ? (
+          <section className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
+            This user keeps their mission history private.
+          </section>
+        ) : (
+          <UserMissionsTable
+            missions={missions}
+            filter={filter}
+            setFilter={setFilter}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
+            isLoading={isMissionsLoading}
+            isError={isMissionsError}
+            sectionClassName={''}
+          ></UserMissionsTable>
+        )}
+        {user.role !== USER_ROLE.ADMIN.ID && (
+          <AdventurerReviewsSection
+            reviewsData={reviewsData}
+            isLoading={isReviewsLoading}
+            hasNextPage={hasNextReviewsPage}
+            isFetchingNextPage={isFetchingNextReviewsPage}
+            fetchNextPage={fetchNextReviewsPage}
+          />
+        )}
+      </main>
+    </>
   );
 };
 

@@ -145,22 +145,29 @@ const EditMissionPageContainer = ({
   mission,
 }) => {
   return (
-    <main className='flex container mx-auto max-w-6xl p-4 sm:p-6 min-h-screen items-center justify-center'>
-      <EditMissionLoading isLoading={isLoading}>
-        {'Seeking mission...'}
-      </EditMissionLoading>
+    <>
+      <title>{`Mission edition | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Mission ${mission?.title} edition form.`}
+      ></meta>
+      <main className='flex container mx-auto max-w-6xl p-4 sm:p-6 min-h-screen items-center justify-center'>
+        <EditMissionLoading isLoading={isLoading}>
+          {'Seeking mission...'}
+        </EditMissionLoading>
 
-      <EditMissionError isError={isError}>{`${error}`}</EditMissionError>
+        <EditMissionError isError={isError}>{`${error}`}</EditMissionError>
 
-      {!isLoading && !isError && mission && (
-        <EditMissionForm
-          state={state}
-          action={action}
-          isPending={isPending}
-          mission={mission}
-        ></EditMissionForm>
-      )}
-    </main>
+        {!isLoading && !isError && mission && (
+          <EditMissionForm
+            state={state}
+            action={action}
+            isPending={isPending}
+            mission={mission}
+          ></EditMissionForm>
+        )}
+      </main>
+    </>
   );
 };
 

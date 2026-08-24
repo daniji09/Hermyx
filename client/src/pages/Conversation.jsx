@@ -421,6 +421,21 @@ export const ConversationThread = ({
 
   return (
     <main>
+      <title>
+        {isDisputeConversation
+          ? `Dispute conversation | Hermyx`
+          : isMissionConversation
+            ? `Mission ${conversation?.mission_title} conversation | Hermyx`
+            : `Conversation with ${otherParticipant?.username} | Hermyx`}
+      </title>
+      <meta
+        name='description'
+        content={
+          isDisputeConversation
+            ? `Dispute conversation of current user with other users and the administration.`
+            : `Private or mission conversation with other users.`
+        }
+      ></meta>
       <section className='container mx-auto flex flex-col gap-4 p-4 sm:p-6 max-w-4xl'>
         <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
           <Card

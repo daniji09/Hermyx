@@ -255,136 +255,143 @@ export const Home = () => {
 
   // Logged page
   return (
-    <main className='container mx-auto max-w-6xl space-y-12 p-4 sm:p-6 mb-12 overflow-hidden'>
-      <section className='flex flex-col gap-6 rounded-2xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8'>
-        <div className='flex flex-col sm:flex-row items-center gap-5'>
-          <Avatar className='h-16 w-16 shrink-0 border-2 border-primary/10'>
-            <AvatarImage src={getImageUrl(currentUser?.avatar)} alt='' />
-            <AvatarFallback className='bg-primary/5 text-xl text-primary'>
-              {currentUser?.username?.charAt(0).toUpperCase() || 'A'}
-            </AvatarFallback>
-          </Avatar>
-          <div className='min-w-0 text-center sm:text-left'>
-            <h1 className='wrap-break-words text-3xl font-bold tracking-tight sm:text-4xl'>
-              Welcome back, {currentUser?.username || 'Adventurer'}!
-            </h1>
-            <p className='ms-1 text-muted-foreground'>
-              Ready for your next great adventure?
+    <>
+      <title>{`Hermyx | The ultimate board to manage services securely and connect with the community.`}</title>
+      <meta
+        name='description'
+        content={`Hermyx, a web application that will allow users to manage service securely via escrow type payment and connecting with high-rated users.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl space-y-12 p-4 sm:p-6 mb-12 overflow-hidden'>
+        <section className='flex flex-col gap-6 rounded-2xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8'>
+          <div className='flex flex-col sm:flex-row items-center gap-5'>
+            <Avatar className='h-16 w-16 shrink-0 border-2 border-primary/10'>
+              <AvatarImage src={getImageUrl(currentUser?.avatar)} alt='' />
+              <AvatarFallback className='bg-primary/5 text-xl text-primary'>
+                {currentUser?.username?.charAt(0).toUpperCase() || 'A'}
+              </AvatarFallback>
+            </Avatar>
+            <div className='min-w-0 text-center sm:text-left'>
+              <h1 className='wrap-break-words text-3xl font-bold tracking-tight sm:text-4xl'>
+                Welcome back, {currentUser?.username || 'Adventurer'}!
+              </h1>
+              <p className='ms-1 text-muted-foreground'>
+                Ready for your next great adventure?
+              </p>
+            </div>
+          </div>
+          <div className='flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row'>
+            <Button asChild className='w-full sm:w-auto truncate'>
+              <Link to='/missions/new'>
+                <Plus className='mr-2 h-4 w-4 truncate' aria-hidden='true' />
+                Post a mission
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant='outline'
+              className='w-full sm:w-auto truncate'
+            >
+              <a href='#quest-board'>
+                <Compass className='mr-2 h-4 w-4 truncate' aria-hidden='true' />
+                Find missions
+              </a>
+            </Button>
+          </div>
+        </section>
+
+        <section className='space-y-10'>
+          <div className='relative'>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              Your joined missions
+            </h2>
+            {joinedIsLoading ? (
+              <p className='text-muted-foreground'>
+                Loading your joined missions...
+              </p>
+            ) : joinedMissions.length === 0 ? (
+              <div className='rounded-xl border border-dashed bg-muted/10 p-8 mt-4 text-center text-muted-foreground'>
+                You haven&lsquo;t joined any active missions yet. Check out the
+                missions of interest below!
+              </div>
+            ) : (
+              <Carousel opts={{ align: 'start' }} className='w-full'>
+                <CarouselContent className='-ml-4 py-4'>
+                  {joinedMissions.map((mission) => (
+                    <CarouselItem
+                      key={mission.mid}
+                      className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
+                    >
+                      <MissionSearchCard mission={mission} />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+
+                <div className='hidden sm:block'>
+                  <CarouselPrevious className='-left-4 lg:-left-6' />
+                  <CarouselNext className='-right-4 lg:-right-6' />
+                </div>
+              </Carousel>
+            )}
+          </div>
+
+          <div className='relative'>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              Your published missions
+            </h2>
+            {publishedIsLoading ? (
+              <p className='text-muted-foreground'>
+                Loading your published missions...
+              </p>
+            ) : publishedMissions.length === 0 ? (
+              <div className='rounded-xl border border-dashed mt-4 bg-muted/10 p-8 text-center text-muted-foreground'>
+                You don&lsquo;t have any published missions. Need help? Post a
+                new one!
+              </div>
+            ) : (
+              <Carousel opts={{ align: 'start' }} className='w-full'>
+                <CarouselContent className='-ml-4 py-4'>
+                  {publishedMissions.map((mission) => (
+                    <CarouselItem
+                      key={mission.mid}
+                      className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
+                    >
+                      <MissionSearchCard mission={mission} />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <div className='hidden sm:block'>
+                  <CarouselPrevious className='-left-4 lg:-left-6' />
+                  <CarouselNext className='-right-4 lg:-right-6' />
+                </div>
+              </Carousel>
+            )}
+          </div>
+        </section>
+
+        <Separator />
+
+        <section id='quest-board' className='scroll-mt-8 space-y-4'>
+          <div>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              Missions of interest
+            </h2>
+            <p className='mt-1 text-muted-foreground'>
+              Discover new missions available right now.
             </p>
           </div>
-        </div>
-        <div className='flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row'>
-          <Button asChild className='w-full sm:w-auto truncate'>
-            <Link to='/missions/new'>
-              <Plus className='mr-2 h-4 w-4 truncate' aria-hidden='true' />
-              Post a mission
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant='outline'
-            className='w-full sm:w-auto truncate'
-          >
-            <a href='#quest-board'>
-              <Compass className='mr-2 h-4 w-4 truncate' aria-hidden='true' />
-              Find missions
-            </a>
-          </Button>
-        </div>
-      </section>
 
-      <section className='space-y-10'>
-        <div className='relative'>
-          <h2 className='text-2xl font-bold tracking-tight'>
-            Your joined missions
-          </h2>
-          {joinedIsLoading ? (
-            <p className='text-muted-foreground'>
-              Loading your joined missions...
-            </p>
-          ) : joinedMissions.length === 0 ? (
-            <div className='rounded-xl border border-dashed bg-muted/10 p-8 mt-4 text-center text-muted-foreground'>
-              You haven&lsquo;t joined any active missions yet. Check out the
-              missions of interest below!
-            </div>
-          ) : (
-            <Carousel opts={{ align: 'start' }} className='w-full'>
-              <CarouselContent className='-ml-4 py-4'>
-                {joinedMissions.map((mission) => (
-                  <CarouselItem
-                    key={mission.mid}
-                    className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
-                  >
-                    <MissionSearchCard mission={mission} />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-
-              <div className='hidden sm:block'>
-                <CarouselPrevious className='-left-4 lg:-left-6' />
-                <CarouselNext className='-right-4 lg:-right-6' />
-              </div>
-            </Carousel>
-          )}
-        </div>
-
-        <div className='relative'>
-          <h2 className='text-2xl font-bold tracking-tight'>
-            Your published missions
-          </h2>
-          {publishedIsLoading ? (
-            <p className='text-muted-foreground'>
-              Loading your published missions...
-            </p>
-          ) : publishedMissions.length === 0 ? (
-            <div className='rounded-xl border border-dashed mt-4 bg-muted/10 p-8 text-center text-muted-foreground'>
-              You don&lsquo;t have any published missions. Need help? Post a new
-              one!
-            </div>
-          ) : (
-            <Carousel opts={{ align: 'start' }} className='w-full'>
-              <CarouselContent className='-ml-4 py-4'>
-                {publishedMissions.map((mission) => (
-                  <CarouselItem
-                    key={mission.mid}
-                    className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
-                  >
-                    <MissionSearchCard mission={mission} />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <div className='hidden sm:block'>
-                <CarouselPrevious className='-left-4 lg:-left-6' />
-                <CarouselNext className='-right-4 lg:-right-6' />
-              </div>
-            </Carousel>
-          )}
-        </div>
-      </section>
-
-      <Separator />
-
-      <section id='quest-board' className='scroll-mt-8 space-y-4'>
-        <div>
-          <h2 className='text-2xl font-bold tracking-tight'>
-            Missions of interest
-          </h2>
-          <p className='mt-1 text-muted-foreground'>
-            Discover new missions available right now.
-          </p>
-        </div>
-
-        <MissionSearchContainer
-          missions={interestMissions}
-          hasNextPage={interestHasNextPage}
-          isFetchingNextPage={interestIsFetchingNextPage}
-          fetchNextPage={interestFetchNextPage}
-          isLoading={interestIsLoading}
-          isError={interestIsError}
-          noMissionsMessage='There are no missions available right now. Be the first to post one!'
-          sectionClassName=''
-        />
-      </section>
-    </main>
+          <MissionSearchContainer
+            missions={interestMissions}
+            hasNextPage={interestHasNextPage}
+            isFetchingNextPage={interestIsFetchingNextPage}
+            fetchNextPage={interestFetchNextPage}
+            isLoading={interestIsLoading}
+            isError={interestIsError}
+            noMissionsMessage='There are no missions available right now. Be the first to post one!'
+            sectionClassName=''
+          />
+        </section>
+      </main>
+    </>
   );
 };

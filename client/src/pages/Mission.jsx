@@ -194,368 +194,378 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
     currentParticipation?.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID;
 
   return (
-    <div className='mx-auto max-w-7xl animate-in fade-in duration-500 pb-16 space-y-8 mt-4'>
-      <div className='flex justify-between items-start gap-4'>
-        <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words wrap-anywhere'>
-          {mission?.title}
-        </h1>
-        {!currentUser?.isAdmin &&
-          mission?.status !== MISSION_STATUS.CANCELLED.ID &&
-          mission?.status !== MISSION_STATUS.DELETED.ID && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant='outline'
-                  size='icon'
-                  className='shrink-0 rounded-full h-10 w-10'
-                >
-                  <MoreVertical className='h-5 w-5 text-muted-foreground' />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end' className='w-56'>
-                {isCreator && MISSION_STATUS[mission?.status].CAN_EDIT && (
-                  <DropdownMenuItem asChild>
-                    <Link
-                      to={`/missions/${mission?.mid}/edit`}
-                      className='w-full justify-start font-normal h-auto px-2 py-1.5 cursor-default'
-                    >
-                      Edit mission
-                    </Link>
-                  </DropdownMenuItem>
-                )}
-                {isCreator &&
-                  MISSION_STATUS[mission?.status].VALID_NEXT_STATES.includes(
-                    MISSION_STATUS.REOPENED.ID,
-                  ) && (
+    <>
+      <title>{`${mission?.title} | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Mission ${mission?.title} information and actions.`}
+      ></meta>
+      <div className='mx-auto max-w-7xl animate-in fade-in duration-500 pb-16 space-y-8 mt-4'>
+        <div className='flex justify-between items-start gap-4'>
+          <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words wrap-anywhere'>
+            {mission?.title}
+          </h1>
+          {!currentUser?.isAdmin &&
+            mission?.status !== MISSION_STATUS.CANCELLED.ID &&
+            mission?.status !== MISSION_STATUS.DELETED.ID && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant='outline'
+                    size='icon'
+                    className='shrink-0 rounded-full h-10 w-10'
+                  >
+                    <MoreVertical className='h-5 w-5 text-muted-foreground' />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end' className='w-56'>
+                  {isCreator && MISSION_STATUS[mission?.status].CAN_EDIT && (
                     <DropdownMenuItem asChild>
-                      <ReopenMissionButton
-                        mission={mission}
-                        variant='ghost'
+                      <Link
+                        to={`/missions/${mission?.mid}/edit`}
                         className='w-full justify-start font-normal h-auto px-2 py-1.5 cursor-default'
-                      />
+                      >
+                        Edit mission
+                      </Link>
                     </DropdownMenuItem>
                   )}
-                {isCreator &&
-                  (MISSION_STATUS[mission?.status].CAN_DELETE ||
-                    MISSION_STATUS[mission?.status].CAN_CANCEL) && (
-                    <DropdownMenuItem asChild>
-                      <CancelMissionButton
-                        mission={mission}
-                        variant='ghost'
-                        className='w-full justify-start font-normal h-auto px-2 py-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-default'
-                      />
-                    </DropdownMenuItem>
-                  )}
-                {!currentUser?.isAdmin &&
-                  !isCreator &&
-                  mission?.status !== MISSION_STATUS.REPORTED.ID && (
-                    <DropdownMenuItem asChild>
-                      <ReportMissionButton
-                        mission={mission}
-                        variant='ghost'
-                        className='w-full justify-start font-normal h-auto px-2 py-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-default'
-                      />
-                    </DropdownMenuItem>
-                  )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-      </div>
-
-      <div className='flex flex-col lg:flex-row gap-8'>
-        <div className='w-full lg:w-2/3'>
-          {mission?.photos?.length > 0 ? (
-            <Carousel className='w-full rounded-2xl overflow-hidden border bg-muted/20'>
-              <CarouselContent>
-                {mission?.photos?.map((photo, index) => (
-                  <CarouselItem key={index}>
-                    <img
-                      src={getImageUrl(photo.url)}
-                      alt={`Mission ${mission?.title} - Photo ${index + 1}`}
-                      className='w-full aspect-video object-cover'
-                    />
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              {mission?.photos?.length > 1 && (
-                <>
-                  <CarouselPrevious className='left-4 bg-background/80 backdrop-blur-sm' />
-                  <CarouselNext className='right-4 bg-background/80 backdrop-blur-sm' />
-                </>
-              )}
-            </Carousel>
-          ) : (
-            <div className='w-full rounded-2xl overflow-hidden border bg-muted/20 shadow-sm'>
-              <img
-                src='https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-                alt='Mission placeholder'
-                className='w-full aspect-video object-cover'
-              />
-            </div>
-          )}
+                  {isCreator &&
+                    MISSION_STATUS[mission?.status].VALID_NEXT_STATES.includes(
+                      MISSION_STATUS.REOPENED.ID,
+                    ) && (
+                      <DropdownMenuItem asChild>
+                        <ReopenMissionButton
+                          mission={mission}
+                          variant='ghost'
+                          className='w-full justify-start font-normal h-auto px-2 py-1.5 cursor-default'
+                        />
+                      </DropdownMenuItem>
+                    )}
+                  {isCreator &&
+                    (MISSION_STATUS[mission?.status].CAN_DELETE ||
+                      MISSION_STATUS[mission?.status].CAN_CANCEL) && (
+                      <DropdownMenuItem asChild>
+                        <CancelMissionButton
+                          mission={mission}
+                          variant='ghost'
+                          className='w-full justify-start font-normal h-auto px-2 py-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-default'
+                        />
+                      </DropdownMenuItem>
+                    )}
+                  {!currentUser?.isAdmin &&
+                    !isCreator &&
+                    mission?.status !== MISSION_STATUS.REPORTED.ID && (
+                      <DropdownMenuItem asChild>
+                        <ReportMissionButton
+                          mission={mission}
+                          variant='ghost'
+                          className='w-full justify-start font-normal h-auto px-2 py-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-default'
+                        />
+                      </DropdownMenuItem>
+                    )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
         </div>
 
-        <div className='w-full lg:w-1/3'>
-          <Card className='sticky top-24 shadow-lg border-primary/10 overflow-hidden'>
-            <CardHeader className='bg-muted/30 border-b pb-5'>
-              <div className='flex items-center gap-4'>
-                <Avatar className='h-16 w-16 border-2 border-background shadow-sm'>
-                  <AvatarImage src={getImageUrl(mission?.avatar)} />
-                  <AvatarFallback className='bg-primary/5 text-primary text-xl'>
-                    {getInitials(mission?.username)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className='min-w-0'>
-                  <p className='text-lg font-semibold text-muted-foreground'>
-                    Mission Owner
-                  </p>
-                  <p className='font-bold text-xl truncate'>
-                    <Link
-                      to={`/users/${mission?.username}`}
-                      className='user-link relative z-20 hover:text-primary hover:underline transition-colors'
-                    >
-                      @{mission?.username || 'unknown'}
-                    </Link>
-                  </p>
-                </div>
+        <div className='flex flex-col lg:flex-row gap-8'>
+          <div className='w-full lg:w-2/3'>
+            {mission?.photos?.length > 0 ? (
+              <Carousel className='w-full rounded-2xl overflow-hidden border bg-muted/20'>
+                <CarouselContent>
+                  {mission?.photos?.map((photo, index) => (
+                    <CarouselItem key={index}>
+                      <img
+                        src={getImageUrl(photo.url)}
+                        alt={`Mission ${mission?.title} - Photo ${index + 1}`}
+                        className='w-full aspect-video object-cover'
+                      />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                {mission?.photos?.length > 1 && (
+                  <>
+                    <CarouselPrevious className='left-4 bg-background/80 backdrop-blur-sm' />
+                    <CarouselNext className='right-4 bg-background/80 backdrop-blur-sm' />
+                  </>
+                )}
+              </Carousel>
+            ) : (
+              <div className='w-full rounded-2xl overflow-hidden border bg-muted/20 shadow-sm'>
+                <img
+                  src='https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+                  alt='Mission placeholder'
+                  className='w-full aspect-video object-cover'
+                />
               </div>
-            </CardHeader>
-            <CardContent className='pt-1 space-y-4'>
-              {canAccessMissionChat && mission?.conversation_id ? (
-                <Button asChild className='w-full' size='lg'>
-                  <Link
-                    to={`/conversations/${mission?.conversation_id}`}
-                    state={{ from: `/missions/${mission?.mid}` }}
+            )}
+          </div>
+
+          <div className='w-full lg:w-1/3'>
+            <Card className='sticky top-24 shadow-lg border-primary/10 overflow-hidden'>
+              <CardHeader className='bg-muted/30 border-b pb-5'>
+                <div className='flex items-center gap-4'>
+                  <Avatar className='h-16 w-16 border-2 border-background shadow-sm'>
+                    <AvatarImage src={getImageUrl(mission?.avatar)} />
+                    <AvatarFallback className='bg-primary/5 text-primary text-xl'>
+                      {getInitials(mission?.username)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className='min-w-0'>
+                    <p className='text-lg font-semibold text-muted-foreground'>
+                      Mission Owner
+                    </p>
+                    <p className='font-bold text-xl truncate'>
+                      <Link
+                        to={`/users/${mission?.username}`}
+                        className='user-link relative z-20 hover:text-primary hover:underline transition-colors'
+                      >
+                        @{mission?.username || 'unknown'}
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className='pt-1 space-y-4'>
+                {canAccessMissionChat && mission?.conversation_id ? (
+                  <Button asChild className='w-full' size='lg'>
+                    <Link
+                      to={`/conversations/${mission?.conversation_id}`}
+                      state={{ from: `/missions/${mission?.mid}` }}
+                    >
+                      <MessageCircle
+                        className='mr-2 h-5 w-5'
+                        aria-hidden='true'
+                      />
+                      Open mission chat
+                    </Link>
+                  </Button>
+                ) : !isCreator ? (
+                  <Button
+                    asChild
+                    className='w-full border border-muted-foreground/30'
+                    variant='secondary'
+                    size='lg'
                   >
-                    <MessageCircle
-                      className='mr-2 h-5 w-5'
-                      aria-hidden='true'
-                    />
-                    Open mission chat
-                  </Link>
-                </Button>
-              ) : !isCreator ? (
-                <Button
-                  asChild
-                  className='w-full border border-muted-foreground/30'
-                  variant='secondary'
-                  size='lg'
-                >
-                  <Link to={`/users/${mission?.username}`}>
-                    <MessageCircle
-                      className='mr-2 h-5 w-5'
-                      aria-hidden='true'
-                    />
-                    Chat with owner
-                  </Link>
-                </Button>
-              ) : null}
+                    <Link to={`/users/${mission?.username}`}>
+                      <MessageCircle
+                        className='mr-2 h-5 w-5'
+                        aria-hidden='true'
+                      />
+                      Chat with owner
+                    </Link>
+                  </Button>
+                ) : null}
 
-              {isCreator ? (
-                <>
-                  {(mission?.status === MISSION_STATUS.CLOSED.ID ||
-                    mission?.waitingForPaymentVacancies?.length > 0) && (
-                    <PayMissionButton
-                      mission={mission}
-                      className='w-full bg-green-700 border border-green-200 hover:bg-green-800 dark:border-0 dark:text-white'
-                      size='lg'
-                    />
-                  )}
-
-                  {(mission?.status === MISSION_STATUS.OPENED.ID ||
-                    mission?.status === MISSION_STATUS.REOPENED.ID) && (
-                    <CloseMissionButton
-                      mission={mission}
-                      className='w-full'
-                      variant='outline'
-                    />
-                  )}
-
-                  {mission?.canFinish &&
-                    mission?.status !== MISSION_STATUS.FINISHED.ID && (
-                      <FinishMissionButton
+                {isCreator ? (
+                  <>
+                    {(mission?.status === MISSION_STATUS.CLOSED.ID ||
+                      mission?.waitingForPaymentVacancies?.length > 0) && (
+                      <PayMissionButton
                         mission={mission}
-                        className='w-full'
+                        className='w-full bg-green-700 border border-green-200 hover:bg-green-800 dark:border-0 dark:text-white'
+                        size='lg'
                       />
                     )}
 
-                  {(mission?.status === MISSION_STATUS.IN_PROGRESS.ID ||
-                    mission?.status === MISSION_STATUS.IN_DISPUTE.ID ||
-                    mission?.status === MISSION_STATUS.CANCELLED.ID ||
-                    mission?.status === MISSION_STATUS.DELETED.ID ||
-                    mission?.status === MISSION_STATUS.REPORTED.ID) && (
-                    <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
-                      <MissionOwnerStatusMessage
-                        status={mission?.status}
-                        canFinish={mission?.canFinish}
+                    {(mission?.status === MISSION_STATUS.OPENED.ID ||
+                      mission?.status === MISSION_STATUS.REOPENED.ID) && (
+                      <CloseMissionButton
+                        mission={mission}
+                        className='w-full'
+                        variant='outline'
                       />
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {(!currentUser?.isAdmin &&
-                    mission?.status === MISSION_STATUS.IN_PROGRESS.ID) ||
-                  (!currentUser?.isAdmin &&
-                    mission?.status === MISSION_STATUS.REOPENED.ID &&
-                    currentParticipation) ? (
-                    <SubmitParticipationButton
-                      missionId={mission?.mid}
-                      participationStatus={currentParticipation?.status}
-                      className='w-full '
-                      size='lg'
-                    />
-                  ) : currentParticipation?.status ===
-                    MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID ? (
-                    <p className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
-                      {'Your participation has been disputed.'}
-                    </p>
-                  ) : !currentUser?.isAdmin &&
-                    (mission?.status === MISSION_STATUS.CANCELLED.ID ||
+                    )}
+
+                    {mission?.canFinish &&
+                      mission?.status !== MISSION_STATUS.FINISHED.ID && (
+                        <FinishMissionButton
+                          mission={mission}
+                          className='w-full'
+                        />
+                      )}
+
+                    {(mission?.status === MISSION_STATUS.IN_PROGRESS.ID ||
+                      mission?.status === MISSION_STATUS.IN_DISPUTE.ID ||
+                      mission?.status === MISSION_STATUS.CANCELLED.ID ||
                       mission?.status === MISSION_STATUS.DELETED.ID ||
-                      mission?.status === MISSION_STATUS.REPORTED.ID) ? (
-                    <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
-                      <EndedStatusMessage
-                        status={mission?.status}
-                      ></EndedStatusMessage>
-                    </div>
-                  ) : currentParticipation ? (
-                    <div className='text-center text-sm font-medium text-muted-foreground bg-muted/20 border py-2 rounded-lg'>
-                      {messages.MISSION.MISSION_JOINED}
-                    </div>
-                  ) : isFull ? (
-                    <div className='text-center text-sm font-medium text-destructive bg-destructive/10 py-2 rounded-lg'>
-                      {messages.MISSION.MISSION_FILLED}
-                    </div>
-                  ) : (
-                    <div className='text-center text-sm font-medium text-green-700 bg-green-50 border border-green-200 py-2 rounded-lg'>
-                      {messages.MISSION.MISSION_OPEN}
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
+                      mission?.status === MISSION_STATUS.REPORTED.ID) && (
+                      <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
+                        <MissionOwnerStatusMessage
+                          status={mission?.status}
+                          canFinish={mission?.canFinish}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {(!currentUser?.isAdmin &&
+                      mission?.status === MISSION_STATUS.IN_PROGRESS.ID) ||
+                    (!currentUser?.isAdmin &&
+                      mission?.status === MISSION_STATUS.REOPENED.ID &&
+                      currentParticipation) ? (
+                      <SubmitParticipationButton
+                        missionId={mission?.mid}
+                        participationStatus={currentParticipation?.status}
+                        className='w-full '
+                        size='lg'
+                      />
+                    ) : currentParticipation?.status ===
+                      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID ? (
+                      <p className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
+                        {'Your participation has been disputed.'}
+                      </p>
+                    ) : !currentUser?.isAdmin &&
+                      (mission?.status === MISSION_STATUS.CANCELLED.ID ||
+                        mission?.status === MISSION_STATUS.DELETED.ID ||
+                        mission?.status === MISSION_STATUS.REPORTED.ID) ? (
+                      <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
+                        <EndedStatusMessage
+                          status={mission?.status}
+                        ></EndedStatusMessage>
+                      </div>
+                    ) : currentParticipation ? (
+                      <div className='text-center text-sm font-medium text-muted-foreground bg-muted/20 border py-2 rounded-lg'>
+                        {messages.MISSION.MISSION_JOINED}
+                      </div>
+                    ) : isFull ? (
+                      <div className='text-center text-sm font-medium text-destructive bg-destructive/10 py-2 rounded-lg'>
+                        {messages.MISSION.MISSION_FILLED}
+                      </div>
+                    ) : (
+                      <div className='text-center text-sm font-medium text-green-700 bg-green-50 border border-green-200 py-2 rounded-lg'>
+                        {messages.MISSION.MISSION_OPEN}
+                      </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
 
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 border-t'>
-        <div className='lg:col-span-2 space-y-10'>
-          <section className='bg-muted/10 p-6 rounded-2xl border'>
-            <div className='flex flex-wrap items-center justify-between gap-4 mb-4 px-2'>
-              <div>
-                <h2 className='text-2xl font-bold tracking-tight'>
-                  Mission Party
-                </h2>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Check out the available slots and current adventurers.
-                </p>
-              </div>
-              <div className='flex items-center gap-2 text-primary bg-primary/10 px-4 py-1.5 rounded-full text-sm font-bold'>
-                <Users className='h-4 w-4' aria-hidden='true' />
-                {mission?.occupied_vacancies}/{mission?.total_vacancies} filled
-              </div>
-            </div>
-
-            {isCreator &&
-              MISSION_STATUS[mission?.status].CAN_ACCEPT_ADVENTURERS && (
-                <div className='mb-3 px-2'>
-                  <Button
-                    onClick={() => setIsSearchModalOpen(true)}
-                    variant='secondary'
-                  >
-                    <UserPlus className='mr-2 h-4 w-4' aria-hidden='true' />{' '}
-                    Invite an adventurer
-                  </Button>
+        <div className='grid grid-cols-1 lg:grid-cols-3 gap-8 pt-6 border-t'>
+          <div className='lg:col-span-2 space-y-10'>
+            <section className='bg-muted/10 p-6 rounded-2xl border'>
+              <div className='flex flex-wrap items-center justify-between gap-4 mb-4 px-2'>
+                <div>
+                  <h2 className='text-2xl font-bold tracking-tight'>
+                    Mission Party
+                  </h2>
+                  <p className='text-sm text-muted-foreground mt-1'>
+                    Check out the available slots and current adventurers.
+                  </p>
                 </div>
-              )}
-
-            <MissionVacancies
-              mission={mission}
-              isCreator={isCreator}
-              currentUser={currentUser}
-            />
-          </section>
-
-          <section>
-            <h2 className='text-2xl font-bold tracking-tight mb-4'>
-              Mission details
-            </h2>
-            <p className='text-lg leading-relaxed whitespace-pre-wrap text-muted-foreground wrap-break-words wrap-anywhere'>
-              {mission?.description}
-            </p>
-          </section>
-        </div>
-
-        <div className='lg:col-span-1 space-y-8'>
-          <Card className='bg-card shadow-sm'>
-            <CardHeader>
-              <CardTitle className='text-2xl font-bold tracking-tight'>
-                Quick Info
-              </CardTitle>
-            </CardHeader>
-            <CardContent className='space-y-5'>
-              <div>
-                <p className='text-sm text-muted-foreground mb-1'>
-                  Total Reward Pool
-                </p>
-                <p className='text-3xl font-black text-primary flex items-center gap-2 tabular-nums'>
-                  {Number(mission?.total_payment).toFixed(2)}€
-                  <HandCoins
-                    className='h-7 w-7 text-primary/80'
-                    aria-hidden='true'
-                  />
-                </p>
+                <div className='flex items-center gap-2 text-primary bg-primary/10 px-4 py-1.5 rounded-full text-sm font-bold'>
+                  <Users className='h-4 w-4' aria-hidden='true' />
+                  {mission?.occupied_vacancies}/{mission?.total_vacancies}{' '}
+                  filled
+                </div>
               </div>
-              <Separator />
-              <div>
-                <p className='text-sm text-muted-foreground mb-1'>
-                  Current Status
-                </p>
-                <p className='font-semibold italic text-muted-foreground'>
-                  {MISSION_STATUS[mission?.status]?.LABEL}
-                </p>
-              </div>
-              <Separator />
-              <div>
-                <p className='text-sm text-muted-foreground mb-1'>Posted on</p>
-                <p className='font-medium'>
-                  {timestampToDayMonthYear(mission?.publication_date)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
 
-          {mission?.location && mission?.latitude && mission?.longitude && (
-            <div>
-              <h2 className='text-2xl font-bold tracking-tight p-2'>
-                Location
+              {isCreator &&
+                MISSION_STATUS[mission?.status].CAN_ACCEPT_ADVENTURERS && (
+                  <div className='mb-3 px-2'>
+                    <Button
+                      onClick={() => setIsSearchModalOpen(true)}
+                      variant='secondary'
+                    >
+                      <UserPlus className='mr-2 h-4 w-4' aria-hidden='true' />{' '}
+                      Invite an adventurer
+                    </Button>
+                  </div>
+                )}
+
+              <MissionVacancies
+                mission={mission}
+                isCreator={isCreator}
+                currentUser={currentUser}
+              />
+            </section>
+
+            <section>
+              <h2 className='text-2xl font-bold tracking-tight mb-4'>
+                Mission details
               </h2>
-              <div className='rounded-2xl overflow-hidden border h-64 shadow-sm'>
-                <Map
-                  readOnly={true}
-                  initialLocation={{
-                    lat: mission?.latitude,
-                    lng: mission?.longitude,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+              <p className='text-lg leading-relaxed whitespace-pre-wrap text-muted-foreground wrap-break-words wrap-anywhere'>
+                {mission?.description}
+              </p>
+            </section>
+          </div>
 
-      {!currentUser?.isAdmin && (
-        <SearchAdventurerModal
-          missionId={mission?.mid}
-          vacancies={(mission?.participants || []).filter(
-            (vacancy) => !vacancy.adventurer_id,
-          )}
-          isOpen={isSearchModalOpen}
-          onClose={() => setIsSearchModalOpen(false)}
-        />
-      )}
-    </div>
+          <div className='lg:col-span-1 space-y-8'>
+            <Card className='bg-card shadow-sm'>
+              <CardHeader>
+                <CardTitle className='text-2xl font-bold tracking-tight'>
+                  Quick Info
+                </CardTitle>
+              </CardHeader>
+              <CardContent className='space-y-5'>
+                <div>
+                  <p className='text-sm text-muted-foreground mb-1'>
+                    Total Reward Pool
+                  </p>
+                  <p className='text-3xl font-black text-primary flex items-center gap-2 tabular-nums'>
+                    {Number(mission?.total_payment).toFixed(2)}€
+                    <HandCoins
+                      className='h-7 w-7 text-primary/80'
+                      aria-hidden='true'
+                    />
+                  </p>
+                </div>
+                <Separator />
+                <div>
+                  <p className='text-sm text-muted-foreground mb-1'>
+                    Current Status
+                  </p>
+                  <p className='font-semibold italic text-muted-foreground'>
+                    {MISSION_STATUS[mission?.status]?.LABEL}
+                  </p>
+                </div>
+                <Separator />
+                <div>
+                  <p className='text-sm text-muted-foreground mb-1'>
+                    Posted on
+                  </p>
+                  <p className='font-medium'>
+                    {timestampToDayMonthYear(mission?.publication_date)}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {mission?.location && mission?.latitude && mission?.longitude && (
+              <div>
+                <h2 className='text-2xl font-bold tracking-tight p-2'>
+                  Location
+                </h2>
+                <div className='rounded-2xl overflow-hidden border h-64 shadow-sm'>
+                  <Map
+                    readOnly={true}
+                    initialLocation={{
+                      lat: mission?.latitude,
+                      lng: mission?.longitude,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!currentUser?.isAdmin && (
+          <SearchAdventurerModal
+            missionId={mission?.mid}
+            vacancies={(mission?.participants || []).filter(
+              (vacancy) => !vacancy.adventurer_id,
+            )}
+            isOpen={isSearchModalOpen}
+            onClose={() => setIsSearchModalOpen(false)}
+          />
+        )}
+      </div>
+    </>
   );
 };
 

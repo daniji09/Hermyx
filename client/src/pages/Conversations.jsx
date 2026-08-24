@@ -146,53 +146,60 @@ export const Conversations = () => {
   }
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-        <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-          <MessageCircle className='h-6 w-6' aria-hidden='true' />
-        </span>
-        <div className='min-w-0'>
-          <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
-            Conversations
-          </h1>
-          <p className='text-muted-foreground'>
-            Your direct messages, active mission chats and mission history.
-          </p>
-        </div>
-      </section>
+    <>
+      <title>{`Conversations | Hermyx`}</title>
+      <meta name='description' content={`User's conversations history.`}></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <MessageCircle className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+              Conversations
+            </h1>
+            <p className='text-muted-foreground'>
+              Your direct messages, active mission chats and mission history.
+            </p>
+          </div>
+        </section>
 
-      {conversations.length === 0 ? (
-        <div className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
-          You have no conversations yet.
-        </div>
-      ) : (
-        <div className='space-y-8'>
-          {conversations.length > 0 && (
-            <section className='grid gap-3' aria-label='List of conversations'>
-              {conversations.map((conversation) => (
-                <ConversationCard
-                  key={conversation.cid}
-                  conversation={conversation}
-                />
-              ))}
-            </section>
-          )}
-          {hasNextPage && (
-            <div className='flex justify-center'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
+        {conversations.length === 0 ? (
+          <div className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
+            You have no conversations yet.
+          </div>
+        ) : (
+          <div className='space-y-8'>
+            {conversations.length > 0 && (
+              <section
+                className='grid gap-3'
+                aria-label='List of conversations'
               >
-                {isFetchingNextPage
-                  ? 'Loading conversations'
-                  : 'Load more conversations'}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </main>
+                {conversations.map((conversation) => (
+                  <ConversationCard
+                    key={conversation.cid}
+                    conversation={conversation}
+                  />
+                ))}
+              </section>
+            )}
+            {hasNextPage && (
+              <div className='flex justify-center'>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage
+                    ? 'Loading conversations'
+                    : 'Load more conversations'}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </>
   );
 };

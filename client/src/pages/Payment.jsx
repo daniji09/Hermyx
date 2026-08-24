@@ -98,16 +98,23 @@ export const Payment = () => {
   }
 
   return (
-    <main className='container mx-auto max-w-6xl sm:p-6 flex justify-center p-4'>
-      <Elements stripe={stripePromise} options={{ locale: 'en' }}>
-        <PaymentForm
-          missionId={id}
-          mission={missionPaymentInfo?.mission}
-          missionPaymentInfo={missionPaymentInfo?.missionPayment}
-          cardsInfo={cardsInfo}
-        />
-      </Elements>
-    </main>
+    <>
+      <title>{`Mission ${missionPaymentInfo?.mission?.title} payment| Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx log in via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl sm:p-6 flex justify-center p-4'>
+        <Elements stripe={stripePromise} options={{ locale: 'en' }}>
+          <PaymentForm
+            missionId={id}
+            mission={missionPaymentInfo?.mission}
+            missionPaymentInfo={missionPaymentInfo?.missionPayment}
+            cardsInfo={cardsInfo}
+          />
+        </Elements>
+      </main>
+    </>
   );
 };
 
