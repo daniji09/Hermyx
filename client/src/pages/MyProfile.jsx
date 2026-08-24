@@ -49,6 +49,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { messages } from '../messages/messages';
 import { Map } from '../components/custom/Map';
 import { getImageUrl } from '../utils/media';
+import { getDisplayName, getInitials } from '../utils/avatar';
 import {
   Dialog,
   DialogClose,
@@ -276,10 +277,7 @@ const ProfileAvatar = ({ user }) => {
           className='h-full w-full object-cover'
         />
         <AvatarFallback>
-          <User
-            className='h-12 w-12 text-muted-foreground'
-            aria-hidden='true'
-          />
+          {getInitials(getDisplayName(user))}
         </AvatarFallback>
       </Avatar>
 

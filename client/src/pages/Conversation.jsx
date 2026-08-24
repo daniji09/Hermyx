@@ -70,7 +70,7 @@ import { getImageUrl } from '../utils/media';
 import { cn } from '@/lib/utils';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { messages as frontendMessages } from './../messages/messages';
-import { getInitials } from '../utils/avatar';
+import { getDisplayName, getInitials } from '../utils/avatar';
 import { NotFound } from './NotFound';
 import { useInView } from 'react-intersection-observer';
 
@@ -110,7 +110,7 @@ const formatMessageTimestamp = (timestamp) =>
     timeStyle: 'short',
   }).format(new Date(timestamp));
 
-const DisputeMessageCard = ({ message, isOwnMessage }) => (
+const DisputeMessageCard = ({ message, isOwnMessage, avatarProfile }) => (
   <article className='overflow-hidden rounded-xl border bg-card shadow-xs'>
     <header className='flex items-center justify-between gap-4 border-b bg-muted/30 px-4 py-3 sm:px-5'>
       <div className='flex min-w-0 items-center gap-3'>
@@ -120,7 +120,7 @@ const DisputeMessageCard = ({ message, isOwnMessage }) => (
             alt={`@${message.sender_username}`}
           />
           <AvatarFallback>
-            {getInitials(message.sender_username)}
+            {getInitials(getDisplayName(avatarProfile || message))}
           </AvatarFallback>
         </Avatar>
         <div className='min-w-0'>
@@ -182,6 +182,10 @@ export const ConversationThread = ({
   const otherParticipant = conversationData?.participants?.find(
     (participant) => participant.uid !== currentUser?.id,
   );
+  const getAvatarProfile = (user) => {
+    if (user?.sender_id === currentUser?.id) return currentUser;
+    return user;
+  };
   const currentParticipant = conversationData?.participants?.find(
     (participant) => participant.uid === currentUser?.id,
   );
@@ -515,7 +519,7 @@ export const ConversationThread = ({
                         conversationData.participants.length === 1 ? (
                         <User className='h-5 w-5 text-muted-foreground' />
                       ) : (
-                        getInitials(otherParticipant?.username)
+                        getInitials(getDisplayName(otherParticipant))
                       )}
                     </AvatarFallback>
                   </Avatar>
@@ -659,6 +663,7 @@ export const ConversationThread = ({
                               >
                                 <DisputeMessageCard
                                   message={message}
+                                  avatarProfile={getAvatarProfile(message)}
                                   isOwnMessage={
                                     message.sender_id === currentUser?.id
                                   }
@@ -694,7 +699,9 @@ export const ConversationThread = ({
                                             <User className='h-5 w-5 text-muted-foreground' />
                                           ) : (
                                             getInitials(
-                                              otherParticipant?.username,
+                                              getDisplayName(
+                                                getAvatarProfile(firstMessage),
+                                              ),
                                             )
                                           )}
                                         </AvatarFallback>

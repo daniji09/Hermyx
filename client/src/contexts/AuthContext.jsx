@@ -45,6 +45,8 @@ export const AuthProvider = ({ children }) => {
             email: firebaseUser.email,
             id: hermyxUser.uid,
             username: hermyxUser.username,
+            name: hermyxUser.name,
+            surnames: hermyxUser.surnames,
             avatar: hermyxUser.avatar,
             isAdmin: userIsAdmin,
           });
