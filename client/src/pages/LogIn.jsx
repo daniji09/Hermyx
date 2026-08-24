@@ -48,21 +48,21 @@ export const LogIn = () => {
       ></meta>
       <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
         <div className='flex w-full max-w-155 flex-col gap-4'>
-        <LogInForm
+          <LogInForm
             state={state}
             action={logInFormAction}
             isPending={isPending}
           ></LogInForm>
           {showVerificationNotice && (
-          <AlertStatic
-            title={messages.SIGN_UP.VERIFICATION_EMAIL_SENT_TITLE}
-            onClose={() => setShowVerificationNotice(false)}
-          >
-            {messages.SIGN_UP.VERIFICATION_EMAIL_SENT}
-          </AlertStatic>
-        )}
-      </div>
-    </main>
+            <AlertStatic
+              title={messages.SIGN_UP.VERIFICATION_EMAIL_SENT_TITLE}
+              onClose={() => setShowVerificationNotice(false)}
+            >
+              {messages.SIGN_UP.VERIFICATION_EMAIL_SENT}
+            </AlertStatic>
+          )}
+        </div>
+      </main>
     </>
   );
 };

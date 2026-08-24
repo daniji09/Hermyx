@@ -658,7 +658,7 @@ const VacancyCard = ({
             </Avatar>
           </div>
         ) : (
-          <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>
+          <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-muted text-secondary'>
             <UserPlus size={24} aria-hidden='true' />
           </div>
         )}
@@ -1608,7 +1608,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
             >
               <label
                 htmlFor='searchAdventurerByUsername'
-                className='text-sm font-medium text-slate-900 dark:text-slate-100'
+                className='text-sm font-medium text-primary'
               >
                 Adventurer username
               </label>
@@ -1697,16 +1697,16 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
             </form>
           ) : (
             <div className='flex flex-col gap-4'>
-              <div className='min-w-0 rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4'>
+              <div className='min-w-0 rounded-2xl border bg-card px-4 py-4'>
                 <div className='flex items-center gap-3'>
                   <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
                     <User className='h-5 w-5' aria-hidden='true' />
                   </span>
                   <div className='min-w-0'>
-                    <p className='truncate text-base font-semibold text-slate-900'>
+                    <p className='truncate text-base font-semibold text-primary'>
                       {selectedUser.username}
                     </p>
-                    <p className='truncate text-sm text-slate-500'>
+                    <p className='truncate text-sm text-primary'>
                       {selectedUser.email || 'Selected adventurer'}
                     </p>
                   </div>
@@ -1715,7 +1715,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
 
               <label
                 htmlFor='invitationVacancy'
-                className='text-sm font-medium text-slate-900'
+                className='text-sm font-medium text-primary'
               >
                 Vacancy
               </label>
@@ -1739,7 +1739,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
 
               <label
                 htmlFor='notificationMessage'
-                className='text-sm font-medium text-slate-900'
+                className='text-sm font-medium text-primary'
               >
                 Invitation message
               </label>

@@ -184,7 +184,10 @@ export const ConversationThread = ({
   );
   const getAvatarProfile = (user) => {
     if (user?.sender_id === currentUser?.id) return currentUser;
-    return user;
+    return {
+      ...user,
+      username: user?.username || user?.sender_username,
+    };
   };
   const currentParticipant = conversationData?.participants?.find(
     (participant) => participant.uid === currentUser?.id,
