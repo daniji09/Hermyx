@@ -75,6 +75,8 @@ import {
 } from '../services/AuthServices';
 import { addEmailAuthenticationAction } from '../actions/AuthActions';
 import { AlertStatic } from '../components/custom/AlertStatic';
+import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -118,6 +120,19 @@ export const MyProfile = () => {
     ),
   );
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextReviewsPage) {
+      fetchNextReviewsPage();
+    }
+  }, [inView, hasNextReviewsPage, fetchNextReviewsPage]);
+
   if (isLoading) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
@@ -129,38 +144,33 @@ export const MyProfile = () => {
   }
 
   if (isError || !data?.user) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load your profile.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   const user = data.user;
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <ProfileHeader user={user}></ProfileHeader>
-      <ProfileInformation data={data}></ProfileInformation>
-      <ProfileReviews
-        reviewsData={reviewsData}
-        isLoading={isReviewsLoading}
-        isPrivate={!reviewsEnabled}
-        hasNextPage={hasNextReviewsPage}
-        isFetchingNextPage={isFetchingNextReviewsPage}
-        fetchNextPage={fetchNextReviewsPage}
-      />
-      <ProfileAccessMethods user={user}></ProfileAccessMethods>
-      <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
-      <ProfileConfiguration user={user}></ProfileConfiguration>
-      <ProfileDangerZone></ProfileDangerZone>
-    </main>
+    <>
+      <title>{`My profile | Hermyx`}</title>
+      <meta name='description' content={`Hermyx user's profile.`}></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <ProfileHeader user={user}></ProfileHeader>
+        <ProfileInformation data={data}></ProfileInformation>
+        <ProfileReviews
+          reviewsData={reviewsData}
+          isLoading={isReviewsLoading}
+          isPrivate={!reviewsEnabled}
+          hasNextPage={hasNextReviewsPage}
+          isFetchingNextPage={isFetchingNextReviewsPage}
+          loadMoreRef={loadMoreRef}
+        />
+        <ProfileAccessMethods user={user}></ProfileAccessMethods>
+        <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
+        <ProfileConfiguration user={user}></ProfileConfiguration>
+        <ProfileDangerZone></ProfileDangerZone>
+      </main>
+    </>
   );
 };
 
@@ -303,7 +313,7 @@ const ProfileReviews = ({
   isPrivate,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   const reviews = reviewsData?.reviews || [];
 
@@ -311,12 +321,12 @@ const ProfileReviews = ({
     <Card asChild>
       <section className='mb-6 p-4 sm:p-6 mt-6 '>
         <div className='mb-3 flex items-center justify-between gap-4 pb-2 border-b'>
-          <h2 className='text-xl font-semibold'>Reviews</h2>
+          <h2 className='text-2xl font-bold tracking-tight'>Reviews</h2>
           {!isLoading && (
             <div className='flex gap-3'>
               <p className='flex text-sm text-muted-foreground items-center gap-1'>
                 <Star
-                  className='h-4 w-4 fill-amber-400 text-amber-400'
+                  className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-600 dark:text-amber-600'
                   aria-hidden='true'
                 />
                 {Number(Number(reviewsData?.averageRating || 0).toFixed(1))}/5
@@ -352,7 +362,7 @@ const ProfileReviews = ({
                 reviews={reviews}
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                fetchNextPage={fetchNextPage}
+                loadMoreRef={loadMoreRef}
               />
             </div>
 
@@ -381,9 +391,9 @@ export const ReviewCard = ({ review, isClamped = false }) => (
           {review.mission_title}
         </Link>
       </span>
-      <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
+      <span className='inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-600'>
         <Star
-          className='h-4 w-4 fill-amber-400 text-amber-400'
+          className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500'
           aria-hidden='true'
         />
         {Number(Number(review.rating).toFixed(1))}/5
@@ -421,7 +431,7 @@ const AllReviewsDialog = ({
   reviews,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -451,17 +461,20 @@ const AllReviewsDialog = ({
           ))}
 
           {hasNextPage && (
-            <div className='pt-2 flex justify-center'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage
-                  ? 'Loading reviews...'
-                  : 'Load more reviews'}
-              </Button>
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
+            >
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reviews...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground py-2'>
+              No more reviews found.
             </div>
           )}
         </div>
@@ -556,7 +569,9 @@ const ProfileInformation = ({ data }) => {
       <section className='p-4 sm:p-6'>
         <form>
           <div className='flex gap-3 items-start justify-between pb-2 border-b'>
-            <h2 className='text-xl font-semibold'>Profile information</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              Profile information
+            </h2>
 
             <div className='flex justify-end gap-2'>
               {isEditing && (
@@ -713,7 +728,9 @@ const ProfileAccessMethods = ({ user }) => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6 '>
-        <h2 className='text-xl font-semibold pb-2 border-b'>Access methods</h2>
+        <h2 className='text-2xl font-bold tracking-tight pb-2 border-b'>
+          Access methods
+        </h2>
         <div className='flex flex-col gap-y-2'>
           <h3 className='text-lg font-medium'>E-mail & password</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
@@ -1405,7 +1422,9 @@ const ProfileConfiguration = ({ user }) => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold pb-2 border-b'>Configuration</h2>
+        <h2 className='text-2xl font-bold tracking-tight pb-2 border-b'>
+          Configuration
+        </h2>
         <div className='flex flex-col gap-4'>
           <form
             id='userConfigurationForm'
@@ -1465,7 +1484,7 @@ const ProfileDangerZone = () => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold text-destructive pb-2 border-b'>
+        <h2 className='text-2xl font-bold tracking-tight text-destructive pb-2 border-b'>
           Danger zone
         </h2>
         <div className='flex flex-col'>

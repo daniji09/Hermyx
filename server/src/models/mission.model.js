@@ -66,7 +66,7 @@ export const findByMidForUpdate = async (mid, client = pool) => {
 
 // Get mission by mid excluding an uid
 export const findByMidExcludingUid = async (id, uid) => {
-  const query = `SELECT *, 
+  const query = `SELECT m.*, u.avatar, u.username,
     ST_Y(m.location::geometry) as latitude, 
     ST_X(m.location::geometry) as longitude, 
     EXISTS (
@@ -109,7 +109,7 @@ export const findByMidExcludingUid = async (id, uid) => {
         AND n.type = 'invitation'
         AND n.status = 'pending'
     ) AS has_pending_join_request
-    FROM mission m WHERE mid = $1`;
+    FROM mission m LEFT JOIN app_user u ON m.owner_id = u.uid WHERE mid = $1`;
   const result = await pool.query(query, [id, uid]);
   return result.rows[0];
 };
@@ -259,8 +259,14 @@ export const findAllOpened = async ({
 export const findPublishedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   const query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
-    m.occupied_vacancies, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE m.status != $2 AND m.owner_id = $1 
+    m.occupied_vacancies, m.status, a.uid, a.username, mph.photos, COUNT(*) OVER() AS total_count
+    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) 
+    LEFT JOIN (
+      SELECT mid, ARRAY_AGG(url) AS photos 
+      FROM mission_photo
+      GROUP BY mid
+    ) AS mph ON (m.mid = mph.mid)
+    WHERE m.status != $2 AND m.owner_id = $1 
     ORDER BY m.publication_date DESC`;
   const values = [uid, MISSION_STATUS.DELETED.ID];
 
@@ -271,10 +277,15 @@ export const findPublishedByUid = async (uid, pagination = null) => {
 export const findJoinedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   const query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
-    m.occupied_vacancies, m.status, owner_user.uid, owner_user.username, COUNT(*) OVER() AS total_count
+    m.occupied_vacancies, m.status, owner_user.uid, owner_user.username, mph.photos, COUNT(*) OVER() AS total_count
     FROM mission_participation AS ma
     JOIN mission AS m ON (m.mid = ma.mid)
     JOIN app_user AS owner_user ON (m.owner_id = owner_user.uid)
+    LEFT JOIN (
+      SELECT mid, ARRAY_AGG(url) AS photos 
+      FROM mission_photo
+      GROUP BY mid
+    ) AS mph ON (m.mid = mph.mid)
     WHERE adventurer_id = $1 AND m.status != $2
     ORDER BY m.publication_date DESC`;
   const values = [uid, MISSION_STATUS.DELETED.ID];
@@ -293,6 +304,7 @@ export const findPublicPublishedByUid = async (userId, pagination = null) => {
       m.total_vacancies,
       m.occupied_vacancies,
       m.total_payment,
+      mph.photos,
       CASE
         WHEN m.status = 'funded' THEN 'looking_for_adventurers'
         WHEN m.status IN (
@@ -316,6 +328,11 @@ export const findPublicPublishedByUid = async (userId, pagination = null) => {
       COUNT(*) OVER() AS total_count
     FROM mission m
     JOIN app_user owner_user ON owner_user.uid = m.owner_id
+    LEFT JOIN (
+      SELECT mid, ARRAY_AGG(url) AS photos 
+      FROM mission_photo
+      GROUP BY mid
+    ) AS mph ON (m.mid = mph.mid)
     WHERE m.owner_id = $1
       AND m.status != $2
     ORDER BY m.publication_date DESC
@@ -336,6 +353,7 @@ export const findPublicJoinedByUid = async (userId, pagination = null) => {
       m.total_vacancies,
       m.occupied_vacancies,
       m.total_payment,
+      mph.photos,
       CASE
         WHEN m.completion_date IS NULL THEN NULL
         ELSE m.completion_date - m.publication_date
@@ -346,6 +364,11 @@ export const findPublicJoinedByUid = async (userId, pagination = null) => {
     FROM mission_participation mp
     JOIN mission m ON m.mid = mp.mid
     JOIN app_user owner_user ON owner_user.uid = m.owner_id
+    LEFT JOIN (
+      SELECT mid, ARRAY_AGG(url) AS photos 
+      FROM mission_photo
+      GROUP BY mid
+    ) AS mph ON (m.mid = mph.mid)
     WHERE mp.adventurer_id = $1 AND m.status != $2
     ORDER BY m.completion_date DESC NULLS LAST, m.publication_date DESC
   `;
@@ -371,9 +394,15 @@ export const findAllActiveByUid = async (uid) => {
       ma.payment_status,
       ma.owner_review_id,
       ma.adventurer_review_id,
+      mph.photos,
       m.owner_id, m.status AS status, ma.status AS participation_status, ma.id AS vacancy_id, COUNT(*) OVER() AS total_active
   FROM mission m
     LEFT JOIN mission_participation ma ON m.mid = ma.mid AND ma.adventurer_id = $1
+    LEFT JOIN (
+      SELECT mid, ARRAY_AGG(url) AS photos 
+      FROM mission_photo
+      GROUP BY mid
+    ) AS mph ON (m.mid = mph.mid)
   WHERE m.status NOT IN ($2, $3, $4, $5)
     AND (m.owner_id = $1 OR ma.adventurer_id = $1)
   `;

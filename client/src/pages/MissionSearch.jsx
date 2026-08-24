@@ -6,7 +6,7 @@ import { useSearchParams } from 'react-router-dom';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { HandPlatter } from 'lucide-react';
+import { Map } from 'lucide-react';
 
 export const SearchMission = () => {
   // Search params, if they exists
@@ -94,105 +94,110 @@ export const SearchMission = () => {
   };
 
   return (
-    <main>
-      <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-            <HandPlatter className='h-6 w-6' aria-hidden='true' />
-          </span>
-          <div className='min-w-0'>
-            <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
-              Missions
-            </h1>
-            <p className='text-muted-foreground'>
-              {data?.pages[0]?.pagination?.totalItems} results for &quot;
-              {title.trim()}&quot;.
-            </p>
+    <>
+      <title>{`Mission results for ${title} | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Results for searching a mission by name, being able to filter by price and distance.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <section className='w-full'>
+          <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+              <Map className='h-6 w-6' aria-hidden='true' />
+            </span>
+            <div className='min-w-0'>
+              <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+                Missions
+              </h1>
+              <p className='text-muted-foreground'>
+                {data?.pages[0]?.pagination?.totalItems} results for &quot;
+                {title.trim()}&quot;.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
-      <section
-        className='w-full px-6 sm:px-8 lg:px-12 xl:px-16'
-        aria-label='Filters section'
-      >
-        <div className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-          <form
-            onSubmit={handleFiltersSubmit}
-            className='mt-4 flex flex-col gap-3 sm:flex-row sm:items-end'
-          >
-            <div className='grid gap-1.5'>
-              <label htmlFor='minPayment' className='text-sm font-medium'>
-                Min price
-              </label>
-              <Input
-                id='minPayment'
-                name='minPayment'
-                type='number'
-                min='0'
-                step='0.1'
-                value={minPaymentInput}
-                onChange={(event) => setMinPaymentInput(event.target.value)}
-                placeholder='0'
-                className='sm:w-36'
-              />
-            </div>
+        </section>
+        <section className='w-full' aria-label='Filters section'>
+          <div className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <form
+              onSubmit={handleFiltersSubmit}
+              className='mt-4 flex flex-col gap-3 sm:flex-row sm:items-end'
+            >
+              <div className='grid gap-1.5'>
+                <label htmlFor='minPayment' className='text-sm font-medium'>
+                  Min price
+                </label>
+                <Input
+                  id='minPayment'
+                  name='minPayment'
+                  type='number'
+                  min='0'
+                  step='0.1'
+                  value={minPaymentInput}
+                  onChange={(event) => setMinPaymentInput(event.target.value)}
+                  placeholder='0'
+                  className='sm:w-36'
+                />
+              </div>
 
-            <div className='grid gap-1.5'>
-              <label htmlFor='maxPayment' className='text-sm font-medium'>
-                Max price
-              </label>
-              <Input
-                id='maxPayment'
-                name='maxPayment'
-                type='number'
-                min='0'
-                step='0.1'
-                value={maxPaymentInput}
-                onChange={(event) => setMaxPaymentInput(event.target.value)}
-                placeholder='Any'
-                className='sm:w-36'
-              />
-            </div>
+              <div className='grid gap-1.5'>
+                <label htmlFor='maxPayment' className='text-sm font-medium'>
+                  Max price
+                </label>
+                <Input
+                  id='maxPayment'
+                  name='maxPayment'
+                  type='number'
+                  min='0'
+                  step='0.1'
+                  value={maxPaymentInput}
+                  onChange={(event) => setMaxPaymentInput(event.target.value)}
+                  placeholder='Any'
+                  className='sm:w-36'
+                />
+              </div>
 
-            <div className='grid gap-1.5'>
-              <label htmlFor='maxDistanceKm' className='text-sm font-medium'>
-                Max distance
-              </label>
-              <Input
-                id='maxDistanceKm'
-                name='maxDistanceKm'
-                type='number'
-                min='0'
-                step='0.1'
-                value={maxDistanceInput}
-                onChange={(event) => setMaxDistanceInput(event.target.value)}
-                placeholder='Any'
-                className='sm:w-36'
-              />
-            </div>
+              <div className='grid gap-1.5'>
+                <label htmlFor='maxDistanceKm' className='text-sm font-medium'>
+                  Max distance
+                </label>
+                <Input
+                  id='maxDistanceKm'
+                  name='maxDistanceKm'
+                  type='number'
+                  min='0'
+                  step='0.1'
+                  value={maxDistanceInput}
+                  onChange={(event) => setMaxDistanceInput(event.target.value)}
+                  placeholder='Any'
+                  className='sm:w-36'
+                />
+              </div>
 
-            <div className='flex gap-2'>
-              <Button type='submit'>Apply</Button>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={handleClearFilters}
-                disabled={!minPayment && !maxPayment && !maxDistanceKm}
-              >
-                Clear
-              </Button>
-            </div>
-          </form>
-        </div>
-      </section>
-      <MissionSearchContainer
-        missions={missions}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-        isLoading={isLoading}
-        isError={isError}
-      ></MissionSearchContainer>
-    </main>
+              <div className='flex gap-2'>
+                <Button type='submit'>Apply</Button>
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={handleClearFilters}
+                  disabled={!minPayment && !maxPayment && !maxDistanceKm}
+                >
+                  Clear
+                </Button>
+              </div>
+            </form>
+          </div>
+        </section>
+        <MissionSearchContainer
+          missions={missions}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+          isLoading={isLoading}
+          isError={isError}
+          infiniteScroll={true}
+        ></MissionSearchContainer>
+      </main>
+    </>
   );
 };

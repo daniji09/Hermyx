@@ -5,7 +5,7 @@ import { AuthContext } from './../contexts/AuthContext';
 import { getUserMissionsInfiniteQueryOptions } from '../queries/MissionsQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
-import { HandPlatter } from 'lucide-react';
+import { Map } from 'lucide-react';
 
 export const UserMissions = () => {
   // Current user from context
@@ -44,34 +44,39 @@ export const UserMissions = () => {
   const missions = data?.pages.flatMap((page) => page.missions) || [];
 
   return (
-    <main className='container mx-auto p-4 sm:p-6 max-w-5xl'>
-      <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-            <HandPlatter className='h-6 w-6' aria-hidden='true' />
-          </span>
-          <div className='min-w-0'>
-            <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
-              My missions
-            </h1>
-            <p className='text-muted-foreground'>
-              Manage your published missions and track your active
-              participations.
-            </p>
+    <>
+      <title>{`My missions | Hermyx`}</title>
+      <meta name='description' content={`User's missions.`}></meta>
+      <main className='container mx-auto p-4 sm:p-6 max-w-6xl '>
+        <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
+          <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+              <Map className='h-6 w-6' aria-hidden='true' />
+            </span>
+            <div className='min-w-0'>
+              <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+                My missions
+              </h1>
+              <p className='text-muted-foreground'>
+                Manage your published missions and track your active
+                participations.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
-      <UserMissionsTable
-        missions={missions}
-        filter={filter}
-        setFilter={setFilter}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-        isLoading={isLoading}
-        isError={isError}
-      ></UserMissionsTable>
-    </main>
+        </section>
+        <UserMissionsTable
+          missions={missions}
+          filter={filter}
+          setFilter={setFilter}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          fetchNextPage={fetchNextPage}
+          isLoading={isLoading}
+          isError={isError}
+          infiniteScroll={true}
+        ></UserMissionsTable>
+      </main>
+    </>
   );
 };
 
@@ -85,6 +90,7 @@ export const UserMissionsTable = ({
   isLoading,
   isError,
   sectionClassName = 'flex flex-col gap-6 mb-8 w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16',
+  infiniteScroll,
 }) => {
   return (
     <section className={sectionClassName}>
@@ -112,6 +118,7 @@ export const UserMissionsTable = ({
             isError={isError}
             noMissionsMessage={`It seems you haven't published any missions yet. Let's ask for some help!`}
             sectionClassName='w-full'
+            infiniteScroll={infiniteScroll}
           ></MissionSearchContainer>
         </TabsContent>
 

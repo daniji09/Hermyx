@@ -30,6 +30,8 @@ import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 import { ReviewCard } from './MyProfile.jsx';
 import { UserMissionsTable } from './UserMissions.jsx';
+import { NotFound } from './NotFound.jsx';
+import { useInView } from 'react-intersection-observer';
 
 export const PublicProfile = () => {
   const { username } = useParams();
@@ -89,6 +91,19 @@ export const PublicProfile = () => {
     }),
   );
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextReviewsPage) {
+      fetchNextReviewsPage();
+    }
+  }, [inView, hasNextReviewsPage, fetchNextReviewsPage]);
+
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
@@ -128,120 +143,123 @@ export const PublicProfile = () => {
   }
 
   if (isProfileError || !user) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load profile.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
 
   return (
-    <main className='container mx-auto max-w-5xl p-4 sm:p-6'>
-      <section className='mb-8 gap-6 border-b pb-8 flex-row items-center'>
-        <div className='flex flex-col gap-6 pb-8 sm:flex-row sm:items-center'>
-          <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
-            {user.avatar ? (
-              <img
-                src={getImageUrl(user.avatar)}
-                alt=''
-                className='h-full w-full object-cover'
-              />
-            ) : (
-              <User className='h-12 w-12 text-muted-foreground' />
-            )}
-          </div>
-
-          <div className='min-w-0 flex-1'>
-            <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
-              {displayName || user.username}
-            </h1>
-
-            <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
-              @{user.username}
-            </p>
-
-            <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-              <span className='inline-flex items-center gap-1 font-medium text-amber-700'>
-                <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
-                {`${Number(reviewsData?.averageRating || 0).toFixed(1)}/5`}
-              </span>
-              <span>
-                from {reviewsData?.totalReviews || 0}{' '}
-                {(reviewsData?.totalReviews || 0) === 1 ? 'review' : 'reviews'}
-              </span>
-            </div>
-
-            {messageError && (
-              <p className='mt-2 text-sm text-destructive'>{messageError}</p>
-            )}
-
-            <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
-              <Button
-                type='button'
-                className='w-full'
-                onClick={() => {
-                  setMessageError('');
-                  openConversation();
-                }}
-                disabled={isOpeningConversation}
-              >
-                <MessageCircle
-                  className='h-4 w-4 mr-1 shrink-0'
-                  aria-hidden='true'
+    <>
+      <title>{`${user?.username} profile | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`${user?.username}'s public Hermyx profile.`}
+      ></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <section className='mb-8 gap-6 border-b pb-8 flex-row items-center'>
+          <div className='flex flex-col gap-6 pb-8 sm:flex-row sm:items-center'>
+            <div className='flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted'>
+              {user.avatar ? (
+                <img
+                  src={getImageUrl(user.avatar)}
+                  alt=''
+                  className='h-full w-full object-cover'
                 />
-                <span className='truncate'>
-                  {isOpeningConversation ? 'Opening...' : 'Message'}
+              ) : (
+                <User className='h-12 w-12 text-muted-foreground' />
+              )}
+            </div>
+
+            <div className='min-w-0 flex-1'>
+              <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
+                {displayName || user.username}
+              </h1>
+
+              <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
+                @{user.username}
+              </p>
+
+              <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
+                <span className='inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-600'>
+                  <Star className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500' />
+                  {`${Number(reviewsData?.averageRating || 0).toFixed(1)}/5`}
                 </span>
-              </Button>
-              <ReportUserButton user={user}></ReportUserButton>
+                <span>
+                  from {reviewsData?.totalReviews || 0}{' '}
+                  {(reviewsData?.totalReviews || 0) === 1
+                    ? 'review'
+                    : 'reviews'}
+                </span>
+              </div>
+
+              {messageError && (
+                <p className='mt-2 text-sm text-destructive'>{messageError}</p>
+              )}
+              {!currentUser?.isAdmin && (
+                <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
+                  <Button
+                    type='button'
+                    className='w-full'
+                    onClick={() => {
+                      setMessageError('');
+                      openConversation();
+                    }}
+                    disabled={isOpeningConversation}
+                  >
+                    <MessageCircle
+                      className='h-4 w-4 mr-1 shrink-0'
+                      aria-hidden='true'
+                    />
+                    <span className='truncate'>
+                      {isOpeningConversation ? 'Opening...' : 'Message'}
+                    </span>
+                  </Button>
+                  <ReportUserButton user={user}></ReportUserButton>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-        <div>
-          {user.description && (
-            <p className='wrap-break-words wrap-anywhere text-sm leading-6 sm:text-base'>
-              {user.description}
-            </p>
-          )}
-        </div>
-      </section>
-
-      {user.role === USER_ROLE.ADMIN.ID ? (
-        ``
-      ) : !missionsVisible ? (
-        <section className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
-          This user keeps their mission history private.
+          <div>
+            {user.description && (
+              <p className='wrap-break-words wrap-anywhere text-sm leading-6 sm:text-base'>
+                {user.description}
+              </p>
+            )}
+          </div>
         </section>
-      ) : (
-        <UserMissionsTable
-          missions={missions}
-          filter={filter}
-          setFilter={setFilter}
-          hasNextPage={hasNextPage}
-          isFetchingNextPage={isFetchingNextPage}
-          fetchNextPage={fetchNextPage}
-          isLoading={isMissionsLoading}
-          isError={isMissionsError}
-          sectionClassName={''}
-        ></UserMissionsTable>
-      )}
-      {user.role !== USER_ROLE.ADMIN.ID && (
-        <AdventurerReviewsSection
-          reviewsData={reviewsData}
-          isLoading={isReviewsLoading}
-          hasNextPage={hasNextReviewsPage}
-          isFetchingNextPage={isFetchingNextReviewsPage}
-          fetchNextPage={fetchNextReviewsPage}
-        />
-      )}
-    </main>
+
+        {user.role === USER_ROLE.ADMIN.ID ? (
+          ``
+        ) : !missionsVisible ? (
+          <section className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
+            This user keeps their mission history private.
+          </section>
+        ) : (
+          <UserMissionsTable
+            missions={missions}
+            filter={filter}
+            setFilter={setFilter}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
+            isLoading={isMissionsLoading}
+            isError={isMissionsError}
+            sectionClassName={''}
+            infiniteScroll={false}
+          ></UserMissionsTable>
+        )}
+        {user.role !== USER_ROLE.ADMIN.ID && (
+          <AdventurerReviewsSection
+            reviewsData={reviewsData}
+            isLoading={isReviewsLoading}
+            hasNextPage={hasNextReviewsPage}
+            isFetchingNextPage={isFetchingNextReviewsPage}
+            fetchNextPage={fetchNextReviewsPage}
+            loadMoreRef={loadMoreRef}
+          />
+        )}
+      </main>
+    </>
   );
 };
 
@@ -260,7 +278,7 @@ const AdventurerReviewsSection = ({
   isLoading,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   const reviews = reviewsData?.reviews || [];
 
@@ -295,15 +313,20 @@ const AdventurerReviewsSection = ({
           </div>
 
           {hasNextPage && (
-            <div className='mt-6 flex justify-center'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? 'Loading reviews' : 'Load more reviews'}
-              </Button>
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
+            >
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reviews...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground pt-6'>
+              No more reviews found.
             </div>
           )}
         </>

@@ -1,12 +1,13 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { History, MessageCircle, User, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { getMyConversationsInfiniteQueryOptions } from '../queries/ConversationsQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { getImageUrl } from '../utils/media';
 import { formatLastMessageTime } from '../utils/date';
 import { cn } from './../lib/utils';
+import { useInView } from 'react-intersection-observer';
+import { useEffect } from 'react';
 
 const getLastMessagePreview = (conversation) => {
   if (conversation.last_message_content) {
@@ -57,7 +58,7 @@ const ConversationCard = ({ conversation }) => {
 
       <div className='min-w-0 flex-1'>
         <div className='flex items-center justify-between gap-3'>
-          <h2 className='min-w-0 truncate font-semibold'>
+          <h2 className='text-xl font-bold min-w-0 truncate'>
             {conversation.type === 'private' &&
             conversation.participant_count === 0
               ? 'Hermyx user'
@@ -122,6 +123,19 @@ export const Conversations = () => {
   );
   const conversations = data?.pages.flatMap((page) => page.conversations) || [];
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
+
   if (isLoading) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
@@ -146,53 +160,63 @@ export const Conversations = () => {
   }
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-        <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-          <MessageCircle className='h-6 w-6' aria-hidden='true' />
-        </span>
-        <div className='min-w-0'>
-          <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
-            Conversations
-          </h1>
-          <p className='text-muted-foreground'>
-            Your direct messages, active mission chats and mission history.
-          </p>
-        </div>
-      </section>
+    <>
+      <title>{`Conversations | Hermyx`}</title>
+      <meta name='description' content={`User's conversations history.`}></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <section className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <MessageCircle className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+              Conversations
+            </h1>
+            <p className='text-muted-foreground'>
+              Your direct messages, active mission chats and mission history.
+            </p>
+          </div>
+        </section>
 
-      {conversations.length === 0 ? (
-        <div className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
-          You have no conversations yet.
-        </div>
-      ) : (
-        <div className='space-y-8'>
-          {conversations.length > 0 && (
-            <section className='grid gap-3' aria-label='List of conversations'>
-              {conversations.map((conversation) => (
-                <ConversationCard
-                  key={conversation.cid}
-                  conversation={conversation}
-                />
-              ))}
-            </section>
-          )}
-          {hasNextPage && (
-            <div className='flex justify-center'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
+        {conversations.length === 0 ? (
+          <div className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
+            You have no conversations yet.
+          </div>
+        ) : (
+          <div className='space-y-8'>
+            {conversations.length > 0 && (
+              <section
+                className='grid gap-3'
+                aria-label='List of conversations'
               >
-                {isFetchingNextPage
-                  ? 'Loading conversations'
-                  : 'Load more conversations'}
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </main>
+                {conversations.map((conversation) => (
+                  <ConversationCard
+                    key={conversation.cid}
+                    conversation={conversation}
+                  />
+                ))}
+              </section>
+            )}
+            {hasNextPage && (
+              <div
+                ref={isFetchingNextPage ? null : loadMoreRef}
+                className='flex justify-center py-4 h-12 w-full'
+              >
+                {isFetchingNextPage && (
+                  <span className='text-xs text-muted-foreground animate-pulse'>
+                    Loading conversations...
+                  </span>
+                )}
+              </div>
+            )}
+            {!hasNextPage && (
+              <div className='text-center text-xs text-muted-foreground'>
+                No more conversations found.
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </>
   );
 };

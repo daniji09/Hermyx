@@ -3,7 +3,6 @@ import { getReportsInfiniteQueryOptions } from '../queries/ReportQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { timestampToDayMonthYear } from '../utils/date';
 import { messages } from './../messages/messages';
-import { Button } from '@/components/ui/button';
 import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import {
   Card,
@@ -21,12 +20,14 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@/components/ui/combobox';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquareWarning } from 'lucide-react';
 import { truncateText } from '../../../server/src/utils/string.util';
+import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
-// Comboboxes   options
+// Comboboxes options
 const DATE_OPTIONS = [
   { value: 'desc', label: 'Newest first' },
   { value: 'asc', label: 'Oldest first' },
@@ -76,6 +77,19 @@ export const Reports = () => {
   // Data destructure for cleaner code
   const reports = data?.pages.flatMap((page) => page.reports);
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
+
   const handleFilterChange = (key, value) => {
     setSearchFilters((prev) => ({
       ...prev,
@@ -84,60 +98,64 @@ export const Reports = () => {
   };
 
   return (
-    <main>
-      <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-            <MessageSquareWarning className='h-6 w-6' aria-hidden='true' />
-          </span>
-          <div className='min-w-0'>
-            <h1 className='text-3xl font-bold tracking-tight wrap-break-words'>
-              Reports
-            </h1>
-            <p className='text-muted-foreground'>
-              Oversee platform moderation. Review, filter, and take action on
-              community reports.
-            </p>
+    <>
+      <title>{`Reports | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`All Hermyx's reports made by users.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <section className='w-full'>
+          <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+              <MessageSquareWarning className='h-6 w-6' aria-hidden='true' />
+            </span>
+            <div className='min-w-0'>
+              <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+                Reports
+              </h1>
+              <p className='text-muted-foreground'>
+                Oversee platform moderation. Review, filter, and take action on
+                community reports.
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
-      <section
-        className='w-full px-6 sm:px-8 lg:px-12 xl:px-16'
-        aria-label='Filters section'
-      >
-        <div className='mt-4 mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-          <FilterCombobox
-            items={DATE_OPTIONS}
-            value={searchFilters.sortByDate}
-            onChange={(val) => handleFilterChange('sortByDate', val)}
-            placeholder='Sort by date...'
-            ariaLabel='Filter by date'
-          />
-          <FilterCombobox
-            items={STATUS_OPTIONS}
-            value={searchFilters.status}
-            onChange={(val) => handleFilterChange('status', val)}
-            placeholder='Sort by status...'
-            ariaLabel='Filter by status'
-          />
-          <FilterCombobox
-            items={TYPE_OPTIONS}
-            value={searchFilters.type}
-            onChange={(val) => handleFilterChange('type', val)}
-            placeholder='Sort by type...'
-            ariaLabel='Filter by type'
-          />
-        </div>
-      </section>
-      <ReportsSearchContainer
-        reports={reports}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-        isLoading={isLoading}
-        isError={isError}
-      ></ReportsSearchContainer>
-    </main>
+        </section>
+        <section className='w-full' aria-label='Filters section'>
+          <div className='mt-4 mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <FilterCombobox
+              items={DATE_OPTIONS}
+              value={searchFilters.sortByDate}
+              onChange={(val) => handleFilterChange('sortByDate', val)}
+              placeholder='Sort by date...'
+              ariaLabel='Filter by date'
+            />
+            <FilterCombobox
+              items={STATUS_OPTIONS}
+              value={searchFilters.status}
+              onChange={(val) => handleFilterChange('status', val)}
+              placeholder='Sort by status...'
+              ariaLabel='Filter by status'
+            />
+            <FilterCombobox
+              items={TYPE_OPTIONS}
+              value={searchFilters.type}
+              onChange={(val) => handleFilterChange('type', val)}
+              placeholder='Sort by type...'
+              ariaLabel='Filter by type'
+            />
+          </div>
+        </section>
+        <ReportsSearchContainer
+          reports={reports}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          loadMoreRef={loadMoreRef}
+          isLoading={isLoading}
+          isError={isError}
+        ></ReportsSearchContainer>
+      </main>
+    </>
   );
 };
 
@@ -180,7 +198,7 @@ const ReportsSearchContainer = ({
   reports,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
   isLoading,
   isLoadingMessage = messages.REPORT.SEARCH_REPORTS.LOADING,
   isError,
@@ -188,7 +206,7 @@ const ReportsSearchContainer = ({
   noReportsMessage = messages.REPORT.SEARCH_REPORTS.NO_REPORTS,
 }) => {
   return (
-    <section className='w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16'>
+    <section className='w-full'>
       <ReportsSearchLoading isLoading={isLoading}>
         {isLoadingMessage}
       </ReportsSearchLoading>
@@ -203,7 +221,7 @@ const ReportsSearchContainer = ({
         reports={reports}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
+        loadMoreRef={loadMoreRef}
       ></ReportsSearchContent>
     </section>
   );
@@ -221,19 +239,8 @@ const ReportsSearchLoading = ({ isLoading, children }) => {
   );
 };
 
-const ReportsSearchError = ({ isError, children }) => {
-  return (
-    <>
-      {isError && (
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          {children}
-        </div>
-      )}
-    </>
-  );
+const ReportsSearchError = ({ isError }) => {
+  return <>{isError && <NotFound></NotFound>}</>;
 };
 
 const NoReportsSearch = ({ reports, children }) => {
@@ -256,7 +263,7 @@ const ReportsSearchContent = ({
   reports,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   return (
     <>
@@ -273,19 +280,24 @@ const ReportsSearchContent = ({
               ></ReportSearchCard>
             ))}
           </ul>
-          <div className='flex align-middle justify-center py-5'>
-            <Button
-              onClick={() => fetchNextPage()}
-              className='rounded-lg p-2 hover:cursor-pointer'
-              disabled={!hasNextPage || isFetchingNextPage}
+
+          {hasNextPage && (
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
             >
-              {hasNextPage
-                ? isFetchingNextPage
-                  ? 'Loading'
-                  : 'More reports'
-                : 'No more reports to show'}
-            </Button>
-          </div>
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reports...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground pt-6'>
+              No more reports found.
+            </div>
+          )}
         </>
       )}
     </>

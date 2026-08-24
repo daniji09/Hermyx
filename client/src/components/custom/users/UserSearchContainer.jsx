@@ -6,7 +6,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../../../utils/media';
 import { getInitials } from '../../../utils/avatar';
@@ -15,7 +14,7 @@ export const UserSearchContainer = ({
   users,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
   isLoading,
   isLoadingMessage = 'Searching users...',
   isError,
@@ -23,7 +22,7 @@ export const UserSearchContainer = ({
   noUsersMessage = 'It seems there are no users matching this search.',
 }) => {
   return (
-    <section className='w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16'>
+    <section className='w-full mt-8'>
       <UsersSearchLoading isLoading={isLoading}>
         {isLoadingMessage}
       </UsersSearchLoading>
@@ -38,7 +37,7 @@ export const UserSearchContainer = ({
         users={users}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
+        loadMoreRef={loadMoreRef}
       ></UserSearchContent>
     </section>
   );
@@ -91,7 +90,7 @@ const UserSearchContent = ({
   users,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   return (
     <>
@@ -105,19 +104,23 @@ const UserSearchContent = ({
               <UserSearchCard key={foundUser.uid} foundUser={foundUser} />
             ))}
           </ul>
-          <div className='flex align-middle justify-center py-5'>
-            <Button
-              onClick={() => fetchNextPage()}
-              className='rounded-lg p-2 hover:cursor-pointer'
-              disabled={!hasNextPage || isFetchingNextPage}
+          {hasNextPage && (
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
             >
-              {hasNextPage
-                ? isFetchingNextPage
-                  ? 'Loading'
-                  : 'More users'
-                : 'No more users to show'}
-            </Button>
-          </div>
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading conversations...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground pt-6'>
+              No more users found.
+            </div>
+          )}
         </>
       )}
     </>
@@ -152,7 +155,7 @@ const UserSearchCard = ({ foundUser }) => {
                 </Avatar>
               </span>
               <div className='min-w-0'>
-                <CardTitle asChild>
+                <CardTitle asChild className='text-2xl font-bold'>
                   <h2 className='wrap-break-words wrap-anywhere line-clamp-1 group-hover:underline group-hover:text-primary transition-colors'>
                     {foundUser.name && foundUser.surnames
                       ? `${foundUser.name} ${foundUser.surnames}`

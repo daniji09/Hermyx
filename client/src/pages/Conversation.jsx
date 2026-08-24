@@ -1,4 +1,11 @@
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from 'react';
 import {
   useInfiniteQuery,
   useMutation,
@@ -64,6 +71,8 @@ import { cn } from '@/lib/utils';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { messages as frontendMessages } from './../messages/messages';
 import { getInitials } from '../utils/avatar';
+import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
 const groupConsecutiveMessages = (messages) =>
   messages.reduce((groups, message) => {
@@ -234,6 +243,38 @@ export const ConversationThread = ({
     () => (selectedPhoto ? URL.createObjectURL(selectedPhoto) : ''),
     [selectedPhoto],
   );
+
+  const viewportRef = useRef(null);
+  const previousScrollHeightRef = useRef(0);
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '100px 0px 0px 0px',
+    delay: 300,
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasOlderMessages) {
+      // Saves height so when messages are load, it doesn't jump up
+      if (viewportRef.current) {
+        previousScrollHeightRef.current = viewportRef.current.scrollHeight;
+      }
+      fetchOlderMessages();
+    }
+  }, [inView, hasOlderMessages, fetchOlderMessages]);
+
+  // Block is executed after data is loaded but before layout is printed
+  useLayoutEffect(() => {
+    if (viewportRef.current && previousScrollHeightRef.current > 0) {
+      const currentHeight = viewportRef.current.scrollHeight;
+      const heightDifference = currentHeight - previousScrollHeightRef.current;
+      if (heightDifference > 0) {
+        viewportRef.current.scrollTop += heightDifference;
+      }
+      previousScrollHeightRef.current = 0;
+    }
+  }, [messages]);
 
   useEffect(() => {
     return () => {
@@ -428,26 +469,27 @@ export const ConversationThread = ({
   }
 
   if (isConversationError || !conversationData) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load conversation.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   return (
     <main>
-      <section
-        className={cn(
-          'container mx-auto flex flex-col gap-4 p-4 sm:p-6',
-          isDisputeConversation ? 'max-w-5xl' : 'max-w-3xl',
-        )}
-      >
+      <title>
+        {isDisputeConversation
+          ? `Dispute conversation | Hermyx`
+          : isMissionConversation
+            ? `Mission ${conversation?.mission_title} conversation | Hermyx`
+            : `Conversation with ${otherParticipant?.username} | Hermyx`}
+      </title>
+      <meta
+        name='description'
+        content={
+          isDisputeConversation
+            ? `Dispute conversation of current user with other users and the administration.`
+            : `Private or mission conversation with other users.`
+        }
+      ></meta>
+      <section className='container mx-auto flex flex-col gap-4 p-4 sm:p-6 max-w-4xl'>
         <MessageScrollerProvider autoScroll defaultScrollPosition='end'>
           <Card
             className={cn(
@@ -578,7 +620,7 @@ export const ConversationThread = ({
                 </div>
               ) : (
                 <MessageScroller>
-                  <MessageScrollerViewport>
+                  <MessageScrollerViewport ref={viewportRef}>
                     <MessageScrollerContent
                       aria-busy={isPending}
                       className={cn('p-5 flex flex-col min-h-full')}
@@ -590,18 +632,20 @@ export const ConversationThread = ({
                         )}
                       >
                         {hasOlderMessages && (
-                          <div className='flex justify-center pb-4'>
-                            <Button
-                              type='button'
-                              variant='outline'
-                              size='sm'
-                              onClick={() => fetchOlderMessages()}
-                              disabled={isFetchingOlderMessages}
-                            >
-                              {isFetchingOlderMessages
-                                ? 'Loading older messages'
-                                : 'Load older messages'}
-                            </Button>
+                          <div
+                            ref={isFetchingOlderMessages ? null : loadMoreRef}
+                            className='flex justify-center py-4 h-12 w-full'
+                          >
+                            {isFetchingOlderMessages && (
+                              <span className='text-xs text-muted-foreground animate-pulse'>
+                                Loading older messages...
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {!hasOlderMessages && (
+                          <div className='text-center text-xs text-muted-foreground pb-2'>
+                            No more messages found.
                           </div>
                         )}
                         {isDisputeConversation

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import { getDisputeQueryOptions } from '../queries/DisputesQueries';
 import { ConversationThread } from './Conversation';
+import { NotFound } from './NotFound';
 
 const truncateText = (text, maxLength = 20) => {
   if (!text) return '';
@@ -26,9 +27,7 @@ export const Dispute = () => {
         to={`/users/${username}`}
         className={linkClass}
         title={username}
-        aria-label={username} // 👈 Accesibilidad salvada
-        target='_blank'
-        rel='noopener noreferrer'
+        aria-label={username}
       >
         {truncateText(username)}
       </Link>
@@ -45,8 +44,6 @@ export const Dispute = () => {
         className={linkClass}
         title={title}
         aria-label={title}
-        target='_blank'
-        rel='noopener noreferrer'
       >
         {truncateText(title)}
       </Link>
@@ -77,7 +74,7 @@ export const Dispute = () => {
           </>
         );
 
-      default: // REVIEW_DISPUTE (El bloque final que tenías en el else)
+      default:
         return (
           <>
             Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
@@ -103,16 +100,7 @@ export const Dispute = () => {
     );
 
   if (isError || !dispute) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load dispute.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   return (

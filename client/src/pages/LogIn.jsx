@@ -40,14 +40,20 @@ export const LogIn = () => {
   }, [location.pathname, location.state?.verificationEmailSent, navigate]);
 
   return (
-    <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
-      <div className='flex w-full max-w-155 flex-col gap-4'>
+    <>
+      <title>{`Log in | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx log in via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
+        <div className='flex w-full max-w-155 flex-col gap-4'>
         <LogInForm
-          state={state}
-          action={logInFormAction}
-          isPending={isPending}
-        ></LogInForm>
-        {showVerificationNotice && (
+            state={state}
+            action={logInFormAction}
+            isPending={isPending}
+          ></LogInForm>
+          {showVerificationNotice && (
           <AlertStatic
             title={messages.SIGN_UP.VERIFICATION_EMAIL_SENT_TITLE}
             onClose={() => setShowVerificationNotice(false)}
@@ -57,6 +63,7 @@ export const LogIn = () => {
         )}
       </div>
     </main>
+    </>
   );
 };
 
@@ -120,7 +127,7 @@ const LogInForm = ({ state, action, isPending }) => {
             name='usernameEmail'
             defaultValue={state.data?.usernameEmail || ''}
             autoComplete='username'
-            maxLength={consts.USERNAME_MAX_LENGTH}
+            maxLength={consts.USER.USERNAME.MAX_LENGTH}
             required
             aria-invalid={
               !clearedFields.usernameEmail && !!state.errors?.usernameEmail
