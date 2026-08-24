@@ -24,6 +24,7 @@ import {
 } from '../services/ReportsServices';
 import { AnswerReportDialog } from '../components/custom/reports/AnswerReportDialog';
 import { truncateText } from '../../../server/src/utils/string.util';
+import { NotFound } from './NotFound';
 
 const invalidateResolvedReportQueries = (queryClient, report) =>
   Promise.all([
@@ -99,19 +100,8 @@ const ReportLoading = ({ isLoading, children }) => {
   );
 };
 
-const ReportError = ({ isError, children }) => {
-  return (
-    <>
-      {isError && (
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          {children}
-        </div>
-      )}
-    </>
-  );
+const ReportError = ({ isError }) => {
+  return <>{isError && <NotFound></NotFound>}</>;
 };
 
 const ReportContent = ({ report }) => {

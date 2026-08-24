@@ -25,6 +25,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquareWarning } from 'lucide-react';
 import { truncateText } from '../../../server/src/utils/string.util';
+import { NotFound } from './NotFound';
 
 // Comboboxes   options
 const DATE_OPTIONS = [
@@ -218,19 +219,8 @@ const ReportsSearchLoading = ({ isLoading, children }) => {
   );
 };
 
-const ReportsSearchError = ({ isError, children }) => {
-  return (
-    <>
-      {isError && (
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          {children}
-        </div>
-      )}
-    </>
-  );
+const ReportsSearchError = ({ isError }) => {
+  return <>{isError && <NotFound></NotFound>}</>;
 };
 
 const NoReportsSearch = ({ reports, children }) => {

@@ -64,6 +64,7 @@ import { cn } from '@/lib/utils';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { messages as frontendMessages } from './../messages/messages';
 import { getInitials } from '../utils/avatar';
+import { NotFound } from './NotFound';
 
 const groupConsecutiveMessages = (messages) =>
   messages.reduce((groups, message) => {
@@ -415,16 +416,7 @@ export const ConversationThread = ({
   }
 
   if (isConversationError || !conversationData) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load conversation.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   return (

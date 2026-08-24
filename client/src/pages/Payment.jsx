@@ -36,6 +36,7 @@ import { BanknoteArrowUp } from 'lucide-react';
 import { getSavedCardsQueryOptions } from '../queries/PaymentQueries.jsx';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { NotFound } from './NotFound.jsx';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -87,16 +88,7 @@ export const Payment = () => {
   }
 
   if (isError || isErrorCards || !missionPaymentInfo) {
-    return (
-      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load mission payment.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   if (missionPaymentInfo.missionPayment.length === 0) {

@@ -21,6 +21,7 @@ import { Reports } from './pages/Reports';
 import { Report } from './pages/Report';
 import { Dispute } from './pages/Dispute';
 import { Disputes } from './pages/Disputes';
+import { NotFound } from './pages/NotFound';
 
 function App() {
   return (
@@ -73,6 +74,9 @@ function App() {
           <Route path='/reports' element={<Reports />}></Route>
           <Route path='/reports/:id' element={<Report />}></Route>
         </Route>
+
+        {/* --- Catch routes --- */}
+        <Route path='*' element={<NotFound />} />
       </Routes>
     </>
   );

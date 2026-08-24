@@ -30,6 +30,7 @@ import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 import { ReviewCard } from './MyProfile.jsx';
 import { UserMissionsTable } from './UserMissions.jsx';
+import { NotFound } from './NotFound.jsx';
 
 export const PublicProfile = () => {
   const { username } = useParams();
@@ -128,16 +129,7 @@ export const PublicProfile = () => {
   }
 
   if (isProfileError || !user) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load profile.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   const displayName = [user.name, user.surnames].filter(Boolean).join(' ');
@@ -181,27 +173,28 @@ export const PublicProfile = () => {
             {messageError && (
               <p className='mt-2 text-sm text-destructive'>{messageError}</p>
             )}
-
-            <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
-              <Button
-                type='button'
-                className='w-full'
-                onClick={() => {
-                  setMessageError('');
-                  openConversation();
-                }}
-                disabled={isOpeningConversation}
-              >
-                <MessageCircle
-                  className='h-4 w-4 mr-1 shrink-0'
-                  aria-hidden='true'
-                />
-                <span className='truncate'>
-                  {isOpeningConversation ? 'Opening...' : 'Message'}
-                </span>
-              </Button>
-              <ReportUserButton user={user}></ReportUserButton>
-            </div>
+            {!currentUser?.isAdmin && (
+              <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
+                <Button
+                  type='button'
+                  className='w-full'
+                  onClick={() => {
+                    setMessageError('');
+                    openConversation();
+                  }}
+                  disabled={isOpeningConversation}
+                >
+                  <MessageCircle
+                    className='h-4 w-4 mr-1 shrink-0'
+                    aria-hidden='true'
+                  />
+                  <span className='truncate'>
+                    {isOpeningConversation ? 'Opening...' : 'Message'}
+                  </span>
+                </Button>
+                <ReportUserButton user={user}></ReportUserButton>
+              </div>
+            )}
           </div>
         </div>
         <div>

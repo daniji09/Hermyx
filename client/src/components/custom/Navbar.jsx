@@ -463,7 +463,7 @@ const NotificationsButton = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant='ghost'
-          size='icon'
+          size='lg'
           className='relative rounded-full '
           aria-label={ariaLabelText}
         >

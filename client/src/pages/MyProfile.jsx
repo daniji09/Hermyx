@@ -75,6 +75,7 @@ import {
 } from '../services/AuthServices';
 import { addEmailAuthenticationAction } from '../actions/AuthActions';
 import { AlertStatic } from '../components/custom/AlertStatic';
+import { NotFound } from './NotFound';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -129,16 +130,7 @@ export const MyProfile = () => {
   }
 
   if (isError || !data?.user) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load your profile.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   const user = data.user;

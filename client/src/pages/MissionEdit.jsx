@@ -53,6 +53,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
 import { Separator } from '@/components/ui/separator';
 import { AuthContext } from '../contexts/AuthContext';
+import { NotFound } from './NotFound';
 
 export const EditMission = () => {
   // Mission id
@@ -112,16 +113,7 @@ export const EditMission = () => {
   }
 
   if (isError) {
-    return (
-      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load mission.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   if (

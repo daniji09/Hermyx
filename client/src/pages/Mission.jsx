@@ -96,6 +96,7 @@ import { Separator } from '@/components/ui/separator';
 import { getInitials } from '../utils/avatar';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { NotFound } from './NotFound';
 
 export const Mission = () => {
   // Mission id
@@ -121,7 +122,7 @@ export const Mission = () => {
       retry: retryOption,
     }),
   );
-  console.log(mission);
+
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
     errorMessage = 'Oops! This mission does not exist or it has been deleted.';
@@ -137,13 +138,7 @@ export const Mission = () => {
   );
 };
 
-const MissionPageContainer = ({
-  mission,
-  currentUser,
-  isLoading,
-  isError,
-  error,
-}) => {
+const MissionPageContainer = ({ mission, currentUser, isLoading, isError }) => {
   const isCreator =
     !currentUser?.isAdmin && currentUser?.id === mission?.owner_id;
   const isFull = mission?.total_vacancies === mission?.occupied_vacancies;
@@ -153,14 +148,18 @@ const MissionPageContainer = ({
         {'Seeking mission...'}
       </MissionLoading>
 
-      <MissionError isError={isError}>{`${error}`}</MissionError>
+      {!isLoading && (
+        <MissionError isError={isError} mission={mission}></MissionError>
+      )}
 
-      <MissionContent
-        mission={mission}
-        isCreator={isCreator}
-        isFull={isFull}
-        currentUser={currentUser}
-      ></MissionContent>
+      {!isLoading && !isError && (
+        <MissionContent
+          mission={mission}
+          isCreator={isCreator}
+          isFull={isFull}
+          currentUser={currentUser}
+        ></MissionContent>
+      )}
     </main>
   );
 };
@@ -177,19 +176,10 @@ const MissionLoading = ({ isLoading, children }) => {
   );
 };
 
-const MissionError = ({ isError, children }) => {
-  return (
-    <>
-      {isError && (
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          {children}
-        </div>
-      )}
-    </>
-  );
+const MissionError = ({ isError, mission }) => {
+  if (isError || !mission) {
+    return <NotFound />;
+  }
 };
 
 const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
@@ -209,7 +199,8 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
         <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words wrap-anywhere'>
           {mission?.title}
         </h1>
-        {mission?.status !== MISSION_STATUS.CANCELLED.ID &&
+        {!currentUser?.isAdmin &&
+          mission?.status !== MISSION_STATUS.CANCELLED.ID &&
           mission?.status !== MISSION_STATUS.DELETED.ID && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -255,7 +246,8 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       />
                     </DropdownMenuItem>
                   )}
-                {!isCreator &&
+                {!currentUser?.isAdmin &&
+                  !isCreator &&
                   mission?.status !== MISSION_STATUS.REPORTED.ID && (
                     <DropdownMenuItem asChild>
                       <ReportMissionButton
@@ -402,12 +394,14 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                 </>
               ) : (
                 <>
-                  {mission?.status === MISSION_STATUS.IN_PROGRESS.ID ||
-                  (mission?.status === MISSION_STATUS.REOPENED.ID &&
+                  {(!currentUser?.isAdmin &&
+                    mission?.status === MISSION_STATUS.IN_PROGRESS.ID) ||
+                  (!currentUser?.isAdmin &&
+                    mission?.status === MISSION_STATUS.REOPENED.ID &&
                     currentParticipation) ? (
                     <SubmitParticipationButton
                       missionId={mission?.mid}
-                      participationStatus={currentParticipation.status}
+                      participationStatus={currentParticipation?.status}
                       className='w-full '
                       size='lg'
                     />
@@ -416,9 +410,10 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     <p className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
                       {'Your participation has been disputed.'}
                     </p>
-                  ) : mission?.status === MISSION_STATUS.CANCELLED.ID ||
-                    mission?.status === MISSION_STATUS.DELETED.ID ||
-                    mission?.status === MISSION_STATUS.REPORTED.ID ? (
+                  ) : !currentUser?.isAdmin &&
+                    (mission?.status === MISSION_STATUS.CANCELLED.ID ||
+                      mission?.status === MISSION_STATUS.DELETED.ID ||
+                      mission?.status === MISSION_STATUS.REPORTED.ID) ? (
                     <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
                       <EndedStatusMessage
                         status={mission?.status}
