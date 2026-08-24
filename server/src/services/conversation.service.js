@@ -313,6 +313,8 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
     initialConversation.type !== 'dispute'
   )
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+  if (!(await canAccessMissionConversation(initialConversation, senderId)))
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   const isParticipant =
     await conversationParticipantModel.isConversationParticipant(cid, senderId);
   const canInitiallyJoinAsAdmin =
@@ -342,6 +344,8 @@ export const sendMessage = async ({ cid, sender, content, photo }) => {
     await client.query('BEGIN');
     // Gets conversation and checks if its participant
     const conversation = await getConversationByIdOrThrow(cid, client);
+    if (!(await canAccessMissionConversation(conversation, senderId, client)))
+      throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
     const isParticipant = await isConversationParticipant(
       cid,
       senderId,
@@ -475,6 +479,9 @@ const getConversationAccess = async (conversationId, user) => {
     conversationId,
     user.uid,
   );
+  if (!(await canAccessMissionConversation(conversation, user.uid)))
+    throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
+
   const isAdminPreview =
     !isParticipant &&
     user.role === USER_ROLE.ADMIN.ID &&
@@ -482,6 +489,16 @@ const getConversationAccess = async (conversationId, user) => {
   if (!isParticipant && !isAdminPreview)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   return { conversation, isAdminPreview, isParticipant };
+};
+
+// Checks whether a user still belongs to a mission conversation
+const canAccessMissionConversation = async (conversation, userId, client) => {
+  if (conversation.type !== 'mission') return true;
+  return await conversationModel.isMissionConversationParticipant(
+    conversation.cid,
+    userId,
+    client,
+  );
 };
 
 // Saves attachment

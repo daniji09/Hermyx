@@ -1,13 +1,30 @@
-import { auth, provider } from '../config/firebase';
+import { app, auth, provider } from '../config/firebase';
+import { getApp, getApps, initializeApp } from 'firebase/app';
 import {
+  applyActionCode as _applyActionCode,
+  confirmPasswordReset as _confirmPasswordReset,
+  getAuth,
   signInWithCustomToken as _signInWithCustomToken,
+  signInWithEmailAndPassword as _signInWithEmailAndPassword,
   signInWithPopup,
+  sendEmailVerification as _sendEmailVerification,
+  sendPasswordResetEmail as _sendPasswordResetEmail,
+  signOut as _signOut,
+  reload as _reload,
+  verifyPasswordResetCode as _verifyPasswordResetCode,
   updatePassword,
   linkWithPopup,
   unlink,
 } from 'firebase/auth';
 import { consts, messages } from '@hermyx/shared';
 import api from '../config/api';
+
+const emailVerificationApp = getApps().some(
+  (firebaseApp) => firebaseApp.name === 'email-verification',
+)
+  ? getApp('email-verification')
+  : initializeApp(app.options, 'email-verification');
+const emailVerificationAuth = getAuth(emailVerificationApp);
 
 // Creates new user
 export const createUser = async (user) => {
@@ -23,6 +40,174 @@ export const login = async (user) => {
   const { data } = await api.post('/auth/login', user);
 
   return data;
+};
+
+// Sends a verification email using temporary email/password authentication
+export const sendVerificationEmailWithCredentials = async (email, password) => {
+  let temporaryUser;
+  try {
+    const credential = await _signInWithEmailAndPassword(
+      emailVerificationAuth,
+      email,
+      password,
+    );
+    temporaryUser = credential.user;
+    await _sendEmailVerification(temporaryUser);
+  } catch (error) {
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+    if (errorBuilder) {
+      const mappedError = errorBuilder({ email });
+      throw {
+        errors: {
+          [mappedError.field]: [mappedError.message],
+        },
+      };
+    }
+
+    throw {
+      errors: {
+        general: [messages.AUTH.EMAIL_VERIFICATION.COULD_NOT_SEND],
+      },
+    };
+  } finally {
+    if (
+      temporaryUser &&
+      emailVerificationAuth.currentUser?.uid === temporaryUser.uid
+    ) {
+      try {
+        await _signOut(emailVerificationAuth);
+      } catch {
+        // Do not mask a verification error with a cleanup error.
+      }
+    }
+  }
+};
+
+// Sends a verification email to the currently authenticated user
+export const sendVerificationEmailToCurrentUser = async () => {
+  const currentUser = auth.currentUser;
+  if (!currentUser)
+    throw {
+      errors: {
+        general: [messages.AUTH.EMAIL_VERIFICATION.COULD_NOT_SEND],
+      },
+    };
+
+  try {
+    await _reload(currentUser);
+    await _sendEmailVerification(currentUser);
+  } catch (error) {
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+    if (errorBuilder) {
+      const mappedError = errorBuilder({ email: currentUser.email });
+      throw {
+        errors: {
+          [mappedError.field]: [mappedError.message],
+        },
+      };
+    }
+
+    throw {
+      errors: {
+        general: [messages.AUTH.EMAIL_VERIFICATION.COULD_NOT_SEND],
+      },
+    };
+  }
+};
+
+// Applies a Firebase e-mail verification action code
+export const applyVerificationActionCode = async (actionCode) => {
+  try {
+    await _applyActionCode(auth, actionCode);
+  } catch (error) {
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+    if (errorBuilder) {
+      const mappedError = errorBuilder();
+      throw {
+        errors: {
+          [mappedError.field]: [mappedError.message],
+        },
+      };
+    }
+
+    throw {
+      errors: {
+        general: [messages.AUTH.EMAIL_VERIFICATION.INVALID_CODE],
+      },
+    };
+  }
+};
+
+// Verifies a Firebase password reset action code
+export const verifyPasswordResetActionCode = async (actionCode) => {
+  try {
+    return await _verifyPasswordResetCode(auth, actionCode);
+  } catch (error) {
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+    if (errorBuilder) {
+      const mappedError = errorBuilder();
+      throw {
+        errors: {
+          [mappedError.field]: [mappedError.message],
+        },
+      };
+    }
+
+    throw {
+      errors: {
+        general: [messages.AUTH.PASSWORD_RESET.INVALID_CODE],
+      },
+    };
+  }
+};
+
+// Confirms a new password using a Firebase password reset action code
+export const confirmPasswordResetActionCode = async (actionCode, password) => {
+  try {
+    await _confirmPasswordReset(auth, actionCode, password);
+  } catch (error) {
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+    if (errorBuilder) {
+      const mappedError = errorBuilder();
+      throw {
+        errors: {
+          [mappedError.field]: [mappedError.message],
+        },
+      };
+    }
+
+    throw {
+      errors: {
+        general: [messages.AUTH.PASSWORD_RESET.COULD_NOT_CHANGE],
+      },
+    };
+  }
+};
+
+// Sends a password reset email
+export const sendPasswordResetEmail = async (email) => {
+  try {
+    await _sendPasswordResetEmail(auth, email);
+  } catch (error) {
+    // Do not reveal whether an email is registered in Firebase.
+    if (error.code === 'auth/user-not-found') return;
+
+    const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+    if (errorBuilder) {
+      const mappedError = errorBuilder();
+      throw {
+        errors: {
+          [mappedError.field]: [mappedError.message],
+        },
+      };
+    }
+
+    throw {
+      errors: {
+        general: [messages.AUTH.PASSWORD_RESET.COULD_NOT_SEND],
+      },
+    };
+  }
 };
 
 // Signs in user in Firebase with custom token

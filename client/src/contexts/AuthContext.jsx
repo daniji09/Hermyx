@@ -97,6 +97,17 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
+        socketRef.current.on('mission:edited', (payload) => {
+          console.log('Mission edit notification:', payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+        });
+
         socketRef.current.on('conversation:message-received', (payload) => {
           if (payload.conversationType === 'dispute') {
             queryClient.invalidateQueries({

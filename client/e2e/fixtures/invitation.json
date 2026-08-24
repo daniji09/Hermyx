@@ -1,0 +1,11 @@
+{
+  "title": "Playwright - Invitacion",
+  "description": "Necesito un tester para validar el flujo de invitacion y aceptacion.",
+  "location": "Madrid, Spain",
+  "vacancy": {
+    "title": "Tester",
+    "description": "Aceptar la invitacion y comprobar la asignacion.",
+    "reward": 10
+  },
+  "invitationMessage": "Te invito a participar en esta mision de prueba."
+}

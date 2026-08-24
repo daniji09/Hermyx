@@ -9,7 +9,7 @@ export const createFirebaseUser = async (user) => {
     email: user.email,
     password: user.password,
     displayName: user.username,
-    emailVerified: true,
+    emailVerified: false,
   });
 
   // If Firebase user is not received, it returns the error
@@ -61,6 +61,11 @@ export const verifyIdToken = async (token, checkRevoked) => {
 // Gets user by email
 export const getUserByEmail = async (email) => {
   return await firebaseAdmin.auth().getUserByEmail(email);
+};
+
+// Gets a Firebase user by uid
+export const getUserByUid = async (uid) => {
+  return await firebaseAdmin.auth().getUser(uid);
 };
 
 // Updates firebase account

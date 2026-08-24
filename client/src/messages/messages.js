@@ -15,6 +15,9 @@ export const messages = {
   },
   SIGN_UP: {
     FORM_TITLE: 'Sign up',
+    VERIFICATION_EMAIL_SENT_TITLE: 'Check your e-mail',
+    VERIFICATION_EMAIL_SENT:
+      'We sent you a verification link. Confirm your e-mail before logging in.',
     USERNAME_DESCRIPTION:
       'No longer than 20 characters. Must start with a letter or number, and may contain [._-].',
     PASSWORD_DESCRIPTION:
@@ -22,6 +25,35 @@ export const messages = {
   },
   LOG_IN: {
     FORM_TITLE: 'Log in',
+    FORGOT_PASSWORD: 'Forgot your password?',
+  },
+  FORGOT_PASSWORD: {
+    FORM_TITLE: 'Recover your password',
+    FORM_DESCRIPTION:
+      'Enter your e-mail and we will send you a link to reset your password.',
+    EMAIL_SENT_TITLE: 'Check your e-mail',
+    EMAIL_SENT:
+      'If an account exists for this e-mail, you will receive a password reset link shortly.',
+    SEND_BUTTON: 'Send reset link',
+    SENDING_BUTTON: 'Sending...',
+    BACK_TO_LOGIN: 'Back to log in',
+  },
+  EMAIL_ACTION: {
+    LOADING_TITLE: 'Processing request',
+    LOADING_DESCRIPTION: 'Please wait while we validate your link.',
+    VERIFICATION_SUCCESS_TITLE: 'E-mail verified',
+    VERIFICATION_SUCCESS_DESCRIPTION:
+      'Your e-mail has been verified successfully. You can now log in.',
+    PASSWORD_RESET_TITLE: 'Choose a new password',
+    PASSWORD_RESET_DESCRIPTION: (email) => `Set a new password for ${email}.`,
+    PASSWORD_RESET_BUTTON: 'Change password',
+    PASSWORD_RESET_PENDING_BUTTON: 'Changing password...',
+    PASSWORD_RESET_SUCCESS_TITLE: 'Password changed',
+    PASSWORD_RESET_SUCCESS_DESCRIPTION:
+      'Your password has been changed successfully. You can now log in.',
+    INVALID_LINK_TITLE: 'Invalid link',
+    BACK_TO_LOGIN: 'Go to login',
+    UNKNOWN_ACTION: 'This e-mail action is not supported.',
   },
   NEW_MISSION: {
     FORM_TITLE: 'Create a mission',

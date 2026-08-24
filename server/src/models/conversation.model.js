@@ -42,6 +42,33 @@ export const findById = async (conversationId, client = pool) => {
   return result.rows[0];
 };
 
+// Checks whether a user can access a mission conversation
+export const isMissionConversationParticipant = async (
+  conversationId,
+  userId,
+  client = pool,
+) => {
+  const query = `
+    SELECT 1
+    FROM conversation c
+    JOIN mission m ON m.mid = c.mission_id
+    WHERE c.cid = $1
+      AND c.type = 'mission'
+      AND (
+        m.owner_id = $2
+        OR EXISTS (
+          SELECT 1
+          FROM mission_participation mp
+          WHERE mp.mid = m.mid
+            AND mp.adventurer_id = $2
+        )
+      )
+    LIMIT 1
+  `;
+  const result = await client.query(query, [conversationId, userId]);
+  return result.rowCount > 0;
+};
+
 // Find conversation by uid
 export const findAllByUid = async (userId, pagination) => {
   const query = `
@@ -118,6 +145,16 @@ SELECT
     WHERE current_participant.user_id = $1
       AND current_participant.left_at IS NULL
       AND c.type <> 'dispute'
+      AND (
+        c.type <> 'mission'
+        OR mission_details.owner_id = $1
+        OR EXISTS (
+          SELECT 1
+          FROM mission_participation mp
+          WHERE mp.mid = c.mission_id
+            AND mp.adventurer_id = $1
+        )
+      )
     ORDER BY
       last_message.created_at DESC NULLS LAST,
       c.created_at DESC,

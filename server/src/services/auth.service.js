@@ -123,6 +123,11 @@ export const login = async (email, username, password) => {
     password,
   );
 
+  // Password accounts must verify ownership of their e-mail before logging in.
+  const firebaseUser = await authProvider.getUserByUid(firebaseData.localId);
+  if (!firebaseUser.emailVerified)
+    throw new AppError(messages.AUTH.LOGIN.EMAIL_NOT_VERIFIED, 403, 'general');
+
   // Creates custom token so frontend knows it has been successful
   return await authProvider.createCustomToken(firebaseData.localId);
 };

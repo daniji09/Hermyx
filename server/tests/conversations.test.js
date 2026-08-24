@@ -21,6 +21,7 @@ const conversationService = vi.hoisted(() => ({
 
 const conversationModel = vi.hoisted(() => ({
   findById: vi.fn(),
+  isMissionConversationParticipant: vi.fn(),
 }));
 const conversationParticipantModel = vi.hoisted(() => ({
   create: vi.fn(),
@@ -325,6 +326,40 @@ describe('Conversation API', () => {
       true,
       { cursor: undefined, limit: 50 },
     );
+  });
+
+  it('rejects a removed adventurer from a mission conversation', async () => {
+    conversationModel.findById.mockResolvedValue({
+      cid: 4,
+      type: 'mission',
+    });
+    conversationParticipantModel.isConversationParticipant.mockResolvedValue(
+      true,
+    );
+    conversationModel.isMissionConversationParticipant.mockResolvedValue(false);
+
+    await expect(
+      actualConversationService.getConversation(4, {
+        uid: currentUser.uid,
+        role: USER_ROLE.USER.ID,
+      }),
+    ).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('rejects a removed adventurer from sending in a mission conversation', async () => {
+    conversationModel.findById.mockResolvedValue({
+      cid: 4,
+      type: 'mission',
+    });
+    conversationModel.isMissionConversationParticipant.mockResolvedValue(false);
+
+    await expect(
+      actualConversationService.sendMessage({
+        cid: 4,
+        sender: { uid: currentUser.uid, role: USER_ROLE.USER.ID },
+        content: 'I should not be able to send this.',
+      }),
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   it('lets an administrator send the first message in a dispute', async () => {

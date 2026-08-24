@@ -1,5 +1,6 @@
 import {
   addEmailAuthenticationSchema,
+  emailBaseSchema,
   logInSchema,
   signUpSchema,
   messages,
@@ -8,6 +9,9 @@ import { addEmailAuthentication } from '../services/UsersServices';
 import {
   createUser,
   login,
+  sendVerificationEmailToCurrentUser,
+  sendVerificationEmailWithCredentials,
+  sendPasswordResetEmail,
   signInWithCustomToken,
 } from '../services/AuthServices';
 
@@ -38,6 +42,11 @@ export const signUpAction = async (previousState, formData) => {
         },
       };
 
+    await sendVerificationEmailWithCredentials(
+      fieldsData.email,
+      fieldsData.password,
+    );
+
     // Success
     return { success: true, data: null, errors: {} };
   } catch (error) {
@@ -49,6 +58,14 @@ export const signUpAction = async (previousState, formData) => {
       return {
         success: false,
         errors: error.response.data.errors,
+        data: fieldsData,
+      };
+
+    // Controlled errors thrown while sending the verification email
+    if (error.errors)
+      return {
+        success: false,
+        errors: error.errors,
         data: fieldsData,
       };
 
@@ -111,7 +128,7 @@ export const logInAction = async (previousState, formData) => {
   } catch (error) {
     // Controlled errors thrown from backend
     if (
-      [400, 401, 409, 500].includes(error.response?.status) &&
+      [400, 401, 403, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
@@ -135,6 +152,37 @@ export const logInAction = async (previousState, formData) => {
     return {
       success: false,
       errors: { general: [errorMessage] },
+      data: fieldsData,
+    };
+  }
+};
+
+// Sends a password reset email
+export const forgotPasswordAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedEmail = emailBaseSchema.safeParse(fieldsData.email);
+  if (!validatedEmail.success) {
+    return {
+      success: false,
+      errors: {
+        email: validatedEmail.error.flatten().formErrors,
+      },
+      data: fieldsData,
+    };
+  }
+
+  try {
+    await sendPasswordResetEmail(validatedEmail.data);
+    return { success: true, data: fieldsData, errors: {} };
+  } catch (error) {
+    return {
+      success: false,
+      errors: error.errors || {
+        general: [messages.AUTH.PASSWORD_RESET.COULD_NOT_SEND],
+      },
       data: fieldsData,
     };
   }
@@ -167,6 +215,8 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
         },
       };
 
+    await sendVerificationEmailToCurrentUser();
+
     // Success
     return { success: true, data: null, errors: {} };
   } catch (error) {
@@ -178,6 +228,13 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
       return {
         success: false,
         errors: error.response.data.errors,
+        data: fieldsData,
+      };
+
+    if (error.errors)
+      return {
+        success: false,
+        errors: error.errors,
         data: fieldsData,
       };
 
