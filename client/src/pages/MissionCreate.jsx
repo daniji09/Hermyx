@@ -21,7 +21,14 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField';
 import { consts } from '@hermyx/shared';
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
-import { Plus, Trash2, UploadCloud, UserPlus, X } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  UploadCloud,
+  UserPlus,
+  X,
+  Map as MapIcon,
+} from 'lucide-react';
 import {
   Dialog,
   DialogTrigger,
@@ -52,13 +59,20 @@ export const NewMission = () => {
   }, [state.success, state.redirectTo, navigate]);
 
   return (
-    <main className='flex min-h-screen items-center justify-center p-4'>
-      <NewMissionForm
-        state={state}
-        action={newMissionFormAction}
-        isPending={isPending}
-      ></NewMissionForm>
-    </main>
+    <>
+      <title>{`Mission creation | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Form to create and publish a mission into Hermyx.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl sm:p-6 flex min-h-screen items-center justify-center p-4'>
+        <NewMissionForm
+          state={state}
+          action={newMissionFormAction}
+          isPending={isPending}
+        ></NewMissionForm>
+      </main>
+    </>
   );
 };
 
@@ -104,11 +118,22 @@ const NewMissionForm = ({ state, action, isPending }) => {
         action={handleFormAction}
         encType='multipart/form-data'
       >
-        <CardForm.Header>
-          <CardForm.Title>{messages.NEW_MISSION.FORM_TITLE}</CardForm.Title>
-          <CardForm.Description>
-            {messages.NEW_MISSION.FORM_DESCRIPTION}
-          </CardForm.Description>
+        <CardForm.Header
+          className={
+            'flex flex-col items-start gap-4 sm:flex-row sm:items-center'
+          }
+        >
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <MapIcon className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <CardForm.Title className={'min-w-0'}>
+              {messages.NEW_MISSION.FORM_TITLE}
+            </CardForm.Title>
+            <CardForm.Description className={'ms-0.5'}>
+              {messages.NEW_MISSION.FORM_DESCRIPTION}
+            </CardForm.Description>
+          </div>
         </CardForm.Header>
         <div className='px-8'>
           <Separator />
@@ -264,7 +289,7 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
       </h3>
 
       <div className='flex justify-center mb-4'>
-        <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed  border-muted-foreground text-muted-foreground'>
+        <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-muted-foreground text-muted-foreground'>
           <UserPlus
             size={24}
             aria-hidden='true'
@@ -355,7 +380,7 @@ const CreateVacanciesDialog = ({
             disabled={isPending}
             className='snap-start shrink-0 w-50 h-60 flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-primary/20 bg-background hover:bg-secondary hover:border-primary/50 hover:text-primary transition-all text-primary group cursor-pointer'
           >
-            <div className='w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform'>
+            <div className='w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform dark:border-2'>
               <Plus
                 size={32}
                 aria-hidden='true'

@@ -10,25 +10,25 @@ import { Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const SearchBar = ({ id: externalId, legend, ...props }) => {
-  // Ids for descriptions and errors so the input is described successfully
   const reactId = useId();
   const id = externalId || reactId;
   const fieldId = `${id}_input`;
   const searchId = `${id}-search`;
   const buttonId = `${id}-button`;
 
-  // For search bar
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const [focusedIndex, setFocusedIndex] = useState(-1);
   const trimmedQuery = query.trim();
 
-  // No React useAction because is a GET, it's done by Maps
   const handleSearch = (e) => {
     e.preventDefault();
     if (trimmedQuery) {
       navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
       setIsMenuOpen(false);
+      setFocusedIndex(-1);
     }
   };
 
@@ -36,6 +36,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
     if (trimmedQuery) {
       navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
       setIsMenuOpen(false);
+      setFocusedIndex(-1);
     }
   };
 
@@ -43,6 +44,30 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
     if (trimmedQuery) {
       navigate(`/users/search?username=${encodeURIComponent(trimmedQuery)}`);
       setIsMenuOpen(false);
+      setFocusedIndex(-1);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (!isMenuOpen || !trimmedQuery) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex((prev) => (prev < 1 ? prev + 1 : prev));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex((prev) => (prev > -1 ? prev - 1 : -1));
+    } else if (e.key === 'Enter') {
+      if (focusedIndex === 0) {
+        e.preventDefault();
+        handleMissionSearch();
+      } else if (focusedIndex === 1) {
+        e.preventDefault();
+        handleUserSearch();
+      }
+    } else if (e.key === 'Escape') {
+      setIsMenuOpen(false);
+      setFocusedIndex(-1);
     }
   };
 
@@ -51,11 +76,11 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
       id={id}
       onSubmit={handleSearch}
       noValidate
-      className='relative z-[10001] flex w-full max-w-md items-center min-w-25 md:min-w-75 lg:min-w-100'
+      className='relative z-50 flex w-full items-center'
     >
-      <InputGroup className='bg-white flex justify-between'>
-        <div className='flex'>
-          <FieldSet>
+      <InputGroup className='bg-background w-full flex justify-between'>
+        <div className='flex flex-1 w-full'>
+          <FieldSet className='flex-1'>
             <FieldLegend className='hidden'>{legend}</FieldLegend>
             <InputGroupInput
               id={fieldId}
@@ -66,14 +91,16 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
               onChange={(e) => {
                 setQuery(e.target.value);
                 setIsMenuOpen(true);
+                setFocusedIndex(-1);
               }}
               onFocus={() => setIsMenuOpen(true)}
+              onKeyDown={handleKeyDown}
               required
               placeholder='Search mission in Hermyx...'
               aria-label='Search mission'
               aria-describedby={searchId}
               {...props}
-              className='w-full min-w-25 md:min-w-50 lg:min-w-75 max-w-md'
+              className='w-full'
             />
           </FieldSet>
           <InputGroupAddon>
@@ -92,28 +119,51 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
       </InputGroup>
 
       {trimmedQuery && isMenuOpen && (
-        <div className='absolute left-0 right-0 top-full z-[10001] mt-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm'>
+        <div className='absolute left-0 right-0 top-full mt-2 rounded-xl border border-border bg-background p-2 shadow-sm'>
           <button
             type='button'
             onClick={handleMissionSearch}
-            className='block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100'
+            onMouseEnter={() => setFocusedIndex(0)}
+            className={`block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+              focusedIndex === 0
+                ? 'bg-accent text-accent-foreground'
+                : 'hover:bg-accent'
+            }`}
           >
-            <span className='text-slate-700'>
+            <span
+              className={
+                focusedIndex === 0
+                  ? 'text-accent-foreground'
+                  : 'text-muted-foreground'
+              }
+            >
               Search for{' '}
-              <span className='font-semibold text-slate-900'>
+              <span className='font-semibold text-foreground'>
                 {`"${trimmedQuery}"`}
               </span>{' '}
               in missions
             </span>
           </button>
+
           <button
             type='button'
             onClick={handleUserSearch}
-            className='block w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-slate-100'
+            onMouseEnter={() => setFocusedIndex(1)}
+            className={`block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+              focusedIndex === 1
+                ? 'bg-accent text-accent-foreground'
+                : 'hover:bg-accent'
+            }`}
           >
-            <span className='text-slate-700'>
+            <span
+              className={
+                focusedIndex === 1
+                  ? 'text-accent-foreground'
+                  : 'text-muted-foreground'
+              }
+            >
               Search for{' '}
-              <span className='font-semibold text-slate-900'>
+              <span className='font-semibold text-foreground'>
                 {`"${trimmedQuery}"`}
               </span>{' '}
               in users

@@ -36,6 +36,7 @@ import { BanknoteArrowUp } from 'lucide-react';
 import { getSavedCardsQueryOptions } from '../queries/PaymentQueries.jsx';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/Checkbox';
+import { NotFound } from './NotFound.jsx';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -78,7 +79,7 @@ export const Payment = () => {
 
   if (isLoading || isLoadingCards) {
     return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
         <div role='status' className='p-8 text-center text-muted-foreground'>
           Loading mission payment...
         </div>
@@ -87,16 +88,7 @@ export const Payment = () => {
   }
 
   if (isError || isErrorCards || !missionPaymentInfo) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          Could not load mission payment.
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   if (missionPaymentInfo.missionPayment.length === 0) {
@@ -106,16 +98,23 @@ export const Payment = () => {
   }
 
   return (
-    <main className='flex justify-center p-4'>
-      <Elements stripe={stripePromise} options={{ locale: 'en' }}>
-        <PaymentForm
-          missionId={id}
-          mission={missionPaymentInfo?.mission}
-          missionPaymentInfo={missionPaymentInfo?.missionPayment}
-          cardsInfo={cardsInfo}
-        />
-      </Elements>
-    </main>
+    <>
+      <title>{`Mission ${missionPaymentInfo?.mission?.title} payment| Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx log in via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl sm:p-6 flex justify-center p-4'>
+        <Elements stripe={stripePromise} options={{ locale: 'en' }}>
+          <PaymentForm
+            missionId={id}
+            mission={missionPaymentInfo?.mission}
+            missionPaymentInfo={missionPaymentInfo?.missionPayment}
+            cardsInfo={cardsInfo}
+          />
+        </Elements>
+      </main>
+    </>
   );
 };
 
@@ -309,7 +308,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
       </section>
 
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-8 px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='flex flex-col order-2 lg:order-1'>
+        <div className='flex flex-col'>
           <Card className='h-fit border-primary/20 shadow-sm'>
             <CardHeader className='pb-4 border-b bg-muted/20'>
               <CardTitle className='min-w-0 wrap-break-words wrap-anywhere text-3xl'>
@@ -384,7 +383,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
           </Card>
         </div>
 
-        <div className='order-1 lg:order-2'>
+        <div>
           <CardForm id='paymentForm' action={paymentFormAction}>
             <CardForm.Header>
               <CardForm.Title>{messages.PAYMENT.FORM_TITLE}</CardForm.Title>
@@ -420,7 +419,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
                           tabIndex={0}
                           onClick={() => setSelectedPaymentMethod(pm.id)}
                           onKeyDown={(e) => handleRadioKeyDown(e, pm.id)}
-                          className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                          className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
                             selectedPaymentMethod === pm.id
                               ? 'border-primary bg-primary/5 ring-1 ring-primary'
                               : 'hover:border-primary/50 bg-card'

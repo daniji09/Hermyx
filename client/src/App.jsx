@@ -8,7 +8,6 @@ import { NewMission } from './pages/MissionCreate';
 import { Payment } from './pages/Payment';
 import { SearchMission } from './pages/MissionSearch';
 import { UserMissions } from './pages/UserMissions';
-import TestDashboard from './pages/TestDashboard';
 import { Navbar } from './components/custom/Navbar';
 import { PublicProfile } from './pages/PublicProfile';
 import { MyProfile } from './pages/MyProfile';
@@ -22,6 +21,7 @@ import { Reports } from './pages/Reports';
 import { Report } from './pages/Report';
 import { Dispute } from './pages/Dispute';
 import { Disputes } from './pages/Disputes';
+import { NotFound } from './pages/NotFound';
 
 function App() {
   return (
@@ -60,7 +60,6 @@ function App() {
           {/* Users */}
           <Route path='/profile' element={<MyProfile />} />
           <Route path='/notifications' element={<Notifications />} />
-          <Route path='/test' element={<TestDashboard />}></Route>
           <Route path='/stripe/connect/success' element={<StripeSuccess />} />
           <Route
             path='/conversations/:conversationId'
@@ -75,6 +74,9 @@ function App() {
           <Route path='/reports' element={<Reports />}></Route>
           <Route path='/reports/:id' element={<Report />}></Route>
         </Route>
+
+        {/* --- Catch routes --- */}
+        <Route path='*' element={<NotFound />} />
       </Routes>
     </>
   );

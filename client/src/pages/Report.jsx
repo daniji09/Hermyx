@@ -24,6 +24,7 @@ import {
 } from '../services/ReportsServices';
 import { AnswerReportDialog } from '../components/custom/reports/AnswerReportDialog';
 import { truncateText } from '../../../server/src/utils/string.util';
+import { NotFound } from './NotFound';
 
 const invalidateResolvedReportQueries = (queryClient, report) =>
   Promise.all([
@@ -77,13 +78,22 @@ export const Report = () => {
 
 const ReportPageContainer = ({ report, isLoading, isError, error }) => {
   return (
-    <main className='p-4'>
-      <ReportLoading isLoading={isLoading}>{'Seeking report...'}</ReportLoading>
+    <>
+      <title>{`Report information | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Report information and actions.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <ReportLoading isLoading={isLoading}>
+          {'Seeking report...'}
+        </ReportLoading>
 
-      <ReportError isError={isError}>{`${error}`}</ReportError>
+        <ReportError isError={isError}>{`${error}`}</ReportError>
 
-      <ReportContent report={report}></ReportContent>
-    </main>
+        <ReportContent report={report}></ReportContent>
+      </main>
+    </>
   );
 };
 
@@ -99,19 +109,8 @@ const ReportLoading = ({ isLoading, children }) => {
   );
 };
 
-const ReportError = ({ isError, children }) => {
-  return (
-    <>
-      {isError && (
-        <div
-          role='alert'
-          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
-        >
-          {children}
-        </div>
-      )}
-    </>
-  );
+const ReportError = ({ isError }) => {
+  return <>{isError && <NotFound></NotFound>}</>;
 };
 
 const ReportContent = ({ report }) => {
@@ -216,8 +215,10 @@ const ReportContent = ({ report }) => {
       <Card asChild className='justify-between'>
         <article>
           <CardHeader>
-            <CardTitle asChild className='text-3xl'>
-              <h1>{title}</h1>
+            <CardTitle asChild>
+              <h1 className='text-3xl sm:text-4xl font-bold tracking-tight'>
+                {title}
+              </h1>
             </CardTitle>
             {report.needs_admin_attention && (
               <CardDescription className='font-semibold text-destructive text-lg'>
@@ -291,7 +292,10 @@ const ReportContent = ({ report }) => {
         <Card asChild className='justify-between mt-4'>
           <article>
             <CardHeader>
-              <CardTitle asChild className='text-3xl'>
+              <CardTitle
+                asChild
+                className='min-w-0 wrap-break-words text-2xl text-bold'
+              >
                 <h2>
                   Decision taken: {REPORT_DECISION[report.decision].LABEL}
                 </h2>

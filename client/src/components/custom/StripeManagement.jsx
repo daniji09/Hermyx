@@ -183,7 +183,7 @@ export const StripeManagement = ({ user }) => {
   return (
     <Card asChild>
       <section id='payment-settings' className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold pb-2 border-b'>
+        <h2 className='text-2xl font-bold tracking-tight pb-2 border-b'>
           Payment settings
         </h2>
         <div className='flex flex-col gap-y-2'>

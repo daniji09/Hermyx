@@ -27,13 +27,20 @@ export const LogIn = () => {
   }, [state.success, navigate]);
 
   return (
-    <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
-      <LogInForm
-        state={state}
-        action={logInFormAction}
-        isPending={isPending}
-      ></LogInForm>
-    </main>
+    <>
+      <title>{`Log in | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx log in via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
+        <LogInForm
+          state={state}
+          action={logInFormAction}
+          isPending={isPending}
+        ></LogInForm>
+      </main>
+    </>
   );
 };
 
@@ -97,7 +104,7 @@ const LogInForm = ({ state, action, isPending }) => {
             name='usernameEmail'
             defaultValue={state.data?.usernameEmail || ''}
             autoComplete='username'
-            maxLength={consts.USERNAME_MAX_LENGTH}
+            maxLength={consts.USER.USERNAME.MAX_LENGTH}
             required
             aria-invalid={
               !clearedFields.usernameEmail && !!state.errors?.usernameEmail
