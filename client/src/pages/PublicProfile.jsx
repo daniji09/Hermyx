@@ -1,11 +1,12 @@
 import { useActionState, useContext, useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { MessageCircle, MessageSquareWarning, Star, User } from 'lucide-react';
+import { MessageCircle, MessageSquareWarning, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { initialStateUseStateAction, PAGINATION_LIMIT } from '../consts/consts';
 import { AuthContext } from '../contexts/AuthContext';
 import { getImageUrl } from '../utils/media';
+import { getDisplayName, getInitials } from '../utils/avatar';
 import {
   getPublicUserProfileMissionsInfiniteQueryOptions,
   getPublicUserProfileQueryOptions,
@@ -166,7 +167,9 @@ export const PublicProfile = () => {
                   className='h-full w-full object-cover'
                 />
               ) : (
-                <User className='h-12 w-12 text-muted-foreground' />
+                <span className='text-4xl font-semibold text-muted-foreground'>
+                  {getInitials(getDisplayName(user))}
+                </span>
               )}
             </div>
 

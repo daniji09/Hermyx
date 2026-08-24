@@ -6,6 +6,7 @@ import { AuthContext } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeProvider';
 import { SearchBar } from './form/SearchBar';
 import { getImageUrl } from '@/utils/media';
+import { getDisplayName, getInitials } from '@/utils/avatar';
 
 // Icons
 import {
@@ -87,8 +88,6 @@ export function Navbar() {
               />
             </div>
 
-            <ThemeToggle setTheme={setTheme} />
-
             {currentUser ? (
               currentUser.isAdmin ? (
                 <UserDropdown
@@ -120,10 +119,11 @@ export function Navbar() {
             ) : (
               <LogButton currentUser={currentUser} logout={logout} />
             )}
+
+            <ThemeToggle setTheme={setTheme} />
           </div>
 
           <div className='flex md:hidden items-center gap-2'>
-            <ThemeToggle setTheme={setTheme} />
             <Button
               variant='ghost'
               size='icon'
@@ -135,6 +135,7 @@ export function Navbar() {
                 <Menu className='h-6 w-6' aria-hidden='true' />
               )}
             </Button>
+            <ThemeToggle setTheme={setTheme} />
           </div>
         </nav>
         {isMobileMenuOpen && (
@@ -260,7 +261,7 @@ const UserDropdown = ({
                 alt={currentUser.username}
               />
               <AvatarFallback>
-                <User className='h-4 w-4' />
+                {getInitials(getDisplayName(currentUser))}
               </AvatarFallback>
             </Avatar>
 

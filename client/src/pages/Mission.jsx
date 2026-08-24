@@ -98,7 +98,7 @@ import {
 } from '@/components/ui/carousel';
 import { MoreVertical } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { getInitials } from '../utils/avatar';
+import { getDisplayName, getInitials } from '../utils/avatar';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { NotFound } from './NotFound';
@@ -314,7 +314,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   <Avatar className='h-16 w-16 border-2 border-background shadow-sm'>
                     <AvatarImage src={getImageUrl(mission?.avatar)} />
                     <AvatarFallback className='bg-primary/5 text-primary text-xl'>
-                      {getInitials(mission?.username)}
+                      {getInitials(getDisplayName(mission))}
                     </AvatarFallback>
                   </Avatar>
                   <div className='min-w-0'>
@@ -653,10 +653,7 @@ const VacancyCard = ({
                 className='h-full w-full object-cover'
               />
               <AvatarFallback>
-                <User
-                  className='h-12 w-12 text-muted-foreground'
-                  aria-hidden='true'
-                />
+                {getInitials(getDisplayName(vacancy))}
               </AvatarFallback>
             </Avatar>
           </div>
@@ -866,10 +863,7 @@ const ViewVacancyDialog = ({
                 <Avatar className='h-10 w-10 border border-primary/10'>
                   <AvatarImage src={getImageUrl(vacancy.avatar)} />
                   <AvatarFallback>
-                    <User
-                      className='h-5 w-5 text-muted-foreground'
-                      aria-hidden='true'
-                    />
+                    {getInitials(getDisplayName(vacancy))}
                   </AvatarFallback>
                 </Avatar>
                 <div>
