@@ -230,8 +230,8 @@ export const getUserPublicProfile = async (username) => {
     name: user.name,
     surnames: user.surnames,
     description: user.description,
-    location: user.location,
     avatar: user.avatar,
+    role: user.role,
   };
 
   return {
@@ -387,7 +387,7 @@ export const updateMyEmail = async (user, email) => {
   let firebaseChange;
   try {
     // Prepares user email update
-    const firebaseUpdates = { email };
+    const firebaseUpdates = { email, emailVerified: false };
     // So, email is changed on Firebase
     firebaseChange = await authProvider.updateFirebaseAccount(
       user.firebase_uid,
@@ -442,7 +442,7 @@ export const addEmailAuthentication = async (user, email, password) => {
   let firebaseChange;
   try {
     // Prepares user email authentication add
-    const firebaseUpdates = { email, password };
+    const firebaseUpdates = { email, password, emailVerified: false };
     // So, email authentication is added in Firebase
     firebaseChange = await authProvider.updateFirebaseAccount(
       user.firebase_uid,

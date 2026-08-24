@@ -1,11 +1,12 @@
 import {
   useActionState,
   useCallback,
+  useContext,
   useEffect,
   useRef,
   useState,
 } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   addVacanciesAction,
   editMissionAction,
@@ -26,15 +27,14 @@ import {
 import { Map } from '../components/custom/Map';
 import { Card } from '@/components/ui/card';
 import {
-  MessageSquareWarning,
   Plus,
   Trash2,
   UploadCloud,
   User,
   UserPlus,
   X,
+  Map as MapIcon,
 } from 'lucide-react';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogTrigger,
@@ -48,14 +48,17 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getMissionByIdQueryOptions } from '../queries/MissionsQueries';
 import { useAlert } from '../contexts/AlertContext';
-import { reportAdventurerAction } from '../actions/ReportActions';
 import { useDropzone } from 'react-dropzone';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
+import { Separator } from '@/components/ui/separator';
+import { AuthContext } from '../contexts/AuthContext';
+import { NotFound } from './NotFound';
 
 export const EditMission = () => {
   // Mission id
   const { id } = useParams();
+  const { currentUser } = useContext(AuthContext);
 
   // Initial data retrieving
   const enabledOption = !!id;
@@ -99,6 +102,26 @@ export const EditMission = () => {
     }
   }, [state.success, state.redirectTo, navigate, id, queryClient]);
 
+  if (isLoading) {
+    return (
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
+          Loading mission...
+        </div>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return <NotFound></NotFound>;
+  }
+
+  if (
+    !MISSION_STATUS[mission?.status].CAN_EDIT ||
+    currentUser.id !== mission.owner_id
+  )
+    return <Navigate to={`/missions/${id}`} replace={true} />;
+
   return (
     <EditMissionPageContainer
       state={state}
@@ -122,22 +145,29 @@ const EditMissionPageContainer = ({
   mission,
 }) => {
   return (
-    <main className='flex min-h-screen items-center justify-center p-4'>
-      <EditMissionLoading isLoading={isLoading}>
-        {'Seeking mission...'}
-      </EditMissionLoading>
+    <>
+      <title>{`Mission edition | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Mission ${mission?.title} edition form.`}
+      ></meta>
+      <main className='flex container mx-auto max-w-6xl p-4 sm:p-6 min-h-screen items-center justify-center'>
+        <EditMissionLoading isLoading={isLoading}>
+          {'Seeking mission...'}
+        </EditMissionLoading>
 
-      <EditMissionError isError={isError}>{`${error}`}</EditMissionError>
+        <EditMissionError isError={isError}>{`${error}`}</EditMissionError>
 
-      {!isLoading && !isError && mission && (
-        <EditMissionForm
-          state={state}
-          action={action}
-          isPending={isPending}
-          mission={mission}
-        ></EditMissionForm>
-      )}
-    </main>
+        {!isLoading && !isError && mission && (
+          <EditMissionForm
+            state={state}
+            action={action}
+            isPending={isPending}
+            mission={mission}
+          ></EditMissionForm>
+        )}
+      </main>
+    </>
   );
 };
 
@@ -225,10 +255,26 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         action={handleFormAction}
         encType='multipart/form-data'
       >
-        <CardForm.Header>
-          <CardForm.Title>{messages.EDIT_MISSION.FORM_TITLE}</CardForm.Title>
+        <CardForm.Header
+          className={
+            'flex flex-col items-start gap-4 sm:flex-row sm:items-center'
+          }
+        >
+          <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+            <MapIcon className='h-6 w-6' aria-hidden='true' />
+          </span>
+          <div className='min-w-0'>
+            <CardForm.Title className={'min-w-0'}>
+              {messages.EDIT_MISSION.FORM_TITLE}
+            </CardForm.Title>
+            <CardForm.Description className={'ms-0.5'}>
+              {messages.EDIT_MISSION.FORM_DESCRIPTION}
+            </CardForm.Description>
+          </div>
         </CardForm.Header>
-
+        <div className='px-8'>
+          <Separator />
+        </div>
         <CardForm.Content
           legend='Application edit mission form.'
           className={'-mb-2'}
@@ -247,7 +293,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
             defaultValue={state.data?.title || mission?.title || ''}
             autoComplete='off'
             required
-            maxLength={consts.MISSION.TITLE_MAX_LENGTH}
+            maxLength={consts.MISSION.TITLE.MAX_LENGTH}
             aria-invalid={!clearedFields.title && !!state.errors?.title}
             disabled={isPending}
             onChange={handleFieldChange}
@@ -268,7 +314,7 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
             defaultValue={state.data?.description || mission?.description || ''}
             autoComplete='off'
             required
-            maxLength={consts.MISSION.DESCRIPTION_MAX_LENGTH}
+            maxLength={consts.MISSION.DESCRIPTION.MAX_LENGTH}
             aria-invalid={
               !clearedFields.description && !!state.errors?.description
             }
@@ -277,9 +323,9 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
           ></FormTextareaField>
 
           <div className='pt-4 pb-2 space-y-2'>
-            <Label className='group/field-label peer/field-label flex w-fit gap-2 leading-snug group-data-[disabled=true]/field:opacity-50 has-data-checked:border-primary/30 has-data-checked:bg-primary/5 has-[>[data-slot=field]]:rounded-lg has-[>[data-slot=field]]:border *:data-[slot=field]:p-2.5 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10'>
+            <span className='flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50'>
               Photos:
-            </Label>
+            </span>
             <MissionPhotoUpload
               files={missionPhotos}
               setFiles={setMissionPhotos}
@@ -306,7 +352,6 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
         <div className='px-8'>
           <MissionVacanciesCreator
             initialVacancies={mission?.participants || []}
-            canDelete={MISSION_STATUS[mission.status].CAN_DELETE_ADVENTURERS}
             mid={mission.mid}
           ></MissionVacanciesCreator>
           {state.errors?.vacanciesData && !isAlertClosed && (
@@ -360,37 +405,34 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
   );
 };
 
-const CreationVacancyCard = ({
-  vacancy,
-  onDelete,
-  onReport,
-  onClick,
-  canDelete,
-}) => {
+const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
   const isAssigned = !!vacancy.adventurer_id;
-  const handleKeyDown = (e) => {
-    if (!MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      onClick(vacancy.id);
-    }
-  };
+  console.log(vacancy);
+  const isDeletable =
+    vacancy.status === MISSION_PARTICIPATION_STATUS.JOINED.ID ||
+    vacancy.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID;
+
   return (
     <Card
-      role='button'
-      tabIndex={0}
       className={`relative shrink-0 w-50 h-60 flex flex-col p-4 shadow-sm transition-all group ${
         MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT
-          ? 'hover:shadow-lg hover:cursor-pointer focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+          ? 'hover:shadow-lg hover:cursor-pointer focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50'
           : 'opacity-70 cursor-default'
       }`}
-      onKeyDown={handleKeyDown}
       onClick={() =>
         MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_EDIT &&
         onClick(vacancy.id)
       }
     >
-      {canDelete ? (
+      <button
+        type='button'
+        className='sr-only'
+        onClick={() => onClick(vacancy.id)}
+      >
+        Edit vacancy {vacancy.title}
+      </button>
+
+      {isDeletable && (
         <Button
           id={`deleteVacancy${vacancy.id}`}
           type='button'
@@ -399,34 +441,18 @@ const CreationVacancyCard = ({
             e.stopPropagation();
             onDelete(vacancy.id);
           }}
-          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
+          className='absolute top-2 right-2 hover:text-red-500 transition-colors z-10'
           title='Delete vacancy'
           aria-label='Delete vacancy'
         >
-          <Trash2 size={24} />
-        </Button>
-      ) : (
-        <Button
-          id={`reportVacancy${vacancy.id}`}
-          type='button'
-          variant='outline'
-          onClick={(e) => {
-            e.stopPropagation();
-            onReport(vacancy.id);
-          }}
-          className='absolute top-2 right-2 hover:text-red-500 transition-colors'
-          title='Report vacancy'
-          aria-label='Report vacancy'
-        >
-          <MessageSquareWarning size={24} />
+          <Trash2 size={20} aria-hidden='true' />
         </Button>
       )}
 
-      <h3 className='font-semibold text-sm truncate min-h-5 mb-3 text-center mx-8'>
+      <h3 className='font-bold text-sm truncate min-h-5 mb-1 text-center mx-8'>
         {vacancy.title || 'Adventurer'}
       </h3>
-
-      <div className='flex justify-center mb-4'>
+      <div className='flex justify-center'>
         {isAssigned ? (
           <div className='w-16 h-16 rounded-full flex items-center justify-center bg-primary/10 text-primary border-2 border-primary'>
             <Avatar size='md' className='h-full w-full'>
@@ -436,31 +462,40 @@ const CreationVacancyCard = ({
                 className='h-full w-full object-cover'
               />
               <AvatarFallback>
-                <User className='h-12 w-12 text-muted-foreground' />
+                <User
+                  className='h-12 w-12 text-muted-foreground'
+                  aria-hidden='true'
+                />
               </AvatarFallback>
             </Avatar>
           </div>
         ) : (
-          <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-slate-300 text-slate-400'>
-            <UserPlus size={24} />
+          <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-muted-foreground text-muted-foreground'>
+            <UserPlus
+              size={24}
+              aria-hidden='true'
+              className='text-muted-foreground'
+            />
           </div>
         )}
       </div>
-
-      <div className='flex justify-between items-center text-xs font-medium mb-2'>
+      <div className='text-center -mt-3'>
         <span
-          className={`truncate w-2/3 ${isAssigned ? 'text-primary font-bold' : 'italic '}`}
+          className={`truncate w-2/3 ${isAssigned ? 'text-primary font-semibold' : 'italic '}`}
         >
           {isAssigned ? vacancy.username : 'Unassigned'}
         </span>
-        <span className='w-1/3 text-right text-primary font-bold text-sm'>
-          {vacancy.reward}€
-        </span>
-      </div>
 
-      <p className='text-xs line-clamp-3 leading-relaxed grow'>
-        {vacancy.description || 'No additional description.'}
-      </p>
+        <div className='flex justify-between items-center font-medium mt-4 mb-3'>
+          <span className='text-primary truncate text-sm'>
+            {MISSION_PARTICIPATION_STATUS[vacancy.status].LABEL}
+          </span>
+          <span className='text-primary text-sm'>{vacancy.reward}€</span>
+        </div>
+        <p className='text-xs wrap-break-words wrap-anywhere line-clamp-2 leading-relaxed grow text-left'>
+          {vacancy.description || 'No additional description.'}
+        </p>
+      </div>
     </Card>
   );
 };
@@ -471,7 +506,6 @@ const CreateVacanciesDialog = ({
   handleClickVacancy,
   handleReportVacancy,
   onConfirm,
-  canDelete,
 }) => {
   // Action handling for create vacancy form
   const [state, addVacanciesFormAction, isPending] = useActionState(
@@ -528,7 +562,7 @@ const CreateVacanciesDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <div className='flex overflow-x-auto gap-4 py-4 snap-x snap-mandatory hide-scrollbar items-center '>
+      <div className='flex overflow-x-auto gap-4 py-3 snap-x snap-mandatory hide-scrollbar items-center '>
         <DialogTrigger asChild>
           <Button
             id='addVacanciesButton'
@@ -536,10 +570,16 @@ const CreateVacanciesDialog = ({
             disabled={isPending}
             className='snap-start shrink-0 w-50 h-60 flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-primary/20 bg-background hover:bg-secondary hover:border-primary/50 hover:text-primary transition-all text-primary group cursor-pointer'
           >
-            <div className='w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform'>
-              <Plus size={32} />
+            <div className='w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform dark:border-2'>
+              <Plus
+                size={32}
+                aria-hidden='true'
+                className='text-muted-foreground'
+              />
             </div>
-            <span className='font-medium text-sm'>Add vacancies</span>
+            <span className='text-sm text-muted-foreground text-center'>
+              Add vacancies
+            </span>
           </Button>
         </DialogTrigger>
 
@@ -550,13 +590,12 @@ const CreateVacanciesDialog = ({
               onDelete={handleDeleteVacancy}
               onReport={handleReportVacancy}
               onClick={handleClickVacancy}
-              canDelete={canDelete}
             />
           </div>
         ))}
       </div>
 
-      <DialogContent>
+      <DialogContent className='max-h-[80vh] overflow-y-auto'>
         <form action={addVacanciesFormAction} id='addVacanciesForm' noValidate>
           <DialogHeader>
             <DialogTitle>Add new vacancies</DialogTitle>
@@ -743,13 +782,10 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
   useEffect(() => {
     if (state.success && processedState.current !== state) {
       onConfirm({
-        id: vacancy.id,
-        adventurer_id: vacancy.adventurer_id || undefined,
-        username: vacancy.username || undefined,
+        ...vacancy,
         reward: state.data.vacanciesReward,
         title: state.data.vacanciesTitle,
         description: state.data.vacanciesDescription,
-        status: vacancy.status,
       });
       processedState.current = state;
       onClose();
@@ -761,7 +797,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      <DialogContent className='max-h-[80vh] overflow-y-auto'>
         <form action={editVacancyFormAction} id='editVacancyForm' noValidate>
           <DialogHeader>
             <DialogTitle>Edit vacancy</DialogTitle>
@@ -877,12 +913,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
     </Dialog>
   );
 };
-
-export const MissionVacanciesCreator = ({
-  initialVacancies,
-  canDelete,
-  mid,
-}) => {
+export const MissionVacanciesCreator = ({ initialVacancies }) => {
   const { showAlert } = useAlert();
   const formattedVacancies = initialVacancies.map((vac) => ({
     adventurer_id: vac.adventurer_id,
@@ -897,7 +928,6 @@ export const MissionVacanciesCreator = ({
 
   const [vacancies, setVacancies] = useState(formattedVacancies);
   const [editingVacancyId, setEditingVacancyId] = useState(null);
-  const [reportingVacancyId, setReportingVacancyId] = useState(null);
 
   const handleAddVacancies = useCallback(
     ({ quantity, reward, title, description, status }) => {
@@ -909,7 +939,6 @@ export const MissionVacanciesCreator = ({
           description,
           status,
         }));
-
         return [...prevVacancies, ...newVacancies];
       });
     },
@@ -925,10 +954,6 @@ export const MissionVacanciesCreator = ({
     },
     [editingVacancyId],
   );
-
-  const handleReportVacancy = useCallback((id) => {
-    setReportingVacancyId(id);
-  }, []);
 
   const handleClickVacancy = useCallback(
     (id) => {
@@ -957,14 +982,15 @@ export const MissionVacanciesCreator = ({
 
   return (
     <div className='w-full space-y-2'>
-      <Label>Vacancies ({vacancies.length})</Label>
+      <span className='flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50'>
+        Vacancies (required):
+      </span>
       <input
         type='hidden'
         name='vacancies'
         form='editMissionForm'
         value={vacancies.length}
       />
-
       <input
         type='hidden'
         name='vacanciesData'
@@ -976,9 +1002,7 @@ export const MissionVacanciesCreator = ({
         onConfirm={handleAddVacancies}
         handleDeleteVacancy={handleDeleteVacancy}
         handleClickVacancy={handleClickVacancy}
-        handleReportVacancy={handleReportVacancy}
         vacancies={vacancies}
-        canDelete={canDelete}
       />
 
       <EditVacancyDialog
@@ -989,131 +1013,10 @@ export const MissionVacanciesCreator = ({
         onConfirm={handleConfirmEdit}
       />
 
-      <ReportVacancyDialog
-        vacancyId={reportingVacancyId}
-        mid={mid}
-        isOpen={!!reportingVacancyId}
-        onClose={() => setReportingVacancyId(null)}
-      />
+      <p className='text-left text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance [[data-variant=legend]+&]:-mt-1.5'>
+        You have added {vacancies.length} vacancies.
+      </p>
     </div>
-  );
-};
-
-const ReportVacancyDialog = ({ mid, vacancyId, isOpen, onClose }) => {
-  // Action handling for update email form
-  const [state, reportVacancyFormAction, isPending] = useActionState(
-    reportAdventurerAction,
-    initialStateUseStateAction,
-  );
-
-  // Logic for cleaning errors in fields or alerts when modifications are done
-  const [clearedFields, setClearedFields] = useState({});
-  const [prevServerState, setPrevServerState] = useState(state);
-  const [isAlertClosed, setIsAlertClosed] = useState(false);
-  const processedState = useRef(null);
-  const { showAlert } = useAlert();
-
-  // If the state has changed, field errors should be cleared
-  if (state !== prevServerState) {
-    setPrevServerState(state);
-    setClearedFields({});
-    setIsAlertClosed(false);
-  }
-
-  // When user changes field's value, the error is not shown until the form is sent again
-  const handleFieldChange = (e) => {
-    const fieldName = e.target.name;
-    setClearedFields((prev) => ({ ...prev, [fieldName]: true }));
-  };
-
-  // Effect for success handling
-  useEffect(() => {
-    if (state.success && processedState.current !== state) {
-      processedState.current = state;
-      onClose();
-      showAlert({
-        title: messages.REPORT.SUCCESS_ALERT.TITLE,
-        description: messages.REPORT.SUCCESS_ALERT.DESCRIPTION,
-      });
-    }
-  }, [state, onClose, showAlert]);
-
-  // Handle manual dialog close to reset visual errors
-  const handleOpenChange = (open) => {
-    if (!open) {
-      setIsAlertClosed(true);
-      onClose();
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className='sm:max-w-sm'>
-        <DialogHeader>
-          <DialogTitle>
-            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE}
-          </DialogTitle>
-          <DialogDescription>
-            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION}
-          </DialogDescription>
-        </DialogHeader>
-        <form
-          action={reportVacancyFormAction}
-          id='reportAdventurerForm'
-          noValidate
-        >
-          <div className='space-y-4 py-4'>
-            <div className='space-y-2'>
-              <FormTextareaField
-                id='reportVacancyMessage'
-                name='message'
-                label='Message (required):'
-                type='text'
-                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
-                defaultValue={state.data?.message || ''}
-                error={
-                  !clearedFields.message && state.errors?.message
-                    ? state.errors.message[0]
-                    : undefined
-                }
-                invalid={!clearedFields.message && !!state.errors?.message}
-                aria-invalid={!clearedFields.message && !!state.errors?.message}
-                required
-                autoComplete='off'
-                disabled={isPending}
-                onChange={handleFieldChange}
-              />
-            </div>
-            <input
-              type='hidden'
-              id='vacancyId'
-              name='vacancyId'
-              value={vacancyId || ''}
-            />
-            <input type='hidden' id='mid' name='mid' value={mid} />
-            {state.errors?.general && !isAlertClosed && (
-              <FormAlert onClose={() => setIsAlertClosed(true)}>
-                {state.errors.general[0]}
-              </FormAlert>
-            )}
-          </div>
-        </form>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant='outline' type='button' onClick={onClose}>
-              Cancel
-            </Button>
-          </DialogClose>
-          <Button
-            type='submit'
-            disabled={isPending}
-            form='reportAdventurerForm'
-          >
-            {isPending ? 'Reporting...' : 'Report adventurer'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 };
 
@@ -1197,7 +1100,10 @@ export function MissionPhotoUpload({ files, setFiles }) {
         `}
       >
         <input {...getInputProps()} />
-        <UploadCloud className='w-10 h-10 text-muted-foreground mb-4' />
+        <UploadCloud
+          className='w-10 h-10 text-muted-foreground mb-4'
+          aria-hidden='true'
+        />
         <p className='text-sm text-muted-foreground text-center'>
           {isDragActive
             ? messages.NEW_MISSION.PHOTOS_DRAGGING_DESCRIPTION
@@ -1230,10 +1136,11 @@ export function MissionPhotoUpload({ files, setFiles }) {
                 type='button'
                 variant='destructive'
                 size='icon'
-                className='absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity'
+                aria-label={`Remove photo ${index + 1}`}
+                className='absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity'
                 onClick={() => removeFile(file.name)}
               >
-                <X className='w-4 h-4' />
+                <X className='w-4 h-4' aria-hidden='true' />
               </Button>
             </div>
           ))}

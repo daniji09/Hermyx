@@ -1,6 +1,10 @@
+import { consts } from '@hermyx/shared';
 import api from '../config/api';
 
-export const getMyNotifications = async (page, limit) => {
+export const getMyNotifications = async (
+  page = consts.PAGINATION.DEFAULT_PAGE,
+  limit = consts.PAGINATION.DEFAULT_LIMIT,
+) => {
   const { data } = await api.get('/notifications/me', {
     params: { page, limit },
   });

@@ -1,5 +1,6 @@
 import {
   addEmailAuthenticationSchema,
+  emailBaseSchema,
   logInSchema,
   signUpSchema,
   messages,
@@ -8,6 +9,9 @@ import { addEmailAuthentication } from '../services/UsersServices';
 import {
   createUser,
   login,
+  sendVerificationEmailToCurrentUser,
+  sendVerificationEmailWithCredentials,
+  sendPasswordResetEmail,
   signInWithCustomToken,
 } from '../services/AuthServices';
 
@@ -38,6 +42,11 @@ export const signUpAction = async (previousState, formData) => {
         },
       };
 
+    await sendVerificationEmailWithCredentials(
+      fieldsData.email,
+      fieldsData.password,
+    );
+
     // Success
     return { success: true, data: null, errors: {} };
   } catch (error) {
@@ -52,9 +61,17 @@ export const signUpAction = async (previousState, formData) => {
         data: fieldsData,
       };
 
+    // Controlled errors thrown while sending the verification email
+    if (error.errors)
+      return {
+        success: false,
+        errors: error.errors,
+        data: fieldsData,
+      };
+
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -103,7 +120,7 @@ export const logInAction = async (previousState, formData) => {
     if (!success)
       throw {
         errors: {
-          general: [messages.COULD_NOT_LOG_IN],
+          general: [messages.AUTH.LOGIN.COULD_NOT_LOG_IN],
         },
       };
 
@@ -111,7 +128,7 @@ export const logInAction = async (previousState, formData) => {
   } catch (error) {
     // Controlled errors thrown from backend
     if (
-      [400, 401, 409, 500].includes(error.response?.status) &&
+      [400, 401, 403, 409, 500].includes(error.response?.status) &&
       error.response.data?.errors
     )
       return {
@@ -130,11 +147,42 @@ export const logInAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
       errors: { general: [errorMessage] },
+      data: fieldsData,
+    };
+  }
+};
+
+// Sends a password reset email
+export const forgotPasswordAction = async (previousState, formData) => {
+  // Data is collected
+  const fieldsData = Object.fromEntries(formData);
+
+  // Fields validation
+  const validatedEmail = emailBaseSchema.safeParse(fieldsData.email);
+  if (!validatedEmail.success) {
+    return {
+      success: false,
+      errors: {
+        email: validatedEmail.error.flatten().formErrors,
+      },
+      data: fieldsData,
+    };
+  }
+
+  try {
+    await sendPasswordResetEmail(validatedEmail.data);
+    return { success: true, data: fieldsData, errors: {} };
+  } catch (error) {
+    return {
+      success: false,
+      errors: error.errors || {
+        general: [messages.AUTH.PASSWORD_RESET.COULD_NOT_SEND],
+      },
       data: fieldsData,
     };
   }
@@ -163,9 +211,11 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
     if (!success)
       throw {
         errors: {
-          general: [messages.COULD_NOT_ADD_EMAIL_AUTHENTICATION],
+          general: [messages.AUTH.EMAIL_AUTHENTICATION.COULD_NOT_ADD],
         },
       };
+
+    await sendVerificationEmailToCurrentUser();
 
     // Success
     return { success: true, data: null, errors: {} };
@@ -181,9 +231,16 @@ export const addEmailAuthenticationAction = async (previousState, formData) => {
         data: fieldsData,
       };
 
+    if (error.errors)
+      return {
+        success: false,
+        errors: error.errors,
+        data: fieldsData,
+      };
+
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,

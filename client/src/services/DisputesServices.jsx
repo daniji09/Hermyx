@@ -1,6 +1,10 @@
+import { consts } from '@hermyx/shared';
 import api from '../config/api';
 
-export const getMyDisputes = async (page, limit) => {
+export const getMyDisputes = async (
+  page = consts.PAGINATION.DEFAULT_PAGE,
+  limit = consts.PAGINATION.DEFAULT_LIMIT,
+) => {
   const { data } = await api.get('/disputes', {
     params: { page, limit },
   });

@@ -1,7 +1,12 @@
+import { consts } from '@hermyx/shared';
 import api from '../config/api';
 
 // Get user reviews by username
-export const getUserReviews = async (uid, page, limit) => {
+export const getUserReviews = async (
+  uid,
+  page = consts.PAGINATION.DEFAULT_PAGE,
+  limit = consts.PAGINATION.DEFAULT_LIMIT,
+) => {
   const { data } = await api.get(`/reviews/users/${uid}`, {
     params: { page, limit },
   });

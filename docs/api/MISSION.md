@@ -13,9 +13,9 @@ Gets all missions from Hermyx, being able to query them by title.
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `title` | string | No | Title to search. |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -44,7 +44,11 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   ```
   <br>
 
-**Workflow:** application missions are searched by their title, with pagination used by default, although it is optional. The database search is performed using the PostgreSQL `unaccent` extension, which removes accents and diacritics from a text string, transforming them into their base equivalent, so that text strings are compared in a way that is insensitive to accents.
+**Workflow:** application missions are searched by their title with mandatory
+pagination. The database search is performed using the PostgreSQL `unaccent`
+extension, which removes accents and diacritics from a text string, transforming
+them into their base equivalent, so that text strings are compared in a way
+that is insensitive to accents.
 <br>
 <br>
 <br>
@@ -62,9 +66,9 @@ Gets all mission opened from Hermyx, being able to query them by title, minimum 
 | `minPayment` | double | No | Minimum payment accepted. |
 | `maxPayment` | double | No | Maximum payment accepted. |
 | `maxDistanceKm` | double | No | Maximum distance to user in km accepted. |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -93,7 +97,12 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   ```
   <br>
 
-**Workflow:** application opened missions are searched by their title, with pagination used by default, although it is optional. The database search is performed using the PostgreSQL `unaccent` extension, which removes accents and diacritics from a text string, transforming them into their base equivalent, so that text strings are compared in a way that is insensitive to accents. Includes filters for minimum payment, maximum payment and maximum distance.
+**Workflow:** application opened missions are searched by their title with
+mandatory pagination. The database search is performed using the PostgreSQL
+`unaccent` extension, which removes accents and diacritics from a text string,
+transforming them into their base equivalent, so that text strings are
+compared in a way that is insensitive to accents. Includes filters for
+minimum payment, maximum payment and maximum distance.
 <br>
 <br>
 <br>
@@ -141,6 +150,53 @@ Gets the mission specified by its identifier, mid.
     <br>
 
 **Workflow:** application mission is searched by its identifier, it retrieves all mission information, including its participants, its participants waiting for payment and its photos.
+<br>
+<br>
+<br>
+
+## - Get mission payment info by mid: `GET /api/missions/:mid/payment-info`
+
+Gets payment info of the mission specified by its identifier, mid.
+
+**Requires authentication:** Yes
+
+**Path parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `mid` | integer | Yes | Mission identifier. |
+<br>
+
+**Responses:**
+
+- `200 OK`: mission obtain successfully.
+
+  ```json
+  {
+    "mission": "<mission>"
+  }
+  ```
+
+- `400 Bad Request`: path parameters fields validation error, missing path parameters fields.
+
+  ```json
+  {
+    "errors": {
+      "<field>": ["<error>"]
+    }
+  }
+  ```
+
+- `404 Not Found`: mission not found, mission with that mid does not exist.
+  ```json
+  {
+    "errors": {
+      "general": ["Mission not found."]
+    }
+  }
+  ```
+    <br>
+
+**Workflow:** application mission payment info is searched by its identifier, it retrieves all mission payment information, all participants that are in pending payment status.
 <br>
 <br>
 <br>

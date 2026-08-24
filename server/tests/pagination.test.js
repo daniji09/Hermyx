@@ -23,6 +23,7 @@ vi.mock('../src/middlewares/auth.middleware.js', () => ({
     next();
   },
   verifyAdmin: (_req, _res, next) => next(),
+  verifyRegularUser: (_req, _res, next) => next(),
 }));
 
 import app from '../src/app.js';
@@ -60,13 +61,13 @@ describe('Paginated API endpoints', () => {
     });
   });
 
-  it('rejects incomplete user review pagination', async () => {
+  it('rejects user review pagination without a limit', async () => {
     const response = await request(app)
       .get('/api/reviews/users/8')
       .query({ page: 1 });
 
     expect(response.status).toBe(400);
-    expect(response.body.errors.page).toBeDefined();
+    expect(response.body.errors.limit).toBeDefined();
     expect(reviewService.getUserReviews).not.toHaveBeenCalled();
   });
 

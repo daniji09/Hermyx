@@ -1,5 +1,5 @@
 import { useActionState, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logInAction } from '../actions/AuthActions';
 import { initialStateUseStateAction } from '../consts/consts.js';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { consts } from '@hermyx/shared';
 import { GoogleSignInButton } from '../components/custom/GoogleSignInButton';
 import { UseGoogleAuth } from '../hooks/UseGoogleAuth.jsx';
 import { Separator } from '../components/ui/separator.jsx';
+import { AlertStatic } from '../components/custom/AlertStatic.jsx';
 
 export const LogIn = () => {
   // Form action handling
@@ -22,18 +23,47 @@ export const LogIn = () => {
 
   // Effect for navigating to home
   const navigate = useNavigate();
+  const location = useLocation();
+  const [showVerificationNotice, setShowVerificationNotice] = useState(
+    () => location.state?.verificationEmailSent === true,
+  );
+
   useEffect(() => {
     if (state.success) navigate('/');
   }, [state.success, navigate]);
 
+  // Consumes the navigation state so the notice is shown only once
+  useEffect(() => {
+    if (location.state?.verificationEmailSent) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.pathname, location.state?.verificationEmailSent, navigate]);
+
   return (
-    <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
-      <LogInForm
-        state={state}
-        action={logInFormAction}
-        isPending={isPending}
-      ></LogInForm>
+    <>
+      <title>{`Log in | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx log in via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
+        <div className='flex w-full max-w-155 flex-col gap-4'>
+        <LogInForm
+            state={state}
+            action={logInFormAction}
+            isPending={isPending}
+          ></LogInForm>
+          {showVerificationNotice && (
+          <AlertStatic
+            title={messages.SIGN_UP.VERIFICATION_EMAIL_SENT_TITLE}
+            onClose={() => setShowVerificationNotice(false)}
+          >
+            {messages.SIGN_UP.VERIFICATION_EMAIL_SENT}
+          </AlertStatic>
+        )}
+      </div>
     </main>
+    </>
   );
 };
 
@@ -73,7 +103,7 @@ const LogInForm = ({ state, action, isPending }) => {
             {`Don't have an account? `}
             <Link
               to={'/signup'}
-              className='text-black underline
+              className='text-foreground underline
             '
             >
               {'Sign up!'}
@@ -97,7 +127,7 @@ const LogInForm = ({ state, action, isPending }) => {
             name='usernameEmail'
             defaultValue={state.data?.usernameEmail || ''}
             autoComplete='username'
-            maxLength={consts.USERNAME_MAX_LENGTH}
+            maxLength={consts.USER.USERNAME.MAX_LENGTH}
             required
             aria-invalid={
               !clearedFields.usernameEmail && !!state.errors?.usernameEmail
@@ -124,6 +154,14 @@ const LogInForm = ({ state, action, isPending }) => {
             disabled={isPending}
             onChange={handleFieldChange}
           ></FormPasswordInputField>
+          <div className='text-right -mt-2'>
+            <Link
+              to='/forgot-password'
+              className='text-sm text-foreground underline'
+            >
+              {messages.LOG_IN.FORGOT_PASSWORD}
+            </Link>
+          </div>
         </CardForm.Content>
 
         <CardForm.Footer>
@@ -137,7 +175,10 @@ const LogInForm = ({ state, action, isPending }) => {
             >
               {isPending ? 'Logging in...' : 'Log in'}
             </Button>
-            <div className='grid grid-cols-3 grid-rows-1 justify-items-center'>
+            <div
+              className='grid grid-cols-3 grid-rows-1 justify-items-center'
+              aria-hidden='true'
+            >
               <Separator className='my-4 w-fit'></Separator>
               <span className='text-muted-foreground self-center-safe'>o</span>
               <Separator className='my-4 w-fit'></Separator>

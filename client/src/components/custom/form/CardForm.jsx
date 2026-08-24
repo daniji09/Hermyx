@@ -45,7 +45,10 @@ const CardFormHeader = ({ children, className }) => {
 const CardFormTitle = ({ children, headingLevel = 'h1', className }) => {
   const HeadingTag = headingLevel;
   return (
-    <CardTitle className={`text-3xl ${className || ''}`} asChild>
+    <CardTitle
+      className={`text-3xl sm:text-4xl font-bold tracking-tight ${className || ''}`}
+      asChild
+    >
       <HeadingTag>{children}</HeadingTag>
     </CardTitle>
   );

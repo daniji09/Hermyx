@@ -45,7 +45,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { StripeManagement } from '../components/custom/StripeManagement';
 import { useAlert } from '../contexts/AlertContext';
 import { deleteUser } from '../services/UsersServices';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { messages } from '../messages/messages';
 import { Map } from '../components/custom/Map';
 import { getImageUrl } from '../utils/media';
@@ -75,6 +75,8 @@ import {
 } from '../services/AuthServices';
 import { addEmailAuthenticationAction } from '../actions/AuthActions';
 import { AlertStatic } from '../components/custom/AlertStatic';
+import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -101,9 +103,7 @@ export const MyProfile = () => {
   );
   const profileUser = data?.user;
 
-  const reviewsEnabled =
-    !!profileUser?.username &&
-    profileUser.configuration?.show_missions_to_others !== false;
+  const reviewsEnabled = !!profileUser?.username;
   const {
     data: reviewsPagesData,
     hasNextPage: hasNextReviewsPage,
@@ -120,46 +120,57 @@ export const MyProfile = () => {
     ),
   );
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextReviewsPage) {
+      fetchNextReviewsPage();
+    }
+  }, [inView, hasNextReviewsPage, fetchNextReviewsPage]);
+
   if (isLoading) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div className='p-8 text-center text-muted-foreground'>
-          Loading profile
+        <div role='status' className='p-8 text-center text-muted-foreground'>
+          Loading your profile...
         </div>
       </main>
     );
   }
 
   if (isError || !data?.user) {
-    return (
-      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-        <div className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'>
-          Could not load your profile
-        </div>
-      </main>
-    );
+    return <NotFound></NotFound>;
   }
 
   const user = data.user;
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
 
   return (
-    <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
-      <ProfileHeader user={user}></ProfileHeader>
-      <ProfileInformation data={data}></ProfileInformation>
-      <ProfileReviews
-        reviewsData={reviewsData}
-        isLoading={isReviewsLoading}
-        isPrivate={!reviewsEnabled}
-        hasNextPage={hasNextReviewsPage}
-        isFetchingNextPage={isFetchingNextReviewsPage}
-        fetchNextPage={fetchNextReviewsPage}
-      />
-      <ProfileAccessMethods user={user}></ProfileAccessMethods>
-      <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
-      <ProfileConfiguration user={user}></ProfileConfiguration>
-      <ProfileDangerZone></ProfileDangerZone>
-    </main>
+    <>
+      <title>{`My profile | Hermyx`}</title>
+      <meta name='description' content={`Hermyx user's profile.`}></meta>
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <ProfileHeader user={user}></ProfileHeader>
+        <ProfileInformation data={data}></ProfileInformation>
+        <ProfileReviews
+          reviewsData={reviewsData}
+          isLoading={isReviewsLoading}
+          isPrivate={!reviewsEnabled}
+          hasNextPage={hasNextReviewsPage}
+          isFetchingNextPage={isFetchingNextReviewsPage}
+          loadMoreRef={loadMoreRef}
+        />
+        <ProfileAccessMethods user={user}></ProfileAccessMethods>
+        <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
+        <ProfileConfiguration user={user}></ProfileConfiguration>
+        <ProfileDangerZone></ProfileDangerZone>
+      </main>
+    </>
   );
 };
 
@@ -180,11 +191,11 @@ const ProfileHeader = ({ user }) => {
       <ProfileAvatar user={user}></ProfileAvatar>
 
       <div className='min-w-0 flex-1'>
-        <h1 className='break-all text-3xl font-bold tracking-tight sm:text-4xl'>
+        <h1 className='wrap-break-words wrap-anywhere text-3xl font-bold tracking-tight sm:text-4xl'>
           {displayName || user.username}
         </h1>
 
-        <p className='break-all mt-1 text-lg text-muted-foreground'>
+        <p className='wrap-break-words wrap-anywhere mt-1 text-lg text-muted-foreground'>
           @{user.username}
         </p>
       </div>
@@ -246,7 +257,16 @@ const ProfileAvatar = ({ user }) => {
 
   return (
     <div
-      className={`group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border bg-muted transition-opacity ${isPending ? 'opacity-50' : ''}`}
+      role='button'
+      tabIndex={isPending ? -1 : 0}
+      aria-label='Change profile picture'
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleAvatarClick();
+        }
+      }}
+      className={`group relative flex h-28 w-28 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${isPending ? 'opacity-50' : ''}`}
       onClick={handleAvatarClick}
     >
       <Avatar size='profile' className='h-full w-full'>
@@ -256,13 +276,16 @@ const ProfileAvatar = ({ user }) => {
           className='h-full w-full object-cover'
         />
         <AvatarFallback>
-          <User className='h-12 w-12 text-muted-foreground' />
+          <User
+            className='h-12 w-12 text-muted-foreground'
+            aria-hidden='true'
+          />
         </AvatarFallback>
       </Avatar>
 
       {!isPending && (
         <div className='absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100'>
-          <Camera className='mb-1 h-6 w-6' />
+          <Camera className='mb-1 h-6 w-6' aria-hidden='true' />
           <span className='text-xs font-medium'>Change</span>
         </div>
       )}
@@ -290,20 +313,26 @@ const ProfileReviews = ({
   isPrivate,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   const reviews = reviewsData?.reviews || [];
 
   return (
     <Card asChild>
-      <section className='mb-6 p-4 sm:p-6'>
-        <div className='mb-5 flex items-center justify-between gap-4'>
-          <h2 className='text-xl font-semibold'>Reviews</h2>
+      <section className='mb-6 p-4 sm:p-6 mt-6 '>
+        <div className='mb-3 flex items-center justify-between gap-4 pb-2 border-b'>
+          <h2 className='text-2xl font-bold tracking-tight'>Reviews</h2>
           {!isLoading && (
-            <p className='text-sm text-muted-foreground'>
-              {Number(reviewsData?.averageRating || 0).toFixed(1)}/5 from{' '}
-              {reviewsData?.totalReviews || 0}
-            </p>
+            <div className='flex gap-3'>
+              <p className='flex text-sm text-muted-foreground items-center gap-1'>
+                <Star
+                  className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-600 dark:text-amber-600'
+                  aria-hidden='true'
+                />
+                {Number(Number(reviewsData?.averageRating || 0).toFixed(1))}/5
+                from {reviewsData?.totalReviews || 0} reviews
+              </p>
+            </div>
           )}
         </div>
 
@@ -312,58 +341,153 @@ const ProfileReviews = ({
             Reviews are hidden while your mission history is private.
           </p>
         ) : isLoading ? (
-          <p className='text-muted-foreground'>Loading reviews</p>
+          <p className='text-muted-foreground'>Loading reviews...</p>
         ) : reviews.length === 0 ? (
           <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
-            You have no reviews yet.
+            No reviews yet.
           </p>
         ) : (
           <>
             <div className='grid gap-4'>
-              {reviews.map((review) => (
-                <article
-                  key={review.id}
-                  className='rounded-lg border bg-card p-4 shadow-sm'
-                >
-                  <div className='mb-3 flex flex-wrap items-center justify-between gap-2'>
-                    <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
-                      <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
-                      {Number(review.rating).toFixed(1)}/5
-                    </span>
-                    <span className='text-sm text-muted-foreground'>
-                      {new Date(review.created_at).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  {review.comment && (
-                    <p className='whitespace-pre-line text-sm leading-6'>
-                      {review.comment}
-                    </p>
-                  )}
-
-                  <p className='mt-3 text-xs text-muted-foreground'>
-                    {review.owner_username} on {review.mission_title}
-                  </p>
-                </article>
+              {reviews.slice(0, 3).map((review) => (
+                <ReviewCard key={review.id} review={review} isClamped={true} />
               ))}
             </div>
-
-            {hasNextPage && (
-              <div className='mt-6 flex justify-center'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                >
-                  {isFetchingNextPage ? 'Loading reviews' : 'Load more reviews'}
-                </Button>
-              </div>
-            )}
           </>
+        )}
+        {reviews.length > 3 && (
+          <div>
+            <div className='flex justify-center pt-2'>
+              <AllReviewsDialog
+                reviews={reviews}
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                loadMoreRef={loadMoreRef}
+              />
+            </div>
+
+            <div className='flex items-center justify-end me-3 mt-2'>
+              <Info className='w-4 h-4 mr-1' aria-hidden='true' />
+              <small>
+                Only showing last 3 reviews, click &quot;See all&quot; to view
+                them all!
+              </small>
+            </div>
+          </div>
         )}
       </section>
     </Card>
+  );
+};
+
+export const ReviewCard = ({ review, isClamped = false }) => (
+  <article className='rounded-lg border bg-card p-4 shadow-sm min-w-0 flex-1'>
+    <div className='mb-1 flex flex-wrap items-center justify-between gap-2'>
+      <span className='text-lg truncate min-w-0 flex-1 me-4'>
+        <Link
+          to={`/missions/${review.mission_id}`}
+          className='hover:underline-offset-2 hover:underline transition-colors'
+        >
+          {review.mission_title}
+        </Link>
+      </span>
+      <span className='inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-600'>
+        <Star
+          className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500'
+          aria-hidden='true'
+        />
+        {Number(Number(review.rating).toFixed(1))}/5
+      </span>
+    </div>
+
+    {review.comment && (
+      <p
+        className={`whitespace-pre-line text-sm wrap-break-words wrap-anywhere leading-relaxed min-w-0 flex-1 ${
+          isClamped ? 'line-clamp-3' : ''
+        }`}
+      >
+        {review.comment}
+      </p>
+    )}
+    <div className='mt-2 flex flex-wrap items-center justify-between gap-2'>
+      <p className='text-xs text-muted-foreground'>
+        By {review.reviewed_role === 'owner' ? 'adventurer' : 'applicant'}{' '}
+        <Link
+          to={`/users/${review.owner_username}`}
+          className='font-medium hover:underline-offset-2 hover:underline hover:text-primary transition-colors'
+        >
+          {review.owner_username}
+        </Link>
+        .
+      </p>
+      <span className='text-xs text-muted-foreground'>
+        {new Date(review.created_at).toLocaleDateString()}
+      </span>
+    </div>
+  </article>
+);
+
+const AllReviewsDialog = ({
+  reviews,
+  hasNextPage,
+  isFetchingNextPage,
+  loadMoreRef,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant='outline'
+          size='sm'
+          className='w-full sm:w-auto mt-2 sm:mt-0'
+        >
+          See all reviews ({reviews.length})
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className='sm:max-w-xl flex flex-col gap-0 max-h-[80vh] p-3 overflow-hidden'>
+        <DialogHeader className='px-6 py-4 border-b shrink-0'>
+          <DialogTitle>All Reviews</DialogTitle>
+          <DialogDescription>
+            History of all reviews received in your missions.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className='flex-1 overflow-y-auto px-6 py-4 space-y-4'>
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+
+          {hasNextPage && (
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
+            >
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reviews...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground py-2'>
+              No more reviews found.
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className='px-6 py-4 border-t shrink-0'>
+          <DialogClose asChild>
+            <Button variant='outline' type='button'>
+              Close
+            </Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -444,8 +568,11 @@ const ProfileInformation = ({ data }) => {
     <Card asChild>
       <section className='p-4 sm:p-6'>
         <form>
-          <div className='flex gap-3 items-start justify-between'>
-            <h2 className='text-xl font-semibold'>Profile information</h2>
+          <div className='flex gap-3 items-start justify-between pb-2 border-b'>
+            <h2 className='text-2xl font-bold tracking-tight'>
+              Profile information
+            </h2>
+
             <div className='flex justify-end gap-2'>
               {isEditing && (
                 <Button
@@ -454,7 +581,7 @@ const ProfileInformation = ({ data }) => {
                   onClick={handleCancel}
                   disabled={isPending}
                 >
-                  <X aria-hidden='true' />
+                  <X className='w-4 h-4' aria-hidden='true' />
                   Cancel
                 </Button>
               )}
@@ -464,9 +591,9 @@ const ProfileInformation = ({ data }) => {
                 disabled={isPending}
               >
                 {isEditing ? (
-                  <Save aria-hidden='true' />
+                  <Save className='w-4 h-4' aria-hidden='true' />
                 ) : (
-                  <Edit aria-hidden='true' />
+                  <Edit className='w-4 h-4' aria-hidden='true' />
                 )}
                 {isEditing ? 'Save' : 'Edit'}
               </Button>
@@ -481,7 +608,7 @@ const ProfileInformation = ({ data }) => {
                 isEditing ? form.username : profileForm.username,
                 isEditing,
               )}
-              maxLength={consts.USERNAME_MAX_LENGTH}
+              maxLength={consts.USER.USERNAME.MAX_LENGTH}
               disabled={!isEditing || isPending}
               invalid={!!errors.username}
               error={errors.username?.[0]}
@@ -495,7 +622,7 @@ const ProfileInformation = ({ data }) => {
                   isEditing ? form.name : profileForm.name,
                   isEditing,
                 )}
-                maxLength={consts.NAME_MAX_LENGTH}
+                maxLength={consts.USER.NAME.MAX_LENGTH}
                 disabled={!isEditing || isPending}
                 invalid={!!errors.name}
                 error={errors.name?.[0]}
@@ -509,7 +636,7 @@ const ProfileInformation = ({ data }) => {
                 isEditing ? form.surnames : profileForm.surnames,
                 isEditing,
               )}
-              maxLength={consts.SURNAMES_MAX_LENGTH}
+              maxLength={consts.USER.SURNAMES.MAX_LENGTH}
               disabled={!isEditing || isPending}
               invalid={!!errors.surnames}
               error={errors.surnames?.[0]}
@@ -524,7 +651,7 @@ const ProfileInformation = ({ data }) => {
                   isEditing ? form.description : profileForm.description,
                   isEditing,
                 )}
-                maxLength={consts.DESCRIPTION_MAX_LENGTH}
+                maxLength={consts.USER.DESCRIPTION.MAX_LENGTH}
                 disabled={!isEditing || isPending}
                 invalid={!!errors.description}
                 error={errors.description?.[0]}
@@ -600,8 +727,10 @@ const ProfileAccessMethods = ({ user }) => {
 
   return (
     <Card asChild>
-      <section className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold'>Access methods</h2>
+      <section className='p-4 sm:p-6 mt-6 '>
+        <h2 className='text-2xl font-bold tracking-tight pb-2 border-b'>
+          Access methods
+        </h2>
         <div className='flex flex-col gap-y-2'>
           <h3 className='text-lg font-medium'>E-mail & password</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between'>
@@ -743,7 +872,7 @@ const AddEmailAuthenticationButton = ({ hasPasswordProvider }) => {
           id='addEmailAuthenticationForm'
           noValidate
         >
-          <DialogHeader>
+          <DialogHeader className='border-b pb-3'>
             <DialogTitle>
               {messages.MY_PROFILE.ADD_EMAIL_AUTHENTICATION_DIALOG.TITLE}
             </DialogTitle>
@@ -928,7 +1057,7 @@ const UpdateEmailButton = ({ currentEmail, hasPasswordProvider }) => {
 
       <DialogContent className='sm:max-w-sm'>
         <form action={updateEmailFormAction} id='updateEmailForm' noValidate>
-          <DialogHeader>
+          <DialogHeader className='border-b pb-3'>
             <DialogTitle>
               {messages.MY_PROFILE.CHANGE_EMAIL_DIALOG.TITLE}
             </DialogTitle>
@@ -1078,7 +1207,7 @@ const UpdatePasswordButton = ({ hasPasswordProvider }) => {
           id='updatePasswordForm'
           noValidate
         >
-          <DialogHeader>
+          <DialogHeader className='border-b pb-3'>
             <DialogTitle>
               {messages.MY_PROFILE.CHANGE_PASSWORD_DIALOG.TITLE}
             </DialogTitle>
@@ -1293,7 +1422,9 @@ const ProfileConfiguration = ({ user }) => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold'>Configuration</h2>
+        <h2 className='text-2xl font-bold tracking-tight pb-2 border-b'>
+          Configuration
+        </h2>
         <div className='flex flex-col gap-4'>
           <form
             id='userConfigurationForm'
@@ -1313,19 +1444,22 @@ const ProfileConfiguration = ({ user }) => {
                   value='true'
                   onCheckedChange={(checked) => setShowMissions(checked)}
                 />
-                <Label htmlFor='show_missions_mode' className='w-8 justify-end'>
+                <Label
+                  htmlFor='show_missions_to_others'
+                  className='w-8 justify-end'
+                >
                   {showMissions ? 'Yes' : 'No'}
                 </Label>
               </div>
             </div>
-            <div className='flex justify-end mt-4'>
+            <div className='flex justify-end mt-5'>
               <Button
                 type='submit'
                 id='submitUserConfiguration'
                 disabled={isPending}
                 onClick={() => setIsAlertClosed(false)}
               >
-                <Save aria-hidden='true' />
+                <Save className='w-4 h-4' aria-hidden='true' />
                 Save configuration
               </Button>
             </div>
@@ -1350,7 +1484,9 @@ const ProfileDangerZone = () => {
   return (
     <Card asChild>
       <section className='p-4 sm:p-6 mt-6'>
-        <h2 className='text-xl font-semibold text-destructive'>Danger zone</h2>
+        <h2 className='text-2xl font-bold tracking-tight text-destructive pb-2 border-b'>
+          Danger zone
+        </h2>
         <div className='flex flex-col'>
           <p className='text-lg text-destructive font-medium'>Delete account</p>
           <div className='flex items-center justify-between'>
@@ -1404,7 +1540,7 @@ const DeleteAccountButton = () => {
       onClick={handleAttempt}
       disabled={isPending}
     >
-      <UserRoundX aria-hidden='true' />
+      <UserRoundX className='w-4 h-4' aria-hidden='true' />
       {'Delete account'}
     </Button>
   );

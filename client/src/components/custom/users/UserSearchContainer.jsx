@@ -1,17 +1,20 @@
 import { Link } from 'react-router-dom';
-import { User } from 'lucide-react';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { getImageUrl } from '../../../utils/media';
+import { getInitials } from '../../../utils/avatar';
 
 export const UserSearchContainer = ({
   users,
+  hasNextPage,
+  isFetchingNextPage,
+  loadMoreRef,
   isLoading,
   isLoadingMessage = 'Searching users...',
   isError,
@@ -19,16 +22,23 @@ export const UserSearchContainer = ({
   noUsersMessage = 'It seems there are no users matching this search.',
 }) => {
   return (
-    <section className='w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16'>
+    <section className='w-full mt-8'>
       <UsersSearchLoading isLoading={isLoading}>
         {isLoadingMessage}
       </UsersSearchLoading>
 
       <UsersSearchError isError={isError}>{isErrorMessage}</UsersSearchError>
 
-      <NoUsersSearch users={users}>{noUsersMessage}</NoUsersSearch>
+      <NoUsersSearch users={users} isLoading={isLoading}>
+        {noUsersMessage}
+      </NoUsersSearch>
 
-      <UserSearchContent users={users}></UserSearchContent>
+      <UserSearchContent
+        users={users}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        loadMoreRef={loadMoreRef}
+      ></UserSearchContent>
     </section>
   );
 };
@@ -37,7 +47,7 @@ const UsersSearchLoading = ({ isLoading, children }) => {
   return (
     <>
       {isLoading && (
-        <div className='flex justify-center p-8 text-muted-foreground'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
           {children}
         </div>
       )}
@@ -49,7 +59,10 @@ const UsersSearchError = ({ isError, children }) => {
   return (
     <>
       {isError && (
-        <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
           {children}
         </div>
       )}
@@ -57,11 +70,15 @@ const UsersSearchError = ({ isError, children }) => {
   );
 };
 
-const NoUsersSearch = ({ users, children }) => {
+const NoUsersSearch = ({ users, children, isLoading }) => {
   return (
     <>
-      {users?.length === 0 && (
-        <div className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'>
+      {!isLoading && users?.length === 0 && (
+        <div
+          role='status'
+          aria-live='polite'
+          className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'
+        >
           {children}
         </div>
       )}
@@ -69,18 +86,42 @@ const NoUsersSearch = ({ users, children }) => {
   );
 };
 
-const UserSearchContent = ({ users }) => {
+const UserSearchContent = ({
+  users,
+  hasNextPage,
+  isFetchingNextPage,
+  loadMoreRef,
+}) => {
   return (
     <>
       {users?.length > 0 && (
-        <div
-          className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-          aria-label='Users list'
-        >
-          {users.map((foundUser) => (
-            <UserSearchCard key={foundUser.uid} foundUser={foundUser} />
-          ))}
-        </div>
+        <>
+          <ul
+            className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
+            aria-label='Users list'
+          >
+            {users.map((foundUser) => (
+              <UserSearchCard key={foundUser.uid} foundUser={foundUser} />
+            ))}
+          </ul>
+          {hasNextPage && (
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
+            >
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading conversations...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground pt-6'>
+              No more users found.
+            </div>
+          )}
+        </>
       )}
     </>
   );
@@ -88,34 +129,54 @@ const UserSearchContent = ({ users }) => {
 
 const UserSearchCard = ({ foundUser }) => {
   return (
-    <Card asChild className='justify-between'>
-      <article>
-        <CardHeader>
-          <div className='flex items-center gap-3'>
-            <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
-              <User className='h-5 w-5' aria-hidden='true' />
-            </span>
-            <div className='min-w-0'>
-              <CardTitle asChild>
-                <h2 className='truncate'>{foundUser.username}</h2>
-              </CardTitle>
-              <CardDescription className='truncate'>
-                {foundUser.email || 'User profile'}
-              </CardDescription>
+    <li>
+      <Card
+        asChild
+        className='justify-between group relative transition-all hover:border-primary/50 hover:shadow-md overflow-hidden focus-within:ring-1 focus-within:ring-secondary-foreground focus-within:ring-offset-2'
+      >
+        <article className='flex flex-col h-full'>
+          <Link
+            to={`/users/${foundUser.username}`}
+            className='absolute inset-0 z-10'
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <span className='sr-only'>See profile of {foundUser.username}</span>
+          </Link>
+
+          <CardHeader>
+            <div className='flex items-center gap-3'>
+              <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full'>
+                <Avatar className='size-10 shrink-0'>
+                  <AvatarImage src={getImageUrl(foundUser?.avatar)} alt='' />
+                  <AvatarFallback>
+                    {getInitials(foundUser?.username)}
+                  </AvatarFallback>
+                </Avatar>
+              </span>
+              <div className='min-w-0'>
+                <CardTitle asChild className='text-2xl font-bold'>
+                  <h2 className='wrap-break-words wrap-anywhere line-clamp-1 group-hover:underline group-hover:text-primary transition-colors'>
+                    {foundUser.name && foundUser.surnames
+                      ? `${foundUser.name} ${foundUser.surnames}`
+                      : foundUser.username}
+                  </h2>
+                </CardTitle>
+                <CardDescription className='truncate'>
+                  {foundUser.username || 'User profile'}
+                </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className='text-sm text-muted-foreground'>
-            View this user profile and public information.
-          </p>
-        </CardContent>
-        <CardFooter>
-          <Button asChild>
-            <Link to={`/users/${foundUser.username}`}>See profile</Link>
-          </Button>
-        </CardFooter>
-      </article>
-    </Card>
+          </CardHeader>
+
+          <CardContent className='flex flex-1 flex-col -mt-2 mb-1'>
+            <div className='wrap-break-words wrap-anywhere line-clamp-3 text-muted-foreground text-sm'>
+              {foundUser.description ||
+                `View this user profile and public information.`}
+            </div>
+          </CardContent>
+        </article>
+      </Card>
+    </li>
   );
 };

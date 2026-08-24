@@ -6,6 +6,10 @@ import {
   validateQuerySchema,
 } from '../middlewares/validation.middleware.js';
 import { pagination } from '../middlewares/pagination.middleware.js';
+import {
+  verifyRegularUser,
+  verifyToken,
+} from '../middlewares/auth.middleware.js';
 
 const router = Router();
 
@@ -13,6 +17,7 @@ const router = Router();
 // Get all current user's disputes
 router.get(
   '/',
+  verifyRegularUser,
   validateQuerySchema(paginationQuerySchema),
   pagination(),
   disputeController.getMyDisputes,
@@ -24,6 +29,7 @@ router.get('/unread-count', disputeController.getMyDisputeUnreadCount);
 // Get dispute by id
 router.get(
   '/:rid',
+  verifyToken,
   validateParamsSchema(getReportByIdValidation),
   disputeController.getDispute,
 );

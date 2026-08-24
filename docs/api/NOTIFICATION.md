@@ -9,17 +9,33 @@ Gets all notifications that the current user has ever received.
 
 **Requires authentication:** Yes
 
+**Query parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
+
 **Responses:**
 
 - `200 OK`: search done successfully (could retrieve no notifications).
 
   ```json
   {
-    "notifications": ["<notifications>"]
+    "notifications": ["<notifications>"],
+    "totalUnseen": "<totalUnseen>",
+    "pagination": {
+      "currentPage": "<currentPage>",
+      "totalPages": "<totalPages>",
+      "totalItems": "<totalItems>",
+      "hasMore": "<hasMore>"
+    }
   }
   ```
 
-**Workflow:** current user's notifications are searched and returned TODO: pagination?.
+**Workflow:** current user's notifications are always returned with
+pagination. Both `page` and `limit` are required, and the response includes
+the pagination metadata and the total number of unseen notifications.
 <br>
 <br>
 <br>

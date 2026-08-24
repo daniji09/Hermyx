@@ -18,3 +18,7 @@ export const checkRequired = (value, fieldName) => {
   if (value === undefined)
     throw new AppError(messages.GENERAL.FIELD_REQUIRED(fieldName), 400);
 };
+
+// Checks whether PostgreSQL rejected a specific unique constraint
+export const isUniqueConstraintError = (error, constraint) =>
+  error?.code === '23505' && error?.constraint === constraint;

@@ -20,7 +20,11 @@ import * as notificationService from './notification.service.js';
 import * as userService from './user.service.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import { emitToAdmins, emitToUser } from '../providers/socket.provider.js';
-import { AppError, checkRequired } from '../utils/error.util.js';
+import {
+  AppError,
+  checkRequired,
+  isUniqueConstraintError,
+} from '../utils/error.util.js';
 import {
   buildPagination,
   withDefaultPagination,
@@ -182,6 +186,7 @@ export const reportAdventurer = async ({
         payload: {
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
+          associated_user_id: adventurer.uid,
         },
         conversationId: conversation.cid,
       },
@@ -339,7 +344,7 @@ export const reportMission = async ({ message, mid, senderId }) => {
       senderId,
       message,
       type: REPORT_TYPE.REPORT_MISSION.ID,
-      lookupPayload: { mid },
+      lookupPayload: { missionId: mid },
       payload: { associated_mission_id: mid },
     },
     messages.REPORT.REPORT_MISSION.ACTIVE_REPORT,
@@ -381,10 +386,26 @@ const createReportIfNotActive = async (
   if (activeReport > 0) throw new AppError(activeReportMessage, 409);
 
   // And, if theres no other, creates it
-  return reportModel.create(
-    { senderId, message, type, payload, conversationId },
-    client,
-  );
+  try {
+    return await reportModel.create(
+      { senderId, message, type, payload, conversationId },
+      client,
+    );
+  } catch (error) {
+    const activeReportConstraints = [
+      'unique_active_profile_report',
+      'unique_active_mission_report',
+      'unique_active_vacancy_report',
+    ];
+    if (
+      activeReportConstraints.some((constraint) =>
+        isUniqueConstraintError(error, constraint),
+      )
+    ) {
+      throw new AppError(activeReportMessage, 409);
+    }
+    throw error;
+  }
 };
 
 // Closes report and associated conversation in db

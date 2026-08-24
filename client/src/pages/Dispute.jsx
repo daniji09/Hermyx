@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
-import { REPORT_DECISION, REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import { getDisputeQueryOptions } from '../queries/DisputesQueries';
 import { ConversationThread } from './Conversation';
+import { NotFound } from './NotFound';
 
-const getTypeLabel = (type) => REPORT_TYPE[type]?.LABEL || type;
+const truncateText = (text, maxLength = 20) => {
+  if (!text) return '';
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
 
 export const Dispute = () => {
   const { id } = useParams();
@@ -17,56 +18,98 @@ export const Dispute = () => {
     isError,
   } = useQuery(getDisputeQueryOptions(id));
 
-  if (isLoading)
-    return <main className='p-8 text-center'>Loading dispute</main>;
-  if (isError || !dispute) {
+  const linkClass =
+    'font-medium text-primary hover:underline transition-colors';
+  const renderUserLink = (username) => {
+    if (!username) return null;
     return (
-      <main className='p-8 text-center text-destructive'>
-        Dispute not found or unavailable.
+      <Link
+        to={`/users/${username}`}
+        className={linkClass}
+        title={username}
+        aria-label={username}
+      >
+        {truncateText(username)}
+      </Link>
+    );
+  };
+
+  const renderMissionLink = () => {
+    const missionId = dispute?.payload?.associated_mission_id;
+    const title = dispute?.mission_title;
+    if (!missionId) return null;
+    return (
+      <Link
+        to={`/missions/${missionId}`}
+        className={linkClass}
+        title={title}
+        aria-label={title}
+      >
+        {truncateText(title)}
+      </Link>
+    );
+  };
+
+  const generateTitleText = () => {
+    const { type, other_username, sender_username } = dispute || {};
+
+    const otherUserLink = renderUserLink(other_username);
+    const senderLink = renderUserLink(sender_username);
+    const missionLink = renderMissionLink();
+
+    switch (type) {
+      case REPORT_TYPE.REPORT_ADVENTURER.ID:
+        return (
+          <>
+            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
+        return (
+          <>
+            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      default:
+        return (
+          <>
+            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
+            {missionLink} was reported by {senderLink}.
+          </>
+        );
+    }
+  };
+
+  const title = (
+    <span className='text-sm leading-relaxed text-foreground'>
+      {generateTitleText()}
+    </span>
+  );
+
+  if (isLoading)
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
+          Loading dispute...
+        </div>
       </main>
     );
+
+  if (isError || !dispute) {
+    return <NotFound></NotFound>;
   }
 
   return (
-    <main className='container mx-auto max-w-4xl space-y-4 p-4 sm:p-6'>
-      <Button asChild variant='ghost' className='w-fit gap-2 px-0'>
-        <Link to='/disputes'>
-          <ArrowLeft className='size-4' aria-hidden='true' /> Back
-        </Link>
-      </Button>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {dispute.mission_title ||
-              `Mission ${dispute.payload.associated_mission_id}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-2 text-sm'>
-          <p>{getTypeLabel(dispute.type)}</p>
-          <p>
-            Status:{' '}
-            {dispute.status === REPORT_STATUS.ANSWERED.ID ? 'Resolved' : 'Open'}
-          </p>
-          <p>
-            Vacancy:{' '}
-            {dispute.vacancy_title || dispute.payload.associated_vacancy_id}
-          </p>
-          {dispute.status === REPORT_STATUS.ANSWERED.ID && (
-            <div className='rounded-lg bg-muted p-3'>
-              <p className='font-medium'>
-                {REPORT_DECISION[dispute.decision]?.LABEL || dispute.decision}
-              </p>
-              <p className='text-muted-foreground'>{dispute.decision_reason}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      <ConversationThread
-        conversationId={dispute.conversation_id}
-        showBack={false}
-        title='Dispute conversation'
-        description='Mission owner, adventurer and administration'
-      />
-    </main>
+    <ConversationThread
+      conversationId={dispute.conversation_id}
+      showBack={true}
+      title={title}
+      description={`The complainant, the accused and the administration ${dispute?.status === REPORT_STATUS.SENT.ID ? 'are' : 'were'}  all involved in this ${dispute?.status === REPORT_STATUS.SENT.ID ? 'open' : 'closed'} dispute.`}
+      decision={dispute?.decision}
+    />
   );
 };

@@ -5,7 +5,10 @@ import {
   userConfigurationValidation,
 } from '@hermyx/shared';
 import { updateUserEmail, userConfiguration } from '../services/UsersServices';
-import { updateUserPassword } from '../services/AuthServices';
+import {
+  sendVerificationEmailToCurrentUser,
+  updateUserPassword,
+} from '../services/AuthServices';
 
 // Update email action
 export const updateEmailAction = async (previousState, formData) => {
@@ -34,6 +37,8 @@ export const updateEmailAction = async (previousState, formData) => {
         },
       };
 
+    await sendVerificationEmailToCurrentUser();
+
     // Success
     return { success: true, data: null, errors: {} };
   } catch (error) {
@@ -48,9 +53,16 @@ export const updateEmailAction = async (previousState, formData) => {
         data: fieldsData,
       };
 
+    if (error.errors)
+      return {
+        success: false,
+        errors: error.errors,
+        data: fieldsData,
+      };
+
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -95,7 +107,7 @@ export const updatePasswordAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,
@@ -149,7 +161,7 @@ export const userConfigurationAction = async (previousState, formData) => {
 
     // Any other error
     const errorMessage =
-      error.response?.data?.message || messages.UNEXPECTED_ERROR;
+      error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
 
     return {
       success: false,

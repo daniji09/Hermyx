@@ -1,3 +1,4 @@
+import { consts } from '@hermyx/shared';
 import api from '../config/api';
 
 // Finds user via username
@@ -11,15 +12,18 @@ export const getUserByUsername = async (username) => {
 };
 
 // Searches users by partial username
-export const searchUsersByUsername = async (options) => {
-  const { page, limit } = options;
-  if (page && limit) {
-    const { data } = await api.get('/users/search', {
-      params: { page, limit, ...options.params },
-    });
-    console.log(data);
-    return data;
-  }
+export const searchUsersByUsername = async (options = {}) => {
+  const {
+    page = consts.PAGINATION.DEFAULT_PAGE,
+    limit = consts.PAGINATION.DEFAULT_LIMIT,
+    params = {},
+  } = options;
+
+  const { data } = await api.get('/users/search', {
+    params: { ...params, page, limit },
+  });
+
+  return data;
 };
 
 // Finds current user information
@@ -39,8 +43,8 @@ export const getPublicUserProfile = async (username) => {
 export const getPublicUserProfileMissions = async (
   username,
   type,
-  page,
-  limit,
+  page = consts.PAGINATION.DEFAULT_PAGE,
+  limit = consts.PAGINATION.DEFAULT_LIMIT,
 ) => {
   const { data } = await api.get(`/users/${username}/profile/missions`, {
     params: { type, page, limit },

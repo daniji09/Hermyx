@@ -16,7 +16,11 @@ import {
   USER_ROLE,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
-import { AppError, checkRequired } from '../utils/error.util.js';
+import {
+  AppError,
+  checkRequired,
+  isUniqueConstraintError,
+} from '../utils/error.util.js';
 import * as conversationService from '../services/conversation.service.js';
 import * as notificationService from '../services/notification.service.js';
 import * as userService from '../services/user.service.js';
@@ -196,6 +200,19 @@ export const updateParticipationStatusByMidAndAdventurer = async (
   );
 };
 
+// Restores participation after an acceptance failed before paying the adventurer
+export const restoreParticipationAfterFailedAcceptance = async (
+  mid,
+  adventurerId,
+) => {
+  checkRequired(mid, 'Mission id');
+  checkRequired(adventurerId, 'Adventurer user id');
+  return await missionParticipationModel.restoreSubmittedAfterFailedAcceptance(
+    mid,
+    adventurerId,
+  );
+};
+
 // Updates mission participation status by id an adventurer
 export const updateParticipationAdventurerAndStatus = async (
   id,
@@ -206,12 +223,19 @@ export const updateParticipationAdventurerAndStatus = async (
   checkRequired(id, 'Mission participation id');
   checkRequired(adventurerId, 'Adventurer user id');
   checkRequired(status, 'Mission participation status id');
-  return await missionParticipationModel.updateAdventurerAndStatus(
-    id,
-    adventurerId,
-    status,
-    client,
-  );
+  try {
+    return await missionParticipationModel.updateAdventurerAndStatus(
+      id,
+      adventurerId,
+      status,
+      client,
+    );
+  } catch (error) {
+    if (isUniqueConstraintError(error, 'unique_mission_adventurer')) {
+      throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+    }
+    throw error;
+  }
 };
 
 // Updates occupied vacancies
@@ -488,6 +512,24 @@ export const getMissionByMid = async (mid, uid) => {
   };
 };
 
+// Get mission payment info by mid
+export const getMissionPaymentInfo = async (mid) => {
+  // Parameter checks
+  checkRequired(mid, 'Mission id');
+
+  // Searches mission by id
+  const [mission, missionPayment] = await Promise.all([
+    missionModel.findByMid(mid),
+    missionParticipationModel.findAllWaitingForPaymentByMid(mid),
+  ]);
+
+  // Returns success or error
+  if (!mission || !missionPayment) throw buildMissionNotFoundError();
+
+  // Mission can be finished if all vacancies are empty or finished
+  return { mission, missionPayment };
+};
+
 // Publish mission
 export const publishMission = async (
   uid,
@@ -585,6 +627,9 @@ export const publishMission = async (
   } catch (error) {
     // Transaction rollbacks
     await client.query('ROLLBACK');
+    if (isUniqueConstraintError(error, 'unique_mission_owner_title')) {
+      throw buildMissionWithSameTitleError();
+    }
     throw error;
   } finally {
     // Either way, connection is always released
@@ -594,6 +639,7 @@ export const publishMission = async (
 
 // Close mission
 export const closeMission = async (mid, user) => {
+  console.log('QUE CIERRO QUE CIERRO');
   // Parameter checks
   checkRequired(mid, 'Mission id');
   checkRequired(user, 'Current user');
@@ -1926,6 +1972,13 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
     if (unjoin < 1)
       throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
 
+    // Adventurer leaves the mission conversation
+    await conversationService.leaveMissionConversation(
+      mission.mid,
+      vacancy.adventurer_id,
+      client,
+    );
+
     // Updates mission
     const unjoinMission = await missionModel.updateOccupiedVacancies(
       mission.mid,
@@ -2098,6 +2151,8 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
       mission.mid,
       isProduction,
     );
+  const photosChanged =
+    uploadedPhotoUrls.length > 0 || photosToDelete.length > 0;
 
   // Then, database transaction is made
   const { notificationsToSend, updatedMission } =
@@ -2110,15 +2165,25 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
       existingVacancies,
       originalVacancies,
       newVacancies,
+      photosChanged,
       user,
     );
+
+  // Notify adventurers immediately after the database commit. Cleanup of old
+  // Photos is external work and must not delay or prevent real-time delivery.
+  for (const notification of notificationsToSend) {
+    socketProvider.emitToUser(
+      notification.receiverId,
+      notification.event,
+      notification.payload,
+    );
+  }
 
   // Lastly, after database commit, storage provider deletion is done
   await editMissionExternalUpdates(
     photosToDelete,
     existingPhotos,
     isProduction,
-    notificationsToSend,
   );
 
   return updatedMission;
@@ -2249,6 +2314,7 @@ const editMissionInternalUpdates = async (
   existingVacancies,
   originalVacancies,
   newVacancies,
+  photosChanged,
   user,
 ) => {
   const client = await pool.connect();
@@ -2274,6 +2340,7 @@ const editMissionInternalUpdates = async (
       mission,
       updatedMission,
       originalMission,
+      photosChanged,
       existingIds,
       user,
       vacanciesToNotify,
@@ -2286,6 +2353,9 @@ const editMissionInternalUpdates = async (
     return { notificationsToSend, updatedMission };
   } catch (error) {
     await client.query('ROLLBACK');
+    if (isUniqueConstraintError(error, 'unique_mission_owner_title')) {
+      throw buildMissionWithSameTitleError();
+    }
     throw error;
   } finally {
     client.release();
@@ -2318,12 +2388,36 @@ const internalUpdates = async (
     await missionPhotoModel.deleteById(dbPhoto.id, client);
   }
 
-  // First operation, deleting vacancies that are not occupied from the original mission
+  // First, remove adventurers deleted from the mission conversation
+  const removedVacancies = originalVacancies.filter(
+    (vacancy) => !existingIds.includes(vacancy.id),
+  );
+  for (const vacancy of removedVacancies) {
+    await conversationService.leaveMissionConversation(
+      mission.mid,
+      vacancy.adventurer_id,
+      client,
+    );
+  }
+
+  // Then, delete vacancies removed from the mission
+  const canDeleteAdventurers =
+    MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS;
   await missionParticipationModel.deleteAllUnoccupied(
     mission.mid,
     existingIds,
+    canDeleteAdventurers,
     client,
   );
+
+  // Keep the occupied vacancies counter in sync with removed adventurers
+  if (canDeleteAdventurers && removedVacancies.length > 0) {
+    await missionModel.updateOccupiedVacancies(
+      mission.mid,
+      -removedVacancies.length,
+      client,
+    );
+  }
 
   const vacanciesToNotify = [];
   // After that, updating existing vacancies
@@ -2365,6 +2459,7 @@ const internalNotifications = async (
   mission,
   updatedMission,
   originalMission,
+  photosChanged,
   existingIds,
   user,
   vacanciesToNotify,
@@ -2379,6 +2474,7 @@ const internalNotifications = async (
     mission,
     updatedMission,
     originalMission,
+    photosChanged,
     existingIds,
     user,
     notificationsToSend,
@@ -2420,6 +2516,7 @@ const missionChangedNotifications = async (
   mission,
   updatedMission,
   originalMission,
+  photosChanged,
   existingIds,
   user,
   notificationsToSend,
@@ -2437,6 +2534,7 @@ const missionChangedNotifications = async (
       changes.push(key);
     }
   });
+  if (photosChanged) changes.push('photos');
 
   if (changes.length > 0) {
     for (const vacancyId of existingIds) {
@@ -2593,16 +2691,37 @@ const monetaryRewardChangedNotifications = async (
             .monetary_reward,
           vacancy.reward,
         );
-      await notificationService.updateNotification({
-        nid: notification[0].nid,
-        type: notification[0].type,
-        kind: notification[0].kind,
-        action: notification[0].action,
-        status: notification[0].status,
-        message: notification[0].message,
-        senderId: notification[0].sender_id,
-        recipientId: notification[0].recipient_id,
-        payload: notification[0].payload,
+      await notificationService.updateNotification(
+        {
+          nid: notification[0].nid,
+          type: notification[0].type,
+          kind: notification[0].kind,
+          action: notification[0].action,
+          status: notification[0].status,
+          message: notification[0].message,
+          senderId: notification[0].sender_id,
+          recipientId: notification[0].recipient_id,
+          payload: notification[0].payload,
+        },
+        client,
+      );
+
+      // The notification already exists, but its content changed. Emit the
+      // Updated notification so connected adventurers see the new offer.
+      notificationsToSend.push({
+        receiverId: vacancy.adventurer_id,
+        event: 'mission:edited',
+        payload: {
+          notificationId: notification[0].nid,
+          missionId: mission.mid,
+          vacancyId: vacancy.id,
+          missionTitle: updatedMission.title,
+          senderId: user.uid,
+          senderUsername: user.username,
+          receiverId: vacancy.adventurer_id,
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          message: notification[0].message,
+        },
       });
     } else {
       // If not, the new notification is send
@@ -2613,20 +2732,23 @@ const monetaryRewardChangedNotifications = async (
             .monetary_reward,
           vacancy.reward,
         );
-        const notificationId = await notificationService.createNotification({
-          type: NOTIFICATION_TYPE.MISSION.ID,
-          kind: NOTIFICATION_KIND.ACTIONABLE.ID,
-          action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
-          status: NOTIFICATION_STATUS.PENDING.ID,
-          message: message,
-          senderId: user.uid,
-          receiverId: vacancy.adventurer_id,
-          payload: {
-            associated_mission_id: mission.mid,
-            associated_vacancy_id: vacancy.id,
-            new_offer: vacancy.reward,
+        const notificationId = await notificationService.createNotification(
+          {
+            type: NOTIFICATION_TYPE.MISSION.ID,
+            kind: NOTIFICATION_KIND.ACTIONABLE.ID,
+            action: NOTIFICATION_ACTION.MISSION_EDIT.ID,
+            status: NOTIFICATION_STATUS.PENDING.ID,
+            message: message,
+            senderId: user.uid,
+            receiverId: vacancy.adventurer_id,
+            payload: {
+              associated_mission_id: mission.mid,
+              associated_vacancy_id: vacancy.id,
+              new_offer: vacancy.reward,
+            },
           },
-        });
+          client,
+        );
         notificationsToSend.push({
           receiverId: vacancy.adventurer_id,
           event: 'mission:edited',
@@ -2651,7 +2773,6 @@ const editMissionExternalUpdates = async (
   photosToDelete,
   existingPhotos,
   isProduction,
-  notificationsToSend,
 ) => {
   for (const dbPhoto of photosToDelete) {
     if (!existingPhotos.includes(dbPhoto.url)) {
@@ -2665,15 +2786,6 @@ const editMissionExternalUpdates = async (
       }
     }
   }
-
-  // And notifications are sent
-  for (const notification of notificationsToSend) {
-    socketProvider.emitToUser(
-      notification.receiverId,
-      notification.event,
-      notification.payload,
-    );
-  }
 };
 
 /// Error builders
@@ -2685,6 +2797,14 @@ const buildTooManyFilesError = () => {
   return new AppError(messages.GENERAL.TOO_MANY_FILES, 400);
 };
 
+const buildMissionWithSameTitleError = () => {
+  return new AppError(
+    messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
+    409,
+    'title',
+  );
+};
+
 /// Helper functions
 const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
   // Checks if user has a mission already with the same title
@@ -2693,12 +2813,7 @@ const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
     title,
     mid,
   );
-  if (hasDuplicate)
-    throw new AppError(
-      messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
-      409,
-      'title',
-    );
+  if (hasDuplicate) throw buildMissionWithSameTitleError();
 };
 
 const checkMissionBelongsToUser = (missionOwnerUid, currentUserUid) => {

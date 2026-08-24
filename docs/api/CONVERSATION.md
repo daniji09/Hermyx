@@ -9,12 +9,16 @@ Gets all current user's conversations from Hermyx.
 
 **Requires authentication:** Yes
 
+Administrators cannot list regular conversations. They can access a
+conversation by id only when its type is `dispute`, as part of the report
+workflow.
+
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**
@@ -43,7 +47,9 @@ _> Note: `page` and `limit` are optional, but if one is provided, both must be s
   ```
   <br>
 
-**Workflow:** application conversations with pagination used by default. (TODO: pagination)
+**Workflow:** application conversations are always returned with pagination. The
+client must provide both `page` and `limit`, and the response includes the
+pagination metadata.
 <br>
 <br>
 
@@ -79,6 +85,13 @@ Gets conversation by its id
 | `cid` | integer | Yes | Conversation identifier. |
 <br>
 
+**Query parameters:**
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `cursor` | integer | No | Message identifier used to fetch the next page. Omit it for the first page. |
+| `limit` | integer | Yes | Maximum number of messages to return. |
+<br>
+
 **Responses:**
 
 - `200 OK`: search done successfully.
@@ -102,7 +115,9 @@ Gets conversation by its id
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot get conversation if current user is not in it.
+- `403 Forbidden`: user is unauthorized to do this action: regular users must
+  belong to the conversation, and administrators can only access dispute
+  conversations.
 
   ```json
   {
@@ -144,7 +159,11 @@ Gets conversation's messages by its id
 
   ```json
   {
-    "messages": "<messages>"
+    "messages": ["<messages>"],
+    "pageInfo": {
+      "hasMore": "<hasMore>",
+      "nextCursor": "<nextCursor>"
+    }
   }
   ```
 
@@ -158,7 +177,9 @@ Gets conversation's messages by its id
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot get conversation's messages if current user is not in it.
+- `403 Forbidden`: user is unauthorized to do this action: regular users must
+  belong to the conversation, and administrators can only read messages from
+  dispute conversations.
 
   ```json
   {
@@ -178,9 +199,15 @@ Gets conversation's messages by its id
   ```
   <br>
 
-**Workflow:** gets application conversation's messages (TODO: paginación especial).
+**Workflow:** conversation messages use cursor pagination. `limit` is always
+required; `cursor` is omitted for the first page and then set to the returned
+`nextCursor` value.
 <br>
 <br>
+
+Administrators can preview dispute messages without being inserted as a
+participant. This preview is read-only until the administrator sends a message
+through the endpoint below.
 
 ## - Marks conversation as read: `PATCH /api/conversations/:cid/read`
 
@@ -213,6 +240,10 @@ Marks a conversation as read
     }
   }
   ```
+
+- `403 Forbidden`: the user cannot access the conversation. An administrator
+  can mark a dispute preview as read; if they are not yet a participant, the
+  request succeeds without changing a participant row.
 
 - `404 Not Found`: conversation or user not found.
 
@@ -342,7 +373,9 @@ Sends a message to the conversation, it can be an image
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot send messages if current user is not in the conversation.
+- `403 Forbidden`: user is unauthorized to do this action. Regular users must
+  be active participants; administrators may send messages only to dispute
+  conversations.
 
   ```json
   {
@@ -374,6 +407,6 @@ Sends a message to the conversation, it can be an image
 
   <br>
 
-**Workflow:** creates a message conversation and sends it, being message or image. Images are handled by the `multer` (Azure TODO:)library.
+**Workflow:** creates a message conversation and sends it, being message or image. When an administrator sends the first message in a dispute, the backend adds the administrator to that conversation. Images are handled by the `multer` (Azure TODO:)library.
 <br>
 <br>

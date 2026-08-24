@@ -22,7 +22,12 @@ export const createMissionType = async (missionId, userId, client = pool) => {
     FROM conversation
     WHERE mission_id = $1
       AND type = 'mission'
-    ON CONFLICT (conversation_id, user_id) DO NOTHING
+    ON CONFLICT (conversation_id, user_id) DO UPDATE
+    SET joined_at = CURRENT_TIMESTAMP,
+        left_at = NULL,
+        can_send = TRUE,
+        history_until = NULL,
+        last_read_at = CURRENT_TIMESTAMP
     RETURNING *
   `;
 

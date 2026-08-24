@@ -7,50 +7,40 @@ export const getMissionById = async (id) => {
   return data.mission;
 };
 
-// Finds all missions, it may be paginated
-export const getMissions = async (options) => {
-  const { page, limit } = options ? options : {};
+// Finds all missions with mandatory pagination
+export const getMissions = async (options = {}) => {
+  const {
+    page = consts.PAGINATION.DEFAULT_PAGE,
+    limit = consts.PAGINATION.DEFAULT_LIMIT,
+    params = {},
+  } = options;
 
-  // Paginated
-  if (page && limit) {
-    // API search
-    const { data } = await api.get('/missions', {
-      params: { page, limit, ...options.params },
-    });
+  const { data } = await api.get('/missions', {
+    params: { ...params, page, limit },
+  });
 
-    return data;
-  }
-
-  // Not paginated
-  else {
-    // API search
-    const { data } = await api.get('/missions', { ...options.params });
-
-    return data.missions;
-  }
+  return data;
 };
 
-// Finds all missions opened, it may be paginated
-export const getMissionsOpened = async (options) => {
-  const { page, limit } = options ? options : {};
+// Finds all opened missions with mandatory pagination
+export const getMissionsOpened = async (options = {}) => {
+  const {
+    page = consts.PAGINATION.DEFAULT_PAGE,
+    limit = consts.PAGINATION.DEFAULT_LIMIT,
+    params = {},
+  } = options;
 
-  // Paginated
-  if (page && limit) {
-    // API search
-    const { data } = await api.get('/missions/opened', {
-      params: { page, limit, ...options.params },
-    });
+  const { data } = await api.get('/missions/opened', {
+    params: { ...params, page, limit },
+  });
 
-    return data;
-  }
+  return data;
+};
 
-  // Not paginated
-  else {
-    // API search
-    const { data } = await api.get('/missions/opened', { ...options.params });
-
-    return data.missions;
-  }
+// Finds mission payment info by id
+export const getMissionPaymentInfoById = async (id) => {
+  const { data } = await api.get(`/missions/${id}/payment-info`);
+  return data;
 };
 
 // Create a mission in data base
@@ -214,25 +204,11 @@ export const getUserMissions = async (
   page = consts.PAGINATION.DEFAULT_PAGE,
   limit = consts.PAGINATION.DEFAULT_LIMIT,
 ) => {
-  // Paginated
-  if (page && limit) {
-    // API search
-    const { data } = await api.get(`/users/${uid}/missions`, {
-      params: { type, page, limit },
-    });
+  const { data } = await api.get(`/users/${uid}/missions`, {
+    params: { type, page, limit },
+  });
 
-    return data;
-  }
-
-  // Not paginated
-  else {
-    // API search
-    const { data } = await api.get(`/users/${uid}/missions`, {
-      params: { type },
-    });
-
-    return data.missions;
-  }
+  return data;
 };
 
 // Closes a mission

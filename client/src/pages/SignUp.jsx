@@ -23,17 +23,25 @@ export const SignUp = () => {
   // Effect for navigating to login
   const navigate = useNavigate();
   useEffect(() => {
-    if (state.success) navigate('/login');
+    if (state.success)
+      navigate('/login', { state: { verificationEmailSent: true } });
   }, [state.success, navigate]);
 
   return (
-    <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
-      <SignUpForm
-        state={state}
-        action={signUpFormAction}
-        isPending={isPending}
-      ></SignUpForm>
-    </main>
+    <>
+      <title>{`Sign up | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`Hermyx sign up via username/e-mail and password or Google.`}
+      ></meta>
+      <main className='flex min-h-[calc(100vh-60px)] items-center justify-center p-4'>
+        <SignUpForm
+          state={state}
+          action={signUpFormAction}
+          isPending={isPending}
+        ></SignUpForm>
+      </main>
+    </>
   );
 };
 
@@ -73,7 +81,7 @@ const SignUpForm = ({ state, action, isPending }) => {
             {`Already have an account? `}
             <Link
               to={'/login'}
-              className='text-black underline
+              className='text-primary underline 
             '
             >
               {'Log in!'}
@@ -97,7 +105,7 @@ const SignUpForm = ({ state, action, isPending }) => {
             defaultValue={state.data?.username || ''}
             autoComplete='username'
             required
-            maxLength={consts.USERNAME_MAX_LENGTH}
+            maxLength={consts.USER.USERNAME.MAX_LENGTH}
             aria-invalid={!clearedFields.username && !!state.errors?.username}
             disabled={isPending}
             onChange={handleFieldChange}
@@ -180,7 +188,10 @@ const SignUpForm = ({ state, action, isPending }) => {
             >
               {isPending ? 'Signing up...' : 'Sign up'}
             </Button>
-            <div className='grid grid-cols-3 grid-rows-1 justify-items-center'>
+            <div
+              className='grid grid-cols-3 grid-rows-1 justify-items-center'
+              aria-hidden='true'
+            >
               <Separator className='my-4 w-fit'></Separator>
               <span className='text-muted-foreground self-center-safe'>o</span>
               <Separator className='my-4 w-fit'></Separator>

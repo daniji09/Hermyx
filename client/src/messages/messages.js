@@ -1,7 +1,23 @@
 // Frontend messages
 export const messages = {
+  CONVERSATION: {
+    HISTORY_ONLY: {
+      PARTICIPATION_FINISHED: `Your participation has finished. You can view the messages sent before it ended.`,
+      MISSION_ENDED: `This mission has finished. You can view its message history.`,
+      NO_EXISTING_USER: `This user doesn't belong anymore to Hermyx community.`,
+    },
+    DISPUTE_DECISION: {
+      ACCEPT_ADVENTURERS_WORK: `This dispute has ended by accepting the adventurer's work.`,
+      REJECT_ADVENTURERS_WORK: `This dispute has ended by rejecting the adventurer's work.`,
+      KICK_ADVENTURER_OUT: `This dispute has ended by kicking the adventurer out of the mission`,
+      DISMISS: `This dispute has ended by dismissing the accusation.`,
+    },
+  },
   SIGN_UP: {
     FORM_TITLE: 'Sign up',
+    VERIFICATION_EMAIL_SENT_TITLE: 'Check your e-mail',
+    VERIFICATION_EMAIL_SENT:
+      'We sent you a verification link. Confirm your e-mail before logging in.',
     USERNAME_DESCRIPTION:
       'No longer than 20 characters. Must start with a letter or number, and may contain [._-].',
     PASSWORD_DESCRIPTION:
@@ -9,9 +25,40 @@ export const messages = {
   },
   LOG_IN: {
     FORM_TITLE: 'Log in',
+    FORGOT_PASSWORD: 'Forgot your password?',
+  },
+  FORGOT_PASSWORD: {
+    FORM_TITLE: 'Recover your password',
+    FORM_DESCRIPTION:
+      'Enter your e-mail and we will send you a link to reset your password.',
+    EMAIL_SENT_TITLE: 'Check your e-mail',
+    EMAIL_SENT:
+      'If an account exists for this e-mail, you will receive a password reset link shortly.',
+    SEND_BUTTON: 'Send reset link',
+    SENDING_BUTTON: 'Sending...',
+    BACK_TO_LOGIN: 'Back to log in',
+  },
+  EMAIL_ACTION: {
+    LOADING_TITLE: 'Processing request',
+    LOADING_DESCRIPTION: 'Please wait while we validate your link.',
+    VERIFICATION_SUCCESS_TITLE: 'E-mail verified',
+    VERIFICATION_SUCCESS_DESCRIPTION:
+      'Your e-mail has been verified successfully. You can now log in.',
+    PASSWORD_RESET_TITLE: 'Choose a new password',
+    PASSWORD_RESET_DESCRIPTION: (email) => `Set a new password for ${email}.`,
+    PASSWORD_RESET_BUTTON: 'Change password',
+    PASSWORD_RESET_PENDING_BUTTON: 'Changing password...',
+    PASSWORD_RESET_SUCCESS_TITLE: 'Password changed',
+    PASSWORD_RESET_SUCCESS_DESCRIPTION:
+      'Your password has been changed successfully. You can now log in.',
+    INVALID_LINK_TITLE: 'Invalid link',
+    BACK_TO_LOGIN: 'Go to login',
+    UNKNOWN_ACTION: 'This e-mail action is not supported.',
   },
   NEW_MISSION: {
     FORM_TITLE: 'Create a mission',
+    FORM_DESCRIPTION:
+      'Create a mission by adding a title, description and vacancies! You can also use some photos to attract more adventurers or ping a location if needed.',
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
     PHOTOS_DESCRIPTION:
       'Each photo has to weight less than 5MB and the only types accepted are .jpeg, .png and .webp.',
@@ -27,6 +74,8 @@ export const messages = {
   },
   EDIT_MISSION: {
     FORM_TITLE: 'Edit your mission',
+    FORM_DESCRIPTION:
+      'Edit your mission if you want to update or add more information, or if you want more adventurers to enter it!',
     DESCRIPTION_DESCRIPTION: 'Tell the adventurers what your mission is about!',
     VACANCIES_DESCRIPTION:
       'Define how many adventurers you need for this mission.',
@@ -80,7 +129,7 @@ export const messages = {
       DESCRIPTION_DELETE:
         'This will delete the mission forever, unlinking adventurers for it and acknowledging them.',
       DESCRIPTION_CANCEL: `This will cancel the mission, but a refund of your money won't be made, adventurers will be payed.`,
-      CONFIRM_TEXT: 'Yes, close mission',
+      CONFIRM_TEXT: 'Yes, cancel mission',
     },
     REOPEN_MISSION_ALERT: {
       TITLE: 'Are you sure you want to reopen the mission?',
@@ -146,7 +195,7 @@ export const messages = {
   },
   SEARCH_MISSIONS: {
     LOADING: 'Searching missions...',
-    ERROR: 'Oops! Something went wrong while loading missions',
+    ERROR: 'Oops! Something went wrong while loading missions.',
     NO_MISSIONS: 'It seems there is no missions yet. Add one!',
   },
   PAYMENT: {

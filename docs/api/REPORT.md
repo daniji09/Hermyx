@@ -15,9 +15,9 @@ Gets all reports from Hermyx, being able to query them by type and status and so
 | `sortByDate` | string | No | Date sort. |
 | `status` | string | No | Report status. |
 | `type` | string | No | Report type. |
-| `page` | integer | No* | Page number for pagination. |
-| `limit` | integer | No* | Maximum number of results per page. |
-_> Note: `page` and `limit` are optional, but if one is provided, both must be sent together, for a correct pagination._
+| `page` | integer | Yes | Page number for pagination (starts at 1). |
+| `limit` | integer | Yes | Maximum number of results per page. |
+_> Both `page` and `limit` must be sent for every request._
 <br>
 
 **Responses:**

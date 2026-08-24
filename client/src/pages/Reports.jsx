@@ -3,14 +3,12 @@ import { getReportsInfiniteQueryOptions } from '../queries/ReportQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { timestampToDayMonthYear } from '../utils/date';
 import { messages } from './../messages/messages';
-import { Button } from '@/components/ui/button';
 import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import {
   Card,
   CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -22,10 +20,14 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@/components/ui/combobox';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { MessageSquareWarning } from 'lucide-react';
+import { truncateText } from '../../../server/src/utils/string.util';
+import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
-// Comboboxes   options
+// Comboboxes options
 const DATE_OPTIONS = [
   { value: 'desc', label: 'Newest first' },
   { value: 'asc', label: 'Oldest first' },
@@ -75,6 +77,19 @@ export const Reports = () => {
   // Data destructure for cleaner code
   const reports = data?.pages.flatMap((page) => page.reports);
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
+
   const handleFilterChange = (key, value) => {
     setSearchFilters((prev) => ({
       ...prev,
@@ -83,45 +98,68 @@ export const Reports = () => {
   };
 
   return (
-    <main>
-      <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
-        <div className='mb-6 border-b pb-4'>
-          <h1 className='text-3xl font-bold tracking-tight'>Reports</h1>
-        </div>
-        <div className='flex flex-col sm:flex-row gap-4 mb-6'>
-          <FilterCombobox
-            items={DATE_OPTIONS}
-            value={searchFilters.sortByDate}
-            onChange={(val) => handleFilterChange('sortByDate', val)}
-            placeholder='Sort by date...'
-          />
-          <FilterCombobox
-            items={STATUS_OPTIONS}
-            value={searchFilters.status}
-            onChange={(val) => handleFilterChange('status', val)}
-            placeholder='Sort by status...'
-          />
-          <FilterCombobox
-            items={TYPE_OPTIONS}
-            value={searchFilters.type}
-            onChange={(val) => handleFilterChange('type', val)}
-            placeholder='Sort by type...'
-          />
-        </div>
-      </section>
-      <ReportsSearchContainer
-        reports={reports}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-        isLoading={isLoading}
-        isError={isError}
-      ></ReportsSearchContainer>
-    </main>
+    <>
+      <title>{`Reports | Hermyx`}</title>
+      <meta
+        name='description'
+        content={`All Hermyx's reports made by users.`}
+      ></meta>
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <section className='w-full'>
+          <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <span className='hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground'>
+              <MessageSquareWarning className='h-6 w-6' aria-hidden='true' />
+            </span>
+            <div className='min-w-0'>
+              <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
+                Reports
+              </h1>
+              <p className='text-muted-foreground'>
+                Oversee platform moderation. Review, filter, and take action on
+                community reports.
+              </p>
+            </div>
+          </div>
+        </section>
+        <section className='w-full' aria-label='Filters section'>
+          <div className='mt-4 mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+            <FilterCombobox
+              items={DATE_OPTIONS}
+              value={searchFilters.sortByDate}
+              onChange={(val) => handleFilterChange('sortByDate', val)}
+              placeholder='Sort by date...'
+              ariaLabel='Filter by date'
+            />
+            <FilterCombobox
+              items={STATUS_OPTIONS}
+              value={searchFilters.status}
+              onChange={(val) => handleFilterChange('status', val)}
+              placeholder='Sort by status...'
+              ariaLabel='Filter by status'
+            />
+            <FilterCombobox
+              items={TYPE_OPTIONS}
+              value={searchFilters.type}
+              onChange={(val) => handleFilterChange('type', val)}
+              placeholder='Sort by type...'
+              ariaLabel='Filter by type'
+            />
+          </div>
+        </section>
+        <ReportsSearchContainer
+          reports={reports}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          loadMoreRef={loadMoreRef}
+          isLoading={isLoading}
+          isError={isError}
+        ></ReportsSearchContainer>
+      </main>
+    </>
   );
 };
 
-const FilterCombobox = ({ items, value, onChange, placeholder }) => {
+const FilterCombobox = ({ items, value, onChange, placeholder, ariaLabel }) => {
   const stringLabels = items.map((item) => item.label);
   const currentLabel = items.find((item) => item.value === value)?.label || '';
   const handleValueChange = (selectedLabel) => {
@@ -137,7 +175,10 @@ const FilterCombobox = ({ items, value, onChange, placeholder }) => {
         value={currentLabel}
         onValueChange={handleValueChange}
       >
-        <ComboboxInput placeholder={placeholder} />
+        <ComboboxInput
+          placeholder={placeholder}
+          aria-label={ariaLabel || placeholder}
+        />
         <ComboboxContent>
           <ComboboxEmpty>No results.</ComboboxEmpty>
           <ComboboxList>
@@ -157,7 +198,7 @@ const ReportsSearchContainer = ({
   reports,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
   isLoading,
   isLoadingMessage = messages.REPORT.SEARCH_REPORTS.LOADING,
   isError,
@@ -165,7 +206,7 @@ const ReportsSearchContainer = ({
   noReportsMessage = messages.REPORT.SEARCH_REPORTS.NO_REPORTS,
 }) => {
   return (
-    <section className='w-full px-6 pb-4 sm:px-8 lg:px-12 xl:px-16'>
+    <section className='w-full'>
       <ReportsSearchLoading isLoading={isLoading}>
         {isLoadingMessage}
       </ReportsSearchLoading>
@@ -180,7 +221,7 @@ const ReportsSearchContainer = ({
         reports={reports}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
+        loadMoreRef={loadMoreRef}
       ></ReportsSearchContent>
     </section>
   );
@@ -190,7 +231,7 @@ const ReportsSearchLoading = ({ isLoading, children }) => {
   return (
     <>
       {isLoading && (
-        <div className='flex justify-center p-8 text-muted-foreground'>
+        <div role='status' className='p-8 text-center text-muted-foreground'>
           {children}
         </div>
       )}
@@ -198,23 +239,19 @@ const ReportsSearchLoading = ({ isLoading, children }) => {
   );
 };
 
-const ReportsSearchError = ({ isError, children }) => {
-  return (
-    <>
-      {isError && (
-        <div className='text-center p-8 text-destructive border border-destructive/20 rounded-lg bg-destructive/5'>
-          {children}
-        </div>
-      )}
-    </>
-  );
+const ReportsSearchError = ({ isError }) => {
+  return <>{isError && <NotFound></NotFound>}</>;
 };
 
 const NoReportsSearch = ({ reports, children }) => {
   return (
     <>
       {reports?.length === 0 && (
-        <div className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'>
+        <div
+          role='status'
+          aria-live='polite'
+          className='text-center p-12 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/20'
+        >
           {children}
         </div>
       )}
@@ -226,13 +263,13 @@ const ReportsSearchContent = ({
   reports,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   return (
     <>
       {reports?.length > 0 && (
         <>
-          <div
+          <ul
             className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
             aria-label='Reports list'
           >
@@ -242,69 +279,177 @@ const ReportsSearchContent = ({
                 report={report}
               ></ReportSearchCard>
             ))}
-          </div>
-          <div className='flex align-middle justify-center py-5'>
-            <Button
-              onClick={() => fetchNextPage()}
-              className='rounded-lg p-2 hover:cursor-pointer'
-              disabled={!hasNextPage || isFetchingNextPage}
+          </ul>
+
+          {hasNextPage && (
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
             >
-              {hasNextPage
-                ? isFetchingNextPage
-                  ? 'Loading'
-                  : 'More reports'
-                : 'No more reports to show'}
-            </Button>
-          </div>
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reports...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground pt-6'>
+              No more reports found.
+            </div>
+          )}
         </>
       )}
     </>
   );
 };
-
 const ReportSearchCard = ({ report }) => {
+  const linkClass =
+    'user-link relative z-20 font-medium text-primary hover:underline transition-colors';
+
+  const renderUserLink = (username) => {
+    if (!username) return null;
+    return (
+      <Link
+        to={`/users/${username}`}
+        className={linkClass}
+        title={username}
+        aria-label={username}
+        target='_blank'
+        rel='noopener noreferrer'
+      >
+        {truncateText(username)}
+      </Link>
+    );
+  };
+
+  const renderMissionLink = () => {
+    const missionId = report?.payload?.associated_mission_id;
+    const title = report?.mission_title;
+    if (!missionId) return null;
+    return (
+      <Link
+        to={`/missions/${missionId}`}
+        className={linkClass}
+        title={title}
+        aria-label={title}
+        target='_blank'
+        rel='noopener noreferrer'
+      >
+        {truncateText(title)}
+      </Link>
+    );
+  };
+
+  const generateTitle = () => {
+    const { type, other_username, sender_username } = report || {};
+
+    const senderLink = renderUserLink(sender_username);
+    const otherUserLink = renderUserLink(other_username);
+    const missionLink = renderMissionLink();
+
+    switch (type) {
+      case REPORT_TYPE.REPORT_ADVENTURER.ID:
+        return (
+          <>
+            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
+        return (
+          <>
+            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
+            {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REVIEW_DISPUTE.ID:
+        return (
+          <>
+            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
+            {missionLink} was reported by {senderLink}.
+          </>
+        );
+
+      case REPORT_TYPE.REPORT_MISSION.ID:
+        return (
+          <>
+            Mission {missionLink} was reported by {senderLink}.
+          </>
+        );
+
+      default: // REPORT_USER
+        return (
+          <>
+            User {otherUserLink} was reported by {senderLink}.
+          </>
+        );
+    }
+  };
+
+  const title = (
+    <span className='leading-relaxed font-normal text-foreground'>
+      {generateTitle()}
+    </span>
+  );
+
   return (
-    <Card asChild className='justify-between'>
-      <article>
-        <CardHeader>
-          <CardTitle asChild>
-            <h2>
-              {report.type === REPORT_TYPE.REPORT_PROFILE.ID
-                ? `User ${report.payload.associated_user_id}`
-                : report.type === REPORT_TYPE.REPORT_MISSION.ID
-                  ? `Mission ${report.payload.associated_mission_id}`
-                  : report.type === REPORT_TYPE.REPORT_ADVENTURER.ID ||
-                      report.type === REPORT_TYPE.REVIEW_DISPUTE.ID
-                    ? `Adventurer of vacancy ${report.payload.associated_vacancy_id} on mission ${report.payload.associated_mission_id}`
-                    : `Applicant of mission ${report.payload.associated_mission_id}`}
-              {` was reported by ${report.sender_id}`}
-            </h2>
-          </CardTitle>
-          <CardDescription>{`Status: ${report.status}`}</CardDescription>
-          {report.needs_admin_attention && (
-            <CardDescription className='font-semibold text-destructive'>
-              Needs admin attention
-            </CardDescription>
-          )}
-          {report.unread_count > 0 && (
-            <CardDescription className='font-semibold text-destructive'>
-              {report.unread_count} unread message
-              {report.unread_count === 1 ? '' : 's'}
-            </CardDescription>
-          )}
-          <CardAction>
-            <p>{timestampToDayMonthYear(report.date)}</p>
-          </CardAction>
-        </CardHeader>
-        <CardContent className='flex flex-1 flex-col'>
-          <div className='mb-4 line-clamp-4'>{report.message}</div>
-        </CardContent>
-        <CardFooter>
-          <Button asChild>
-            <Link to={`/reports/${report.rid}`}>See report</Link>
-          </Button>
-        </CardFooter>
-      </article>
-    </Card>
+    <li className='h-full'>
+      <Card
+        asChild
+        className='justify-between group relative transition-all hover:border-primary/50 hover:shadow-md overflow-hidden focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2'
+      >
+        <article className='flex flex-col h-full'>
+          <Link
+            to={`/reports/${report.rid}`}
+            className='absolute inset-0 z-10'
+            target='_blank'
+            rel='noopener noreferrer'
+          >
+            <span className='sr-only'>See details for report {report.rid}</span>
+          </Link>
+
+          <CardHeader>
+            <CardTitle asChild>
+              <h2 className='group-hover:underline group-has-[.user-link:hover]:no-underline transition-colors'>
+                {title}
+              </h2>
+            </CardTitle>
+
+            {report.needs_admin_attention && (
+              <CardDescription className='font-semibold text-destructive'>
+                Needs admin attention
+              </CardDescription>
+            )}
+
+            {report.unread_count > 0 && (
+              <CardDescription className='font-semibold text-destructive'>
+                {report.unread_count} unread message
+                {report.unread_count === 1 ? '' : 's'}
+              </CardDescription>
+            )}
+
+            <CardAction>
+              <p>{timestampToDayMonthYear(report.date)}</p>
+            </CardAction>
+          </CardHeader>
+
+          <CardContent className='flex flex-1 flex-col -mt-2'>
+            <div className='mb-5 wrap-break-words wrap-anywhere line-clamp-3'>
+              {report.message}
+            </div>
+
+            <div className='mt-auto flex items-center self-end gap-2'>
+              <span className='sr-only'>Status:</span>
+              <span className='italic text-muted-foreground text-sm'>
+                {REPORT_STATUS[report?.status].LABEL}
+              </span>
+            </div>
+          </CardContent>
+        </article>
+      </Card>
+    </li>
   );
 };
