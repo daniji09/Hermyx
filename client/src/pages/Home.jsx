@@ -22,6 +22,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { getImageUrl } from '../utils/media';
+import { getDisplayName, getInitials } from '../utils/avatar';
 import {
   Compass,
   Plus,
@@ -306,7 +307,7 @@ export const Home = () => {
             <Avatar className='h-16 w-16 shrink-0 border-2 border-primary/10'>
               <AvatarImage src={getImageUrl(currentUser?.avatar)} alt='' />
               <AvatarFallback className='bg-primary/5 text-xl text-primary'>
-                {currentUser?.username?.charAt(0).toUpperCase() || 'A'}
+                {getInitials(getDisplayName(currentUser)) || 'A'}
               </AvatarFallback>
             </Avatar>
             <div className='min-w-0 text-center sm:text-left'>

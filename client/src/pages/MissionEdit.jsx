@@ -51,6 +51,7 @@ import { useAlert } from '../contexts/AlertContext';
 import { useDropzone } from 'react-dropzone';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
+import { getDisplayName, getInitials } from '../utils/avatar';
 import { Separator } from '@/components/ui/separator';
 import { AuthContext } from '../contexts/AuthContext';
 import { NotFound } from './NotFound';
@@ -462,10 +463,7 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
                 className='h-full w-full object-cover'
               />
               <AvatarFallback>
-                <User
-                  className='h-12 w-12 text-muted-foreground'
-                  aria-hidden='true'
-                />
+                {getInitials(getDisplayName(vacancy))}
               </AvatarFallback>
             </Avatar>
           </div>
