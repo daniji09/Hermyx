@@ -27,8 +27,6 @@ export const Dispute = () => {
         className={linkClass}
         title={username}
         aria-label={username}
-        target='_blank'
-        rel='noopener noreferrer'
       >
         {truncateText(username)}
       </Link>
@@ -45,8 +43,6 @@ export const Dispute = () => {
         className={linkClass}
         title={title}
         aria-label={title}
-        target='_blank'
-        rel='noopener noreferrer'
       >
         {truncateText(title)}
       </Link>
