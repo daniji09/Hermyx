@@ -35,7 +35,7 @@ import { getMissionPaymentInfoByIdQueryOptions } from '../queries/MissionsQuerie
 import { BanknoteArrowUp } from 'lucide-react';
 import { getSavedCardsQueryOptions } from '../queries/PaymentQueries.jsx';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/Checkbox';
+import { Checkbox } from '@/components/ui/checkbox';
 import { NotFound } from './NotFound.jsx';
 
 const STRIPE_KEY =
