@@ -147,8 +147,15 @@ export const findByUidAndTitle = async (uid, title, mid = undefined) => {
 export const findAll = async ({ title = undefined, pagination }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
-    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username, COUNT(*) OVER() AS total_count
-    FROM mission AS m JOIN app_user AS a ON (m.owner_id = a.uid) WHERE 1=1`;
+    m.occupied_vacancies, m.total_payment, m.status, a.uid, a.username, mph.photos, COUNT(*) OVER() AS total_count
+    FROM mission AS m
+    JOIN app_user AS a ON (m.owner_id = a.uid)
+    LEFT JOIN (
+      SELECT mid, ARRAY_AGG(url) AS photos
+      FROM mission_photo
+      GROUP BY mid
+    ) AS mph ON (m.mid = mph.mid)
+    WHERE 1=1`;
   const values = [];
 
   if (title) {
