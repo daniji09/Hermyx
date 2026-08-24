@@ -31,6 +31,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
 import { getInitials } from '../utils/avatar';
 import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
 export const Notifications = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -55,6 +56,19 @@ export const Notifications = () => {
       },
     }),
   );
+
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
 
   const { mutate, isPending, variables } = useMutation(
     respondToNotificationMutationOptions({
@@ -486,17 +500,20 @@ export const Notifications = () => {
                   );
                 })}
                 {hasNextPage && (
-                  <div className='flex justify-center pt-3'>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      onClick={() => fetchNextPage()}
-                      disabled={isFetchingNextPage}
-                    >
-                      {isFetchingNextPage
-                        ? 'Loading notifications'
-                        : 'Load more notifications'}
-                    </Button>
+                  <div
+                    ref={isFetchingNextPage ? null : loadMoreRef}
+                    className='flex justify-center py-4 h-12 w-full'
+                  >
+                    {isFetchingNextPage && (
+                      <span className='text-xs text-muted-foreground animate-pulse'>
+                        Loading notifications...
+                      </span>
+                    )}
+                  </div>
+                )}
+                {!hasNextPage && (
+                  <div className='text-center text-xs text-muted-foreground py-2'>
+                    No more notifications found.
                   </div>
                 )}
               </ul>

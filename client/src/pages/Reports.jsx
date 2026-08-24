@@ -3,7 +3,6 @@ import { getReportsInfiniteQueryOptions } from '../queries/ReportQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { timestampToDayMonthYear } from '../utils/date';
 import { messages } from './../messages/messages';
-import { Button } from '@/components/ui/button';
 import { REPORT_STATUS, REPORT_TYPE } from '@hermyx/shared';
 import {
   Card,
@@ -21,13 +20,14 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@/components/ui/combobox';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquareWarning } from 'lucide-react';
 import { truncateText } from '../../../server/src/utils/string.util';
 import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
-// Comboboxes   options
+// Comboboxes options
 const DATE_OPTIONS = [
   { value: 'desc', label: 'Newest first' },
   { value: 'asc', label: 'Oldest first' },
@@ -76,6 +76,19 @@ export const Reports = () => {
   );
   // Data destructure for cleaner code
   const reports = data?.pages.flatMap((page) => page.reports);
+
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
 
   const handleFilterChange = (key, value) => {
     setSearchFilters((prev) => ({
@@ -137,7 +150,7 @@ export const Reports = () => {
           reports={reports}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
-          fetchNextPage={fetchNextPage}
+          loadMoreRef={loadMoreRef}
           isLoading={isLoading}
           isError={isError}
         ></ReportsSearchContainer>
@@ -185,7 +198,7 @@ const ReportsSearchContainer = ({
   reports,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
   isLoading,
   isLoadingMessage = messages.REPORT.SEARCH_REPORTS.LOADING,
   isError,
@@ -208,7 +221,7 @@ const ReportsSearchContainer = ({
         reports={reports}
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
+        loadMoreRef={loadMoreRef}
       ></ReportsSearchContent>
     </section>
   );
@@ -250,7 +263,7 @@ const ReportsSearchContent = ({
   reports,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   return (
     <>
@@ -267,19 +280,24 @@ const ReportsSearchContent = ({
               ></ReportSearchCard>
             ))}
           </ul>
-          <div className='flex align-middle justify-center py-5'>
-            <Button
-              onClick={() => fetchNextPage()}
-              className='rounded-lg p-2 hover:cursor-pointer'
-              disabled={!hasNextPage || isFetchingNextPage}
+
+          {hasNextPage && (
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
             >
-              {hasNextPage
-                ? isFetchingNextPage
-                  ? 'Loading'
-                  : 'More reports'
-                : 'No more reports to show'}
-            </Button>
-          </div>
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reports...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground pt-6'>
+              No more reports found.
+            </div>
+          )}
         </>
       )}
     </>

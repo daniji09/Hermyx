@@ -195,6 +195,7 @@ export const SearchMission = () => {
           fetchNextPage={fetchNextPage}
           isLoading={isLoading}
           isError={isError}
+          infiniteScroll={true}
         ></MissionSearchContainer>
       </main>
     </>

@@ -1,12 +1,13 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { History, MessageCircle, User, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { getMyConversationsInfiniteQueryOptions } from '../queries/ConversationsQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { getImageUrl } from '../utils/media';
 import { formatLastMessageTime } from '../utils/date';
 import { cn } from './../lib/utils';
+import { useInView } from 'react-intersection-observer';
+import { useEffect } from 'react';
 
 const getLastMessagePreview = (conversation) => {
   if (conversation.last_message_content) {
@@ -122,6 +123,19 @@ export const Conversations = () => {
   );
   const conversations = data?.pages.flatMap((page) => page.conversations) || [];
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
+
   if (isLoading) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
@@ -184,17 +198,20 @@ export const Conversations = () => {
               </section>
             )}
             {hasNextPage && (
-              <div className='flex justify-center'>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                >
-                  {isFetchingNextPage
-                    ? 'Loading conversations'
-                    : 'Load more conversations'}
-                </Button>
+              <div
+                ref={isFetchingNextPage ? null : loadMoreRef}
+                className='flex justify-center py-4 h-12 w-full'
+              >
+                {isFetchingNextPage && (
+                  <span className='text-xs text-muted-foreground animate-pulse'>
+                    Loading conversations...
+                  </span>
+                )}
+              </div>
+            )}
+            {!hasNextPage && (
+              <div className='text-center text-xs text-muted-foreground'>
+                No more conversations found.
               </div>
             )}
           </div>

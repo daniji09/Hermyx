@@ -31,6 +31,7 @@ import { getOrCreatePrivateConversation } from '../services/ConversationsService
 import { ReviewCard } from './MyProfile.jsx';
 import { UserMissionsTable } from './UserMissions.jsx';
 import { NotFound } from './NotFound.jsx';
+import { useInView } from 'react-intersection-observer';
 
 export const PublicProfile = () => {
   const { username } = useParams();
@@ -89,6 +90,19 @@ export const PublicProfile = () => {
       enabled: !!user?.uid && !isOwnProfile && !!profileData?.missionsVisible,
     }),
   );
+
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextReviewsPage) {
+      fetchNextReviewsPage();
+    }
+  }, [inView, hasNextReviewsPage, fetchNextReviewsPage]);
 
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
@@ -231,6 +245,7 @@ export const PublicProfile = () => {
             isLoading={isMissionsLoading}
             isError={isMissionsError}
             sectionClassName={''}
+            infiniteScroll={false}
           ></UserMissionsTable>
         )}
         {user.role !== USER_ROLE.ADMIN.ID && (
@@ -240,6 +255,7 @@ export const PublicProfile = () => {
             hasNextPage={hasNextReviewsPage}
             isFetchingNextPage={isFetchingNextReviewsPage}
             fetchNextPage={fetchNextReviewsPage}
+            loadMoreRef={loadMoreRef}
           />
         )}
       </main>
@@ -262,7 +278,7 @@ const AdventurerReviewsSection = ({
   isLoading,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   const reviews = reviewsData?.reviews || [];
 
@@ -297,15 +313,20 @@ const AdventurerReviewsSection = ({
           </div>
 
           {hasNextPage && (
-            <div className='mt-6 flex justify-center'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? 'Loading reviews' : 'Load more reviews'}
-              </Button>
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
+            >
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reviews...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground pt-6'>
+              No more reviews found.
             </div>
           )}
         </>

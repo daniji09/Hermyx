@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -14,6 +14,7 @@ import { Users } from 'lucide-react';
 import { messages } from '../../../messages/messages';
 import { MISSION_STATUS } from '@hermyx/shared';
 import { getImageUrl } from '../../../utils/media';
+import { useInView } from 'react-intersection-observer';
 
 export const MissionSearchContainer = ({
   missions,
@@ -26,6 +27,7 @@ export const MissionSearchContainer = ({
   isErrorMessage = messages.SEARCH_MISSIONS.ERROR,
   noMissionsMessage = messages.SEARCH_MISSIONS.NO_MISSIONS,
   sectionClassName = 'w-full',
+  infiniteScroll,
 }) => {
   return (
     <section className={sectionClassName}>
@@ -46,6 +48,7 @@ export const MissionSearchContainer = ({
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         fetchNextPage={fetchNextPage}
+        infiniteScroll={infiniteScroll}
       ></MissionSearchContent>
     </section>
   );
@@ -99,7 +102,21 @@ const MissionSearchContent = ({
   hasNextPage,
   isFetchingNextPage,
   fetchNextPage,
+  infiniteScroll,
 }) => {
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
   return (
     <>
       {missions?.length > 0 && (
@@ -112,19 +129,41 @@ const MissionSearchContent = ({
               <MissionSearchCard key={mission.mid} mission={mission} />
             ))}
           </ul>
-          <div className='flex align-middle justify-center py-5'>
-            <Button
-              onClick={() => fetchNextPage()}
-              className='rounded-lg p-2 hover:cursor-pointer'
-              disabled={!hasNextPage || isFetchingNextPage}
-            >
-              {hasNextPage
-                ? isFetchingNextPage
-                  ? 'Loading'
-                  : 'More missions'
-                : 'No more missions to show'}
-            </Button>
-          </div>
+          {infiniteScroll ? (
+            <>
+              {hasNextPage && (
+                <div
+                  ref={isFetchingNextPage ? null : loadMoreRef}
+                  className='flex justify-center py-4 h-12 w-full'
+                >
+                  {isFetchingNextPage && (
+                    <span className='text-xs text-muted-foreground animate-pulse'>
+                      Loading missions...
+                    </span>
+                  )}
+                </div>
+              )}
+              {!hasNextPage && (
+                <div className='text-center text-xs text-muted-foreground pt-6'>
+                  No more missions found.
+                </div>
+              )}
+            </>
+          ) : (
+            <div className='flex align-middle justify-center py-5'>
+              <Button
+                onClick={() => fetchNextPage()}
+                className='rounded-lg p-2 hover:cursor-pointer'
+                disabled={!hasNextPage || isFetchingNextPage}
+              >
+                {hasNextPage
+                  ? isFetchingNextPage
+                    ? 'Loading'
+                    : 'More missions'
+                  : 'No more missions to show'}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </>

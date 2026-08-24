@@ -73,6 +73,7 @@ export const UserMissions = () => {
           fetchNextPage={fetchNextPage}
           isLoading={isLoading}
           isError={isError}
+          infiniteScroll={true}
         ></UserMissionsTable>
       </main>
     </>
@@ -89,6 +90,7 @@ export const UserMissionsTable = ({
   isLoading,
   isError,
   sectionClassName = 'flex flex-col gap-6 mb-8 w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16',
+  infiniteScroll,
 }) => {
   return (
     <section className={sectionClassName}>
@@ -116,6 +118,7 @@ export const UserMissionsTable = ({
             isError={isError}
             noMissionsMessage={`It seems you haven't published any missions yet. Let's ask for some help!`}
             sectionClassName='w-full'
+            infiniteScroll={infiniteScroll}
           ></MissionSearchContainer>
         </TabsContent>
 

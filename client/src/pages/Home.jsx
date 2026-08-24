@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -30,6 +30,7 @@ import {
   ShieldCheck,
   MessageSquareWarning,
 } from 'lucide-react';
+import { useInView } from 'react-intersection-observer';
 
 export const Home = () => {
   const { currentUser } = useContext(AuthContext);
@@ -40,23 +41,47 @@ export const Home = () => {
   };
 
   // Published missions
-  const { data: publishedData, isLoading: publishedIsLoading } =
-    useInfiniteQuery(
-      getUserMissionsInfiniteQueryOptions(
-        currentUser?.id,
-        'published',
-        PAGINATION_LIMIT.MISSIONS,
-        {
-          retry: retryOption,
-          enabled: !!currentUser?.id && !currentUser?.isAdmin,
-        },
-      ),
-    );
+  const {
+    data: publishedData,
+    isLoading: publishedIsLoading,
+    fetchNextPage: fetchNextPublishedPage,
+    hasNextPage: hasNextPublishedPage,
+    isFetchingNextPage: isFetchingNextPublishedPage,
+  } = useInfiniteQuery(
+    getUserMissionsInfiniteQueryOptions(
+      currentUser?.id,
+      'published',
+      PAGINATION_LIMIT.MISSIONS,
+      {
+        retry: retryOption,
+        enabled: !!currentUser?.id && !currentUser?.isAdmin,
+      },
+    ),
+  );
   const publishedMissions =
     publishedData?.pages.flatMap((page) => page.missions) || [];
 
+  // Observer for infinite scroll
+  const { ref: loadMorePublishedRef, inView: publishedInView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 200px 0px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (publishedInView && hasNextPublishedPage) {
+      fetchNextPublishedPage();
+    }
+  }, [publishedInView, hasNextPublishedPage, fetchNextPublishedPage]);
+
   // Joined missions
-  const { data: joinedData, isLoading: joinedIsLoading } = useInfiniteQuery(
+  const {
+    data: joinedData,
+    isLoading: joinedIsLoading,
+    fetchNextPage: fetchNextJoinedPage,
+    hasNextPage: hasNextJoinedPage,
+    isFetchingNextPage: isFetchingNextJoinedPage,
+  } = useInfiniteQuery(
     getUserMissionsInfiniteQueryOptions(
       currentUser?.id,
       'joined',
@@ -69,6 +94,19 @@ export const Home = () => {
   );
   const joinedMissions =
     joinedData?.pages.flatMap((page) => page.missions) || [];
+
+  // Observer for infinite scroll
+  const { ref: loadMoreJoinedRef, inView: joinedInView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 200px 0px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (joinedInView && hasNextJoinedPage) {
+      fetchNextJoinedPage();
+    }
+  }, [joinedInView, hasNextJoinedPage, fetchNextJoinedPage]);
 
   // Interest missions
   const {
@@ -247,6 +285,7 @@ export const Home = () => {
             isError={interestIsError}
             noMissionsMessage='There are no missions available right now.'
             sectionClassName=''
+            infiniteScroll={true}
           />
         </section>
       </main>
@@ -324,6 +363,18 @@ export const Home = () => {
                       <MissionSearchCard mission={mission} />
                     </CarouselItem>
                   ))}
+                  {hasNextJoinedPage && (
+                    <CarouselItem
+                      ref={isFetchingNextJoinedPage ? null : loadMoreJoinedRef}
+                      className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3 flex items-center justify-center min-h-75'
+                    >
+                      {isFetchingNextJoinedPage && (
+                        <span className='text-sm text-muted-foreground animate-pulse'>
+                          Loading missions...
+                        </span>
+                      )}
+                    </CarouselItem>
+                  )}
                 </CarouselContent>
 
                 <div className='hidden sm:block'>
@@ -358,6 +409,22 @@ export const Home = () => {
                       <MissionSearchCard mission={mission} />
                     </CarouselItem>
                   ))}
+                  {hasNextPublishedPage && (
+                    <CarouselItem
+                      ref={
+                        isFetchingNextPublishedPage
+                          ? null
+                          : loadMorePublishedRef
+                      }
+                      className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3 flex items-center justify-center min-h-75'
+                    >
+                      {isFetchingNextPublishedPage && (
+                        <span className='text-sm text-muted-foreground animate-pulse'>
+                          Loading missions...
+                        </span>
+                      )}
+                    </CarouselItem>
+                  )}
                 </CarouselContent>
                 <div className='hidden sm:block'>
                   <CarouselPrevious className='-left-4 lg:-left-6' />
@@ -389,6 +456,7 @@ export const Home = () => {
             isError={interestIsError}
             noMissionsMessage='There are no missions available right now. Be the first to post one!'
             sectionClassName=''
+            infiniteScroll={true}
           />
         </section>
       </main>

@@ -1,4 +1,9 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQueryClient,
+  useQuery,
+  useInfiniteQuery,
+} from '@tanstack/react-query';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getMissionByIdQueryOptions,
@@ -97,6 +102,7 @@ import { getInitials } from '../utils/avatar';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
 export const Mission = () => {
   // Mission id
@@ -1497,20 +1503,49 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
 };
 
 const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
-  // Query options
   const retryOption = (failureCount, error) => {
-    if (error.response?.status === 404) return false; // So Axios won't try to search again the data if there is none
+    if (error.response?.status === 404) return false;
     return failureCount < 3;
   };
-  const queryClient = useQueryClient();
+
   const [username, setUsername] = useState('');
-  const [foundUsers, setFoundUsers] = useState([]);
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedVacancyId, setSelectedVacancyId] = useState('');
   const [notificationMessage, setNotificationMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [localError, setLocalError] = useState('');
+
   const { showAlert } = useAlert();
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetching,
+    isError,
+    error: searchError,
+  } = useInfiniteQuery(
+    searchUsersByUsernameInfiniteQueryOptions(
+      PAGINATION_LIMIT.USERS,
+      { username: submittedQuery },
+      {
+        enabled: !!submittedQuery,
+        retry: retryOption,
+      },
+    ),
+  );
+
+  const foundUsers = data?.pages.flatMap((page) => page.users) || [];
+  const { ref: loadMoreRef, inView } = useInView({
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
+
   const { isPending: isSendingNotification, mutate: sendNotification } =
     useMutation(
       inviteToMissionMutationOptions({
@@ -1522,62 +1557,43 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
           handleClose();
         },
         onError: (error) => {
-          setErrorMessage(
+          setLocalError(
             error?.response?.data?.error || 'Could not send invitation.',
           );
         },
       }),
     );
 
-  const handleSearch = async (event) => {
+  const handleSearch = (event) => {
     event.preventDefault();
     const trimmedUsername = username.trim();
 
     if (!trimmedUsername) {
-      setFoundUsers([]);
-      setErrorMessage('Write a username to search for an adventurer.');
+      setLocalError('Write a username to search for an adventurer.');
       return;
     }
 
-    setIsSearching(true);
-    setErrorMessage('');
-
-    try {
-      const data = await queryClient.fetchInfiniteQuery(
-        searchUsersByUsernameInfiniteQueryOptions(
-          PAGINATION_LIMIT.USERS,
-          { username: trimmedUsername },
-          {
-            retry: retryOption,
-          },
-        ),
-      );
-      const users = data?.pages.flatMap((page) => page.users);
-      setFoundUsers(users);
-      if (users.length === 0) {
-        setErrorMessage('No adventurer found with that username.');
-      }
-    } catch (error) {
-      setFoundUsers([]);
-      setErrorMessage(
-        error?.response?.data?.error ||
-          'No adventurer found with that username.',
-      );
-    } finally {
-      setIsSearching(false);
-    }
+    setLocalError('');
+    setSubmittedQuery(trimmedUsername);
   };
 
   const handleClose = () => {
     setUsername('');
-    setFoundUsers([]);
+    setSubmittedQuery('');
     setSelectedUser(null);
     setSelectedVacancyId('');
     setNotificationMessage('');
-    setErrorMessage('');
-    setIsSearching(false);
+    setLocalError('');
     onClose();
   };
+
+  const displayError =
+    localError ||
+    (isError && searchError?.response?.status !== 404
+      ? searchError?.response?.data?.error
+      : '');
+  const isInitialLoading = isFetching && !isFetchingNextPage;
+  const noResults = !isFetching && submittedQuery && foundUsers.length === 0;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
@@ -1598,7 +1614,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
             >
               <label
                 htmlFor='searchAdventurerByUsername'
-                className='text-sm font-medium text-slate-900'
+                className='text-sm font-medium text-slate-900 dark:text-slate-100'
               >
                 Adventurer username
               </label>
@@ -1610,15 +1626,21 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                   placeholder='Search by username'
                   autoComplete='off'
                 />
-                <Button type='submit' disabled={isSearching}>
-                  <Search className='h-4 w-4' aria-hidden='true' />
-                  {isSearching ? 'Searching...' : 'Search'}
+                <Button type='submit' disabled={isInitialLoading}>
+                  <Search className='h-4 w-4 mr-2' aria-hidden='true' />
+                  {isInitialLoading ? 'Searching...' : 'Search'}
                 </Button>
               </div>
 
-              {errorMessage && (
+              {displayError && (
                 <p className='rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive'>
-                  {errorMessage}
+                  {displayError}
+                </p>
+              )}
+
+              {noResults && (
+                <p className='text-sm text-muted-foreground text-center py-4'>
+                  No adventurer found with that username.
                 </p>
               )}
 
@@ -1627,7 +1649,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                   {foundUsers.map((foundUser) => (
                     <div
                       key={foundUser.uid}
-                      className='rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-4 shrink-0'
+                      className='rounded-2xl border bg-muted/20 px-4 py-4 shrink-0'
                     >
                       <div className='flex items-center justify-between gap-4'>
                         <div className='flex min-w-0 items-center gap-3'>
@@ -1635,12 +1657,11 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                             <User className='h-5 w-5' aria-hidden='true' />
                           </span>
                           <div className='min-w-0'>
-                            <p className='truncate text-base font-semibold text-slate-900'>
+                            <p className='truncate text-base font-semibold'>
                               {foundUser.username}
                             </p>
-                            <p className='truncate text-sm text-slate-500'>
-                              {foundUser.email ||
-                                'User found and ready to invite.'}
+                            <p className='truncate text-sm text-muted-foreground'>
+                              {foundUser.email || 'Ready to invite.'}
                             </p>
                           </div>
                         </div>
@@ -1650,7 +1671,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                           onClick={() => {
                             setSelectedUser(foundUser);
                             setNotificationMessage('');
-                            setErrorMessage('');
+                            setLocalError('');
                           }}
                         >
                           Invite
@@ -1658,6 +1679,25 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                       </div>
                     </div>
                   ))}
+
+                  {hasNextPage && (
+                    <div
+                      ref={isFetchingNextPage ? null : loadMoreRef}
+                      className='flex justify-center py-4'
+                    >
+                      {isFetchingNextPage && (
+                        <span className='text-sm text-muted-foreground animate-pulse'>
+                          Loading more users...
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {!hasNextPage && foundUsers.length > 5 && (
+                    <div className='text-center text-xs text-muted-foreground py-2'>
+                      No more users found.
+                    </div>
+                  )}
                 </div>
               )}
             </form>
@@ -1690,7 +1730,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                 value={selectedVacancyId}
                 onChange={(event) => {
                   setSelectedVacancyId(event.target.value);
-                  setErrorMessage('');
+                  setLocalError('');
                 }}
                 className='h-10 w-full rounded-md border border-input bg-background px-3 text-sm'
               >
@@ -1718,9 +1758,9 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                 rows={5}
               />
 
-              {errorMessage && (
+              {displayError && (
                 <p className='rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive'>
-                  {errorMessage}
+                  {displayError}
                 </p>
               )}
             </div>
@@ -1736,7 +1776,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                 onClick={() => {
                   setSelectedUser(null);
                   setNotificationMessage('');
-                  setErrorMessage('');
+                  setLocalError('');
                 }}
               >
                 Back
@@ -1751,7 +1791,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                         vacancyId: Number(selectedVacancyId),
                         message: notificationMessage,
                       })
-                    : setErrorMessage('Select a vacancy before inviting.')
+                    : setLocalError('Select a vacancy before inviting.')
                 }
                 disabled={isSendingNotification || vacancies.length === 0}
               >

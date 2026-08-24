@@ -4,6 +4,8 @@ import { searchUsersByUsernameInfiniteQueryOptions } from '../queries/UsersQueri
 import { UserSearchContainer } from '../components/custom/users/UserSearchContainer';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { Users } from 'lucide-react';
+import { useInView } from 'react-intersection-observer';
+import { useEffect } from 'react';
 
 export const SearchUsers = () => {
   const [searchParams] = useSearchParams();
@@ -24,7 +26,7 @@ export const SearchUsers = () => {
     isError,
   } = useInfiniteQuery(
     searchUsersByUsernameInfiniteQueryOptions(
-      PAGINATION_LIMIT.USERS,
+      PAGINATION_LIMIT.USERS_SEARCH,
       { username: trimmedUsername },
       {
         enabled: !!trimmedUsername,
@@ -32,7 +34,20 @@ export const SearchUsers = () => {
       },
     ),
   );
-  const users = data?.pages.flatMap((page) => page.users); // TODO: pagination must be done with infinite scroll
+  const users = data?.pages.flatMap((page) => page.users);
+
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextPage) {
+      fetchNextPage();
+    }
+  }, [inView, hasNextPage, fetchNextPage]);
 
   return (
     <>
@@ -69,7 +84,7 @@ export const SearchUsers = () => {
           }
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
-          fetchNextPage={fetchNextPage}
+          loadMoreRef={loadMoreRef}
         />
       </main>
     </>

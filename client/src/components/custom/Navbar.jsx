@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useContext, useState } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -417,17 +417,36 @@ const MobileNavLink = ({ to, icon: Icon, badge, children, onClick }) => (
 
 const LogButton = ({ currentUser, logout, fullWidth }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
   const onClick = async () => {
-    if (currentUser) await logout();
-    navigate('/login');
+    if (currentUser) {
+      await logout();
+      navigate('/login');
+      return;
+    }
+
+    if (location.pathname === '/login') {
+      navigate('/signup');
+    } else {
+      navigate('/login');
+    }
   };
+
+  let buttonText = 'Log in';
+  if (currentUser) {
+    buttonText = 'Log out';
+  } else if (location.pathname === '/login') {
+    buttonText = 'Sign up';
+  }
+
   return (
     <Button
       variant={currentUser ? 'secondary' : 'default'}
       className={fullWidth ? 'w-full' : ''}
       onClick={onClick}
     >
-      {currentUser ? 'Log out' : 'Log in'}
+      {buttonText}
     </Button>
   );
 };

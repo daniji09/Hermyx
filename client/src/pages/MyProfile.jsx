@@ -76,6 +76,7 @@ import {
 import { addEmailAuthenticationAction } from '../actions/AuthActions';
 import { AlertStatic } from '../components/custom/AlertStatic';
 import { NotFound } from './NotFound';
+import { useInView } from 'react-intersection-observer';
 
 const STRIPE_KEY =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
@@ -119,6 +120,19 @@ export const MyProfile = () => {
     ),
   );
 
+  // Observer for infinite scroll
+  const { ref: loadMoreRef, inView } = useInView({
+    // RootMargin begins load 100px before user's reaches the top, so the load is smooth
+    rootMargin: '0px 0px 100px 0px',
+  });
+
+  // When observer is in view, is shot
+  useEffect(() => {
+    if (inView && hasNextReviewsPage) {
+      fetchNextReviewsPage();
+    }
+  }, [inView, hasNextReviewsPage, fetchNextReviewsPage]);
+
   if (isLoading) {
     return (
       <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
@@ -149,7 +163,7 @@ export const MyProfile = () => {
           isPrivate={!reviewsEnabled}
           hasNextPage={hasNextReviewsPage}
           isFetchingNextPage={isFetchingNextReviewsPage}
-          fetchNextPage={fetchNextReviewsPage}
+          loadMoreRef={loadMoreRef}
         />
         <ProfileAccessMethods user={user}></ProfileAccessMethods>
         <ProfilePaymentMethods user={user}></ProfilePaymentMethods>
@@ -299,7 +313,7 @@ const ProfileReviews = ({
   isPrivate,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   const reviews = reviewsData?.reviews || [];
 
@@ -348,7 +362,7 @@ const ProfileReviews = ({
                 reviews={reviews}
                 hasNextPage={hasNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                fetchNextPage={fetchNextPage}
+                loadMoreRef={loadMoreRef}
               />
             </div>
 
@@ -417,7 +431,7 @@ const AllReviewsDialog = ({
   reviews,
   hasNextPage,
   isFetchingNextPage,
-  fetchNextPage,
+  loadMoreRef,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -447,17 +461,20 @@ const AllReviewsDialog = ({
           ))}
 
           {hasNextPage && (
-            <div className='pt-2 flex justify-center'>
-              <Button
-                type='button'
-                variant='outline'
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage
-                  ? 'Loading reviews...'
-                  : 'Load more reviews'}
-              </Button>
+            <div
+              ref={isFetchingNextPage ? null : loadMoreRef}
+              className='flex justify-center py-4 h-12 w-full'
+            >
+              {isFetchingNextPage && (
+                <span className='text-xs text-muted-foreground animate-pulse'>
+                  Loading reviews...
+                </span>
+              )}
+            </div>
+          )}
+          {!hasNextPage && (
+            <div className='text-center text-xs text-muted-foreground py-2'>
+              No more reviews found.
             </div>
           )}
         </div>
