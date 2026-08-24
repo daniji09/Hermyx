@@ -21,6 +21,8 @@ import {
   Menu,
   MessageSquareWarning,
   User,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import { consts } from '@hermyx/shared';
 import { useNavigate } from 'react-router-dom';
@@ -32,6 +34,7 @@ import { getMyNotificationsQueryOptions } from '../../queries/NotificationsQueri
 import { getUnreadMessageCountQueryOptions } from '../../queries/ConversationsQueries';
 import { getDisputeUnreadCountQueryOptions } from '../../queries/DisputesQueries';
 import { PAGINATION_LIMIT } from '../../consts/consts';
+import { useTheme } from '../../contexts/ThemeProvider';
 
 export function Navbar() {
   // Current user and logout function are obtained to display
@@ -49,6 +52,8 @@ export function Navbar() {
       staleTime: 30000,
     }),
   );
+
+  const { setTheme } = useTheme();
   return (
     <>
       <header className='sticky top-0 z-10000 w-full bg-secondary py-3'>
@@ -65,6 +70,27 @@ export function Navbar() {
               Hermyx
             </Link>
           </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant='outline' size='icon'>
+                <Sun className='h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0' />
+                <Moon className='absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100' />
+                <span className='sr-only'>Toggle theme</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuItem onClick={() => setTheme('light')}>
+                Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('dark')}>
+                Dark
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme('system')}>
+                System
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <div className='hidden md:flex items-center justify-end gap-3 lg:gap-6'>
             <section className='flex items-center'>

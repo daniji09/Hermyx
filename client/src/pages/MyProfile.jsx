@@ -316,7 +316,7 @@ const ProfileReviews = ({
             <div className='flex gap-3'>
               <p className='flex text-sm text-muted-foreground items-center gap-1'>
                 <Star
-                  className='h-4 w-4 fill-amber-400 text-amber-400'
+                  className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-600 dark:text-amber-600'
                   aria-hidden='true'
                 />
                 {Number(Number(reviewsData?.averageRating || 0).toFixed(1))}/5
@@ -381,9 +381,9 @@ export const ReviewCard = ({ review, isClamped = false }) => (
           {review.mission_title}
         </Link>
       </span>
-      <span className='inline-flex items-center gap-1 font-semibold text-amber-700'>
+      <span className='inline-flex items-center gap-1 font-semibold text-amber-700 dark:text-amber-600'>
         <Star
-          className='h-4 w-4 fill-amber-400 text-amber-400'
+          className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500'
           aria-hidden='true'
         />
         {Number(Number(review.rating).toFixed(1))}/5

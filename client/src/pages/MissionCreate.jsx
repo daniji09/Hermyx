@@ -282,7 +282,7 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
       </h3>
 
       <div className='flex justify-center mb-4'>
-        <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed  border-muted-foreground text-muted-foreground'>
+        <div className='w-16 h-16 rounded-full flex items-center justify-center border-2 border-dashed border-muted-foreground text-muted-foreground'>
           <UserPlus
             size={24}
             aria-hidden='true'
@@ -373,7 +373,7 @@ const CreateVacanciesDialog = ({
             disabled={isPending}
             className='snap-start shrink-0 w-50 h-60 flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-primary/20 bg-background hover:bg-secondary hover:border-primary/50 hover:text-primary transition-all text-primary group cursor-pointer'
           >
-            <div className='w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform'>
+            <div className='w-16 h-16 rounded-full flex items-center justify-center mb-2 shadow-sm group-hover:scale-110 transition-transform dark:border-2'>
               <Plus
                 size={32}
                 aria-hidden='true'

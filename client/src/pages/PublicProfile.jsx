@@ -168,8 +168,8 @@ export const PublicProfile = () => {
             </p>
 
             <div className='mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground'>
-              <span className='inline-flex items-center gap-1 font-medium text-amber-700'>
-                <Star className='h-4 w-4 fill-amber-400 text-amber-400' />
+              <span className='inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-600'>
+                <Star className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-500 dark:text-amber-500' />
                 {`${Number(reviewsData?.averageRating || 0).toFixed(1)}/5`}
               </span>
               <span>

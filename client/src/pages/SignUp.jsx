@@ -73,7 +73,7 @@ const SignUpForm = ({ state, action, isPending }) => {
             {`Already have an account? `}
             <Link
               to={'/login'}
-              className='text-black underline
+              className='text-primary underline 
             '
             >
               {'Log in!'}
@@ -97,7 +97,7 @@ const SignUpForm = ({ state, action, isPending }) => {
             defaultValue={state.data?.username || ''}
             autoComplete='username'
             required
-            maxLength={consts.USERNAME_MAX_LENGTH}
+            maxLength={consts.USER.USERNAME.MAX_LENGTH}
             aria-invalid={!clearedFields.username && !!state.errors?.username}
             disabled={isPending}
             onChange={handleFieldChange}

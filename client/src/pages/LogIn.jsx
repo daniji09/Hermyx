@@ -97,7 +97,7 @@ const LogInForm = ({ state, action, isPending }) => {
             name='usernameEmail'
             defaultValue={state.data?.usernameEmail || ''}
             autoComplete='username'
-            maxLength={consts.USERNAME_MAX_LENGTH}
+            maxLength={consts.USER.USERNAME.MAX_LENGTH}
             required
             aria-invalid={
               !clearedFields.usernameEmail && !!state.errors?.usernameEmail

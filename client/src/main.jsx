@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 import './index.css';
 import App from './App.jsx';
 import { AlertProvider } from './contexts/AlertContext';
+import { ThemeProvider } from './contexts/ThemeProvider.jsx';
 
 const queryClient = new QueryClient();
 
@@ -13,11 +14,13 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AlertProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </AlertProvider>
+        <ThemeProvider defaultTheme='system' storageKey='hermyx-theme'>
+          <AlertProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </AlertProvider>
+        </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>,

@@ -365,7 +365,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     mission?.waitingForPaymentVacancies?.length > 0) && (
                     <PayMissionButton
                       mission={mission}
-                      className='w-full bg-green-700 border border-green-200 hover:bg-green-800'
+                      className='w-full bg-green-700 border border-green-200 hover:bg-green-800 dark:border-0 dark:text-white'
                       size='lg'
                     />
                   )}
@@ -678,13 +678,13 @@ const VacancyCard = ({
         {(hasOwnerReview || hasAdventurerReview) && (
           <div className='space-y-1.5'>
             {hasOwnerReview && (
-              <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 px-2.5 py-1.5 rounded-md'>
-                <span className='text-xs font-medium text-muted-foreground'>
+              <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 dark:bg-amber-100/80 dark:border-amber-200 px-2.5 py-1.5 rounded-md'>
+                <span className='text-xs font-medium text-muted-foreground dark:text-amber-800/70'>
                   Adventurer rating
                 </span>
-                <div className='flex items-center gap-1 text-sm font-bold text-amber-700'>
+                <div className='flex items-center gap-1 text-sm font-bold text-amber-700 dark:text-amber-800'>
                   <Star
-                    className='h-3.5 w-3.5 fill-amber-400 text-amber-400'
+                    className='h-3.5 w-3.5 fill-amber-400 text-amber-400 dark:fill-amber-600 dark:text-amber-600'
                     aria-hidden='true'
                   />
                   {Number(vacancy.owner_review_rating).toFixed(1)}
@@ -693,13 +693,13 @@ const VacancyCard = ({
             )}
 
             {hasAdventurerReview && (
-              <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 px-2.5 py-1.5 rounded-md'>
-                <span className='text-xs font-medium text-muted-foreground'>
+              <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 dark:bg-amber-100/80 dark:border-amber-200 px-2.5 py-1.5 rounded-md'>
+                <span className='text-xs font-medium text-muted-foreground dark:text-amber-800/70'>
                   Owner rating
                 </span>
-                <div className='flex items-center gap-1 text-sm font-bold text-amber-700'>
+                <div className='flex items-center gap-1 text-sm font-bold text-amber-700 dark:text-amber-800'>
                   <Star
-                    className='h-3.5 w-3.5 fill-amber-400 text-amber-400'
+                    className='h-3.5 w-3.5 fill-amber-400 text-amber-400  dark:fill-amber-600 dark:text-amber-600'
                     aria-hidden='true'
                   />
                   {Number(vacancy.adventurer_review_rating).toFixed(1)}
@@ -820,22 +820,21 @@ const ViewVacancyDialog = ({
 
         <div className='space-y-6 py-2'>
           <div className='grid grid-cols-2 gap-4'>
-            <div className='bg-muted/20 p-4 rounded-xl border'>
-              <h4 className='text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1'>
-                Monetary reward
-              </h4>
-              <p className='text-2xl font-bold text-primary'>
-                {vacancy.reward}€
-              </p>
+            <div>
+              <h4 className='font-semibold mb-1'>Monetary reward</h4>
+              <div className='bg-muted/20 p-4 rounded-xl border'>
+                <p className='text-2xl font-bold text-primary'>
+                  {vacancy.reward}€
+                </p>
+              </div>
             </div>
-
-            <div className='bg-muted/20 p-4 rounded-xl border flex flex-col justify-center'>
-              <h4 className='text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1'>
-                Current status
-              </h4>
-              <p className='text-sm font-medium'>
-                {getParticipationStatusLabel(vacancy.status)}
-              </p>
+            <div>
+              <h4 className='font-semibold mb-1'>Current status</h4>
+              <div className='bg-muted/20 p-4 rounded-xl border flex flex-col justify-center min-h-17'>
+                <p className='text-sm font-medium'>
+                  {getParticipationStatusLabel(vacancy.status)}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -878,14 +877,14 @@ const ViewVacancyDialog = ({
               <h4 className='font-semibold text-sm mb-2'>Mission Reviews</h4>
               <div className='space-y-3'>
                 {hasOwnerReview && (
-                  <div className='bg-amber-50/50 border border-amber-100 p-4 rounded-xl'>
+                  <div className='bg-amber-50/50 border border-amber-100  dark:bg-amber-100/80 dark:border-amber-200  p-4 rounded-xl'>
                     <div className='flex items-center justify-between mb-2'>
                       <span className='font-bold  text-amber-800/70'>
                         Adventurer Rating
                       </span>
-                      <div className='flex items-center gap-1 font-bold text-amber-700'>
+                      <div className='flex items-center gap-1 font-bold text-amber-700 dark:text-amber-800'>
                         <Star
-                          className='h-4 w-4 fill-amber-400 text-amber-400'
+                          className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-600 dark:text-amber-600'
                           aria-hidden='true'
                         />
                         {Number(vacancy.owner_review_rating).toFixed(1)}
@@ -904,21 +903,21 @@ const ViewVacancyDialog = ({
                 )}
 
                 {hasAdventurerReview && (
-                  <div className='bg-amber-50/50 border border-amber-100 p-4 rounded-xl'>
+                  <div className='bg-amber-50/50 border border-amber-100 dark:bg-amber-100/80 dark:border-amber-200  p-4 rounded-xl'>
                     <div className='flex items-center justify-between mb-2'>
                       <span className='font-bold text-amber-800/70'>
                         Owner Rating
                       </span>
-                      <div className='flex items-center gap-1 font-bold text-amber-700'>
+                      <div className='flex items-center gap-1 font-bold text-amber-700 dark:text-amber-800'>
                         <Star
-                          className='h-4 w-4 fill-amber-400 text-amber-400'
+                          className='h-4 w-4 fill-amber-400 text-amber-400 dark:fill-amber-600 dark:text-amber-600'
                           aria-hidden='true'
                         />
                         {Number(vacancy.adventurer_review_rating).toFixed(1)}
                       </div>
                     </div>
                     {vacancy.adventurer_review_comment ? (
-                      <p className='text-sm text-amber-900/80 italic wrap-break-words'>
+                      <p className='text-sm text-amber-900/80 dark:text-amber-900/80  italic wrap-break-words'>
                         &quot;{vacancy.adventurer_review_comment}&quot;
                       </p>
                     ) : (
@@ -1447,7 +1446,7 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
               <Input
                 id='ownerRating'
                 type='number'
-                min={consts.RATING_MIN}
+                min={consts.REVIEW.RATING_MIN}
                 max={consts.REVIEW.RATING_MAX}
                 step={consts.REVIEW.RATING_STEP}
                 value={rating}
@@ -1881,7 +1880,7 @@ const SubmitParticipationButton = ({
   const classNameButton =
     participationStatus === MISSION_PARTICIPATION_STATUS.REJECTED.ID
       ? 'bg-destructive/80'
-      : 'bg-green-700 border border-green-200 hover:bg-green-800';
+      : 'bg-green-700 border border-green-200 hover:bg-green-800 dark:text-white';
 
   return (
     <Button
