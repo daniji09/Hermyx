@@ -201,7 +201,7 @@ Gets payment info of the mission specified by its identifier, mid.
 <br>
 <br>
 
-## - Publish mission: `POST /api/missions/`
+## - Publish mission: `POST /api/missions`
 
 Publishes a new mission.
 
@@ -254,7 +254,7 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
 
     <br>
 
-**Workflow:** to publish a mission, it's needed to enter the title, description, and information about the available vacancies, which must include at least one vacancy and its title and monetary reward. Optionally, it's aso possible to add up to five images, which are handled by the `multer` (Azure TODO:)library, and a location, which is handled by the `postgis` extension for PostgreSQL. Because creating a mission requires entering data into missions, mission participants, conversations, conversation participants, and mission photos, a database transaction is necessary.
+**Workflow:** to publish a mission, it's needed to enter the title, description, and information about the available vacancies, which must include at least one vacancy and its title and monetary reward. Optionally, it's also possible to add up to five images, which are received by Multer and stored through the configured local/Azure storage provider, and a location, which is handled by the PostGIS extension for PostgreSQL. Because creating a mission requires entering data into missions, mission participants, conversations, conversation participants, and mission photos, a database transaction is necessary.
 <br>
 <br>
 <br>
@@ -744,7 +744,7 @@ Reopens a mission after being closed.
 <br>
 <br>
 
-## - Reopen mission: `POST /api/missions/:mid/finish`
+## - Finish mission: `POST /api/missions/:mid/finish`
 
 Finishes a mission.
 

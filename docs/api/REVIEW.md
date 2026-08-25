@@ -1,9 +1,9 @@
-# API - Payment documentation
+# API - Reviews documentation
 
 Manages reviews in the platform
 <br><br>
 
-## - Get all reviews: `GET /api/reviews/user/:uid`
+## - Get all reviews: `GET /api/reviews/users/:uid`
 
 Gets all reviews that user has received.
 
@@ -28,7 +28,7 @@ _> Both `page` and `limit` must be sent for every request._
 
   ```json
   {
-    "missions": ["<reviews>"],
+    "reviews": ["<reviews>"],
     "pagination": {
       "currentPage": "<currentPage>",
       "totalPages": "<totalPages>",
@@ -54,7 +54,7 @@ both `page` and `limit` are required.
 <br>
 <br>
 
-## - Review adventurer: `POST /missions/:mid/adventurers/:adventurerId`
+## - Review adventurer: `POST /api/reviews/missions/:mid/adventurers/:adventurerId`
 
 Applicant can review one of their mission's adventurer after they finish
 
@@ -130,7 +130,7 @@ Applicant can review one of their mission's adventurer after they finish
 <br>
 <br>
 
-## - Review adventurer: `POST /missions/:mid/owner`
+## - Review mission owner: `POST /api/reviews/missions/:mid/owner`
 
 Adventurer can review their applicant after finish
 

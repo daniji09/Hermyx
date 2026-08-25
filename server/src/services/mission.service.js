@@ -473,7 +473,7 @@ export const getOpenedMissions = async (
 };
 
 // Get mission by mid
-export const getMissionByMid = async (mid, uid) => {
+export const getMissionByMid = async (mid, uid, isAdmin = false) => {
   // Parameter checks
   checkRequired(uid, 'Current user id');
   checkRequired(mid, 'Mission id');
@@ -489,6 +489,8 @@ export const getMissionByMid = async (mid, uid) => {
 
   // Returns success or error
   if (!mission) throw buildMissionNotFoundError();
+  if (!isAdmin && mission.status === MISSION_STATUS.DELETED.ID)
+    throw buildMissionNotFoundError();
 
   // Mission can be finished if all vacancies are empty or finished
   const canFinish =

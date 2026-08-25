@@ -3,7 +3,7 @@
 Manages payments in the platform
 <br><br>
 
-## - Get user's saved cards: `GET /stripe/cards`
+## - Get user's saved cards: `GET /api/stripe/cards`
 
 Gets all cards saved by user.
 
@@ -25,7 +25,7 @@ Gets all cards saved by user.
   <br>
   <br>
 
-## - User's Stripe connection success: `GET /stripe/connect/success`
+## - User's Stripe connection success: `GET /api/stripe/connect/success`
 
 Endpoint that confirms the success of the connection to Stripe
 
@@ -44,7 +44,7 @@ Endpoint that confirms the success of the connection to Stripe
 <br>
 <br>
 
-## - Create intent for card addition: `POST /stripe/cards`
+## - Create intent for card addition: `POST /api/stripe/cards`
 
 Creates an intent in Stripe for that user to add a card.
 
@@ -65,7 +65,7 @@ Creates an intent in Stripe for that user to add a card.
   <br>
   <br>
 
-## - Set card as default: `POST /stripe/cards/default`
+## - Set card as default: `POST /api/stripe/cards/default`
 
 Sets a card to be the default one.
 
@@ -120,7 +120,7 @@ Sets a card to be the default one.
 <br>
 <br>
 
-## - Create payment intent with default card: `POST /stripe/missions/:mid/pay/default`
+## - Create payment intent with default card: `POST /api/stripe/missions/:mid/pay/default`
 
 Creates a payment intent using the user's default card.
 
@@ -189,7 +189,7 @@ Creates a payment intent using the user's default card.
   <br>
   <br>
 
-## - Create payment intent with default card: `POST /stripe/missions/:mid/pay/new`
+## - Create payment intent with a new card: `POST /api/stripe/missions/:mid/pay/new`
 
 Creates a payment intent using a new card.
 
@@ -263,7 +263,7 @@ Creates a payment intent using a new card.
 <br>
 <br>
 
-## - Create payment intent with default card: `POST /stripe/missions/:mid/confirm`
+## - Confirm mission payment: `POST /api/stripe/missions/:mid/confirm`
 
 Confirms payment and make changes in database
 
@@ -334,7 +334,7 @@ Confirms payment and make changes in database
 <br>
 <br>
 
-## - Connects user to a Stripe account as an adventurer: `POST /stripe/connect/onboard`
+## - Connects user to a Stripe account as an adventurer: `POST /api/stripe/connect/onboard`
 
 Creates an account in Stripe for the adventurer.
 
@@ -353,7 +353,7 @@ Creates an account in Stripe for the adventurer.
 <br>
 <br>
 
-## - Links user to Stripe dashboard: `POST /stripe/connect/dashboard-link`
+## - Links user to Stripe dashboard: `POST /api/stripe/connect/dashboard-link`
 
 Returns Stripe dashboard link for registered users
 
@@ -382,7 +382,7 @@ Returns Stripe dashboard link for registered users
 <br>
 <br>
 
-## - Delete a card: `DELETE /stripe/cards`
+## - Delete a card: `DELETE /api/stripe/cards`
 
 Deletes the specified card.
 

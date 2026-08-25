@@ -1,4 +1,5 @@
 //External modules
+import { USER_ROLE } from '@hermyx/shared';
 import * as missionService from '../services/mission.service.js';
 
 /// Controller functions
@@ -44,7 +45,9 @@ export const getMissionByMid = async (req, res, next) => {
   try {
     const { mid } = req.params;
     const uid = req.user.uid;
-    const mission = await missionService.getMissionByMid(mid, uid);
+    const isAdmin =
+      req.firebaseToken?.admin === true && req.user.role === USER_ROLE.ADMIN.ID;
+    const mission = await missionService.getMissionByMid(mid, uid, isAdmin);
     return res.status(200).json(mission);
   } catch (error) {
     next(error);

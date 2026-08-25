@@ -222,7 +222,7 @@ Searches missions from the user specified by username, either joined or publishe
 **Path parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `uid` | integer | Yes | Uid of user. |
+| `username` | string | Yes | Username from the public profile. |
 <br>
 
 **Query parameters:**
@@ -352,7 +352,7 @@ _> Note: only one `avatar` file is treated._
 
   <br>
 
-**Workflow:** to process the image, Multer library is used, which allows to configure the number of files per endpoint, their size, and the expected format of each file. Regarding image storage, for development purposes, images are saved locally in the /public/uploads/avatars folder, while in production, Azure Blob is used (TODO:). It's worth noting that this is another backend which does not use any database transactions, as the industry standard prioritizes UX. This means that the image is first saved to storage, then to the database, and finally, the previous avatar image is deleted if it exists. Therefore, in the worst-case scenario, only a dirty image remains stored (TODO:).
+**Workflow:** to process the image, Multer library is used, which allows to configure the number of files per endpoint, their size, and the expected format of each file. Regarding image storage, development uses the local uploads directory and a configured production environment can use Azure Blob through the storage provider. The image is first saved to storage, then to the database, and finally the previous avatar image is deleted if it exists; therefore, an orphaned file can remain if a later step fails.
 <br>
 <br>
 <br>

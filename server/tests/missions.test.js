@@ -158,6 +158,22 @@ describe('Mission API', () => {
     expect(missionService.getMissionByMid).toHaveBeenCalledWith(
       5,
       currentUser.uid,
+      false,
+    );
+  });
+
+  it('allows administrators to inspect deleted missions', async () => {
+    currentUser.role = USER_ROLE.ADMIN.ID;
+    const mission = { mission: { mid: 5, status: 'DELETED' } };
+    missionService.getMissionByMid.mockResolvedValue(mission);
+
+    const response = await request(app).get('/api/missions/5');
+
+    expect(response.status).toBe(200);
+    expect(missionService.getMissionByMid).toHaveBeenCalledWith(
+      5,
+      currentUser.uid,
+      true,
     );
   });
 
