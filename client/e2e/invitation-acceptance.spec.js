@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import { expect, test } from 'playwright/test';
+import {
+  inviteePassword,
+  inviteeUsername as configuredInviteeUsername,
+  ownerPassword,
+  ownerUsername as configuredOwnerUsername,
+} from './support/realMissionFlow.js';
 
 const missionFixture = JSON.parse(
   await readFile(
@@ -9,9 +15,14 @@ const missionFixture = JSON.parse(
   ),
 );
 
-const ownerUsername = process.env.PLAYWRIGHT_OWNER_USERNAME || 'e1';
-const inviteeUsername = process.env.PLAYWRIGHT_INVITEE_USERNAME || 'e2';
-const password = process.env.PLAYWRIGHT_PASSWORD;
+const ownerUsername =
+  process.env.PLAYWRIGHT_OWNER_USERNAME ||
+  missionFixture.ownerUsername ||
+  configuredOwnerUsername;
+const inviteeUsername =
+  process.env.PLAYWRIGHT_INVITEE_USERNAME ||
+  missionFixture.inviteeUsername ||
+  configuredInviteeUsername;
 const actionPauseMs = Number(process.env.PLAYWRIGHT_ACTION_PAUSE_MS || 700);
 
 const pauseAfterAction = (page) => page.waitForTimeout(actionPauseMs);
@@ -22,6 +33,8 @@ const fillAndPause = async (page, locator, value) => {
 };
 
 const loginRealUser = async (page, username) => {
+  const password = username === ownerUsername ? ownerPassword : inviteePassword;
+
   await page.goto('/login');
   await pauseAfterAction(page);
   await fillAndPause(page, page.locator('#logInUsernameEmail'), username);
@@ -124,7 +137,9 @@ const createMission = async (page, title) => {
 };
 
 const inviteUser = async (page, missionId) => {
-  await page.getByRole('button', { name: 'Add adventurer' }).click();
+  await page
+    .getByRole('button', { name: /Invite an adventurer|Add adventurer/ })
+    .click();
   await pauseAfterAction(page);
 
   const dialog = page.getByRole('alertdialog', {
@@ -149,9 +164,19 @@ const inviteUser = async (page, missionId) => {
   ).toBeVisible();
   await pauseAfterAction(page);
 
-  await dialog.getByRole('button', { name: 'Invite' }).click();
+  const userResult = dialog
+    .getByText(inviteeUsername, { exact: true })
+    .locator('xpath=ancestor::div[.//button[normalize-space()="Invite"]][1]');
+  await userResult.getByRole('button', { name: 'Invite', exact: true }).click();
   await pauseAfterAction(page);
-  await dialog.locator('#invitationVacancy').selectOption({ index: 1 });
+  const vacancyOption = dialog
+    .locator('#invitationVacancy option')
+    .filter({ hasText: missionFixture.vacancy.title })
+    .first();
+  await expect(vacancyOption).toHaveCount(1);
+  const vacancyValue = await vacancyOption.getAttribute('value');
+  expect(vacancyValue).toBeTruthy();
+  await dialog.locator('#invitationVacancy').selectOption(vacancyValue);
   await pauseAfterAction(page);
   await fillAndPause(
     page,
@@ -179,8 +204,8 @@ test('invites an adventurer and accepts the invitation with a second account', a
 }) => {
   test.setTimeout(120000);
   test.skip(
-    !password,
-    'Set PLAYWRIGHT_PASSWORD to run the real invitation acceptance flow.',
+    !ownerPassword || !inviteePassword,
+    'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the real invitation acceptance flow.',
   );
 
   const missionTitle = `${missionFixture.title} ${Date.now()}`;
@@ -233,6 +258,6 @@ test('invites an adventurer and accepts the invitation with a second account', a
   await expect(
     page.getByText(inviteeUsername, { exact: true }).first(),
   ).toBeVisible();
-  await expect(page.getByText('JOINED', { exact: true })).toBeVisible();
+  await expect(page.getByText('Joined', { exact: true })).toBeVisible();
   await pauseAfterAction(page);
 });

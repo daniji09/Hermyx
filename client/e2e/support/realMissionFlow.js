@@ -9,13 +9,19 @@ const missionFixture = JSON.parse(
   ),
 );
 
-export const ownerUsername = process.env.PLAYWRIGHT_OWNER_USERNAME || 'e1';
-export const inviteeUsername = process.env.PLAYWRIGHT_INVITEE_USERNAME || 'e2';
+export const ownerUsername =
+  process.env.PLAYWRIGHT_OWNER_USERNAME ||
+  missionFixture.ownerUsername ||
+  'dani';
+export const inviteeUsername =
+  process.env.PLAYWRIGHT_INVITEE_USERNAME ||
+  missionFixture.inviteeUsername ||
+  'wen';
 export const ownerPassword =
   process.env.PLAYWRIGHT_OWNER_PASSWORD || process.env.PLAYWRIGHT_PASSWORD;
 export const inviteePassword =
   process.env.PLAYWRIGHT_INVITEE_PASSWORD || process.env.PLAYWRIGHT_PASSWORD;
-export const password = ownerPassword;
+export const hasRealCredentials = Boolean(ownerPassword && inviteePassword);
 const actionPauseMs = Number(process.env.PLAYWRIGHT_ACTION_PAUSE_MS || 700);
 
 const pauseAfterAction = (page) => page.waitForTimeout(actionPauseMs);
@@ -168,7 +174,14 @@ export const inviteUser = async (page, missionId) => {
     .locator('xpath=ancestor::div[.//button[normalize-space()="Invite"]][1]');
   await userResult.getByRole('button', { name: 'Invite', exact: true }).click();
   await pauseAfterAction(page);
-  await dialog.locator('#invitationVacancy').selectOption({ index: 1 });
+  const vacancyOption = dialog
+    .locator('#invitationVacancy option')
+    .filter({ hasText: missionFixture.vacancy.title })
+    .first();
+  await expect(vacancyOption).toHaveCount(1);
+  const vacancyValue = await vacancyOption.getAttribute('value');
+  expect(vacancyValue).toBeTruthy();
+  await dialog.locator('#invitationVacancy').selectOption(vacancyValue);
   await pauseAfterAction(page);
   await fillAndPause(
     page,

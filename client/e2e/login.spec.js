@@ -35,13 +35,21 @@ test('logs in through the form and lands on the home page', async ({
   await expect(page).toHaveURL('/');
   await expect(
     page.getByRole('heading', {
-      name: `Welcome again, ${hermyxLoginFixture.hermyxUser.username}!`,
+      name: `Welcome back, ${hermyxLoginFixture.hermyxUser.username}!`,
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole('link', {
-      name: 'Go to my profile',
+    page.getByRole('button', {
+      name: new RegExp(hermyxLoginFixture.hermyxUser.username),
     }),
-  ).toContainText(hermyxLoginFixture.hermyxUser.username);
-  await expect(page.getByRole('button', { name: 'Log out' })).toBeVisible();
+  ).toBeVisible();
+  await page
+    .getByRole('button', {
+      name: new RegExp(hermyxLoginFixture.hermyxUser.username),
+    })
+    .click();
+  await expect(
+    page.getByRole('menuitem', { name: 'My profile' }),
+  ).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Log out' })).toBeVisible();
 });

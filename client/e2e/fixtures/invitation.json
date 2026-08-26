@@ -1,4 +1,6 @@
 {
+  "ownerUsername": "dani",
+  "inviteeUsername": "wen",
   "title": "Playwright - Invitacion",
   "description": "Necesito un tester para validar el flujo de invitacion y aceptacion.",
   "location": "Madrid, Spain",
@@ -7,5 +9,6 @@
     "description": "Aceptar la invitacion y comprobar la asignacion.",
     "reward": 10
   },
-  "invitationMessage": "Te invito a participar en esta mision de prueba."
+  "invitationMessage": "Te invito a participar en esta mision de prueba.",
+  "disputeReason": "No estoy de acuerdo con el rechazo de mi entrega porque cumple la descripcion de la vacante."
 }

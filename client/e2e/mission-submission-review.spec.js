@@ -6,8 +6,8 @@ import {
   inviteUser,
   inviteeUsername,
   loginRealUser,
+  hasRealCredentials,
   ownerUsername,
-  password,
   startAndPayMission,
 } from './support/realMissionFlow.js';
 
@@ -17,8 +17,8 @@ test('submits a participation and lets the owner approve it', async ({
 }) => {
   test.setTimeout(240000);
   test.skip(
-    !password,
-    'Set PLAYWRIGHT_PASSWORD to run the real submission and review flow.',
+    !hasRealCredentials,
+    'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the real submission and review flow.',
   );
 
   const missionTitle = `Playwright - Entrega ${Date.now()}`;

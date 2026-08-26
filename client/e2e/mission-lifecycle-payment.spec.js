@@ -6,8 +6,8 @@ import {
   inviteUser,
   inviteeUsername,
   loginRealUser,
+  hasRealCredentials,
   ownerUsername,
-  password,
   startAndPayMission,
 } from './support/realMissionFlow.js';
 
@@ -17,8 +17,8 @@ test('closes, pays and starts a newly created mission', async ({
 }) => {
   test.setTimeout(180000);
   test.skip(
-    !password,
-    'Set PLAYWRIGHT_PASSWORD to run the real mission lifecycle payment flow.',
+    !hasRealCredentials,
+    'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the real mission lifecycle payment flow.',
   );
 
   const missionTitle = `Playwright - Lifecycle ${Date.now()}`;

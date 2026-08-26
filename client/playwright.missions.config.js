@@ -1,6 +1,7 @@
 import { defineConfig, devices } from 'playwright/test';
 import { fileURLToPath } from 'node:url';
 import process from 'node:process';
+import './e2e/support/loadPlaywrightEnv.js';
 
 const clientDirectory = fileURLToPath(new URL('.', import.meta.url));
 const serverDirectory = fileURLToPath(new URL('../server/', import.meta.url));
@@ -15,6 +16,8 @@ export default defineConfig({
     'invitation-acceptance.spec.js',
     'mission-lifecycle-payment.spec.js',
     'mission-submission-review.spec.js',
+    'mission-rejection-dispute.spec.js',
+    'stripe-connect-onboarding.spec.js',
   ],
   fullyParallel: false,
   reporter: [['list']],

@@ -1,22 +1,25 @@
-[
-  {
-    "title": "Playwright - Misión de prueba",
-    "description": "Necesito un tester para validar el flujo de creación y publicación de una misión.",
-    "location": "Madrid, Spain",
-    "vacancy": {
-      "title": "Tester",
-      "description": "Comprobar que la misión se crea y aparece correctamente.",
-      "reward": 10
+{
+  "user": "dani",
+  "missions": [
+    {
+      "title": "Playwright - Misión de prueba",
+      "description": "Necesito un tester para validar el flujo de creación y publicación de una misión.",
+      "location": "Madrid, Spain",
+      "vacancy": {
+        "title": "Tester",
+        "description": "Comprobar que la misión se crea y aparece correctamente.",
+        "reward": 10
+      }
+    },
+    {
+      "title": "Playwright - Misión de ubicación",
+      "description": "Necesito un tester para comprobar que la ubicación y la vacante se guardan correctamente.",
+      "location": "Madrid, Spain",
+      "vacancy": {
+        "title": "Tester",
+        "description": "Revisar la ubicación mostrada y validar los datos de la vacante.",
+        "reward": 10
+      }
     }
-  },
-  {
-    "title": "Playwright - Misión de ubicación",
-    "description": "Necesito un tester para comprobar que la ubicación y la vacante se guardan correctamente.",
-    "location": "Madrid, Spain",
-    "vacancy": {
-      "title": "Tester",
-      "description": "Revisar la ubicación mostrada y validar los datos de la vacante.",
-      "reward": 10
-    }
-  }
-]
+  ]
+}
