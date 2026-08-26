@@ -176,10 +176,10 @@ export const Home = () => {
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
               <ShieldCheck className='h-7 w-7' aria-hidden='true' />
             </div>
-            <h3 className='text-xl font-bold mb-2'>3. Pay securely</h3>
+            <h3 className='text-xl font-bold mb-2'>3. Use test payments</h3>
             <p className='text-muted-foreground'>
-              Payments are safely held in escrow via Stripe until the mission is
-              completed.
+              The prototype uses Stripe in test mode to demonstrate the payment
+              flow. No real payment or escrow service is provided.
             </p>
           </div>
         </section>
@@ -299,7 +299,7 @@ export const Home = () => {
       <title>{`Hermyx | The ultimate board to manage services securely and connect with the community.`}</title>
       <meta
         name='description'
-        content={`Hermyx, a web application that will allow users to manage service securely via escrow type payment and connecting with high-rated users.`}
+        content={`Hermyx, an academic prototype for managing missions and connecting users through a test payment flow.`}
       ></meta>
       <main className='container mx-auto max-w-6xl space-y-12 p-4 sm:p-6 mb-12 overflow-hidden'>
         <section className='flex flex-col gap-6 rounded-2xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8'>

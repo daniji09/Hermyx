@@ -38,6 +38,8 @@ CREATE TABLE APP_USER (
 	avatar TEXT,
 	configuration JSONB NOT NULL DEFAULT '{"show_missions_to_others": true}'::jsonb,
 	rating NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating >= 0 AND rating <= 5), -- Cached aggregate for profile reads
+	terms_version VARCHAR(20),
+	terms_accepted_at TIMESTAMP,
 	stripe_customer_id VARCHAR(255),
   	stripe_connected_id VARCHAR(255)
 );

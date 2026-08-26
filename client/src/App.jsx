@@ -24,6 +24,14 @@ import { Report } from './pages/Report';
 import { Dispute } from './pages/Dispute';
 import { Disputes } from './pages/Disputes';
 import { NotFound } from './pages/NotFound';
+import {
+  Terms,
+  LegalNotice,
+  PrivacyPolicy,
+  CookiePolicy,
+  CommunityGuidelines,
+} from './pages/LegalPages';
+import { Footer } from './components/custom/Footer';
 
 function App() {
   return (
@@ -34,6 +42,14 @@ function App() {
         {/* Home */}
         <Route path='/' element={<Home />}></Route>
         <Route path='/auth/action' element={<AuthAction />}></Route>
+        <Route path='/terms' element={<Terms />}></Route>
+        <Route path='/legal' element={<LegalNotice />}></Route>
+        <Route path='/privacy' element={<PrivacyPolicy />}></Route>
+        <Route path='/cookies' element={<CookiePolicy />}></Route>
+        <Route
+          path='/community-guidelines'
+          element={<CommunityGuidelines />}
+        ></Route>
 
         {/* --- Authentication routes (not log in needed) --- */}
         <Route element={<ProtectedRoute reverseLogic />}>
@@ -82,6 +98,7 @@ function App() {
         {/* --- Catch routes --- */}
         <Route path='*' element={<NotFound />} />
       </Routes>
+      <Footer />
     </>
   );
 }

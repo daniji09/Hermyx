@@ -64,6 +64,7 @@ export const messages = {
       USERNAME_ALREADY_EXISTS: (username) =>
         `Username ${username} already in use.`,
       COULD_NOT_CREATE_NEW_ACCOUNT: 'Could not create new account.',
+      TERMS_REQUIRED: 'You must accept the Hermyx terms and conditions.',
     },
     EMAIL_AUTHENTICATION: {
       COULD_NOT_ADD: `Couldn't add email authentication.`,

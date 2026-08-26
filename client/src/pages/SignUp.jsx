@@ -14,6 +14,8 @@ import { UseGoogleAuth } from '../hooks/UseGoogleAuth';
 import { Separator } from '@/components/ui/separator';
 
 export const SignUp = () => {
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   // Form action, standard sign up
   const [state, signUpFormAction, isPending] = useActionState(
     signUpAction,
@@ -39,13 +41,21 @@ export const SignUp = () => {
           state={state}
           action={signUpFormAction}
           isPending={isPending}
+          termsAccepted={termsAccepted}
+          onTermsAcceptedChange={setTermsAccepted}
         ></SignUpForm>
       </main>
     </>
   );
 };
 
-const SignUpForm = ({ state, action, isPending }) => {
+const SignUpForm = ({
+  state,
+  action,
+  isPending,
+  termsAccepted,
+  onTermsAcceptedChange,
+}) => {
   // Logic for cleaning errors in fields or alerts when modifications are done
   const [clearedFields, setClearedFields] = useState({});
   const [prevServerState, setPrevServerState] = useState(state);
@@ -179,6 +189,55 @@ const SignUpForm = ({ state, action, isPending }) => {
 
         <CardForm.Footer>
           <div className='flex flex-col w-full gap-y-1'>
+            <div className='space-y-2 pb-3'>
+              <div className='flex items-start gap-3'>
+                <input
+                  id='signUpTermsAccepted'
+                  form='signUpForm'
+                  name='termsAccepted'
+                  type='checkbox'
+                  value='true'
+                  checked={termsAccepted}
+                  onChange={(event) =>
+                    onTermsAcceptedChange(event.target.checked)
+                  }
+                  className='mt-1 h-4 w-4 rounded border-input accent-primary'
+                  aria-invalid={!!state.errors?.termsAccepted}
+                  required
+                  disabled={isPending || isGoogleAuthPending}
+                />
+                <label
+                  htmlFor='signUpTermsAccepted'
+                  className='text-sm leading-5 text-muted-foreground'
+                >
+                  Confirmo que tengo al menos 18 años y que he leído y acepto
+                  los{' '}
+                  <Link
+                    to='/terms'
+                    target='_blank'
+                    rel='noreferrer'
+                    className='text-primary underline'
+                  >
+                    Términos y condiciones de Hermyx
+                  </Link>
+                  . La{' '}
+                  <Link
+                    to='/privacy'
+                    target='_blank'
+                    rel='noreferrer'
+                    className='text-primary underline'
+                  >
+                    Política de privacidad
+                  </Link>{' '}
+                  se consulta por separado.
+                </label>
+              </div>
+              {state.errors?.termsAccepted && (
+                <p className='text-sm text-destructive' role='alert'>
+                  {state.errors.termsAccepted[0]}
+                </p>
+              )}
+            </div>
             <Button
               className='w-full'
               id='sendSignUp'
@@ -197,11 +256,16 @@ const SignUpForm = ({ state, action, isPending }) => {
               <Separator className='my-4 w-fit'></Separator>
             </div>
             <GoogleSignInButton
-              disabled={isPending || isGoogleAuthPending}
-              onClick={mutate}
+              disabled={isPending || isGoogleAuthPending || !termsAccepted}
+              onClick={() => mutate({ termsAccepted: true })}
               isPending={isGoogleAuthPending}
               text='Sign up with Google'
             ></GoogleSignInButton>
+            {!termsAccepted && (
+              <p className='text-center text-xs text-muted-foreground'>
+                Acepta los términos para continuar con Google.
+              </p>
+            )}
           </div>
         </CardForm.Footer>
       </CardForm>

@@ -303,6 +303,11 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
             <p className='text-muted-foreground mt-1'>
               Pay all participations that are needed.
             </p>
+            <p className='mt-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground'>
+              Modo de demostración: Stripe utiliza claves de prueba. No se
+              realiza un cobro real y Hermyx no ofrece un servicio real de
+              escrow o depósito en garantía.
+            </p>
           </div>
         </div>
       </section>
@@ -522,7 +527,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
               >
                 {isPending
                   ? 'Processing payment...'
-                  : `Pay ${formatCurrency(totalDue)}`}
+                  : `Simulate payment ${formatCurrency(totalDue)}`}
               </Button>
             </CardForm.Footer>
           </CardForm>

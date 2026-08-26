@@ -10,6 +10,12 @@ export const signUpSchema = z
     email: userValidation.emailBaseSchema,
     password: userValidation.newPasswordBaseSchema,
     confirmPassword: userValidation.confirmPasswordBaseSchema,
+    termsAccepted: z.preprocess(
+      (value) => value === true || value === 'true',
+      z.boolean().refine((value) => value, {
+        message: messages.AUTH.SIGNUP.TERMS_REQUIRED,
+      }),
+    ),
   })
   .refine((val) => val.password === val.confirmPassword, {
     message: messages.AUTH.SIGNUP.PASSWORDS_NOT_MATCH,
@@ -36,4 +42,9 @@ export const syncGoogleSchema = z.object({
     .min(1, messages.GENERAL.FIELD_REQUIRED('Username')),
   email: userValidation.emailBaseSchema,
   firebaseUid: userValidation.firebaseUidBaseSchema,
+  termsAccepted: z.preprocess((value) => {
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return undefined;
+  }, z.boolean().optional()),
 });

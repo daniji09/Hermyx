@@ -20,13 +20,24 @@ import { AZURE_CONN_STRING } from '../config/config.js';
 
 /// Model access functions
 // Create user
-export const createUser = async (email, username, firebaseUid) => {
+export const createUser = async (
+  email,
+  username,
+  firebaseUid,
+  termsVersion,
+) => {
   checkRequired(email, 'User email');
   checkRequired(username, 'Username');
   checkRequired(firebaseUid, 'User Firebase uid');
+  checkRequired(termsVersion, 'Terms version');
 
   // Creates user
-  const user = await userModel.create(email, username, firebaseUid);
+  const user = await userModel.create(
+    email,
+    username,
+    firebaseUid,
+    termsVersion,
+  );
   return user;
 };
 

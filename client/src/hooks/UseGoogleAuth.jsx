@@ -13,7 +13,7 @@ export const UseGoogleAuth = () => {
   return useMutation({
     onMutate: () => setIsSyncing(true),
 
-    mutationFn: async () => {
+    mutationFn: async ({ termsAccepted = false } = {}) => {
       try {
         // Sign in with Google
         const result = await signInWithGoogle();
@@ -24,6 +24,7 @@ export const UseGoogleAuth = () => {
           user.email,
           user.email?.split('@')[0],
           user.uid,
+          termsAccepted,
         );
 
         // State is saved in React

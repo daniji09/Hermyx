@@ -9,6 +9,9 @@ export const consts = {
 
   /// Auth consts
   AUTH: {
+    LEGAL: {
+      TERMS_VERSION: '1.0',
+    },
     // Firebase consts
     FIREBASE_ERRORS: {
       //Auth/account-exists-with-different-credential?

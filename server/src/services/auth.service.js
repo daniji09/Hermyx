@@ -6,7 +6,14 @@ import { stringShortener } from '../utils/string.util.js';
 
 /// Service functions
 // Signup
-export const signup = async (email, username, password) => {
+export const signup = async (email, username, password, termsAccepted) => {
+  if (termsAccepted !== true)
+    throw new AppError(
+      messages.AUTH.SIGNUP.TERMS_REQUIRED,
+      400,
+      'termsAccepted',
+    );
+
   // Checks if the email is already in use
   const userByEmail = await userService.getUserByEmail(email);
 
@@ -70,6 +77,7 @@ export const signup = async (email, username, password) => {
       email,
       username,
       firebaseUser.uid,
+      consts.AUTH.LEGAL.TERMS_VERSION,
     );
 
     // Returns success or error
@@ -133,12 +141,24 @@ export const login = async (email, username, password) => {
 };
 
 // Sync with Google action
-export const syncGoogle = async (email, username, firebaseUid) => {
+export const syncGoogle = async (
+  email,
+  username,
+  firebaseUid,
+  termsAccepted,
+) => {
   // Checks if user already exist on Hermyx db
   const checkedUser = await userService.getUserByEmail(email);
 
   // If it exists, it returns it, its a login
   if (checkedUser) return { user: checkedUser, isLogin: true };
+
+  if (termsAccepted !== true)
+    throw new AppError(
+      messages.AUTH.SIGNUP.TERMS_REQUIRED,
+      400,
+      'termsAccepted',
+    );
 
   // Otherwise, it is a signup, so unique username is generated
   const uniqueUsername = await generateUniqueUsername(username);
@@ -149,6 +169,7 @@ export const syncGoogle = async (email, username, firebaseUid) => {
       email,
       uniqueUsername,
       firebaseUid,
+      consts.AUTH.LEGAL.TERMS_VERSION,
     );
 
     // Returns success or error
