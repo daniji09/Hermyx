@@ -247,6 +247,8 @@ export const PublicProfile = () => {
             fetchNextPage={fetchNextPage}
             isLoading={isMissionsLoading}
             isError={isMissionsError}
+            publishedMissionsMessage="It seems this user hasn't published any missions yet."
+            joinedMissionsMessage="It seems this user hasn't joined any missions yet."
             sectionClassName={''}
             infiniteScroll={false}
           ></UserMissionsTable>

@@ -89,6 +89,8 @@ export const UserMissionsTable = ({
   fetchNextPage,
   isLoading,
   isError,
+  publishedMissionsMessage = `It seems you haven't published any missions yet. Let's ask for some help!`,
+  joinedMissionsMessage = `It seems you haven't joined any missions yet. Embrace an adventure!`,
   sectionClassName = 'flex flex-col gap-6 mb-8 w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16',
   infiniteScroll,
 }) => {
@@ -116,7 +118,7 @@ export const UserMissionsTable = ({
             fetchNextPage={fetchNextPage}
             isLoading={isLoading}
             isError={isError}
-            noMissionsMessage={`It seems you haven't published any missions yet. Let's ask for some help!`}
+            noMissionsMessage={publishedMissionsMessage}
             sectionClassName='w-full'
             infiniteScroll={infiniteScroll}
           ></MissionSearchContainer>
@@ -130,7 +132,7 @@ export const UserMissionsTable = ({
             fetchNextPage={fetchNextPage}
             isLoading={isLoading}
             isError={isError}
-            noMissionsMessage={`It seems you haven't joined any missions yet. Embrace an adventure!`}
+            noMissionsMessage={joinedMissionsMessage}
             sectionClassName='w-full'
           ></MissionSearchContainer>
         </TabsContent>
