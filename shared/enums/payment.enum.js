@@ -17,7 +17,7 @@ export const TRANSACTION_TYPE = {
   INITIAL_FUNDING: { ID: 'INITIAL_FUNDING', LABEL: 'Initial funding' },
   NEW_ADVENTURER_FUNDING: {
     ID: 'NEW_ADVENTURER_FUNDING',
-    LABEL: 'New adventurer funding',
+    LABEL: 'New collaborator funding',
   },
   NEGOTIATION_EXTRA: { ID: 'NEGOTIATION_EXTRA', LABEL: 'Negotiation extra' },
   NEGOTIATION_REFUND: {
@@ -34,7 +34,7 @@ export const TRANSACTION_TYPE = {
   },
   ADVENTURER_KICKED_OUT_COMPENSATION: {
     ID: 'ADVENTURER_KICKED_OUT_COMPENSATION',
-    LABEL: 'Adventurer kicked out compensation',
+    LABEL: 'Collaborator kicked out compensation',
   },
   PAYOUT: { ID: 'PAYOUT', LABEL: 'Payout' },
 };

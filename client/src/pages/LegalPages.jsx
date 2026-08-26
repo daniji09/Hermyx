@@ -1,14 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
 import { consts } from '@hermyx/shared';
 
-const LAST_UPDATED = '26 de agosto de 2026';
+const LAST_UPDATED = 'August 26, 2026';
 
 const legalLinks = [
-  { to: '/terms', label: 'Términos y condiciones' },
-  { to: '/legal', label: 'Aviso legal' },
-  { to: '/privacy', label: 'Política de privacidad' },
-  { to: '/cookies', label: 'Política de cookies' },
-  { to: '/community-guidelines', label: 'Normas de comunidad' },
+  { to: '/terms', label: 'Terms and conditions' },
+  { to: '/legal', label: 'Legal notice' },
+  { to: '/privacy', label: 'Privacy policy' },
+  { to: '/cookies', label: 'Cookie policy' },
+  { to: '/community-guidelines', label: 'Community guidelines' },
 ];
 
 const DocumentSection = ({ title, children }) => (
@@ -52,7 +52,7 @@ const LegalDocumentContent = ({ title, description, children }) => {
         <article className='rounded-2xl border bg-card p-6 shadow-sm sm:p-10'>
           <header className='mb-10 space-y-4 border-b pb-8'>
             <p className='text-sm font-semibold uppercase tracking-[0.18em] text-primary'>
-              Documento del prototipo académico
+              Academic prototype document
             </p>
             <h1 className='text-3xl font-bold tracking-tight sm:text-4xl'>
               {title}
@@ -61,7 +61,7 @@ const LegalDocumentContent = ({ title, description, children }) => {
               {description}
             </p>
             <p className='text-xs text-muted-foreground'>
-              Versión {consts.AUTH.LEGAL.TERMS_VERSION} · Última actualización:{' '}
+              Version {consts.AUTH.LEGAL.TERMS_VERSION} · Last updated:{' '}
               {LAST_UPDATED}
             </p>
           </header>
@@ -74,238 +74,226 @@ const LegalDocumentContent = ({ title, description, children }) => {
 
 export const Terms = () => (
   <LegalDocument
-    title='Términos y condiciones de uso'
-    description='Condiciones de uso de Hermyx, un prototipo académico de plataforma de misiones.'
+    title='Terms and conditions of use'
+    description='Terms governing the use of Hermyx, an academic service platform prototype.'
   >
     <div className='rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm leading-6 text-foreground'>
-      Hermyx es un prototipo académico desarrollado en el contexto de un Trabajo
-      de Fin de Grado. Esta versión no constituye una plataforma comercial y
-      utiliza Stripe únicamente en modo prueba: no permite contratar servicios
-      ni realizar pagos reales.
+      Hermyx is an academic prototype developed as part of a final degree
+      project. This version is not a commercial platform and uses Stripe only in
+      test mode: it does not support real service contracts or payments.
     </div>
 
-    <DocumentSection title='1. Identificación y alcance'>
+    <DocumentSection title='1. Identification and scope'>
       <p>
-        Estos términos regulan el acceso y uso de la aplicación Hermyx (la
-        “Aplicación”). En esta versión académica no existe un operador comercial
-        identificado para contratar servicios. Antes de publicar una versión
-        real deberán completarse el nombre o razón social, NIF, domicilio,
-        correo de contacto y, cuando proceda, los datos registrales del
-        operador.
+        These terms govern access to and use of the Hermyx application (the
+        “Application”). This academic version does not identify a commercial
+        operator for contracting services. Before a real version is published,
+        the operator’s name or company name, tax identification number, address,
+        contact email and, where applicable, registration details must be added.
       </p>
       <p>
-        La aceptación de estos términos solo permite utilizar el prototipo en el
-        entorno habilitado para el proyecto. No crea por sí misma una relación
-        laboral, mercantil o de prestación de servicios remunerados.
-      </p>
-    </DocumentSection>
-
-    <DocumentSection title='2. Requisitos y cuenta de usuario'>
-      <p>
-        El uso de Hermyx está reservado a personas mayores de 18 años. El
-        usuario debe aportar datos veraces, mantenerlos actualizados y crear una
-        sola cuenta personal. No está permitido ceder, vender ni compartir las
-        credenciales.
-      </p>
-      <p>
-        El usuario es responsable de custodiar su contraseña y de avisar si
-        detecta un acceso no autorizado. Hermyx podrá suspender o limitar una
-        cuenta cuando existan indicios de fraude, abuso, suplantación, contenido
-        ilegal o incumplimiento de estos términos.
-      </p>
-      <p>
-        El usuario puede solicitar la eliminación de su cuenta. La eliminación
-        podrá quedar pendiente mientras existan misiones activas, pagos de
-        prueba, incidencias o disputas que deban cerrarse o conservarse por
-        obligación legal.
+        Accepting these terms only permits use of the prototype in the
+        environment enabled for the project. It does not by itself create an
+        employment, commercial or paid service relationship.
       </p>
     </DocumentSection>
 
-    <DocumentSection title='3. Funcionamiento de las misiones'>
+    <DocumentSection title='2. Requirements and user account'>
       <p>
-        Hermyx permite publicar misiones con título, descripción, ubicación,
-        fotografías, vacantes y recompensa. El propietario debe describir la
-        misión de forma suficiente, lícita y no engañosa, y fijar condiciones
-        que pueda cumplir.
+        Hermyx is restricted to people aged 18 or over. Users must provide
+        truthful information, keep it up to date and create only one personal
+        account. Credentials may not be transferred, sold or shared.
+      </p>
+      <p>
+        Users are responsible for safeguarding their password and reporting any
+        unauthorised access. Hermyx may suspend or restrict an account when
+        there are indications of fraud, abuse, impersonation, illegal content or
+        a breach of these terms.
+      </p>
+      <p>
+        Users may request account deletion. Deletion may remain pending while
+        active services, test payments, incidents or disputes need to be closed
+        or retained due to a legal obligation.
+      </p>
+    </DocumentSection>
+
+    <DocumentSection title='3. How services work'>
+      <p>
+        Hermyx allows users to publish services with a title, description,
+        location, photographs, vacancies and a reward. The applicant must
+        describe the service sufficiently, lawfully and without deception, and
+        set conditions they can fulfil.
       </p>
       <ol className='list-decimal space-y-2 pl-6'>
         <li>
-          Otros usuarios pueden solicitar unirse a una vacante o recibir una
-          invitación.
+          Other users may request to join a vacancy or receive an invitation.
         </li>
         <li>
-          La participación queda sujeta a la aceptación y al estado de la misión
-          que muestre la Aplicación.
+          Participation depends on acceptance and the service status shown by
+          the Application.
         </li>
         <li>
-          Una misión puede cerrarse cuando se cubren sus vacantes y pasa al
-          flujo de financiación de prueba.
+          A service may be closed when its vacancies are filled and it enters
+          the test funding flow.
         </li>
         <li>
-          El trabajo comienza cuando el estado de la misión lo indique y el
-          aventurero puede comunicarse con el equipo mediante las herramientas
-          disponibles.
+          Work begins when the service status indicates it, and the collaborator
+          may communicate with the team through the available tools.
         </li>
         <li>
-          Cuando el aventurero termina su trabajo, puede marcar la
-          participación como entregada mediante la Aplicación. Esta acción
-          registra el cambio de estado y notifica al propietario. En esta
-          versión del prototipo, Hermyx no almacena un archivo o resultado
-          formal de la misión; los detalles adicionales pueden comunicarse
-          mediante las herramientas disponibles. El propietario puede aceptar
-          la participación, solicitar una revisión, rechazarla o abrir una
-          incidencia según el flujo disponible.
+          When the collaborator finishes their work, they may mark the
+          participation as delivered through the Application. This records the
+          status change and notifies the applicant. In this prototype version,
+          Hermyx does not store a formal service file or result; additional
+          details may be communicated through the available tools. The applicant
+          may accept the participation, request a revision, reject it or open an
+          incident according to the available flow.
         </li>
       </ol>
       <p>
-        Si el propietario no revisa una entrega dentro del plazo configurado, la
-        versión actual puede aceptarla automáticamente después de una semana.
-        Este mecanismo no impide que se corrijan errores técnicos o se
-        investiguen conductas fraudulentas.
+        If the applicant does not review a delivery within the configured
+        period, the current version may accept it automatically after one week.
+        This mechanism does not prevent technical errors from being corrected or
+        fraudulent conduct from being investigated.
       </p>
     </DocumentSection>
 
-    <DocumentSection title='4. Papel de Hermyx'>
+    <DocumentSection title='4. Hermyx’s role'>
       <p>
-        Hermyx facilita el contacto entre usuarios y ofrece herramientas para
-        publicar misiones, comunicarse, gestionar pagos de prueba, recibir
-        reportes y resolver incidencias. No garantiza la identidad,
-        disponibilidad, calidad, legalidad o comportamiento de cada usuario ni
-        que una misión se complete correctamente.
+        Hermyx facilitates contact between users and provides tools to publish
+        services, communicate, manage test payments, receive reports and resolve
+        incidents. It does not guarantee the identity, availability, quality,
+        legality or behaviour of any user, nor that a service will be completed
+        successfully.
       </p>
       <p>
-        Hermyx no es el empleador del aventurero ni, necesariamente, quien
-        presta el servicio subyacente. La calificación jurídica de cada relación
-        dependerá de cómo funcione una eventual versión comercial en la práctica
-        y de la legislación aplicable; esta cláusula no excluye
-        responsabilidades que legalmente correspondan al operador.
-      </p>
-    </DocumentSection>
-
-    <DocumentSection title='5. Pagos, comisión y reembolsos'>
-      <p>
-        El prototipo muestra un cálculo de recompensa y una comisión de servicio
-        del 10 %. Como ejemplo, una recompensa de 100 € genera una comisión de
-        10 € y un total mostrado de 110 €. La recompensa prevista para el
-        aventurero sería de 100 €.
-      </p>
-      <p>
-        Stripe está integrado exclusivamente con claves y operaciones de prueba.
-        No deben introducirse tarjetas reales. Las pantallas pueden simular
-        confirmaciones, reembolsos o transferencias, pero Hermyx no ofrece en
-        esta versión un servicio real de escrow, depósito en garantía o custodia
-        de fondos.
-      </p>
-      <p>
-        Antes de aceptar dinero real deberán definirse el precio total, los
-        impuestos, las comisiones de Stripe, los pagos fallidos, los
-        contracargos, el fraude, los reembolsos totales o parciales, los
-        retrasos y los requisitos de la cuenta conectada del aventurero. El
-        modelo deberá revisarse legal, fiscal y regulatoriamente.
-      </p>
-      <p>
-        Si una futura versión opera con consumidores y una empresa, deberá
-        facilitar la información precontractual, el precio total y las reglas
-        sobre desistimiento y sus excepciones que resulten aplicables.
+        Hermyx is not the collaborator’s employer and is not necessarily the
+        provider of the underlying service. The legal classification of each
+        relationship will depend on how a potential commercial version operates
+        in practice and on applicable law; this clause does not exclude
+        responsibilities that legally belong to the operator.
       </p>
     </DocumentSection>
 
-    <DocumentSection title='6. Contenido y propiedad intelectual'>
+    <DocumentSection title='5. Payments, fees and refunds'>
       <p>
-        El usuario conserva sus derechos sobre textos, fotografías, mensajes y
-        archivos. Al subir contenido declara que tiene autorización suficiente y
-        concede a Hermyx una licencia no exclusiva, limitada y gratuita para
-        alojarlo, mostrarlo, procesarlo y ponerlo a disposición dentro de la
-        Aplicación mientras sea necesario para prestar sus funciones.
+        The prototype displays a reward calculation and a 10% service fee. For
+        example, a €100 reward generates a €10 fee and a displayed total of
+        €110. The reward intended for the collaborator would be €100.
       </p>
-      <p>No se permite publicar o solicitar:</p>
+      <p>
+        Stripe is integrated exclusively with test keys and test operations.
+        Real cards must not be entered. Screens may simulate confirmations,
+        refunds or transfers, but this version of Hermyx does not provide a real
+        escrow, custodial or funds-holding service.
+      </p>
+      <p>
+        Before accepting real money, the total price, taxes, Stripe fees, failed
+        payments, chargebacks, fraud, full or partial refunds, delays and
+        connected-account requirements for collaborators must be defined. The
+        model must be reviewed from legal, tax and regulatory perspectives.
+      </p>
+      <p>
+        If a future version operates with consumers and a business, it must
+        provide the applicable pre-contract information, total price and rules
+        on withdrawal and its exceptions.
+      </p>
+    </DocumentSection>
+
+    <DocumentSection title='6. Content and intellectual property'>
+      <p>
+        Users retain their rights to text, photographs, messages and files. By
+        uploading content, they declare that they have sufficient authorisation
+        and grant Hermyx a non-exclusive, limited and free licence to host,
+        display, process and make it available within the Application while
+        necessary to provide its functions.
+      </p>
+      <p>Users may not publish or request:</p>
       <ul className='list-disc space-y-2 pl-6'>
-        <li>Contenido ilegal, fraudulento, engañoso o plagiado.</li>
-        <li>Fotografías o datos personales de terceros sin autorización.</li>
-        <li>Acoso, amenazas, discriminación o suplantación.</li>
+        <li>Illegal, fraudulent, deceptive or plagiarised content.</li>
         <li>
-          Tareas peligrosas, delictivas o que requieran una licencia profesional
-          no acreditada.
+          Photographs or personal data of third parties without authorisation.
         </li>
-        <li>Drogas, armas, explotación sexual u otras actividades ilícitas.</li>
+        <li>Harassment, threats, discrimination or impersonation.</li>
         <li>
-          Pagos o acuerdos fuera de Hermyx para eludir sus controles o
-          comisiones.
+          Dangerous or criminal tasks, or tasks requiring an unverified
+          professional licence.
+        </li>
+        <li>
+          Drugs, weapons, sexual exploitation or other unlawful activities.
+        </li>
+        <li>
+          Payments or agreements outside Hermyx to bypass its controls or fees.
         </li>
       </ul>
     </DocumentSection>
 
-    <DocumentSection title='7. Moderación, reportes y disputas'>
+    <DocumentSection title='7. Moderation, reports and disputes'>
       <p>
-        Se puede reportar un perfil, misión, mensaje o participación desde las
-        herramientas disponibles o mediante el canal habilitado para el
-        proyecto. El equipo administrador podrá solicitar información, retirar
-        contenido, limitar funciones, suspender o expulsar cuentas y cerrar
-        misiones cuando sea necesario para proteger a la comunidad o cumplir la
-        ley.
+        Users may report a profile, service, message or participation through
+        the available tools or the channel enabled for the project. The
+        administrator team may request information, remove content, restrict
+        features, suspend or remove accounts and close services when necessary
+        to protect the community or comply with the law.
       </p>
       <p>
-        Las decisiones se notificarán cuando sea posible, indicando los motivos
-        y, si el prototipo lo permite, el procedimiento interno para responder o
-        solicitar una revisión. Las disputas sobre una entrega o recompensa se
-        tramitarán mediante el flujo interno de incidencias. La moderación no
-        sustituye a los procedimientos administrativos o judiciales que puedan
-        corresponder.
+        Decisions will be notified where possible, including the reasons and, if
+        supported by the prototype, the internal procedure for responding or
+        requesting a review. Disputes about a delivery or reward will be handled
+        through the internal incident flow. Moderation does not replace any
+        administrative or judicial procedures that may apply.
       </p>
     </DocumentSection>
 
-    <DocumentSection title='8. Privacidad y servicios de terceros'>
+    <DocumentSection title='8. Privacy and third-party services'>
       <p>
-        El funcionamiento puede implicar datos de cuenta y autenticación, Google
-        y Firebase, perfiles, ubicación, fotografías, mensajes, reportes,
-        reseñas, identificadores de Stripe y datos necesarios para las
-        operaciones de prueba. La información detallada sobre responsable,
-        finalidades, bases jurídicas, destinatarios, transferencias,
-        conservación y derechos se encuentra en la{' '}
+        Operation may involve account and authentication data, Google and
+        Firebase, profiles, location, photographs, messages, reports, reviews,
+        Stripe identifiers and data required for test operations. Detailed
+        information about the controller, purposes, legal bases, recipients,
+        transfers, retention and rights is available in the{' '}
         <Link to='/privacy' className='text-foreground underline'>
-          Política de privacidad
+          Privacy policy
         </Link>
         .
       </p>
       <p>
-        Algunas funciones pueden utilizar almacenamiento de Azure en producción
-        y servicios cartográficos como OpenStreetMap/Nominatim. Estos terceros
-        pueden tener sus propias condiciones y políticas.
+        Some features may use Azure storage in production and mapping services
+        such as OpenStreetMap/Nominatim. These third parties may have their own
+        terms and policies.
       </p>
     </DocumentSection>
 
-    <DocumentSection title='9. Fiscalidad'>
+    <DocumentSection title='9. Tax matters'>
       <p>
-        Cada usuario es responsable de sus obligaciones fiscales, laborales y de
-        Seguridad Social cuando resulten aplicables. Si una futura versión
-        facilita servicios personales remunerados mediante la plataforma, Hermyx
-        podrá solicitar, conservar o comunicar datos de usuarios cuando la
-        normativa, incluida DAC7 y su normativa española de desarrollo, cuando
-        resulte aplicable, lo exija.
+        Each user is responsible for their tax, employment and social security
+        obligations where applicable. If a future version facilitates paid
+        personal services through the platform, Hermyx may request, retain or
+        communicate user data when required by regulations, including DAC7 and
+        its applicable national implementing rules.
       </p>
     </DocumentSection>
 
-    <DocumentSection title='10. Disponibilidad y cambios'>
+    <DocumentSection title='10. Availability and changes'>
       <p>
-        El prototipo se ofrece con fines académicos, puede contener errores y
-        puede cambiar o dejar de estar disponible sin garantía de continuidad.
-        El usuario debe conservar sus propios archivos y no utilizar la demo
-        para decisiones críticas o para prestar servicios reales.
+        The prototype is provided for academic purposes, may contain errors and
+        may change or become unavailable without a continuity guarantee. Users
+        must keep their own files and must not use the demo for critical
+        decisions or to provide real services.
       </p>
       <p>
-        Las nuevas versiones de estos términos se publicarán en esta página con
-        su versión y fecha. Si se habilitara una versión comercial, el operador
-        deberá establecer el procedimiento legal de información y aceptación que
-        corresponda.
+        New versions of these terms will be published on this page with their
+        version and date. If a commercial version is enabled, the operator must
+        establish the legally required information and acceptance procedure.
       </p>
     </DocumentSection>
 
-    <DocumentSection title='11. Ley aplicable y contacto'>
+    <DocumentSection title='11. Applicable law and contact'>
       <p>
-        Para la versión académica no se designa un operador comercial ni se fija
-        un domicilio contractual ficticio. En una versión real deberán
-        completarse la ley aplicable, la jurisdicción y un canal de contacto
-        válidos antes de aceptar contrataciones o pagos.
+        No commercial operator or fictitious contractual address is designated
+        for the academic version. A real version must define the applicable law,
+        jurisdiction and valid contact channel before accepting contracts or
+        payments.
       </p>
     </DocumentSection>
   </LegalDocument>
@@ -313,32 +301,32 @@ export const Terms = () => (
 
 export const LegalNotice = () => (
   <LegalDocument
-    title='Aviso legal'
-    description='Información identificativa y de responsabilidad de Hermyx.'
+    title='Legal notice'
+    description='Identification and liability information for Hermyx.'
   >
     <div className='rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm leading-6 text-foreground'>
-      Esta página identifica expresamente las partes que todavía deben
-      completarse antes de publicar Hermyx como servicio comercial.
+      This page expressly identifies the details that must still be completed
+      before publishing Hermyx as a commercial service.
     </div>
-    <DocumentSection title='Titular del proyecto'>
+    <DocumentSection title='Project operator'>
       <p>
-        Hermyx es un prototipo académico desarrollado en el contexto de un
-        Trabajo de Fin de Grado. En esta versión no se presenta como empresa,
-        marketplace comercial ni proveedor de servicios de pago.
+        Hermyx is an academic prototype developed as part of a final degree
+        project. This version is not presented as a company, commercial
+        marketplace or payment service provider.
       </p>
       <p>
-        Titular, NIF, domicilio, correo electrónico y datos registrales: no
-        aplicables a esta demo académica. No deben sustituirse por datos
-        ficticios. Estos datos deberán incorporarse antes de una publicación
-        comercial.
+        Operator, tax identification number, address, email and registration
+        details: not applicable to this academic demo. They must not be replaced
+        with fictitious information and must be added before a commercial
+        publication.
       </p>
     </DocumentSection>
-    <DocumentSection title='Responsabilidad'>
+    <DocumentSection title='Liability'>
       <p>
-        La Aplicación se facilita para demostrar un flujo de misiones, perfiles,
-        comunicación y pagos de prueba. El contenido publicado por los usuarios
-        pertenece a sus autores y no implica validación o recomendación por
-        parte del proyecto.
+        The Application is provided to demonstrate a flow for services,
+        profiles, communication and test payments. User-published content
+        belongs to its authors and does not imply validation or recommendation
+        by the project.
       </p>
     </DocumentSection>
   </LegalDocument>
@@ -346,50 +334,47 @@ export const LegalNotice = () => (
 
 export const PrivacyPolicy = () => (
   <LegalDocument
-    title='Política de privacidad'
-    description='Información sobre los datos que puede tratar el prototipo Hermyx y los aspectos que deben completarse para una versión real.'
+    title='Privacy policy'
+    description='Information about data that the Hermyx prototype may process and the items that must be completed for a real version.'
   >
     <div className='rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm leading-6 text-foreground'>
-      Esta política es una base informativa para el TFG. Antes de tratar datos
-      en producción debe completarse con la identidad real del responsable, las
-      bases jurídicas, los plazos y los proveedores concretos, y revisarse
-      profesionalmente.
+      This policy is an information basis for the final degree project. Before
+      processing data in production, the controller’s real identity, legal
+      bases, retention periods and specific providers must be added and reviewed
+      professionally.
     </div>
-    <DocumentSection title='Responsable y datos tratados'>
+    <DocumentSection title='Controller and processed data'>
       <p>
-        Responsable del tratamiento: pendiente de completar; esta demo no debe
-        utilizar datos identificativos ficticios. Según las funciones usadas,
-        Hermyx puede tratar datos de cuenta (nombre de usuario, correo,
-        autenticación de Firebase/Google), perfil, ubicación, fotografías,
-        mensajes, reportes, reseñas, participaciones e identificadores de Stripe
-        asociados a operaciones de prueba.
+        Data controller: pending completion; this demo must not use fictitious
+        identifying details. Depending on the features used, Hermyx may process
+        account data (username, email and Firebase/Google authentication),
+        profile data, location, photographs, messages, reports, reviews,
+        participations and Stripe identifiers associated with test operations.
       </p>
     </DocumentSection>
-    <DocumentSection title='Finalidades y conservación'>
+    <DocumentSection title='Purposes and retention'>
       <p>
-        Los datos pueden utilizarse para crear y proteger cuentas, mostrar
-        perfiles y misiones, gestionar participaciones, mantener conversaciones,
-        tramitar reportes y disputas, probar pagos y mejorar el prototipo. Los
-        plazos de conservación y los criterios de supresión deben fijarse antes
-        de la puesta en producción.
+        Data may be used to create and protect accounts, display profiles and
+        services, manage participations, maintain conversations, process reports
+        and disputes, test payments and improve the prototype. Retention periods
+        and deletion criteria must be set before production launch.
       </p>
     </DocumentSection>
-    <DocumentSection title='Proveedores y destinatarios'>
+    <DocumentSection title='Providers and recipients'>
       <p>
-        El prototipo puede apoyarse en Firebase/Google para autenticación,
-        Stripe para operaciones de prueba, Azure Blob Storage para archivos en
-        producción y OpenStreetMap/Nominatim para funciones cartográficas. Deben
-        formalizarse y documentarse los encargos, transferencias internacionales
-        y garantías aplicables a cada proveedor.
+        The prototype may rely on Firebase/Google for authentication, Stripe for
+        test operations, Azure Blob Storage for production files and
+        OpenStreetMap/Nominatim for mapping features. Processing agreements,
+        international transfers and applicable safeguards must be formalised and
+        documented for each provider.
       </p>
     </DocumentSection>
-    <DocumentSection title='Derechos'>
+    <DocumentSection title='Rights'>
       <p>
-        La persona usuaria deberá poder ejercer sus derechos de acceso,
-        rectificación, supresión, oposición, limitación y portabilidad, además
-        de retirar consentimientos cuando esa sea la base jurídica. El canal de
-        ejercicio y la autoridad de control competente deben añadirse con los
-        datos reales del responsable.
+        Users should be able to exercise their rights of access, rectification,
+        deletion, objection, restriction and portability, and withdraw consent
+        where it is the legal basis. The exercise channel and competent
+        supervisory authority must be added using the controller’s real details.
       </p>
     </DocumentSection>
   </LegalDocument>
@@ -397,25 +382,23 @@ export const PrivacyPolicy = () => (
 
 export const CookiePolicy = () => (
   <LegalDocument
-    title='Política de cookies'
-    description='Información sobre cookies y tecnologías similares utilizadas por el prototipo Hermyx.'
+    title='Cookie policy'
+    description='Information about cookies and similar technologies used by the Hermyx prototype.'
   >
-    <DocumentSection title='Estado actual del prototipo'>
+    <DocumentSection title='Current prototype status'>
       <p>
-        La versión actual no incorpora una finalidad publicitaria ni un sistema
-        propio de analítica no técnica. Puede utilizar almacenamiento local y
-        tecnologías necesarias para mantener preferencias de interfaz,
-        autenticación o seguridad; su inventario definitivo debe verificarse en
-        cada despliegue.
+        The current version has no advertising purpose or proprietary
+        non-technical analytics system. It may use local storage and
+        technologies needed to maintain interface preferences, authentication or
+        security; the definitive inventory must be verified for each deployment.
       </p>
     </DocumentSection>
-    <DocumentSection title='Antes de una versión comercial'>
+    <DocumentSection title='Before a commercial version'>
       <p>
-        Si se incorporan cookies de analítica, personalización, publicidad o
-        servicios de terceros no estrictamente necesarios, deberá mostrarse
-        información clara, obtenerse el consentimiento correspondiente y
-        ofrecerse una configuración granular y revocable. Los detalles de
-        proveedor, duración y finalidad deberán mantenerse actualizados.
+        If analytics, personalisation, advertising or non-essential third-party
+        services are added, clear information must be shown, the appropriate
+        consent must be obtained and granular, revocable settings must be
+        offered. Provider, duration and purpose details must be kept up to date.
       </p>
     </DocumentSection>
   </LegalDocument>
@@ -423,37 +406,37 @@ export const CookiePolicy = () => (
 
 export const CommunityGuidelines = () => (
   <LegalDocument
-    title='Normas de comunidad'
-    description='Reglas de convivencia y contenidos para usar Hermyx.'
+    title='Community guidelines'
+    description='Rules for respectful conduct and content on Hermyx.'
   >
-    <DocumentSection title='Comportamiento esperado'>
+    <DocumentSection title='Expected behaviour'>
       <p>
-        Trate a las demás personas con respeto, describa las misiones con
-        honestidad, cumpla los acuerdos que acepte y utilice los canales de
-        reporte cuando exista un riesgo o incumplimiento. No solicite datos,
-        pagos o comunicaciones externas para esquivar las protecciones del
-        prototipo.
+        Treat other people with respect, describe services honestly, honour the
+        agreements you accept and use the reporting channels when there is a
+        risk or breach. Do not request data, payments or external communication
+        to bypass the prototype’s protections.
       </p>
     </DocumentSection>
-    <DocumentSection title='Contenido no permitido'>
+    <DocumentSection title='Prohibited content'>
       <ul className='list-disc space-y-2 pl-6'>
-        <li>Fraude, spam, suplantación, plagio o infracción de derechos.</li>
-        <li>Datos personales de terceros sin base o autorización.</li>
-        <li>Amenazas, acoso, odio, discriminación o explotación.</li>
+        <li>Fraud, spam, impersonation, plagiarism or rights infringement.</li>
         <li>
-          Actividades delictivas, peligrosas o que requieran permisos no
-          disponibles.
+          Third-party personal data without a lawful basis or authorisation.
         </li>
-        <li>Ofertas engañosas, pagos externos o manipulación de reseñas.</li>
+        <li>Threats, harassment, hate, discrimination or exploitation.</li>
+        <li>
+          Criminal or dangerous activities, or activities requiring unavailable
+          permits.
+        </li>
+        <li>Deceptive offers, external payments or review manipulation.</li>
       </ul>
     </DocumentSection>
-    <DocumentSection title='Aplicación de las normas'>
+    <DocumentSection title='Enforcement'>
       <p>
-        Según la gravedad, el proyecto podrá ocultar contenido, solicitar
-        cambios, limitar una misión, suspender una cuenta o remitir el caso a
-        las autoridades competentes. Las personas afectadas podrán solicitar una
-        revisión mediante el canal habilitado para la demo, sin perjuicio de sus
-        derechos legales.
+        Depending on the severity, the project may hide content, request
+        changes, restrict a service, suspend an account or refer the case to the
+        competent authorities. Affected people may request a review through the
+        channel enabled for the demo, without prejudice to their legal rights.
       </p>
     </DocumentSection>
   </LegalDocument>

@@ -92,7 +92,7 @@ export const Notifications = () => {
           'An unexpected error occurred.';
         const mustConfigureBankAccount =
           backendMessage ===
-          messagesShared.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED;
+          messagesShared.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED;
 
         showAlert({
           title:
@@ -331,21 +331,21 @@ export const Notifications = () => {
                   const getNotificationPrefix = () => {
                     const missionLink = renderMissionLink();
 
-                    // Lógica si ES una notificación de misión
+                    // Handle service notifications.
                     if (isMissionNotification) {
                       if (isPendingMissionReview)
                         return <>Participation review of {missionLink}</>;
                       if (isPendingRevisionResponse)
                         return <>Revision request of {missionLink}</>;
-                      return <>Mission {missionLink} update</>;
+                      return <>Service {missionLink} update</>;
                     }
 
                     const action = notification?.action;
                     if (action === NOTIFICATION_ACTION.MISSION_INVITE.ID) {
-                      return <>Mission {missionLink} invitation</>;
+                      return <>Service {missionLink} invitation</>;
                     }
                     if (action === NOTIFICATION_ACTION.JOIN_REQUEST.ID) {
-                      return <>Join mission {missionLink} request</>;
+                      return <>Join service {missionLink} request</>;
                     }
 
                     return <>Message</>;

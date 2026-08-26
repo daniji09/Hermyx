@@ -12,7 +12,7 @@ import {
 import pool from '../config/db.config.js';
 import * as conversationService from './conversation.service.js';
 import * as notificationService from './notification.service.js';
-import * as missionService from './mission.service.js';
+import * as missionService from './service.service.js';
 import * as reportService from './report.service.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
 
@@ -110,7 +110,7 @@ export const createDisputeTicket = async ({
       client,
     );
 
-    // Syncs mission status
+    // Syncs service status
     const missionAfterSync = await missionService.syncMissionCompletionStatus(
       missionId,
       client,

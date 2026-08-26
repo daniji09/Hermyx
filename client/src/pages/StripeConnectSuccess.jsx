@@ -34,12 +34,12 @@ export const StripeSuccess = () => {
           <CardContent className='space-y-8 pb-8'>
             <p className='text-muted-foreground'>
               Now you can receive payments directly on your account. Everything
-              is ready, so get out there and complete some missions!
+              is ready, so get out there and complete some services!
             </p>
 
             <div className='flex justify-center'>
               <Button asChild size='lg' className='w-full sm:w-auto'>
-                <Link to='/missions/mine'>Go to my missions</Link>
+                <Link to='/missions/mine'>Go to my services</Link>
               </Button>
             </div>
           </CardContent>

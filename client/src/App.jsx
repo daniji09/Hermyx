@@ -5,17 +5,17 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { AuthAction } from './pages/AuthAction';
 import { Home } from './pages/Home';
 import { ProtectedRoute } from './components/custom/routes/ProtectedRoute';
-import { Mission } from './pages/Mission';
-import { NewMission } from './pages/MissionCreate';
+import { Mission } from './pages/Service';
+import { NewMission } from './pages/ServiceCreate';
 import { Payment } from './pages/Payment';
-import { SearchMission } from './pages/MissionSearch';
-import { UserMissions } from './pages/UserMissions';
+import { SearchMission } from './pages/ServiceSearch';
+import { UserMissions } from './pages/UserServices';
 import { Navbar } from './components/custom/Navbar';
 import { PublicProfile } from './pages/PublicProfile';
 import { MyProfile } from './pages/MyProfile';
 import { Notifications } from './pages/Notifications';
 import { SearchUsers } from './pages/SearchUsers';
-import { EditMission } from './pages/MissionEdit';
+import { EditMission } from './pages/ServiceEdit';
 import { StripeSuccess } from './pages/StripeConnectSuccess';
 import { Conversation } from './pages/Conversation';
 import { Conversations } from './pages/Conversations';
@@ -71,7 +71,7 @@ function App() {
 
         {/* --- Regular user routes (administrators are read-only) --- */}
         <Route element={<ProtectedRoute requireRegularUser />}>
-          {/* Missions */}
+          {/* Services */}
           <Route path='/missions/new' element={<NewMission />}></Route>
           <Route path='/missions/:id/pay' element={<Payment />} />
           <Route path='/missions/:id/edit' element={<EditMission />}></Route>

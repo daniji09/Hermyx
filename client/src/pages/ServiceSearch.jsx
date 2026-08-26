@@ -1,9 +1,9 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { getMissionsInfiniteQueryOptions } from '../queries/MissionsQueries';
+import { getMissionsInfiniteQueryOptions } from '../queries/ServicesQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { useSearchParams } from 'react-router-dom';
-import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
+import { MissionSearchContainer } from '../components/custom/services/ServiceSearchContainer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Map } from 'lucide-react';
@@ -95,10 +95,10 @@ export const SearchMission = () => {
 
   return (
     <>
-      <title>{`Mission results for ${title} | Hermyx`}</title>
+      <title>{`Service results for ${title} | Hermyx`}</title>
       <meta
         name='description'
-        content={`Results for searching a mission by name, being able to filter by price and distance.`}
+        content={`Results for searching a service by name, being able to filter by price and distance.`}
       ></meta>
       <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
         <section className='w-full'>
@@ -108,7 +108,7 @@ export const SearchMission = () => {
             </span>
             <div className='min-w-0'>
               <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
-                Missions
+                Services
               </h1>
               <p className='text-muted-foreground'>
                 {data?.pages[0]?.pagination?.totalItems} results for &quot;

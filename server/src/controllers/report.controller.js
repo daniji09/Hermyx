@@ -28,7 +28,7 @@ export const getReports = async (req, res, next) => {
   }
 };
 
-// Report adventurer
+// Report collaborator
 export const reportAdventurer = async (req, res, next) => {
   try {
     const report = await reportService.reportAdventurer({
@@ -57,7 +57,7 @@ export const reportUser = async (req, res, next) => {
   }
 };
 
-// Report mission
+// Report service
 export const reportMission = async (req, res, next) => {
   try {
     const report = await reportService.reportMission({
@@ -71,7 +71,7 @@ export const reportMission = async (req, res, next) => {
   }
 };
 
-// Accepts adventurer's work
+// Accepts collaborator's work
 export const acceptAdventurersWork = async (req, res, next) => {
   try {
     await reportService.acceptAdventurersWork({
@@ -85,7 +85,7 @@ export const acceptAdventurersWork = async (req, res, next) => {
   }
 };
 
-// Rejects adventurer's work
+// Rejects collaborator's work
 export const rejectAdventurersWork = async (req, res, next) => {
   try {
     await reportService.rejectAdventurersWork({

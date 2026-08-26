@@ -62,11 +62,11 @@ const photosBaseSchema = z
           .number()
           .max(
             consts.MISSION.PHOTOS.MAX_FILE_SIZE,
-            messages.MISSION.PUBLISH.MISSION_PHOTO_TOO_BIG,
+            messages.SERVICE.PUBLISH.SERVICE_PHOTO_TOO_BIG,
           ),
         mimetype: z.refine(
           (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
-          messages.MISSION.PUBLISH.MISSION_PHOTO_INVALID_TYPE,
+          messages.SERVICE.PUBLISH.SERVICE_PHOTO_INVALID_TYPE,
         ),
       })
       .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
@@ -187,7 +187,7 @@ const longitudeBaseSchema = z.preprocess(
 
 // Type (published or joined)
 export const typeBaseSchema = z.enum(['published', 'joined'], {
-  message: messages.MISSION.TYPE.INVALID_MISSION_TYPE,
+  message: messages.SERVICE.TYPE.INVALID_SERVICE_TYPE,
 });
 
 // Notification message
@@ -221,14 +221,14 @@ export const reportReasonBaseSchema = z
   );
 
 /// Endpoint complex validation
-// Get all missions
+// Get all services
 export const getMissionsQuerySchema = z.object({
   page: pageBaseSchema,
   limit: limitBaseSchema,
   title: titleBaseSchema.optional(),
 });
 
-// Get all opened missions
+// Get all opened services
 export const getOpenedMissionsQuerySchema = z
   .object({
     page: pageBaseSchema,
@@ -244,22 +244,22 @@ export const getOpenedMissionsQuerySchema = z
       data.maxPayment === undefined ||
       data.minPayment <= data.maxPayment,
     {
-      message: messages.MISSION.GET_ALL.MIN_PAYMENT_GREATER_MAX_PAYMENT,
+      message: messages.SERVICE.GET_ALL.MIN_PAYMENT_GREATER_MAX_PAYMENT,
       path: ['minPayment'],
     },
   );
 
-// Get mission by mid
+// Get service by mid
 export const getMissionSchema = z.object({
   mid: midBaseSchema,
 });
 
-// Get mission payment information
+// Get service payment information
 export const getMissionPaymentInfoSchema = z.object({
   mid: midBaseSchema,
 });
 
-// Publish mission
+// Publish service
 export const publishMissionSchema = z.object({
   title: titleBaseSchema,
   description: descriptionBaseSchema,
@@ -274,12 +274,12 @@ export const publishMissionFilesSchema = z.object({
   photos: photosBaseSchema,
 });
 
-// Close mission
+// Close service
 export const closeMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
-// Join mission
+// Join service
 export const joinMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
@@ -303,7 +303,7 @@ export const inviteToMissionBodySchema = z.object({
   message: messageBaseSchema,
 });
 
-// Unjoin mission
+// Unjoin service
 export const unjoinMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
@@ -317,22 +317,22 @@ export const submitMissionParticipationSchema = z.object({
   mid: midBaseSchema,
 });
 
-// Cancel mission
+// Cancel service
 export const cancelMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
-// Reopen mission
+// Reopen service
 export const reopenMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
-// Finish mission
+// Finish service
 export const finishMissionParamSchema = z.object({
   mid: midBaseSchema,
 });
 
-// Ban mission
+// Ban service
 export const banMissionParamsSchema = z.object({
   mid: midBaseSchema,
 });
@@ -342,7 +342,7 @@ export const banMissionBodySchema = z.object({
   reason: reportReasonBaseSchema,
 });
 
-// Kick adventurer out
+// Kick collaborator out
 export const kickAdventurerOutParamsSchema = z.object({
   mid: midBaseSchema,
   vacancyId: vacancyIdBaseSchema,
@@ -353,7 +353,7 @@ export const kickAdventurerOutBodySchema = z.object({
   reason: reportReasonBaseSchema,
 });
 
-// Edit mission
+// Edit service
 export const editMissionBodySchema = z.object({
   mid: midBaseSchema,
   title: titleBaseSchema,
@@ -388,7 +388,7 @@ export const editMissionFilesSchema = z.object({
 });
 
 /// Frontend exclusive schemas
-// Search mission by title
+// Search service by title
 export const searchMissionByTitleSchema = z.object({
   searchMissionByTitle_input: z
     .string()
@@ -457,7 +457,7 @@ export const addVacanciesSchema = z
       .optional(),
   })
   .refine((val) => val.vacanciesQuantity + val.vacanciesTotalQuantity <= 100, {
-    message: messages.MISSION.PUBLISH.MISSION_VACANCIES_SURPASSED,
+    message: messages.SERVICE.PUBLISH.SERVICE_VACANCIES_SURPASSED,
     path: ['vacanciesQuantity'],
   });
 

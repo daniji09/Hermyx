@@ -6,7 +6,7 @@ import { expect, test } from 'playwright/test';
 const missionsFile = process.env.PLAYWRIGHT_MISSIONS_FILE;
 const missionsPath = missionsFile
   ? resolve(process.cwd(), missionsFile)
-  : new URL('./fixtures/missions.json', import.meta.url);
+  : new URL('./fixtures/services.json', import.meta.url);
 const missionConfig = JSON.parse(await readFile(missionsPath, 'utf8'));
 
 const username = process.env.PLAYWRIGHT_MISSIONS_USERNAME || missionConfig.user;
@@ -14,7 +14,7 @@ const password =
   process.env.PLAYWRIGHT_MISSIONS_PASSWORD ||
   process.env.PLAYWRIGHT_OWNER_PASSWORD ||
   process.env.PLAYWRIGHT_PASSWORD;
-const missions = missionConfig.missions;
+const services = missionConfig.services;
 const actionPauseMs = Number(process.env.PLAYWRIGHT_ACTION_PAUSE_MS || 700);
 
 const pauseAfterAction = (page) => page.waitForTimeout(actionPauseMs);
@@ -56,13 +56,13 @@ const selectMissionLocation = async (page, location) => {
   await expect(removeLocationButton).toBeVisible();
 };
 
-test('creates the configured missions through the real UI', async ({
+test('creates the configured services through the real UI', async ({
   page,
 }) => {
   test.setTimeout(180000);
   test.skip(
-    !username || !password || !missions.length,
-    'Set PLAYWRIGHT_OWNER_PASSWORD (or PLAYWRIGHT_MISSIONS_PASSWORD) and add at least one mission to the JSON fixture.',
+    !username || !password || !services.length,
+    'Set PLAYWRIGHT_OWNER_PASSWORD (or PLAYWRIGHT_MISSIONS_PASSWORD) and add at least one service to the JSON fixture.',
   );
 
   await page.goto('/login');
@@ -76,7 +76,7 @@ test('creates the configured missions through the real UI', async ({
   await expect(page).toHaveURL('/');
   await pauseAfterAction(page);
 
-  for (const missionData of missions) {
+  for (const missionData of services) {
     const title = `${missionData.title} ${Date.now()}`;
 
     await page.goto('/missions/new');

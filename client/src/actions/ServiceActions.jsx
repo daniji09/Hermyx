@@ -6,9 +6,9 @@ import {
   editMissionBodySchema,
   messages,
 } from '@hermyx/shared';
-import { createMission, editMission } from '../services/MissionsServices';
+import { createMission, editMission } from '../services/ServiceServices';
 
-//New mission action, executed when form is sent
+// New service action, executed when the form is submitted
 
 export const createMissionAction = async (previousState, formData) => {
   const fieldsData = Object.fromEntries(formData);
@@ -91,7 +91,7 @@ export const createMissionAction = async (previousState, formData) => {
   }
 };
 
-// Edit mission action, executed when form is sent
+// Edit service action, executed when the form is submitted
 export const editMissionAction = async (previousState, formData) => {
   const fieldsData = Object.fromEntries(formData);
 
@@ -232,14 +232,14 @@ export const paymentAction = async (extraParam, previousState, formData) => {
   console.log(extraParam, Object.fromEntries(formData));
   /*
   If (!stripe || !elements) {
-    return addLog('Error Pago', 'Stripe no ha cargado todavia.');
+    return addLog('Payment error', 'Stripe has not loaded yet.');
   }
-  if (!missionId) return alert('Pon un ID de misión');
+  if (!missionId) return alert('Enter a service ID');
 
   try {
     const cardElement = elements.getElement(CardElement);
     if (!cardElement) {
-      return addLog('Error Pago', 'No se pudo leer la tarjeta.');
+      return addLog('Payment error', 'The card could not be read.');
     }
 
     // 1. Pedir PaymentIntent (Ruta: /pay/new)
@@ -248,31 +248,31 @@ export const paymentAction = async (extraParam, previousState, formData) => {
       saveCard: true,
     });
 
-    if (data.error) return addLog('Error Backend Pago', data);
+    if (data.error) return addLog('Payment backend error', data);
 
-    // 2. Confirmar Pago
+    // 2. Confirm the payment.
     const result = await stripe.confirmCardPayment(data.clientSecret, {
       payment_method: { card: cardElement },
     });
 
-    if (result.error) addLog('Error Pago Stripe', result.error);
+    if (result.error) addLog('Stripe payment error', result.error);
     else {
-      // 3. Confirmar al servidor (Ruta: /missions/:id/confirm-payment)
+      // 3. Confirm the payment with the server.
       if (result.paymentIntent.status === 'succeeded') {
         await api.post(`/stripe/missions/${missionId.trim()}/confirm-payment`, {
           paymentIntentId: result.paymentIntent.id,
         });
 
-        // 4. Establecer tarjeta como default si se guardó
+        // 4. Set the card as the default if it was saved.
         await api.post('/stripe/cards/default', {
           paymentMethodId: result.paymentIntent.payment_method,
         });
 
-        addLog('✅ PAGO COMPLETADO', result.paymentIntent.payment_method);
-        cardElement.clear(); // Limpiar el input
+        addLog('✅ PAYMENT COMPLETED', result.paymentIntent.payment_method);
+        cardElement.clear(); // Clear the input.
       }
     }
   } catch (e) {
-    addLog('Error Pago Nueva Tarjeta', getErrorData(e));
+    addLog('New card payment error', getErrorData(e));
   }*/
 };

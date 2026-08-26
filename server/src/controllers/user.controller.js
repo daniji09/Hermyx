@@ -41,7 +41,7 @@ export const getMyProfile = async (req, res, next) => {
   }
 };
 
-// Gets the missions from the user, joined or published
+// Gets the services from the user, joined or published
 export const getUserMissions = async (req, res, next) => {
   try {
     const { uid } = req.params;
@@ -67,7 +67,7 @@ export const getUserPublicProfile = async (req, res, next) => {
   }
 };
 
-// Get user public profile missions
+// Get user public profile services
 export const getUserPublicProfileMissions = async (req, res, next) => {
   try {
     const username = req.params.username;

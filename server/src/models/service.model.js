@@ -3,7 +3,7 @@ import { MISSION_STATUS, MISSION_PARTICIPATION_STATUS } from '@hermyx/shared';
 import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// INSERTS
-// Crate new mission
+// Crate new service
 export const create = async (missionData, client = pool) => {
   const {
     title,
@@ -43,7 +43,7 @@ export const create = async (missionData, client = pool) => {
 };
 
 /// FINDS
-// Get mission by its mid
+// Get service by its mid
 export const findByMid = async (mid) => {
   const query = `SELECT *,  
     ST_Y(m.location::geometry) as latitude, 
@@ -53,7 +53,7 @@ export const findByMid = async (mid) => {
   return result.rows[0];
 };
 
-// Get mission by its mid for update
+// Get service by its mid for update
 export const findByMidForUpdate = async (mid, client = pool) => {
   const query = `SELECT *,  
     ST_Y(m.location::geometry) as latitude, 
@@ -64,7 +64,7 @@ export const findByMidForUpdate = async (mid, client = pool) => {
   return result.rows[0];
 };
 
-// Get mission by mid excluding an uid
+// Get service by mid excluding an uid
 export const findByMidExcludingUid = async (id, uid) => {
   const query = `SELECT m.*, u.avatar, u.username,
     ST_Y(m.location::geometry) as latitude, 
@@ -114,9 +114,9 @@ export const findByMidExcludingUid = async (id, uid) => {
   return result.rows[0];
 };
 
-// Gets mission by uid and title
+// Gets service by uid and title
 export const findByUidAndTitle = async (uid, title, mid = undefined) => {
-  // If mid is not undefined, then the mission has to be different than that one
+  // If mid is not undefined, then the service has to be different than that one
   let query, result;
   if (!mid) {
     query = `
@@ -143,7 +143,7 @@ export const findByUidAndTitle = async (uid, title, mid = undefined) => {
   return result.rows[0];
 };
 
-// Gets all missions
+// Gets all services
 export const findAll = async ({ title = undefined, pagination }) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
@@ -167,7 +167,7 @@ export const findAll = async ({ title = undefined, pagination }) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
-// Get all missions opened
+// Get all services opened
 export const findAllOpened = async ({
   title = undefined,
   pagination,
@@ -262,7 +262,7 @@ export const findAllOpened = async ({
   return await executePaginatedQuery(query, values, pagination);
 };
 
-// Get missions published by user
+// Get services published by user
 export const findPublishedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   const query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies,
@@ -280,7 +280,7 @@ export const findPublishedByUid = async (uid, pagination = null) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
-// Get missions joined by user
+// Get services joined by user
 export const findJoinedByUid = async (uid, pagination = null) => {
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   const query = `SELECT m.mid, m.publication_date, m.title, m.description, m.total_vacancies, 
@@ -300,7 +300,7 @@ export const findJoinedByUid = async (uid, pagination = null) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
-// Gets created missions displayed in another user's public profile.
+// Gets created services displayed in another user's public profile.
 export const findPublicPublishedByUid = async (userId, pagination = null) => {
   const query = `
     SELECT
@@ -349,7 +349,7 @@ export const findPublicPublishedByUid = async (userId, pagination = null) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
-// Gets joined missions displayed in another user's public profile.
+// Gets joined services displayed in another user's public profile.
 export const findPublicJoinedByUid = async (userId, pagination = null) => {
   const query = `
     SELECT
@@ -384,7 +384,7 @@ export const findPublicJoinedByUid = async (userId, pagination = null) => {
   return await executePaginatedQuery(query, values, pagination);
 };
 
-// Gets user active missions, created or joined
+// Gets user active services, created or joined
 export const findAllActiveByUid = async (uid) => {
   const query = `
   SELECT m.mid, 
@@ -423,7 +423,7 @@ export const findAllActiveByUid = async (uid) => {
   return result.rows;
 };
 
-// Gets mission status summary
+// Gets service status summary
 export const getMissionStatusSummary = async (mid, client = pool) => {
   const summaryQuery = `
     SELECT
@@ -446,7 +446,7 @@ export const getMissionStatusSummary = async (mid, client = pool) => {
 };
 
 /// UPDATES
-// Update mission
+// Update service
 export const update = async (missionData, client = pool) => {
   const {
     mid,
@@ -476,9 +476,9 @@ export const update = async (missionData, client = pool) => {
   return result.rows[0];
 };
 
-// Update mission status
+// Update service status
 export const updateStatusByMid = async (mid, status, client = pool) => {
-  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  // Finds allowed previous status of status passed. This ensures concurrency, so the service state machines actually works
   const allowedPreviousStates = Object.values(MISSION_STATUS)
     .filter((config) => config.VALID_NEXT_STATES.includes(status))
     .map((config) => config.ID);
@@ -506,7 +506,7 @@ export const updateOccupiedVacancies = async (mid, amount, client = pool) => {
   return result.rowCount;
 };
 
-// Updates mission payment by mid
+// Updates service payment by mid
 export const updateMissionPayment = async (mid, payment, client = pool) => {
   const query = `
     UPDATE mission
@@ -518,7 +518,7 @@ export const updateMissionPayment = async (mid, payment, client = pool) => {
   return result.rows[0] || null;
 };
 
-// Empties a mission
+// Empties a service
 export const emptyMission = async (mid) => {
   const query = `UPDATE mission SET occupied_vacancies = 0 WHERE mid = $1 RETURNING *`;
   const result = pool.query(query, [mid]);

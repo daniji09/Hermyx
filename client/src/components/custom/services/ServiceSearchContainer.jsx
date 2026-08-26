@@ -22,10 +22,10 @@ export const MissionSearchContainer = ({
   isFetchingNextPage,
   fetchNextPage,
   isLoading,
-  isLoadingMessage = messages.SEARCH_MISSIONS.LOADING,
+  isLoadingMessage = messages.SEARCH_SERVICES.LOADING,
   isError,
-  isErrorMessage = messages.SEARCH_MISSIONS.ERROR,
-  noMissionsMessage = messages.SEARCH_MISSIONS.NO_MISSIONS,
+  isErrorMessage = messages.SEARCH_SERVICES.ERROR,
+  noMissionsMessage = messages.SEARCH_SERVICES.NO_SERVICES,
   sectionClassName = 'w-full',
   infiniteScroll,
 }) => {
@@ -123,7 +123,7 @@ const MissionSearchContent = ({
         <>
           <ul
             className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
-            aria-label='Missions list'
+            aria-label='Services list'
           >
             {missions?.map((mission) => (
               <MissionSearchCard key={mission.mid} mission={mission} />
@@ -138,14 +138,14 @@ const MissionSearchContent = ({
                 >
                   {isFetchingNextPage && (
                     <span className='text-xs text-muted-foreground animate-pulse'>
-                      Loading missions...
+                      Loading services...
                     </span>
                   )}
                 </div>
               )}
               {!hasNextPage && (
                 <div className='text-center text-xs text-muted-foreground pt-6'>
-                  No more missions found.
+                  No more services found.
                 </div>
               )}
             </>
@@ -159,8 +159,8 @@ const MissionSearchContent = ({
                 {hasNextPage
                   ? isFetchingNextPage
                     ? 'Loading'
-                    : 'More missions'
-                  : 'No more missions to show'}
+                    : 'More services'
+                  : 'No more services to show'}
               </Button>
             </div>
           )}
@@ -187,7 +187,7 @@ export const MissionSearchCard = ({ mission }) => {
             target='_blank'
             rel='noopener noreferrer'
           >
-            <span className='sr-only'>See mission {mission.title}</span>
+            <span className='sr-only'>See service {mission.title}</span>
           </Link>
 
           <div className='aspect-video w-full overflow-hidden bg-muted'>
@@ -195,8 +195,8 @@ export const MissionSearchCard = ({ mission }) => {
               src={missionPhoto}
               alt={
                 mission?.title
-                  ? `Cover of the mission ${mission.title}`
-                  : 'Mission cover'
+                  ? `Cover of the service ${mission.title}`
+                  : 'Service cover'
               }
               className='aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-105'
             />

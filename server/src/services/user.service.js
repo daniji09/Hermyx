@@ -7,7 +7,7 @@ import {
   USER_STATUS,
 } from '@hermyx/shared';
 import { AppError, checkRequired } from '../utils/error.util.js';
-import * as missionService from './mission.service.js';
+import * as missionService from './service.service.js';
 import * as reportService from './report.service.js';
 import * as conversationService from './conversation.service.js';
 import * as notificationService from './notification.service.js';
@@ -166,7 +166,7 @@ export const getMyProfile = async (user) => {
   // Gets user location
   const location = await userModel.findLocationByUid(user.uid);
 
-  // Gets user bank account to receive payments as an adventurer
+  // Gets user bank account to receive payments as an collaborator
   const bankAccount = await getConnectStatus(user);
 
   // Builds object that will be sent to frontend
@@ -187,7 +187,7 @@ export const getMyProfile = async (user) => {
   return { user: profile };
 };
 
-// Gets the missions from the user, joined or published
+// Gets the services from the user, joined or published
 export const getUserMissions = async (uid, type, pagination) => {
   checkRequired(uid, 'User id');
   checkRequired(type, 'Mission type');
@@ -199,7 +199,7 @@ export const getUserMissions = async (uid, type, pagination) => {
   } else if (type === 'joined') {
     result = await missionService.getMissionsJoinedByUid(uid, pagination);
   } else {
-    throw new AppError(messages.MISSION.TYPE.INVALID_MISSION_TYPE, 400);
+    throw new AppError(messages.SERVICE.TYPE.INVALID_SERVICE_TYPE, 400);
   }
   const missions = result.rows;
 
@@ -223,7 +223,7 @@ export const getUserMissions = async (uid, type, pagination) => {
   }
 
   throw new AppError(
-    messages.MISSION.GENERAL.MISSIONS_NOT_FOUND,
+    messages.SERVICE.GENERAL.SERVICES_NOT_FOUND,
     404,
     'general',
   );
@@ -251,7 +251,7 @@ export const getUserPublicProfile = async (username) => {
   };
 };
 
-// Gets the missions from the user public profile, joined or published
+// Gets the services from the user public profile, joined or published
 export const getUserPublicMissions = async (username, type, pagination) => {
   checkRequired(username, 'Username');
   checkRequired(type, 'Mission type');
@@ -259,7 +259,7 @@ export const getUserPublicMissions = async (username, type, pagination) => {
   // Gets user
   const user = await getUserByUsernameOrThrow(username);
 
-  // If user doesn't want missions visible, empty object is returned
+  // If user doesn't want services visible, empty object is returned
   const missionsVisible = user.configuration?.show_missions_to_others !== false;
   if (!missionsVisible) {
     return {
@@ -286,7 +286,7 @@ export const getUserPublicMissions = async (username, type, pagination) => {
       pagination,
     );
   } else {
-    throw new AppError(messages.MISSION.TYPE.INVALID_MISSION_TYPE, 400);
+    throw new AppError(messages.SERVICE.TYPE.INVALID_SERVICE_TYPE, 400);
   }
 
   const missions = result.rows;
@@ -311,7 +311,7 @@ export const getUserPublicMissions = async (username, type, pagination) => {
   }
 
   throw new AppError(
-    messages.MISSION.GENERAL.MISSIONS_NOT_FOUND,
+    messages.SERVICE.GENERAL.SERVICES_NOT_FOUND,
     404,
     'general',
   );
@@ -507,7 +507,7 @@ export const banUser = async (uid, rid, reason, admin) => {
     throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
 
   // External deletions are made first
-  // First, rejects account on Stripe and their adventurer account is rejected so they cannot receive payments
+  // First, rejects account on Stripe and their collaborator account is rejected so they cannot receive payments
   // Not needed for applicant account, because being banned avoids any type of transaction
   try {
     if (user.stripe_connected_id) {
@@ -551,16 +551,16 @@ export const banUser = async (uid, rid, reason, admin) => {
   if (!reportLocked)
     throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
 
-  // Then, mission info is cleared
+  // Then, service info is cleared
   try {
-    // Clears all active missions using a map of promises
+    // Clears all active services using a map of promises
     const activeMissions = await missionService.getUserActiveMissions(uid);
     const cleanupPromises = activeMissions.map((mission) => {
       if (mission.owner_id === uid) {
-        // If user is owner, it just cancel them
+        // If user is applicant, it just cancel them
         return missionService.cancelMission(mission.mid, user, true);
       } else {
-        // Otherwise, it expels them from the mission
+        // Otherwise, it expels them from the service
         return missionService.expelBannedAdventurerFromMission(
           mission,
           user,
@@ -638,10 +638,10 @@ export const deleteMe = async (user) => {
   // Parameter checks
   checkRequired(user, 'User');
 
-  // First of all, checks if user has active missions, published or joined
+  // First of all, checks if user has active services, published or joined
   const activeMissions = await missionService.getUserActiveMissions(user.uid);
   if (activeMissions.length > 0)
-    throw new AppError(messages.USER.DELETE_ME.ACTIVE_MISSIONS, 409);
+    throw new AppError(messages.USER.DELETE_ME.ACTIVE_SERVICES, 409);
 
   // Then, checks if it has active disputes
   const activeDisputes = await reportService.getActiveDisputesByUid(user.uid);

@@ -20,7 +20,6 @@ import {
   Mail,
   Save,
   Star,
-  User,
   UserRoundX,
   X,
 } from 'lucide-react';
@@ -276,9 +275,7 @@ const ProfileAvatar = ({ user }) => {
           alt={`${user.username} avatar`}
           className='h-full w-full object-cover'
         />
-        <AvatarFallback>
-          {getInitials(getDisplayName(user))}
-        </AvatarFallback>
+        <AvatarFallback>{getInitials(getDisplayName(user))}</AvatarFallback>
       </Avatar>
 
       {!isPending && (
@@ -336,7 +333,7 @@ const ProfileReviews = ({
 
         {isPrivate ? (
           <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
-            Reviews are hidden while your mission history is private.
+            Reviews are hidden while your service history is private.
           </p>
         ) : isLoading ? (
           <p className='text-muted-foreground'>Loading reviews...</p>
@@ -409,7 +406,7 @@ export const ReviewCard = ({ review, isClamped = false }) => (
     )}
     <div className='mt-2 flex flex-wrap items-center justify-between gap-2'>
       <p className='text-xs text-muted-foreground'>
-        By {review.reviewed_role === 'owner' ? 'adventurer' : 'applicant'}{' '}
+        By {review.reviewed_role === 'owner' ? 'collaborator' : 'applicant'}{' '}
         <Link
           to={`/users/${review.owner_username}`}
           className='font-medium hover:underline-offset-2 hover:underline hover:text-primary transition-colors'
@@ -449,7 +446,7 @@ const AllReviewsDialog = ({
         <DialogHeader className='px-6 py-4 border-b shrink-0'>
           <DialogTitle>All Reviews</DialogTitle>
           <DialogDescription>
-            History of all reviews received in your missions.
+            History of all reviews received in your services.
           </DialogDescription>
         </DialogHeader>
 
@@ -1429,10 +1426,10 @@ const ProfileConfiguration = ({ user }) => {
             action={userConfigurationFormAction}
             noValidate
           >
-            <p className='text-lg font-medium'>Show missions to others</p>
+            <p className='text-lg font-medium'>Show services to others</p>
             <div className='flex items-center justify-between mt-2'>
               <p className='text-sm me-5'>
-                {messages.MY_PROFILE.CONFIGURATION.SHOW_MISSIONS_TEXT}
+                {messages.MY_PROFILE.CONFIGURATION.SHOW_SERVICES_TEXT}
               </p>
               <div className='flex items-center space-x-2'>
                 <Switch

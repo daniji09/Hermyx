@@ -83,7 +83,7 @@ export function Navbar() {
             <div className='flex-1 max-w-5xl mr-auto'>
               <SearchBar
                 id='searchMissionByTitle'
-                legend='Search mission by title bar.'
+                legend='Search service by title bar.'
                 maxLength={consts.SEARCH_MISSION_TITLE_MAX_LENGTH}
               />
             </div>
@@ -102,9 +102,9 @@ export function Navbar() {
                       <Plus
                         className='mr-0 lg:mr-2 h-4 w-4'
                         aria-hidden='true'
-                        aria-label='Create mission'
+                        aria-label='Create service'
                       />
-                      <span className='hidden lg:flex'>Create Mission</span>
+                      <span className='hidden lg:flex'>Create Service</span>
                     </Link>
                   </Button>
                   <NotificationsButton />
@@ -142,7 +142,7 @@ export function Navbar() {
           <div className='md:hidden border-t bg-background px-4 py-4 space-y-4 shadow-lg'>
             <SearchBar
               id='searchMissionByTitleMobile'
-              legend='Search mission by title bar.'
+              legend='Search service by title bar.'
               maxLength={consts.SEARCH_MISSION_TITLE_MAX_LENGTH}
             />
 
@@ -172,14 +172,14 @@ export function Navbar() {
                   icon={Plus}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Create mission
+                  Create service
                 </MobileNavLink>
                 <MobileNavLink
                   to='/missions/mine'
                   icon={Map}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  My missions
+                  My services
                 </MobileNavLink>
                 <MobileNavLink
                   to='/notifications'
@@ -288,7 +288,7 @@ const UserDropdown = ({
               {currentUser.username}
             </p>
             <p className='text-xs leading-none text-muted-foreground'>
-              {currentUser.email || 'Adventurer account'}
+              {currentUser.email || 'Collaborator account'}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -303,7 +303,7 @@ const UserDropdown = ({
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to='/missions/mine' className='cursor-pointer'>
-                <Map className='mr-2 h-4 w-4' aria-hidden='true' /> My missions
+                <Map className='mr-2 h-4 w-4' aria-hidden='true' /> My services
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -507,7 +507,7 @@ const NotificationsButton = () => {
           <div className='space-y-1'>
             {isTransient && hasMissionCompletion && (
               <DropdownMenuItem className='cursor-default rounded-xl bg-muted/50 p-3 text-sm'>
-                Mission {latestNotification.missionTitle} was completed by{' '}
+                Service {latestNotification.missionTitle} was completed by{' '}
                 {latestNotification.adventurerUsername}
               </DropdownMenuItem>
             )}

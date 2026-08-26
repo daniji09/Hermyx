@@ -18,7 +18,7 @@
     "url": "git+https://github.com/daniji09/Hermyx.git"
   },
   "keywords": [],
-  "author": "Isabel Xian Cardoso Cerón, Wenjie Huang, Daniel Jiménez Caballero",
+  "author": "Daniel Jiménez Caballero, Wenjie Huang",
   "license": "",
   "type": "module",
   "dependencies": {

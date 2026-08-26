@@ -2,9 +2,9 @@ import { useContext, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AuthContext } from './../contexts/AuthContext';
-import { getUserMissionsInfiniteQueryOptions } from '../queries/MissionsQueries';
+import { getUserMissionsInfiniteQueryOptions } from '../queries/ServicesQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
-import { MissionSearchContainer } from '../components/custom/missions/MissionSearchContainer';
+import { MissionSearchContainer } from '../components/custom/services/ServiceSearchContainer';
 import { Map } from 'lucide-react';
 
 export const UserMissions = () => {
@@ -45,8 +45,8 @@ export const UserMissions = () => {
 
   return (
     <>
-      <title>{`My missions | Hermyx`}</title>
-      <meta name='description' content={`User's missions.`}></meta>
+      <title>{`My services | Hermyx`}</title>
+      <meta name='description' content={`User's services.`}></meta>
       <main className='container mx-auto p-4 sm:p-6 max-w-6xl '>
         <section className='w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16'>
           <div className='flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
@@ -55,10 +55,10 @@ export const UserMissions = () => {
             </span>
             <div className='min-w-0'>
               <h1 className='text-3xl sm:text-4xl font-bold tracking-tight wrap-break-words'>
-                My missions
+                My services
               </h1>
               <p className='text-muted-foreground'>
-                Manage your published missions and track your active
+                Manage your published services and track your active
                 participations.
               </p>
             </div>
@@ -89,8 +89,8 @@ export const UserMissionsTable = ({
   fetchNextPage,
   isLoading,
   isError,
-  publishedMissionsMessage = `It seems you haven't published any missions yet. Let's ask for some help!`,
-  joinedMissionsMessage = `It seems you haven't joined any missions yet. Embrace an adventure!`,
+  publishedMissionsMessage = `It seems you haven't published any services yet. Let's ask for some help!`,
+  joinedMissionsMessage = `It seems you haven't joined any services yet. Embrace an adventure!`,
   sectionClassName = 'flex flex-col gap-6 mb-8 w-full px-6 pt-4 sm:px-8 lg:px-12 xl:px-16',
   infiniteScroll,
 }) => {
@@ -103,7 +103,7 @@ export const UserMissionsTable = ({
         className='w-full'
       >
         <TabsList
-          aria-label='Filter your missions'
+          aria-label='Filter your services'
           className='grid h-auto w-full grid-cols-2 bg-muted p-1 my-4'
         >
           <TabsTrigger value='published'>Published</TabsTrigger>

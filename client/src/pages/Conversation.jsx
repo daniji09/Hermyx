@@ -485,7 +485,7 @@ export const ConversationThread = ({
         {isDisputeConversation
           ? `Dispute conversation | Hermyx`
           : isMissionConversation
-            ? `Mission ${conversation?.mission_title} conversation | Hermyx`
+            ? `Service ${conversation?.mission_title} conversation | Hermyx`
             : `Conversation with ${otherParticipant?.username} | Hermyx`}
       </title>
       <meta
@@ -493,7 +493,7 @@ export const ConversationThread = ({
         content={
           isDisputeConversation
             ? `Dispute conversation of current user with other users and the administration.`
-            : `Private or mission conversation with other users.`
+            : `Private or service conversation with other users.`
         }
       ></meta>
       <section className='container mx-auto flex flex-col gap-4 p-4 sm:p-6 max-w-4xl'>
@@ -552,14 +552,14 @@ export const ConversationThread = ({
                       {description ||
                         (isHistoryView ? (
                           <>
-                            Mission history:{' '}
+                            Service history:{' '}
                             {isHistoryOnly
                               ? 'messages up to the end of your participation'
-                              : 'mission finished'}
+                              : 'service finished'}
                           </>
                         ) : (
                           <>
-                            Mission group ·{' '}
+                            Service group ·{' '}
                             {conversationData.participants.length}{' '}
                             {conversationData.participants.length === 1
                               ? 'participant'
@@ -855,18 +855,18 @@ export const ConversationThread = ({
                     ? isHistoryOnly
                       ? frontendMessages.CONVERSATION.HISTORY_ONLY
                           .PARTICIPATION_FINISHED
-                      : frontendMessages.CONVERSATION.HISTORY_ONLY.MISSION_ENDED
+                      : frontendMessages.CONVERSATION.HISTORY_ONLY.SERVICE_ENDED
                     : isDisputeConversation
                       ? decision === REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID
                         ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                            .ACCEPT_ADVENTURERS_WORK
+                            .ACCEPT_COLLABORATORS_WORK
                         : decision ===
                             REPORT_DECISION.REJECT_ADVENTURERS_WORK.ID
                           ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                              .REJECT_ADVENTURERS_WORK
+                              .REJECT_COLLABORATORS_WORK
                           : decision === REPORT_DECISION.KICK_ADVENTURER_OUT.ID
                             ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                                .KICK_ADVENTURER_OUT
+                                .KICK_COLLABORATOR_OUT
                             : frontendMessages.CONVERSATION.DISPUTE_DECISION
                                 .DISMISS
                       : frontendMessages.CONVERSATION.HISTORY_ONLY

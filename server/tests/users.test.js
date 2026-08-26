@@ -257,7 +257,7 @@ describe('User API', () => {
   });
 
   it.each([
-    ['active missions', messages.USER.DELETE_ME.ACTIVE_MISSIONS],
+    ['active missions', messages.USER.DELETE_ME.ACTIVE_SERVICES],
     ['active disputes', messages.USER.DELETE_ME.ACTIVE_DISPUTES],
   ])('prevents account deletion with %s', async (_case, message) => {
     userService.deleteMe.mockRejectedValue(new AppError(message, 409));

@@ -3,7 +3,7 @@ import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 import { regex } from '../regex/regex.js';
 import * as paginationValidation from './pagination.validation.js';
-import * as missionValidation from './mission.validation.js';
+import * as missionValidation from './service.validation.js';
 
 /// Base validations, raw logic
 // Uid
@@ -138,7 +138,7 @@ export const searchUsersByUsernameQueryBaseSchema = z.object({
 
 export const searchUsersByUsernameQuerySchema = searchUsersByUsernameQueryBaseSchema;
 
-// Get missions from user
+// Get services from user
 export const getUserMissionsParamSchema = z.object({
   uid: uidBaseSchema,
 });
@@ -156,7 +156,7 @@ export const getUserPublicProfileParamSchema = z.object({
   username: usernameBaseSchema,
 });
 
-// Get user public profile missions
+// Get user public profile services
 export const getUserPublicProfileMissionsBaseQuerySchema = z.object({
   type: missionValidation.typeBaseSchema,
   page: paginationValidation.pageBaseSchema,

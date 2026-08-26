@@ -12,16 +12,16 @@ const viteExecutable = fileURLToPath(
 export default defineConfig({
   testDir: './e2e',
   testMatch: [
-    'create-missions.spec.js',
+    'create-services.spec.js',
     'invitation-acceptance.spec.js',
-    'mission-lifecycle-payment.spec.js',
-    'mission-submission-review.spec.js',
-    'mission-rejection-dispute.spec.js',
+    'service-lifecycle-payment.spec.js',
+    'service-submission-review.spec.js',
+    'service-rejection-dispute.spec.js',
     'stripe-connect-onboarding.spec.js',
   ],
   fullyParallel: false,
   reporter: [['list']],
-  outputDir: './coverage/playwright-missions-artifacts',
+  outputDir: './coverage/playwright-services-artifacts',
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',

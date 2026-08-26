@@ -14,7 +14,7 @@ export const create = async (conversationId, userId, client = pool) => {
   return result.rows[0];
 };
 
-// Creates mission type
+// Creates service type
 export const createMissionType = async (missionId, userId, client = pool) => {
   const query = `
     INSERT INTO conversation_participant (conversation_id, user_id)
@@ -156,7 +156,7 @@ export const canSendMessageToConversation = async (
 };
 
 /// UPDATES
-// Mission conversation left by user
+// Service conversation left by user
 export const leaveMissionConversation = async (
   missionId,
   userId,
@@ -180,7 +180,7 @@ export const leaveMissionConversation = async (
   return result.rows[0] || null;
 };
 
-// Mission conversation freezed for user
+// Service conversation freezed for user
 export const freezeMissionConversationHistory = async (
   missionId,
   userId,

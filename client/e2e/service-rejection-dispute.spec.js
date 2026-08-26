@@ -10,7 +10,7 @@ import {
   hasRealCredentials,
   ownerUsername,
   startAndPayMission,
-} from './support/realMissionFlow.js';
+} from './support/realServiceFlow.js';
 
 const missionFixture = JSON.parse(
   await readFile(
@@ -19,7 +19,7 @@ const missionFixture = JSON.parse(
   ),
 );
 
-test('lets an adventurer dispute an owner rejection', async ({
+test('lets a collaborator dispute an applicant rejection', async ({
   page,
   browser,
 }) => {
@@ -29,7 +29,7 @@ test('lets an adventurer dispute an owner rejection', async ({
     'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the rejection dispute flow.',
   );
 
-  const missionTitle = `Playwright - Rechazo ${Date.now()}`;
+  const missionTitle = `Playwright - Rejection ${Date.now()}`;
   await loginRealUser(page, ownerUsername);
   const missionId = await createMission(page, missionTitle);
   await inviteUser(page, missionId);

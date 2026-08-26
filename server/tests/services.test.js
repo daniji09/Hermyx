@@ -24,7 +24,7 @@ const missionService = vi.hoisted(() => ({
   editMission: vi.fn(),
 }));
 
-vi.mock('../src/services/mission.service.js', () => missionService);
+vi.mock('../src/services/service.service.js', () => missionService);
 vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
   ...(await importOriginal()),
   verifyToken: (req, _res, next) => {
@@ -280,7 +280,7 @@ describe('Mission API', () => {
 
   it('forwards a duplicate mission title error', async () => {
     missionService.publishMission.mockRejectedValue(
-      new AppError(messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE, 400),
+      new AppError(messages.SERVICE.PUBLISH.SERVICE_WITH_SAME_TITLE, 400),
     );
 
     const response = await request(app)
@@ -289,7 +289,7 @@ describe('Mission API', () => {
 
     expect(response.status).toBe(400);
     expect(response.body.errors.general).toEqual([
-      messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
+      messages.SERVICE.PUBLISH.SERVICE_WITH_SAME_TITLE,
     ]);
   });
 
@@ -319,22 +319,22 @@ describe('Mission API', () => {
 
   it('returns not found when closing a missing mission', async () => {
     missionService.closeMission.mockRejectedValue(
-      new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404),
+      new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404),
     );
 
     const response = await request(app).post('/api/missions/999/close');
 
     expect(response.status).toBe(404);
     expect(response.body.errors.general).toEqual([
-      messages.MISSION.GENERAL.MISSION_NOT_FOUND,
+      messages.SERVICE.GENERAL.SERVICE_NOT_FOUND,
     ]);
   });
 
   it.each([
-    ['has no adventurers', messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS],
+    ['has no adventurers', messages.SERVICE.CLOSE.CANNOT_WITHOUT_COLLABORATORS],
     [
       'is in an incompatible state',
-      messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE,
+      messages.SERVICE.CLOSE.CANNOT_ON_CURRENT_STATE,
     ],
   ])(
     'returns a conflict when closing a mission that %s',
@@ -364,8 +364,8 @@ describe('Mission API', () => {
   });
 
   it.each([
-    ['the mission is full', messages.MISSION.JOIN.FILLED],
-    ['a request was already sent', messages.MISSION.JOIN.REQUEST_ALREADY_SENT],
+    ['the mission is full', messages.SERVICE.JOIN.FILLED],
+    ['a request was already sent', messages.SERVICE.JOIN.REQUEST_ALREADY_SENT],
   ])('returns a conflict when joining because %s', async (_case, message) => {
     missionService.joinMission.mockRejectedValue(new AppError(message, 409));
 
@@ -402,15 +402,15 @@ describe('Mission API', () => {
   it.each([
     [
       'the owner invites themselves',
-      messages.MISSION.INVITE.CANNOT_INVITE_YOURSELF,
+      messages.SERVICE.INVITE.CANNOT_INVITE_YOURSELF,
     ],
     [
       'the vacancy is occupied',
-      messages.MISSION.INVITE.VACANCY_ALREADY_OCCUPIED,
+      messages.SERVICE.INVITE.VACANCY_ALREADY_OCCUPIED,
     ],
     [
       'the invitation was already sent',
-      messages.MISSION.INVITE.INVITATION_ALREADY_SENT,
+      messages.SERVICE.INVITE.INVITATION_ALREADY_SENT,
     ],
   ])('returns a conflict when %s', async (_case, message) => {
     missionService.inviteToMission.mockRejectedValue(
@@ -508,14 +508,14 @@ describe('Mission API', () => {
 
   it('forwards mission service errors through the API error contract', async () => {
     missionService.getMissionByMid.mockRejectedValue(
-      new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404),
+      new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404),
     );
 
     const response = await request(app).get('/api/missions/999');
 
     expect(response.status).toBe(404);
     expect(response.body.errors.general).toEqual([
-      messages.MISSION.GENERAL.MISSION_NOT_FOUND,
+      messages.SERVICE.GENERAL.SERVICE_NOT_FOUND,
     ]);
   });
 });

@@ -96,8 +96,8 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
               onFocus={() => setIsMenuOpen(true)}
               onKeyDown={handleKeyDown}
               required
-              placeholder='Search mission in Hermyx...'
-              aria-label='Search mission'
+              placeholder='Search service in Hermyx...'
+              aria-label='Search service'
               aria-describedby={searchId}
               {...props}
               className='w-full'
@@ -141,7 +141,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
               <span className='font-semibold text-foreground'>
                 {`"${trimmedQuery}"`}
               </span>{' '}
-              in missions
+              in services
             </span>
           </button>
 

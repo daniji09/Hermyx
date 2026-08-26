@@ -21,7 +21,7 @@ test('registers an account and redirects to login', async ({ page }) => {
   await page
     .locator('#signUpConfirmPassword')
     .fill(hermyxSignupFixture.password);
-  await page.getByLabel(/Términos y condiciones de Hermyx/).check();
+  await page.getByLabel(/Hermyx terms and conditions/).check();
   await page.locator('#sendSignUp').click();
 
   const signupRequest = await signupRequestPromise;

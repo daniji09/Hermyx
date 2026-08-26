@@ -28,18 +28,18 @@ import * as reportService from '../services/report.service.js';
 import * as storageProvider from '../providers/storage.provider.js';
 import * as socketProvider from '../providers/socket.provider.js';
 import * as paymentProvider from '../providers/payment.provider.js';
-import * as missionModel from '../models/mission.model.js';
-import * as missionParticipationModel from '../models/mission-participation.model.js';
-import * as missionPhotoModel from '../models/mission-photo.model.js';
-import * as missionPaymentModel from '../models/mission-payment.model.js';
+import * as missionModel from '../models/service.model.js';
+import * as missionParticipationModel from '../models/service-participation.model.js';
+import * as missionPhotoModel from '../models/service-photo.model.js';
+import * as missionPaymentModel from '../models/service-payment.model.js';
 import { AZURE_CONN_STRING } from '../config/config.js';
 
 /// Model access functions
-// Get mission by id
+// Get service by id
 const getMissionById = async (mid) => {
   checkRequired(mid, 'Mission id');
 
-  // Find mission by id
+  // Find service by id
   const mission = await missionModel.findByMid(mid);
   return mission;
 };
@@ -56,11 +56,11 @@ export const getMissionByIdForUpdateOrThrow = async (mid, pool) => {
   return mission;
 };
 
-// Get mission participation by id
+// Get service participation by id
 const getMissionParticipationById = async (id, client) => {
   checkRequired(id, 'Mission participation id');
 
-  // Find mission participation by id
+  // Find service participation by id
   const missionParticipation = await missionParticipationModel.findById(
     id,
     client,
@@ -71,7 +71,7 @@ const getMissionParticipationById = async (id, client) => {
 export const getMissionParticipationByIdOrThrow = async (id) => {
   const missionParticipation = await getMissionParticipationById(id);
   if (!missionParticipation)
-    throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+    throw new AppError(messages.SERVICE.VACANCY.NOT_FOUND, 404);
   return missionParticipation;
 };
 
@@ -82,11 +82,11 @@ export const getMissionParticipationByIdForUpdateOrThrow = async (
   const missionParticipation =
     await missionParticipationModel.findByIdForUpdate(id, client);
   if (!missionParticipation)
-    throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+    throw new AppError(messages.SERVICE.VACANCY.NOT_FOUND, 404);
   return missionParticipation;
 };
 
-// Get mission participation by mid and adventurer id
+// Get service participation by mid and collaborator id
 export const getMissionParticipationByMidAndAdventurerId = async (
   mid,
   adventurerId,
@@ -94,7 +94,7 @@ export const getMissionParticipationByMidAndAdventurerId = async (
   checkRequired(mid, 'Mission id');
   checkRequired(adventurerId, 'Adventurer user id');
 
-  // Find mission participation by id
+  // Find service participation by id
   const missionParticipation =
     await missionParticipationModel.findByMidAndAdventurerId(mid, adventurerId);
   return missionParticipation;
@@ -107,17 +107,17 @@ export const getMissionParticipationByMidAndAdventurerIdOrThrow = async (
   const missionParticipation =
     await getMissionParticipationByMidAndAdventurerId(mid, adventurerId);
   if (!missionParticipation)
-    throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+    throw new AppError(messages.SERVICE.VACANCY.NOT_FOUND, 404);
   return missionParticipation;
 };
 
-// Gets mission current payment
+// Gets service current payment
 export const getMissionPaymentByMid = async (mid) => {
   checkRequired(mid, 'Mission id');
   return await missionParticipationModel.findMissionPaymentByMid(mid);
 };
 
-// Gets all waiting for payment participants by mission
+// Gets all waiting for payment participants by service
 export const getAllWaitingForPaymentByMid = async (mid, client) => {
   checkRequired(mid, 'Mission id');
   return await missionParticipationModel.findAllWaitingForPaymentByMid(
@@ -126,19 +126,19 @@ export const getAllWaitingForPaymentByMid = async (mid, client) => {
   );
 };
 
-// Create mission payment
+// Create service payment
 export const createMissionPayment = async (missionPaymentData, client) => {
   checkRequired(missionPaymentData, 'Mission payment data');
   return await missionPaymentModel.create(missionPaymentData, client);
 };
 
-// Get mission payments by vacancy id
+// Get service payments by vacancy id
 export const getMissionPaymentsByVacancyId = async (vacancyId, client) => {
   checkRequired(vacancyId, 'Mission participation id');
   return await missionPaymentModel.findAllByVacancyId(vacancyId, client);
 };
 
-// Gets mission participation
+// Gets service participation
 export const getMissionParticipationReviewContext = async (
   mid,
   adventurerId,
@@ -156,19 +156,19 @@ export const payParticipant = async (id, payment, client) => {
   return await missionParticipationModel.payParticipant(id, payment, client);
 };
 
-// Get all occupied vacancies of a mission
+// Get all occupied vacancies of a service
 export const getAllOccupiedByMid = async (mid, client) => {
   checkRequired(mid, 'Mission id');
   return await missionParticipationModel.findAllOccupiedByMid(mid, client);
 };
 
-// Gets user's active missions
+// Gets user's active services
 export const getUserActiveMissions = async (uid) => {
   checkRequired(uid, 'User id');
   return await missionModel.findAllActiveByUid(uid);
 };
 
-// Updates mission payment
+// Updates service payment
 export const updateMissionPayment = async (mid, payment, client) => {
   checkRequired(mid, 'Mission id');
   checkRequired(payment, 'Mission payment');
@@ -182,7 +182,7 @@ export const updateStatusByMid = async (mid, status, client) => {
   return await missionModel.updateStatusByMid(mid, status, client);
 };
 
-// Updates mission participation status by mid an adventurer
+// Updates service participation status by mid an collaborator
 export const updateParticipationStatusByMidAndAdventurer = async (
   mid,
   adventurerId,
@@ -200,7 +200,7 @@ export const updateParticipationStatusByMidAndAdventurer = async (
   );
 };
 
-// Restores participation after an acceptance failed before paying the adventurer
+// Restores participation after an acceptance failed before paying the collaborator
 export const restoreParticipationAfterFailedAcceptance = async (
   mid,
   adventurerId,
@@ -213,7 +213,7 @@ export const restoreParticipationAfterFailedAcceptance = async (
   );
 };
 
-// Updates mission participation status by id an adventurer
+// Updates service participation status by id an collaborator
 export const updateParticipationAdventurerAndStatus = async (
   id,
   adventurerId,
@@ -232,7 +232,7 @@ export const updateParticipationAdventurerAndStatus = async (
     );
   } catch (error) {
     if (isUniqueConstraintError(error, 'unique_mission_adventurer')) {
-      throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+      throw new AppError(messages.SERVICE.JOIN.ALREADY_JOINED, 409);
     }
     throw error;
   }
@@ -245,7 +245,7 @@ export const updateOccupiedVacancies = async (mid, amount, client) => {
   return await missionModel.updateOccupiedVacancies(mid, amount, client);
 };
 
-// Starts participants of a mission
+// Starts participants of a service
 export const startParticipants = async (mid, client) => {
   checkRequired(mid, 'Mission id');
   return await missionParticipationModel.startParticipants(mid, client);
@@ -296,14 +296,14 @@ export const updateMissionParticipationReward = async (
   );
 };
 
-// Refund mission payment
+// Refund service payment
 export const refundMissionPayment = async (amount, paymentId, client) => {
   checkRequired(amount, 'Monetary amount');
   checkRequired(paymentId, 'Mission payment id');
   return await missionPaymentModel.refund(amount, paymentId, client);
 };
 
-// Refunds partial payment of mission participation
+// Refunds partial payment of service participation
 export const refundMissionParticipation = async (
   participationId,
   amount,
@@ -318,7 +318,7 @@ export const refundMissionParticipation = async (
   );
 };
 
-// Updates mission participation with owner review to an adventurer
+// Updates service participation with applicant review to an collaborator
 export const updateMissionParticipationOwnerReview = async (
   participationId,
   rid,
@@ -333,7 +333,7 @@ export const updateMissionParticipationOwnerReview = async (
   );
 };
 
-// Updates mission participation with adventurer review to a owner
+// Updates service participation with collaborator review to a applicant
 export const updateMissionParticipationAdventurerReview = async (
   participationId,
   rid,
@@ -348,52 +348,52 @@ export const updateMissionParticipationAdventurerReview = async (
   );
 };
 
-// Get occupied mission participations
+// Get occupied service participations
 export const getOccupiedMissionParticipations = async (mid, client) => {
   checkRequired(mid, 'Mission id');
   return await missionParticipationModel.findAllOccupiedByMid(mid, client);
 };
 
-// Missions published by uid
+// Services published by uid
 export const getMissionsPublishedByUid = async (uid, pagination) => {
   checkRequired(uid, 'User id');
 
-  // Finds missions created by uid
+  // Finds services created by uid
   const result = await missionModel.findPublishedByUid(uid, pagination);
   return result;
 };
 
-// Missions joined by uid
+// Services joined by uid
 export const getMissionsJoinedByUid = async (uid, pagination) => {
   checkRequired(uid, 'User id');
 
-  // Finds missions joined by uid
+  // Finds services joined by uid
   const result = await missionModel.findJoinedByUid(uid, pagination);
   return result;
 };
 
-// Public missions published by uid
+// Public services published by uid
 export const getMissionsPublicPublishedByUid = async (uid, pagination) => {
   checkRequired(uid, 'User id');
 
-  // Finds public missions created by uid
+  // Finds public services created by uid
   const result = await missionModel.findPublicPublishedByUid(uid, pagination);
   return result;
 };
 
-// Public missions joined by uid
+// Public services joined by uid
 export const getMissionsPublicJoinedByUid = async (uid, pagination) => {
   checkRequired(uid, 'User id');
 
-  // Finds public missions joined by uid
+  // Finds public services joined by uid
   const result = await missionModel.findPublicJoinedByUid(uid, pagination);
   return result;
 };
 
 /// Endpoint complex function
-// Get all missions
+// Get all services
 export const getMissions = async (title, pagination) => {
-  // Gets all missions filtering what is needed
+  // Gets all services filtering what is needed
   const { rows: missions, totalCount } = await missionModel.findAll({
     title,
     pagination,
@@ -419,13 +419,13 @@ export const getMissions = async (title, pagination) => {
     return { missions };
   } else
     throw new AppError(
-      messages.MISSION.GENERAL.MISSIONS_NOT_FOUND,
+      messages.SERVICE.GENERAL.SERVICES_NOT_FOUND,
       404,
       'general',
     );
 };
 
-// Get all opened missions
+// Get all opened services
 export const getOpenedMissions = async (
   title,
   minPayment,
@@ -435,7 +435,7 @@ export const getOpenedMissions = async (
   excludeOwnerId,
   user,
 ) => {
-  // Gets all missions filtering what is needed
+  // Gets all services filtering what is needed
   const { rows: missions, totalCount } = await missionModel.findAllOpened({
     title,
     minPayment,
@@ -466,19 +466,19 @@ export const getOpenedMissions = async (
     return { missions };
   } else
     throw new AppError(
-      messages.MISSION.GENERAL.MISSIONS_NOT_FOUND,
+      messages.SERVICE.GENERAL.SERVICES_NOT_FOUND,
       404,
       'general',
     );
 };
 
-// Get mission by mid
+// Get service by mid
 export const getMissionByMid = async (mid, uid, isAdmin = false) => {
   // Parameter checks
   checkRequired(uid, 'Current user id');
   checkRequired(mid, 'Mission id');
 
-  // Searches mission by id
+  // Searches service by id
   const [mission, participants, waitingForPaymentVacancies, photos] =
     await Promise.all([
       missionModel.findByMidExcludingUid(mid, uid),
@@ -492,7 +492,7 @@ export const getMissionByMid = async (mid, uid, isAdmin = false) => {
   if (!isAdmin && mission.status === MISSION_STATUS.DELETED.ID)
     throw buildMissionNotFoundError();
 
-  // Mission can be finished if all vacancies are empty or finished
+  // Service can be finished if all vacancies are empty or finished
   const canFinish =
     participants.every(
       (participant) =>
@@ -514,12 +514,12 @@ export const getMissionByMid = async (mid, uid, isAdmin = false) => {
   };
 };
 
-// Get mission payment info by mid
+// Get service payment info by mid
 export const getMissionPaymentInfo = async (mid) => {
   // Parameter checks
   checkRequired(mid, 'Mission id');
 
-  // Searches mission by id
+  // Searches service by id
   const [mission, missionPayment] = await Promise.all([
     missionModel.findByMid(mid),
     missionParticipationModel.findAllWaitingForPaymentByMid(mid),
@@ -528,11 +528,11 @@ export const getMissionPaymentInfo = async (mid) => {
   // Returns success or error
   if (!mission || !missionPayment) throw buildMissionNotFoundError();
 
-  // Mission can be finished if all vacancies are empty or finished
+  // Service can be finished if all vacancies are empty or finished
   return { mission, missionPayment };
 };
 
-// Publish mission
+// Publish service
 export const publishMission = async (
   uid,
   title,
@@ -553,7 +553,7 @@ export const publishMission = async (
   // Checks if photo number is correct
   if (photos.length > consts.MISSION.PHOTOS.MAX) throw buildTooManyFilesError();
 
-  // Checks if user has a mission already with the same title
+  // Checks if user has a service already with the same title
   await checkUserMissionWithSameTitle(uid, title);
 
   // Saves photos
@@ -578,7 +578,7 @@ export const publishMission = async (
     );
   }
 
-  // Mission data
+  // Service data
   const missionData = {
     title: title || 'Mission not titled',
     description: description || 'No description',
@@ -597,10 +597,10 @@ export const publishMission = async (
     // Transaction starts
     await client.query('BEGIN');
 
-    // Creates the new mission
+    // Creates the new service
     const newMission = await missionModel.create(missionData, client);
 
-    // Creates vacancies for mission
+    // Creates vacancies for service
     for (const vacancy of vacanciesData) {
       await missionParticipationModel.create(newMission.mid, vacancy, client);
     }
@@ -639,7 +639,7 @@ export const publishMission = async (
   }
 };
 
-// Close mission
+// Close service
 export const closeMission = async (mid, user) => {
   console.log('QUE CIERRO QUE CIERRO');
   // Parameter checks
@@ -681,19 +681,22 @@ export const closeMission = async (mid, user) => {
 };
 
 const closeMissionValidations = async (mid, user) => {
-  // Gets mission
+  // Gets service
   const mission = await getMissionByIdOrThrow(mid);
 
-  // Checks mission is owned by user
+  // Checks service is owned by user
   checkMissionBelongsToUser(mission.owner_id, user.uid);
 
   // Checks occupied vacancies
   const occupied_vacancies =
     await missionParticipationModel.findAllOccupiedByMid(mid);
   if (occupied_vacancies.length === 0)
-    throw new AppError(messages.MISSION.CLOSE.CANNOT_WITHOUT_ADVENTURERS, 409);
+    throw new AppError(
+      messages.SERVICE.CLOSE.CANNOT_WITHOUT_COLLABORATORS,
+      409,
+    );
 
-  // Different checks for opened or reopened mission
+  // Different checks for opened or reopened service
   let nextMissionStatus, vacanciesToUpdate, message;
 
   if (mission.status === MISSION_STATUS.OPENED.ID) {
@@ -702,13 +705,13 @@ const closeMissionValidations = async (mid, user) => {
         MISSION_STATUS.CLOSED.ID,
       )
     )
-      throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 409);
+      throw new AppError(messages.SERVICE.CLOSE.CANNOT_ON_CURRENT_STATE, 409);
 
     nextMissionStatus = MISSION_STATUS.CLOSED.ID;
     vacanciesToUpdate = occupied_vacancies.filter(
       (v) => v.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID,
     );
-    message = messages.NOTIFICATION.MISSION_CLOSE.CLOSED(mission.title);
+    message = messages.NOTIFICATION.SERVICE_CLOSE.CLOSED(mission.title);
   } else if (mission.status === MISSION_STATUS.REOPENED.ID) {
     if (
       !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
@@ -716,7 +719,7 @@ const closeMissionValidations = async (mid, user) => {
       )
     )
       throw new AppError(
-        messages.MISSION.REOPEN.CANNOT_CLOSE_ON_CURRENT_STATE,
+        messages.SERVICE.REOPEN.CANNOT_CLOSE_ON_CURRENT_STATE,
         409,
       );
 
@@ -726,14 +729,14 @@ const closeMissionValidations = async (mid, user) => {
     );
     message =
       vacanciesToUpdate.length === 0
-        ? messages.NOTIFICATION.MISSION_CLOSE.CLOSE_AFTER_REOPENED_NO_NEW_ADVENTURERS(
+        ? messages.NOTIFICATION.SERVICE_CLOSE.CLOSE_AFTER_REOPENED_NO_NEW_COLLABORATORS(
             mission.title,
           )
-        : messages.NOTIFICATION.MISSION_CLOSE.CLOSE_AFTER_REOPENED_NEW_ADVENTURERS(
+        : messages.NOTIFICATION.SERVICE_CLOSE.CLOSE_AFTER_REOPENED_NEW_COLLABORATORS(
             mission.title,
           );
   } else {
-    throw new AppError(messages.MISSION.CLOSE.CANNOT_ON_CURRENT_STATE, 409);
+    throw new AppError(messages.SERVICE.CLOSE.CANNOT_ON_CURRENT_STATE, 409);
   }
 
   return {
@@ -760,7 +763,7 @@ const closeMissionInternalUpdates = async (
   try {
     await client.query('BEGIN');
 
-    // Mission state is updated
+    // Service state is updated
     await missionModel.updateStatusByMid(mid, nextMissionStatus, client);
 
     // Vacancies are updated
@@ -814,39 +817,39 @@ const closeMissionInternalUpdates = async (
   }
 };
 
-// Join mission
+// Join service
 export const joinMission = async (mid, user, message, vacancyId) => {
   // Parameter checks
   checkRequired(mid, 'Mission id');
   checkRequired(user, 'Current user');
   checkRequired(vacancyId, 'Mission participation id');
 
-  // Mission is searched
+  // Service is searched
   const mission = await getMissionByIdOrThrow(mid);
 
-  // Checks if mission was created by the current user
+  // Checks if service was created by the current user
   if (mission.owner_id === user.uid)
-    throw new AppError(messages.MISSION.JOIN.OWN_MISSION, 403);
+    throw new AppError(messages.SERVICE.JOIN.OWN_SERVICE, 403);
 
-  // Checks if mission status is valid for accepting adventurers
+  // Checks if service status is valid for accepting collaborators
   checkCanAcceptAdventurers(mission.status);
 
-  // Checks if mission is already full
+  // Checks if service is already full
   if (mission.occupied_vacancies === mission.total_vacancies)
-    throw new AppError(messages.MISSION.JOIN.FILLED, 409);
+    throw new AppError(messages.SERVICE.JOIN.FILLED, 409);
 
-  // Checks if user has already joined that mission
+  // Checks if user has already joined that service
   await checkAdventurerAlreadyJoined(mid, user.uid);
 
   // Checks if vacancy exists
   const vacancy = await getMissionParticipationByIdOrThrow(vacancyId);
   if (vacancy.adventurer_id !== null) {
-    throw new AppError(messages.MISSION.JOIN.FILLED, 409);
+    throw new AppError(messages.SERVICE.JOIN.FILLED, 409);
   }
-  // Checks that vacancy exists in that mission
+  // Checks that vacancy exists in that service
   checkVacancyNotMission(vacancy.mid, mid);
 
-  // Checks if user has already requested the joining for this mission
+  // Checks if user has already requested the joining for this service
   const ownerId = mission.owner_id;
   const pendingRequest = await notificationService.hasPendingJoinNotification(
     mid,
@@ -855,12 +858,12 @@ export const joinMission = async (mid, user, message, vacancyId) => {
     vacancyId,
   );
   if (pendingRequest)
-    throw new AppError(messages.MISSION.JOIN.REQUEST_ALREADY_SENT, 409);
+    throw new AppError(messages.SERVICE.JOIN.REQUEST_ALREADY_SENT, 409);
 
   // Checks if user has configured their bank account
   if (user.stripe_connected_id === null)
     throw new AppError(
-      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+      messages.SERVICE.JOIN.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED,
       403,
     );
 
@@ -892,7 +895,7 @@ export const joinMission = async (mid, user, message, vacancyId) => {
   return;
 };
 
-// Invite to mission
+// Invite to service
 export const inviteToMission = async (
   mid,
   vacancyId,
@@ -909,7 +912,7 @@ export const inviteToMission = async (
 
   // Cannot send a invitation to itself
   if (senderId === receiverId)
-    throw new AppError(messages.MISSION.INVITE.CANNOT_INVITE_YOURSELF, 409);
+    throw new AppError(messages.SERVICE.INVITE.CANNOT_INVITE_YOURSELF, 409);
 
   // eslint-disable-next-line no-unused-vars
   const [mission, receiver, vacancy] = await Promise.all([
@@ -918,17 +921,17 @@ export const inviteToMission = async (
     getMissionParticipationByIdOrThrow(vacancyId),
   ]);
 
-  // Checks that vacancy exists in that mission
+  // Checks that vacancy exists in that service
   checkVacancyNotMission(vacancy.mid, mid);
 
   // Checks if vacancy is already occupied
   if (vacancy.adventurer_id !== null)
-    throw new AppError(messages.MISSION.INVITE.VACANCY_ALREADY_OCCUPIED, 409);
+    throw new AppError(messages.SERVICE.INVITE.VACANCY_ALREADY_OCCUPIED, 409);
 
-  // Checks if mission can accept adventurers
+  // Checks if service can accept collaborators
   checkCanAcceptAdventurers(mission.status);
 
-  // Checks if applicant has already sent a invitation to that adventurer
+  // Checks if applicant has already sent a invitation to that collaborator
   const hasPending = await notificationService.hasPendingJoinNotification(
     mid,
     senderId,
@@ -936,13 +939,13 @@ export const inviteToMission = async (
     vacancyId,
   );
   if (hasPending)
-    throw new AppError(messages.MISSION.INVITE.INVITATION_ALREADY_SENT, 409);
+    throw new AppError(messages.SERVICE.INVITE.INVITATION_ALREADY_SENT, 409);
 
   // Checks if there is available vacancies
   if (mission.total_vacancies <= mission.occupied_vacancies)
-    throw new AppError(messages.MISSION.INVITE.NO_VACANCIES_AVAILABLE, 409);
+    throw new AppError(messages.SERVICE.INVITE.NO_VACANCIES_AVAILABLE, 409);
 
-  // Checks if user has already joined that mission
+  // Checks if user has already joined that service
   const adventurerId = mission.owner_id === senderId ? receiverId : senderId;
   await checkAdventurerAlreadyJoined(mid, adventurerId);
 
@@ -977,45 +980,45 @@ export const inviteToMission = async (
   return;
 };
 
-// Unjoin mission
+// Unjoin service
 export const unjoinMission = async (mid, vacancyId, user) => {
   // Parameter checks
   checkRequired(mid, 'Mission id');
   checkRequired(vacancyId, 'Mission participation id');
   checkRequired(user, 'Current user');
 
-  // Mission is searched
+  // Service is searched
   const mission = await getMissionByIdOrThrow(mid);
 
-  // Checks if mission is opened, so unjoin can be done
+  // Checks if service is opened, so unjoin can be done
   if (!MISSION_STATUS[mission.status].ADVENTURERS_CAN_UNJOIN)
-    throw new AppError(messages.MISSION.UNJOIN.CANNOT_IN_PROGRESS_MISSION);
+    throw new AppError(messages.SERVICE.UNJOIN.CANNOT_IN_PROGRESS_SERVICE);
 
   // Vacancy is searched
   const vacancy = await getMissionParticipationByIdOrThrow(vacancyId);
 
-  // Checks that vacancy exists in that mission
+  // Checks that vacancy exists in that service
   checkVacancyNotMission(vacancy.mid, mid);
 
   // Checks that participant is current user, a user can only unjoin itself
   if (vacancy.adventurer_id !== user.uid)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 
-  // Checks if adventurer can unjoin can be deleted by states
+  // Checks if collaborator can unjoin can be deleted by states
   if (
     !MISSION_PARTICIPATION_STATUS[vacancy.status].VALID_NEXT_STATES.includes(
       MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     )
   )
-    throw new AppError(messages.MISSION.UNJOIN.CANNOT_IN_CURRENT_VACANCY_STATE);
+    throw new AppError(messages.SERVICE.UNJOIN.CANNOT_IN_CURRENT_VACANCY_STATE);
 
-  // Checks if user has actually joined that mission
+  // Checks if user has actually joined that service
   const alreadyJoined =
     await missionParticipationModel.findByMidAndAdventurerId(mid, user.uid);
   if (!alreadyJoined)
-    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+    throw new AppError(messages.SERVICE.JOIN.ALREADY_JOINED, 409);
 
-  // Gets adventurer fled information
+  // Gets collaborator fled information
   const adventurer = await userService.getUserByUidOrThrow(
     vacancy.adventurer_id,
   );
@@ -1023,7 +1026,7 @@ export const unjoinMission = async (mid, vacancyId, user) => {
   // Updates and notification sending needs transaction
   const client = await pool.connect();
   let notificationId;
-  const message = messages.NOTIFICATION.UNJOIN_MISSION(
+  const message = messages.NOTIFICATION.UNJOIN_SERVICE(
     user.username,
     vacancy.title,
     mission.title,
@@ -1040,24 +1043,24 @@ export const unjoinMission = async (mid, vacancyId, user) => {
         client,
       );
     if (!updatedVacancy)
-      throw new AppError(messages.MISSION.VACANCY.ALREADY_MODIFIED, 409);
+      throw new AppError(messages.SERVICE.VACANCY.ALREADY_MODIFIED, 409);
 
-    // Mission is updated
+    // Service is updated
     const updateMission = await missionModel.updateOccupiedVacancies(
       mid,
       -1,
       client,
     );
     if (updateMission.length < 1)
-      throw new AppError(messages.MISSION.NOT_FOUND, 404);
+      throw new AppError(messages.SERVICE.NOT_FOUND, 404);
 
-    // Adventurer leaves conversation
+    // Collaborator leaves conversation
     const leaveMissionConversation =
       await conversationService.leaveMissionConversation(mid, user.uid, client);
     if (!leaveMissionConversation)
       throw new AppError(messages.GENERAL.UNEXPECTED_ERROR, 500);
 
-    // Finally, a notification is sent to the owner
+    // Finally, a notification is sent to the applicant
     notificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1103,7 +1106,7 @@ export const submitMissionParticipation = async (mid, user) => {
   checkRequired(mid, 'Mission id');
   checkRequired(user, 'Current user');
 
-  // Gets mission
+  // Gets service
   const mission = await getMissionByIdOrThrow(mid);
 
   // Gets vacancy
@@ -1112,24 +1115,24 @@ export const submitMissionParticipation = async (mid, user) => {
     user.uid,
   );
 
-  // Check if mission can handle a submit
+  // Check if service can handle a submit
   if (!MISSION_STATUS[mission.status].CAN_SUBMIT_PARTICIPATION)
     throw new AppError(
-      messages.MISSION.SUBMIT_PARTICIPATION.CANNOT_IN_CURRENT_STATE,
+      messages.SERVICE.SUBMIT_PARTICIPATION.CANNOT_IN_CURRENT_STATE,
       409,
     );
 
   // Checks if vacancy can be submitted by status
   if (vacancy.status !== MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID)
     throw new AppError(
-      messages.MISSION.SUBMIT_PARTICIPATION.MISSION_PART_ALREADY_SUBMITTED,
+      messages.SERVICE.SUBMIT_PARTICIPATION.SERVICE_PART_ALREADY_SUBMITTED,
       409,
     );
 
   // Check if vacancy can be submitted by payment status
   if (vacancy.payment_status !== MISSION_PARTICIPATION_PAYMENT_STATUS.PAID.ID)
     throw new AppError(
-      messages.MISSION.SUBMIT_PARTICIPATION.CANNOT_SUBMIT_UNPAID,
+      messages.SERVICE.SUBMIT_PARTICIPATION.CANNOT_SUBMIT_UNPAID,
       409,
     );
 
@@ -1144,7 +1147,7 @@ export const submitMissionParticipation = async (mid, user) => {
     user.username,
   );
 
-  // There is a mission participation update and notification creation, so a transaction is needed
+  // There is a service participation update and notification creation, so a transaction is needed
   const client = await pool.connect();
   let notificationId, updatedParticipation;
   try {
@@ -1161,7 +1164,7 @@ export const submitMissionParticipation = async (mid, user) => {
       );
     if (!updatedParticipation)
       throw new AppError(
-        messages.MISSION.SUBMIT_PARTICIPATION.MISSION_PART_ALREADY_SUBMITTED,
+        messages.SERVICE.SUBMIT_PARTICIPATION.SERVICE_PART_ALREADY_SUBMITTED,
         409,
       );
 
@@ -1205,7 +1208,7 @@ export const submitMissionParticipation = async (mid, user) => {
   return updatedParticipation;
 };
 
-// Cancel mission
+// Cancel service
 export const cancelMission = async (mid, user) => {
   // Parameter checks
   checkRequired(mid, 'Mission id');
@@ -1214,10 +1217,10 @@ export const cancelMission = async (mid, user) => {
   // To save successful payments
   const successfulPayments = [];
 
-  // Mission is searched
+  // Service is searched
   const mission = await getMissionByIdOrThrow(mid);
 
-  // Checks if mission was created by the current user
+  // Checks if service was created by the current user
   checkMissionBelongsToUser(mission.owner_id, user.uid);
 
   // Gets occupied vacancies
@@ -1231,50 +1234,50 @@ export const cancelMission = async (mid, user) => {
   // If its neither, then is an error
   if (!isDeleting && !isCancelling) {
     if (mission.status === MISSION_STATUS.IN_DISPUTE.ID)
-      throw new AppError(messages.MISSION.DELETE.CANNOT_ACTIVE_DISPUTES, 409);
+      throw new AppError(messages.SERVICE.DELETE.CANNOT_ACTIVE_DISPUTES, 409);
     throw new AppError(
-      messages.MISSION.DELETE.CANNOT_DELETE_MISSION_STATE,
+      messages.SERVICE.DELETE.CANNOT_DELETE_SERVICE_STATE,
       409,
     );
   }
 
-  // If is a delete, it just changes mission status
+  // If is a delete, it just changes service status
   if (isDeleting) {
-    // Checks if mission can be deleted by status
+    // Checks if service can be deleted by status
     if (
       !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
         MISSION_STATUS.DELETED.ID,
       )
     )
       throw new AppError(
-        messages.MISSION.DELETE.CANNOT_DELETE_MISSION_STATE,
+        messages.SERVICE.DELETE.CANNOT_DELETE_SERVICE_STATE,
         409,
       );
 
     await missionModel.updateStatusByMid(mid, MISSION_STATUS.DELETED.ID);
   }
 
-  // Otherwise, reward has to be sent to the adventurers
+  // Otherwise, reward has to be sent to the collaborators
   else if (isCancelling) {
-    // Checks if mission can be cancelled by status
+    // Checks if service can be cancelled by status
     if (
       !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
         MISSION_STATUS.CANCELLING.ID,
       )
     )
       throw new AppError(
-        messages.MISSION.DELETE.CANNOT_CANCEL_MISSION_STATE,
+        messages.SERVICE.DELETE.CANNOT_CANCEL_SERVICE_STATE,
         409,
       );
 
-    // Intention is marked, mission is going to be cancel after all money transactions
+    // Intention is marked, service is going to be cancel after all money transactions
     await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLING.ID);
 
-    // Then, without using any db transaction, reward is sent to each adventurer of every unpaid vacancy
+    // Then, without using any db transaction, reward is sent to each collaborator of every unpaid vacancy
     for (const vacancy of occupied_vacancies) {
       if (vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID) {
         try {
-          // Gets adventurer
+          // Gets collaborator
           const adventurer = await userService.getUserByUidOrThrow(
             vacancy.adventurer_id,
           );
@@ -1347,14 +1350,14 @@ export const cancelMission = async (mid, user) => {
     }
   }
 
-  // Either way, all adventurers are informed and mission conversation is closed
+  // Either way, all collaborators are informed and service conversation is closed
   const notificationsToSend = [];
   const client = await pool.connect();
 
   // Notifications are created in a transaction
   try {
     await client.query('BEGIN');
-    // First, mission has been updated to cancel status
+    // First, service has been updated to cancel status
     if (occupied_vacancies.length === successfulPayments.length)
       await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
 
@@ -1365,10 +1368,10 @@ export const cancelMission = async (mid, user) => {
     for (const vacancy of occupied_vacancies) {
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const message = isDeleting
-          ? messages.NOTIFICATION.DELETE_MISSION(mission.title)
+          ? messages.NOTIFICATION.DELETE_SERVICE(mission.title)
           : successfulPayments.includes(vacancy.id)
-            ? messages.NOTIFICATION.CANCEL_MISSION.SUCCESSFUL(mission.title)
-            : messages.NOTIFICATION.CANCEL_MISSION.ISSUED(mission.title);
+            ? messages.NOTIFICATION.CANCEL_SERVICE.SUCCESSFUL(mission.title)
+            : messages.NOTIFICATION.CANCEL_SERVICE.ISSUED(mission.title);
         const action = isDeleting
           ? NOTIFICATION_ACTION.MISSION_DELETE.ID
           : NOTIFICATION_ACTION.MISSION_CANCEL.ID;
@@ -1425,55 +1428,55 @@ export const cancelMission = async (mid, user) => {
   return;
 };
 
-// Reopen mission
+// Reopen service
 export const reopenMission = async (mid, user) => {
   // Parameters check
   checkRequired(mid, 'Mission id');
   checkRequired(user, 'Current user');
 
-  // Mission is searched
+  // Service is searched
   const mission = await getMissionByIdOrThrow(mid);
 
-  // Checks if mission was created by the current user
+  // Checks if service was created by the current user
   checkMissionBelongsToUser(mission.owner_id, user.uid);
 
-  // Checks if mission can be reopened by state
+  // Checks if service can be reopened by state
   if (
     !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
       MISSION_STATUS.REOPENED.ID,
     )
   )
-    throw new AppError(messages.MISSION.REOPEN.CANNOT_ON_CURRENT_STATE, 409);
+    throw new AppError(messages.SERVICE.REOPEN.CANNOT_ON_CURRENT_STATE, 409);
 
-  // Checks if there is at least one empty vacancy, so mission can be reopened
+  // Checks if there is at least one empty vacancy, so service can be reopened
   const vacancies = await missionParticipationModel.findAllUnoccupied(mid);
 
   if (vacancies.length < 1)
     throw new AppError(
-      messages.MISSION.REOPEN.CANNOT_WITHOUT_EMPTY_VACANCIES,
+      messages.SERVICE.REOPEN.CANNOT_WITHOUT_EMPTY_VACANCIES,
       409,
     );
 
-  // Gets adventurers
+  // Gets collaborators
   const occupied_vacancies =
     await missionParticipationModel.findAllOccupiedByMid(mid);
 
-  // Mission status change and notifications sending need to be in a db transaction
+  // Service status change and notifications sending need to be in a db transaction
   const notificationsToSend = [];
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // Finally, mission is reopened
+    // Finally, service is reopened
     await missionModel.updateStatusByMid(
       mid,
       MISSION_STATUS.REOPENED.ID,
       client,
     );
 
-    // And all adventurers are informed
+    // And all collaborators are informed
     for (const vacancy of occupied_vacancies) {
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const message = messages.NOTIFICATION.REOPEN_MISSION(mission.title);
+        const message = messages.NOTIFICATION.REOPEN_SERVICE(mission.title);
         const notificationId = await notificationService.createNotification(
           {
             type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1526,26 +1529,26 @@ export const reopenMission = async (mid, user) => {
   return;
 };
 
-// Finish mission
+// Finish service
 export const finishMission = async (mid, user) => {
   // Parameters check
   checkRequired(mid, 'Mission id');
   checkRequired(user, 'Current user');
 
-  // Mission is searched
+  // Service is searched
   const mission = await getMissionByIdOrThrow(mid);
 
-  // Checks if mission was created by the current user
+  // Checks if service was created by the current user
   checkMissionBelongsToUser(mission.owner_id, user.uid);
 
-  // Checks if mission can be finished by state
+  // Checks if service can be finished by state
   if (
     !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
       MISSION_STATUS.FINISHED.ID,
     )
   )
     throw new AppError(
-      messages.MISSION.FINISH.CANNOT_IN_CURRENT_MISSION_STATE,
+      messages.SERVICE.FINISH.CANNOT_IN_CURRENT_SERVICE_STATE,
       409,
     );
 
@@ -1558,15 +1561,15 @@ export const finishMission = async (mid, user) => {
   );
   if (!canFinish)
     throw new AppError(
-      messages.MISSION.FINISH.CANNOT_ADVENTURERS_IN_PROGRESS,
+      messages.SERVICE.FINISH.CANNOT_COLLABORATORS_IN_PROGRESS,
       409,
     );
 
-  // Then, mission status update and conversation closure are made
+  // Then, service status update and conversation closure are made
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // Mission status is changed
+    // Service status is changed
     await missionModel.updateStatusByMid(
       mid,
       MISSION_STATUS.FINISHED.ID,
@@ -1585,7 +1588,7 @@ export const finishMission = async (mid, user) => {
   }
 };
 
-// Ban mission
+// Ban service
 export const banMission = async (user, mid, rid, reason) => {
   // Parameter checks
   checkRequired(user, 'Admin user');
@@ -1604,7 +1607,7 @@ export const banMission = async (user, mid, rid, reason) => {
   if (report.status === REPORT_STATUS.ANSWERED.ID)
     throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
 
-  // Mission is searched
+  // Service is searched
   const mission = await getMissionByIdOrThrow(mid);
   const isDeleting = MISSION_STATUS[mission.status].CAN_DELETE;
 
@@ -1621,11 +1624,11 @@ export const banMission = async (user, mid, rid, reason) => {
   if (!reportLocked)
     throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
 
-  // If mission is cancelled, payment is sent to every vacancy
+  // If service is cancelled, payment is sent to every vacancy
   if (!isDeleting) {
     const stripePromises = participations.map(async (vacancy) => {
       try {
-        // Gets adventurer info
+        // Gets collaborator info
         const adventurer = await userService.getUserByUidOrThrow(
           vacancy.adventurer_id,
         );
@@ -1665,7 +1668,7 @@ export const banMission = async (user, mid, rid, reason) => {
               receiptClient,
             );
 
-            // Updates mission participation payment status
+            // Updates service participation payment status
             await missionParticipationModel.updatePaymentStatusById(
               vacancy.id,
               MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
@@ -1717,16 +1720,16 @@ export const banMission = async (user, mid, rid, reason) => {
         client,
       );
 
-    // If mission can be deleted, its emptied completely
+    // If service can be deleted, its emptied completely
     if (isDeleting) {
       const updatedVacancies =
         await missionParticipationModel.cleanMissionParticipation(mid, client);
       if (participations.length !== updatedVacancies)
-        throw new AppError(messages.MISSION.BAN.CANNOT_DELETE_VACANCIES, 409);
+        throw new AppError(messages.SERVICE.BAN.CANNOT_DELETE_VACANCIES, 409);
 
       const emptiedMission = await missionModel.emptyMission(mid, client);
       if (emptiedMission < 1)
-        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 409);
+        throw new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 409);
     }
 
     // And current report is closed
@@ -1741,9 +1744,9 @@ export const banMission = async (user, mid, rid, reason) => {
       throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
 
     const ownerMessage = isDeleting
-      ? messages.NOTIFICATION.BAN_MISSION.DELETE
-      : messages.NOTIFICATION.CANCEL_MISSION.CANCEL;
-    // To mission owner
+      ? messages.NOTIFICATION.BAN_SERVICE.DELETE
+      : messages.NOTIFICATION.CANCEL_SERVICE.CANCEL;
+    // To service applicant
     const ownerNotificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1774,14 +1777,14 @@ export const banMission = async (user, mid, rid, reason) => {
       },
     });
 
-    // To every adventurer
+    // To every collaborator
     for (const vacancy of participations) {
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const message = isDeleting
-          ? messages.NOTIFICATION.BAN_MISSION.DELETE
+          ? messages.NOTIFICATION.BAN_SERVICE.DELETE
           : successfulPayments.includes(vacancy.id)
-            ? messages.NOTIFICATION.BAN_MISSION.CANCEL.SUCCESSFUL
-            : messages.NOTIFICATION.BAN_MISSION.CANCEL.ISSUED;
+            ? messages.NOTIFICATION.BAN_SERVICE.CANCEL.SUCCESSFUL
+            : messages.NOTIFICATION.BAN_SERVICE.CANCEL.ISSUED;
         const advNotificationId = await notificationService.createNotification(
           {
             type: NOTIFICATION_TYPE.MISSION.ID,
@@ -1840,7 +1843,7 @@ export const banMission = async (user, mid, rid, reason) => {
   return;
 };
 
-// Kick adventurer out
+// Kick collaborator out
 export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   // Parameter checks
   checkRequired(user, 'Admin user');
@@ -1848,15 +1851,15 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   checkRequired(rid, 'Report id');
   checkRequired(reason, 'Report decision reason');
 
-  // Mission is searched
+  // Service is searched
   const mission = await getMissionByIdOrThrow(mid);
 
-  // Adventurer participation is got
+  // Collaborator participation is got
   const vacancy = await getMissionParticipationByIdOrThrow(vacancyId);
   if (vacancy.mid !== mid)
-    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+    throw new AppError(messages.SERVICE.GENERAL.VACANCY_NOT_IN_SERVICE, 409);
 
-  // Adventurer is got
+  // Collaborator is got
   const adventurer = await userService.getUserByUidOrThrow(
     vacancy.adventurer_id,
   );
@@ -1955,12 +1958,12 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   const client = await pool.connect();
   let ownerNotificationId, advNotificationId;
   let reportClosed;
-  let messageOwner = messages.NOTIFICATION.KICK_ADVENTURER_OUT.TO_OWNER(
+  let messageOwner = messages.NOTIFICATION.KICK_COLLABORATOR_OUT.TO_APPLICANT(
     adventurer.username,
     mission.title,
   );
   const messageAdventurer =
-    messages.NOTIFICATION.KICK_ADVENTURER_OUT.TO_ADVENTURER(mission.title);
+    messages.NOTIFICATION.KICK_COLLABORATOR_OUT.TO_COLLABORATOR(mission.title);
 
   try {
     await client.query('BEGIN');
@@ -1972,26 +1975,26 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
       client,
     );
     if (unjoin < 1)
-      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
+      throw new AppError(messages.SERVICE.GENERAL.SERVICES_NOT_FOUND, 404);
 
-    // Adventurer leaves the mission conversation
+    // Collaborator leaves the service conversation
     await conversationService.leaveMissionConversation(
       mission.mid,
       vacancy.adventurer_id,
       client,
     );
 
-    // Updates mission
+    // Updates service
     const unjoinMission = await missionModel.updateOccupiedVacancies(
       mission.mid,
       -1,
       client,
     );
     if (unjoinMission.length < 1)
-      throw new AppError(messages.MISSION.GENERAL.MISSIONS_NOT_FOUND, 404);
+      throw new AppError(messages.SERVICE.GENERAL.SERVICES_NOT_FOUND, 404);
 
     let newStatus;
-    // If mission is cancellable, refund will be made
+    // If service is cancellable, refund will be made
     if (isCancellable) {
       await missionParticipationModel.updatePaymentStatusById(
         vacancyId,
@@ -2000,13 +2003,13 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
       );
       newStatus = MISSION_STATUS.REOPENED.ID;
     } else newStatus = MISSION_STATUS.OPENED.ID;
-    // If there is no other user joined, mission is opened again
+    // If there is no other user joined, service is opened again
     const occupied_vacancies =
       await missionParticipationModel.findAllOccupiedByMid(mid, client);
     if (occupied_vacancies.length === 0)
       await missionModel.updateStatusByMid(mid, newStatus, client);
 
-    // If cancel, participation and mission are updated
+    // If cancel, participation and service are updated
     if (isCancellable) {
       // When refund is complete, is marked as that
       if (refundSuccessful)
@@ -2016,7 +2019,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
           client,
         );
 
-      // Updates total payment on mission
+      // Updates total payment on service
       const occupied_vacancies =
         await missionParticipationModel.findAllOccupiedByMid(mid, client);
       const newTotal =
@@ -2040,7 +2043,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
     if (!reportClosed)
       throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
 
-    // Notifies owner of the mission
+    // Notifies applicant of the service
     ownerNotificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.MISSION.ID,
@@ -2058,7 +2061,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
       client,
     );
 
-    // Notifies adventurer
+    // Notifies collaborator
     advNotificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.MISSION.ID,
@@ -2085,7 +2088,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   }
 
   // Notifications sends and conversations closures
-  // To Owner
+  // To Applicant
   socketProvider.emitToUser(mission.owner_id, 'mission:adventurer-kicked-out', {
     notificationId: ownerNotificationId,
     missionId: mission.mid,
@@ -2098,7 +2101,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
     message: messageOwner,
   });
 
-  // To Adventurer
+  // To Collaborator
   socketProvider.emitToUser(
     vacancy.adventurer_id,
     'mission:adventurer-kicked-out',
@@ -2124,7 +2127,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   return;
 };
 
-// Edit mission
+// Edit service
 export const editMission = async (user, mission, newPhotos, existingPhotos) => {
   // Parameter checks
   checkRequired(user, 'Current user');
@@ -2171,7 +2174,7 @@ export const editMission = async (user, mission, newPhotos, existingPhotos) => {
       user,
     );
 
-  // Notify adventurers immediately after the database commit. Cleanup of old
+  // Notify collaborators immediately after the database commit. Cleanup of old
   // Photos is external work and must not delay or prevent real-time delivery.
   for (const notification of notificationsToSend) {
     socketProvider.emitToUser(
@@ -2201,25 +2204,25 @@ const editMissionValidations = async (
   if (newPhotos.length + existingPhotos.length > consts.MISSION.PHOTOS.MAX)
     throw buildTooManyFilesError();
 
-  // Gets original mission info
+  // Gets original service info
   const originalMission = await missionModel.findByMidExcludingUid(mission.mid);
   if (!originalMission) throw buildMissionNotFoundError();
 
-  // Checks mission is owned by user
+  // Checks service is owned by user
   checkMissionBelongsToUser(originalMission.owner_id, uid);
 
-  // Checks that mission is in a editable status
+  // Checks that service is in a editable status
   if (!MISSION_STATUS[originalMission.status].CAN_EDIT)
-    throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_MISSION, 409);
+    throw new AppError(messages.SERVICE.EDIT.CANNOT_EDIT_SERVICE, 409);
 
-  // Checks if user has a mission already with the same title and different id
+  // Checks if user has a service already with the same title and different id
   await checkUserMissionWithSameTitle(uid, mission.title, mission.mid);
 
   // Gets current vacancies info
   const originalVacancies =
     await missionParticipationModel.findAllOccupiedByMid(mission.mid);
 
-  // Updates each vacancy of the mission, first, new and existing vacancies are selected
+  // Updates each vacancy of the service, first, new and existing vacancies are selected
   const newVacancies = mission.vacanciesData.filter(
     (v) =>
       typeof v.id === 'string' ||
@@ -2234,11 +2237,11 @@ const editMissionValidations = async (
   // Id array including existing vacancies that stayed
   const existingIds = existingVacancies.map((v) => v.id);
 
-  // New mission info can delete existing vacancies only in opened state
+  // New service info can delete existing vacancies only in opened state
   if (!MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS) {
     if (existingIds.length < originalVacancies.length) {
       throw new AppError(
-        messages.MISSION.EDIT.CANNOT_DELETE_EXISTING_VACANCIES,
+        messages.SERVICE.EDIT.CANNOT_DELETE_EXISTING_VACANCIES,
         409,
       );
     }
@@ -2259,7 +2262,7 @@ const editMissionValidations = async (
         currentOriginal.description !== vacancy.description ||
         currentOriginal.title !== vacancy.title
       ) {
-        throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_VACANCY, 409);
+        throw new AppError(messages.SERVICE.EDIT.CANNOT_EDIT_VACANCY, 409);
       }
     }
   }
@@ -2378,7 +2381,7 @@ const internalUpdates = async (
   // Starting with tables updates
   mission.totalPayment = originalMission.total_payment;
 
-  // Updates mission
+  // Updates service
   const updatedMission = await missionModel.update(mission, client);
 
   // Then, inserts new photos on db
@@ -2390,7 +2393,7 @@ const internalUpdates = async (
     await missionPhotoModel.deleteById(dbPhoto.id, client);
   }
 
-  // First, remove adventurers deleted from the mission conversation
+  // First, remove collaborators deleted from the service conversation
   const removedVacancies = originalVacancies.filter(
     (vacancy) => !existingIds.includes(vacancy.id),
   );
@@ -2402,7 +2405,7 @@ const internalUpdates = async (
     );
   }
 
-  // Then, delete vacancies removed from the mission
+  // Then, delete vacancies removed from the service
   const canDeleteAdventurers =
     MISSION_STATUS[originalMission.status].CAN_DELETE_ADVENTURERS;
   await missionParticipationModel.deleteAllUnoccupied(
@@ -2412,7 +2415,7 @@ const internalUpdates = async (
     client,
   );
 
-  // Keep the occupied vacancies counter in sync with removed adventurers
+  // Keep the occupied vacancies counter in sync with removed collaborators
   if (canDeleteAdventurers && removedVacancies.length > 0) {
     await missionModel.updateOccupiedVacancies(
       mission.mid,
@@ -2437,7 +2440,7 @@ const internalUpdates = async (
         currentOriginalVacancy?.description + '' !== vacancy.description ||
         currentOriginalVacancy?.title + '' !== vacancy.title
       ) {
-        // So its saves that vacancy because its owner will have to be notified
+        // So its saves that vacancy because its applicant will have to be notified
         const vacancyToSave = {
           adventurer_id: currentOriginalVacancy?.adventurer_id,
           ...vacancy,
@@ -2471,7 +2474,7 @@ const internalNotifications = async (
   // eslint-disable-next-line prefer-const
   let notificationsToSend = [];
 
-  // First notifications to every participant, if mission's info has changed
+  // First notifications to every participant, if service's info has changed
   await missionChangedNotifications(
     mission,
     updatedMission,
@@ -2483,7 +2486,7 @@ const internalNotifications = async (
     client,
   );
 
-  // Then, if vacancy info is changed, each adventurer is notified. If monetary reward is changed, the notification is actionable.
+  // Then, if vacancy info is changed, each collaborator is notified. If monetary reward is changed, the notification is actionable.
   for (const vacancy of vacanciesToNotify) {
     // eslint-disable-next-line prefer-const
     let changes = [];
@@ -2526,7 +2529,7 @@ const missionChangedNotifications = async (
 ) => {
   const changes = [];
   Object.keys(updatedMission).forEach((key) => {
-    // Detects changes in mission info, except for publication date and total payment
+    // Detects changes in service info, except for publication date and total payment
     if (
       originalMission[key] !== updatedMission[key] &&
       key !== 'publication_date' &&
@@ -2548,7 +2551,7 @@ const missionChangedNotifications = async (
         vacancy.adventurer_id &&
         MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
       ) {
-        const message = messages.NOTIFICATION.MISSION_EDIT.MISSION_INFO_CHANGED(
+        const message = messages.NOTIFICATION.SERVICE_EDIT.SERVICE_INFO_CHANGED(
           updatedMission.title,
           changes,
         );
@@ -2599,7 +2602,7 @@ const vacancyChangedNotifications = async (
   client,
 ) => {
   Object.keys(vacancy).forEach((key) => {
-    // Detects changes in mission info
+    // Detects changes in service info
     if (
       originalVacancies.find((vac) => vac.id === vacancy.id)[key] !==
         vacancy[key] &&
@@ -2625,7 +2628,7 @@ const vacancyChangedNotifications = async (
     MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT
   ) {
     // First, informational notification is sended
-    const message = messages.NOTIFICATION.MISSION_EDIT.VACANCY_INFO_CHANGED(
+    const message = messages.NOTIFICATION.SERVICE_EDIT.VACANCY_INFO_CHANGED(
       updatedMission.title,
       changes,
     );
@@ -2687,7 +2690,7 @@ const monetaryRewardChangedNotifications = async (
     if (notification.length > 0) {
       notification[0].payload.new_offer = vacancy.reward;
       notification[0].message =
-        messages.NOTIFICATION.MISSION_EDIT.NEW_REWARD_OFFER(
+        messages.NOTIFICATION.SERVICE_EDIT.NEW_REWARD_OFFER(
           updatedMission.title,
           originalVacancies.find((vac) => vac.id === vacancy.id)
             .monetary_reward,
@@ -2709,7 +2712,7 @@ const monetaryRewardChangedNotifications = async (
       );
 
       // The notification already exists, but its content changed. Emit the
-      // Updated notification so connected adventurers see the new offer.
+      // Updated notification so connected collaborators see the new offer.
       notificationsToSend.push({
         receiverId: vacancy.adventurer_id,
         event: 'mission:edited',
@@ -2728,7 +2731,7 @@ const monetaryRewardChangedNotifications = async (
     } else {
       // If not, the new notification is send
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
-        const message = messages.NOTIFICATION.MISSION_EDIT.NEW_REWARD_OFFER(
+        const message = messages.NOTIFICATION.SERVICE_EDIT.NEW_REWARD_OFFER(
           updatedMission.title,
           originalVacancies.find((vac) => vac.id === vacancy.id)
             .monetary_reward,
@@ -2792,7 +2795,7 @@ const editMissionExternalUpdates = async (
 
 /// Error builders
 const buildMissionNotFoundError = () => {
-  return new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
+  return new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404);
 };
 
 const buildTooManyFilesError = () => {
@@ -2801,7 +2804,7 @@ const buildTooManyFilesError = () => {
 
 const buildMissionWithSameTitleError = () => {
   return new AppError(
-    messages.MISSION.PUBLISH.MISSION_WITH_SAME_TITLE,
+    messages.SERVICE.PUBLISH.SERVICE_WITH_SAME_TITLE,
     409,
     'title',
   );
@@ -2809,7 +2812,7 @@ const buildMissionWithSameTitleError = () => {
 
 /// Helper functions
 const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
-  // Checks if user has a mission already with the same title
+  // Checks if user has a service already with the same title
   const { hasDuplicate } = await missionModel.findByUidAndTitle(
     uid,
     title,
@@ -2819,32 +2822,32 @@ const checkUserMissionWithSameTitle = async (uid, title, mid = undefined) => {
 };
 
 const checkMissionBelongsToUser = (missionOwnerUid, currentUserUid) => {
-  // Checks mission is owned by user
+  // Checks service is owned by user
   if (missionOwnerUid !== currentUserUid)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 };
 
 const checkVacancyNotMission = (vacancyMid, mid) => {
-  // Checks that vacancy exists in that mission
+  // Checks that vacancy exists in that service
   if (vacancyMid !== mid)
-    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+    throw new AppError(messages.SERVICE.GENERAL.VACANCY_NOT_IN_SERVICE, 409);
 };
 
 const checkCanAcceptAdventurers = (status) => {
-  // Checks if mission can accept adventurers
+  // Checks if service can accept collaborators
   if (!MISSION_STATUS[status].CAN_ACCEPT_ADVENTURERS)
-    throw new AppError(messages.MISSION.JOIN.NOT_ACCEPTS_ADVENTURERS, 409);
+    throw new AppError(messages.SERVICE.JOIN.NOT_ACCEPTS_COLLABORATORS, 409);
 };
 
 const checkAdventurerAlreadyJoined = async (mid, uid) => {
-  // Checks if user has already joined that mission
+  // Checks if user has already joined that service
   const alreadyJoined =
     await missionParticipationModel.findByMidAndAdventurerId(mid, uid);
   if (alreadyJoined)
-    throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+    throw new AppError(messages.SERVICE.JOIN.ALREADY_JOINED, 409);
 };
 
-// Sync a mission status after review a participation
+// Sync a service status after review a participation
 export const syncMissionCompletionStatus = async (mid, client) => {
   // Gets summary
   const summary = await missionModel.getMissionStatusSummary(mid, client);
@@ -2872,7 +2875,7 @@ export const syncMissionCompletionStatus = async (mid, client) => {
   return await missionModel.updateStatusByMid(mid, nextStatus, client);
 };
 
-// Expels a banned adventurer from a mission and handles refunds
+// Expels a banned collaborator from a service and handles refunds
 export const expelBannedAdventurerFromMission = async (
   mission,
   user,
@@ -2886,7 +2889,7 @@ export const expelBannedAdventurerFromMission = async (
   checkRequired(rid, 'Report id');
 
   let notificationId, notificationMessage;
-  // If mission is not closed
+  // If service is not closed
   if (MISSION_STATUS[mission.status].CAN_DELETE) {
     // Uses database transaction from the start
     const client = await pool.connect();
@@ -2900,7 +2903,7 @@ export const expelBannedAdventurerFromMission = async (
         client,
       );
       if (unjoin < 1)
-        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
+        throw new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404);
 
       // Updates occupied vacancies
       const unjoinMission = await updateOccupiedVacancies(
@@ -2909,10 +2912,10 @@ export const expelBannedAdventurerFromMission = async (
         client,
       );
       if (unjoinMission.length < 1)
-        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
+        throw new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404);
 
       // Chooses message
-      notificationMessage = messages.NOTIFICATION.BAN_USER.OPENED_MISSION(
+      notificationMessage = messages.NOTIFICATION.BAN_USER.OPENED_SERVICE(
         user.username,
         mission.title,
       );
@@ -2948,12 +2951,12 @@ export const expelBannedAdventurerFromMission = async (
     );
   }
 
-  // Mission is closed
+  // Service is closed
   else if (
     MISSION_STATUS[mission.status].CAN_CANCEL &&
     MISSION_PARTICIPATION_STATUS[mission.participation_status].CAN_INTERACT
   ) {
-    // In a database transaction, prepares mission and marks it as partially refunded
+    // In a database transaction, prepares service and marks it as partially refunded
     const prepClient = await pool.connect();
     try {
       await prepClient.query('BEGIN');
@@ -2965,7 +2968,7 @@ export const expelBannedAdventurerFromMission = async (
         prepClient,
       );
       if (unjoin < 1)
-        throw new AppError(messages.MISSION.GENERAL.MISSION_NOT_FOUND, 404);
+        throw new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404);
 
       // Updates occupied vacancies
       await updateOccupiedVacancies(mission.mid, -1, prepClient);
@@ -3091,11 +3094,11 @@ export const expelBannedAdventurerFromMission = async (
 
       // Chooses message
       notificationMessage = refundSuccessful
-        ? messages.NOTIFICATION.BAN_USER.CLOSED_MISSION.SUCCESSFUL(
+        ? messages.NOTIFICATION.BAN_USER.CLOSED_SERVICE.SUCCESSFUL(
             user.username,
             mission.title,
           )
-        : messages.NOTIFICATION.BAN_USER.CLOSED_MISSION.ISSUED(
+        : messages.NOTIFICATION.BAN_USER.CLOSED_SERVICE.ISSUED(
             user.username,
             mission.title,
           );
@@ -3132,7 +3135,7 @@ export const expelBannedAdventurerFromMission = async (
   }
 };
 
-// Sends notifications to the applicant of the mission where the user has been banned
+// Sends notifications to the applicant of the service where the user has been banned
 const sendBannedAdventurerNotification = async (
   mission,
   user,

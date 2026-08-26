@@ -190,7 +190,7 @@ export const updateRating = async (uid, client = pool) => {
     `UPDATE app_user
      SET rating = COALESCE((
        WITH all_ratings AS (
-         -- As adventurer
+         -- As collaborator
          SELECT r.rating
          FROM mission_participation mp
          JOIN review r ON r.id = mp.owner_review_id

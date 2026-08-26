@@ -1,6 +1,6 @@
 export const NOTIFICATION_TYPE = {
   INVITATION: { ID: 'INVITATION', LABEL: 'Invitation' },
-  MISSION: { ID: 'MISSION', LABEL: 'Mission' },
+  MISSION: { ID: 'MISSION', LABEL: 'Service' },
   REPORT: { ID: 'REPORT', LABEL: 'Report' },
 };
 
@@ -11,7 +11,7 @@ export const NOTIFICATION_KIND = {
 
 export const NOTIFICATION_ACTION = {
   JOIN_REQUEST: { ID: 'JOIN_REQUEST', LABEL: 'Join request' },
-  MISSION_INVITE: { ID: 'MISSION_INVITE', LABEL: 'Mission invite' },
+  MISSION_INVITE: { ID: 'MISSION_INVITE', LABEL: 'Service invite' },
   PARTICIPATION_REVIEW: {
     ID: 'PARTICIPATION_REVIEW',
     LABEL: 'Participation review',
@@ -34,35 +34,35 @@ export const NOTIFICATION_ACTION = {
   },
   MISSION_EDIT: {
     ID: 'MISSION_EDIT',
-    LABEL: 'Mission edit',
+    LABEL: 'Service edit',
   },
   MISSION_CLOSE: {
     ID: 'MISSION_CLOSE',
-    LABEL: 'Mission close',
+    LABEL: 'Service close',
   },
   MISSION_START: {
     ID: 'MISSION_START',
-    LABEL: 'Mission start',
+    LABEL: 'Service start',
   },
   MISSION_UNJOIN: {
     ID: 'MISSION_UNJOIN',
-    LABEL: 'Mission unjoin',
+    LABEL: 'Service unjoin',
   },
   MISSION_DELETE: {
     ID: 'MISSION_DELETE',
-    LABEL: 'Mission delete',
+    LABEL: 'Service delete',
   },
   MISSION_CANCEL: {
     ID: 'MISSION_CANCEL',
-    LABEL: 'Mission cancel',
+    LABEL: 'Service cancel',
   },
   MISSION_REOPEN: {
     ID: 'MISSION_REOPEN',
-    LABEL: 'Mission reopen',
+    LABEL: 'Service reopen',
   },
   ADVENTURER_REPORT: {
     ID: 'ADVENTURER_REPORT',
-    LABEL: 'Adventurer report',
+    LABEL: 'Collaborator report',
   },
   REVIEW_DISPUTE: {
     ID: 'REVIEW_DISPUTE',
@@ -74,11 +74,11 @@ export const NOTIFICATION_ACTION = {
   },
   MISSION_BAN: {
     ID: 'MISSION_BAN',
-    LABEL: 'Mission ban',
+    LABEL: 'Service ban',
   },
   ADVENTURER_KICKED_OUT: {
     ID: 'ADVENTURER_KICKED_OUT',
-    LABEL: 'Adventurer kicked out',
+    LABEL: 'Collaborator kicked out',
   },
   USER_BAN: {
     ID: 'USER_BAN',

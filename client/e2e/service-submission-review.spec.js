@@ -9,9 +9,9 @@ import {
   hasRealCredentials,
   ownerUsername,
   startAndPayMission,
-} from './support/realMissionFlow.js';
+} from './support/realServiceFlow.js';
 
-test('submits a participation and lets the owner approve it', async ({
+test('submits a participation and lets the applicant approve it', async ({
   page,
   browser,
 }) => {
@@ -21,7 +21,7 @@ test('submits a participation and lets the owner approve it', async ({
     'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the real submission and review flow.',
   );
 
-  const missionTitle = `Playwright - Entrega ${Date.now()}`;
+  const missionTitle = `Playwright - Delivery ${Date.now()}`;
   await loginRealUser(page, ownerUsername);
   const missionId = await createMission(page, missionTitle);
   await inviteUser(page, missionId);

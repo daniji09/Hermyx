@@ -210,24 +210,24 @@ const SignUpForm = ({
                   htmlFor='signUpTermsAccepted'
                   className='text-sm leading-5 text-muted-foreground'
                 >
-                  Confirmo que tengo al menos 18 años y que he leído y acepto
-                  los{' '}
+                  I confirm that I am at least 18 years old and have read and
+                  accept the{' '}
                   <Link
                     to='/terms'
                     target='_blank'
                     rel='noreferrer'
                     className='text-primary underline'
                   >
-                    Términos y condiciones de Hermyx
+                    Hermyx terms and conditions
                   </Link>
-                  . La{' '}
+                  . The{' '}
                   <Link
                     to='/privacy'
                     target='_blank'
                     rel='noreferrer'
                     className='text-primary underline'
                   >
-                    Política de privacidad
+                    privacy policy
                   </Link>{' '}
                   se consulta por separado.
                 </label>
@@ -252,7 +252,7 @@ const SignUpForm = ({
               aria-hidden='true'
             >
               <Separator className='my-4 w-fit'></Separator>
-              <span className='text-muted-foreground self-center-safe'>o</span>
+              <span className='text-muted-foreground self-center-safe'>or</span>
               <Separator className='my-4 w-fit'></Separator>
             </div>
             <GoogleSignInButton
@@ -263,7 +263,7 @@ const SignUpForm = ({
             ></GoogleSignInButton>
             {!termsAccepted && (
               <p className='text-center text-xs text-muted-foreground'>
-                Acepta los términos para continuar con Google.
+                Accept the terms to continue with Google.
               </p>
             )}
           </div>

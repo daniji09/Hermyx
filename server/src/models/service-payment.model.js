@@ -2,7 +2,7 @@ import { MISSION_PAYMENT_STATUS, TRANSACTION_TYPE } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
 /// INSERTS
-// Create new mission payment
+// Create new service payment
 export const create = async (missionPaymentData, client = pool) => {
   const {
     mid,

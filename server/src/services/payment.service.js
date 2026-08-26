@@ -12,7 +12,7 @@ import {
 } from '@hermyx/shared';
 import { AppError } from '../utils/error.util.js';
 import * as paymentProvider from '../providers/payment.provider.js';
-import * as missionService from '../services/mission.service.js';
+import * as missionService from '../services/service.service.js';
 import * as userService from '../services/user.service.js';
 import * as notificationService from '../services/notification.service.js';
 import * as socketProvider from '../providers/socket.provider.js';
@@ -65,10 +65,10 @@ export const payDefault = async (mid, user) => {
   checkMid(mid);
   checkUser(user);
 
-  // Finds mission
+  // Finds service
   const mission = await missionService.getMissionByIdOrThrow(mid);
 
-  // Checks if mission belongs to user
+  // Checks if service belongs to user
   checkMissionBelongsToUser(mission.owner_id, user.uid);
 
   // Gets customer from Stripe
@@ -106,10 +106,10 @@ export const payNew = async (mid, user, saveCard) => {
   checkMid(mid);
   checkUser(user);
 
-  // Finds mission
+  // Finds service
   const mission = await missionService.getMissionByIdOrThrow(mid);
 
-  // Checks if mission belongs to user
+  // Checks if service belongs to user
   checkMissionBelongsToUser(mission.owner_id, user.uid);
 
   // Finds how much it has to be payed
@@ -159,16 +159,16 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
   try {
     await client.query('BEGIN');
 
-    // Gets mission using pessimistic concurrency because no adventurer can vary, due to monetary reward and payments will be change
+    // Gets service using pessimistic concurrency because no collaborator can vary, due to monetary reward and payments will be change
     const mission = await missionService.getMissionByIdForUpdateOrThrow(
       mid,
       client,
     );
 
-    // Checks if mission belongs to user
+    // Checks if service belongs to user
     checkMissionBelongsToUser(mission.owner_id, user.uid);
 
-    // Checks if mission can be in progress by status
+    // Checks if service can be in progress by status
     if (
       mission.status !== MISSION_STATUS.IN_PROGRESS.ID &&
       !MISSION_STATUS[mission.status].VALID_NEXT_STATES.includes(
@@ -176,7 +176,7 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
       )
     )
       throw new AppError(
-        messages.PAYMENT.CONFIRM_PAYMENT.CANNOT_PAY_MISSION_STATE,
+        messages.PAYMENT.CONFIRM_PAYMENT.CANNOT_PAY_SERVICE_STATE,
         409,
       );
 
@@ -195,7 +195,7 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
 
       // Each type of payment has different information or actions
       if (mission.status === MISSION_STATUS.CLOSED.ID) {
-        // If mission is in closed state, is funding payment
+        // If service is in closed state, is funding payment
         transaction_type = TRANSACTION_TYPE.INITIAL_FUNDING.ID;
       } else if (
         vacancy.payment_status ===
@@ -204,11 +204,11 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
         // If vacancy is partially pay, is a reward negotiation
         transaction_type = TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID;
       } else {
-        // Any other option means a new adventurer joined the mission via reopening
+        // Any other option means a new collaborator joined the service via reopening
         transaction_type = TRANSACTION_TYPE.NEW_ADVENTURER_FUNDING.ID;
       }
 
-      // Adds mission payment
+      // Adds service payment
       await missionService.createMissionPayment(
         {
           mid,
@@ -233,12 +233,12 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
       // Prepares notifications
       let message;
       if (transaction_type === TRANSACTION_TYPE.INITIAL_FUNDING.ID)
-        message = messages.NOTIFICATION.MISSION_STARTED(mission.title);
+        message = messages.NOTIFICATION.SERVICE_STARTED(mission.title);
       else if (transaction_type === TRANSACTION_TYPE.NEGOTIATION_EXTRA.ID)
-        message = messages.NOTIFICATION.MISSION_NEGOTIATION_EXTRA(
+        message = messages.NOTIFICATION.SERVICE_NEGOTIATION_EXTRA(
           mission.title,
         );
-      else message = messages.NOTIFICATION.MISSION_RESTARTED(mission.title);
+      else message = messages.NOTIFICATION.SERVICE_RESTARTED(mission.title);
       if (MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_INTERACT) {
         const notificationId = await notificationService.createNotification(
           {
@@ -273,7 +273,7 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
       }
     }
 
-    // Updates total payment on mission
+    // Updates total payment on service
     await missionService.updateMissionPayment(
       mission.mid,
       occupied_vacancies.reduce(
@@ -283,7 +283,7 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
       client,
     );
 
-    // Mission and participants life cycle is updated
+    // Service and participants life cycle is updated
     await missionService.updateStatusByMid(
       mid,
       MISSION_STATUS.IN_PROGRESS.ID,
@@ -308,7 +308,7 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
   return;
 };
 
-// Adds account to adventurer
+// Adds account to collaborator
 export const connectOnBoard = async (user) => {
   checkUser(user);
 
@@ -427,7 +427,7 @@ const ensurePaymentMethodOwner = async (paymentMethodId, customerId) => {
   return paymentMethod;
 };
 
-// Extracts from the payment method which customer is the owner of it, Stripe API's can send it as a string or as an object
+// Extracts the customer associated with the payment method; Stripe's API can send it as a string or as an object
 const getPaymentMethodCustomerId = (paymentMethod) => {
   if (!paymentMethod.customer) return null;
   if (typeof paymentMethod.customer === 'string') return paymentMethod.customer;
@@ -435,7 +435,7 @@ const getPaymentMethodCustomerId = (paymentMethod) => {
 };
 
 const checkMissionBelongsToUser = (missionOwnerUid, currentUserUid) => {
-  // Checks mission is owned by user
+  // Checks that the service belongs to the user
   if (missionOwnerUid !== currentUserUid)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 };

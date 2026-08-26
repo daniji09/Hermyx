@@ -6,7 +6,7 @@ import {
   getMissionsOpened,
   getUserMissions,
   inviteToMission,
-} from '../services/MissionsServices';
+} from '../services/ServiceServices';
 
 export const getMissionByIdQueryOptions = (params, options) => {
   return queryOptions({

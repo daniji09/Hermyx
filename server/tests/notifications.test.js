@@ -237,7 +237,7 @@ describe('Notification automatic participation review', () => {
       '../src/models/notification.model.js',
     );
     const missionService = await vi.importActual(
-      '../src/services/mission.service.js',
+      '../src/services/service.service.js',
     );
     const userService = await vi.importActual(
       '../src/services/user.service.js',

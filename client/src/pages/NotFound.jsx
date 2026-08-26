@@ -18,7 +18,7 @@ export const NotFound = () => {
               Page not found
             </h1>
             <p className='text-muted-foreground text-lg max-w-md mx-auto'>
-              Oops! It seems this mission wandered off the map or the path
+              Oops! It seems this service wandered off the map or the path
               doesn&lsquo;t exist.
             </p>
           </div>
@@ -33,7 +33,7 @@ export const NotFound = () => {
             <Button asChild variant='outline' size='lg' className='gap-2'>
               <Link to='/missions'>
                 <Compass className='h-4 w-4' aria-hidden='true' />
-                Explore missions
+                Explore services
               </Link>
             </Button>
           </div>

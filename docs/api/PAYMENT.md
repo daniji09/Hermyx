@@ -129,7 +129,7 @@ Creates a payment intent using the user's default card.
 **Path params:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `mid` | int | Yes | Mission identifier. |
+| `mid` | int | Yes | Service identifier. |
 <br>
 
 **Responses:**
@@ -154,7 +154,7 @@ Creates a payment intent using the user's default card.
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot pay a service that don't belong to them.
 
   ```json
   {
@@ -164,12 +164,12 @@ Creates a payment intent using the user's default card.
   }
   ```
 
-- `404 Not Found`: mission not found.
+- `404 Not Found`: service not found.
 
   ```json
   {
     "errors": {
-      "general": ["Mission not found."]
+      "general": ["Service not found."]
     }
   }
   ```
@@ -184,7 +184,7 @@ Creates a payment intent using the user's default card.
   }
   ```
 
-  **Workflow:** this endpoints creates a payment intent (PI) for a mission and retrieves to frontend, so it just warns Stripe that there will be a payment from that user of a certain quantity using their default payment. All basic checks are done.
+  **Workflow:** this endpoints creates a payment intent (PI) for a service and retrieves to frontend, so it just warns Stripe that there will be a payment from that user of a certain quantity using their default payment. All basic checks are done.
   <br>
   <br>
   <br>
@@ -198,7 +198,7 @@ Creates a payment intent using a new card.
 **Path params:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `mid` | int | Yes | Mission identifier. |
+| `mid` | int | Yes | Service identifier. |
 <br>
 
 **Body (JSON):**
@@ -228,7 +228,7 @@ Creates a payment intent using a new card.
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot pay a mission that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot pay a service that don't belong to them.
 
   ```json
   {
@@ -238,12 +238,12 @@ Creates a payment intent using a new card.
   }
   ```
 
-- `404 Not Found`: mission not found.
+- `404 Not Found`: service not found.
 
   ```json
   {
     "errors": {
-      "general": ["Mission not found."]
+      "general": ["Service not found."]
     }
   }
   ```
@@ -258,12 +258,12 @@ Creates a payment intent using a new card.
   }
   ```
 
-**Workflow:** this endpoint creates a payment intent (PI) for a mission and retrieves to frontend, so it just warns Stripe that there will be a payment from that user of a certain quantity using a new payment. All basic checks are done.
+**Workflow:** this endpoint creates a payment intent (PI) for a service and retrieves to frontend, so it just warns Stripe that there will be a payment from that user of a certain quantity using a new payment. All basic checks are done.
 <br>
 <br>
 <br>
 
-## - Confirm mission payment: `POST /api/stripe/missions/:mid/confirm`
+## - Confirm service payment: `POST /api/stripe/missions/:mid/confirm`
 
 Confirms payment and make changes in database
 
@@ -272,7 +272,7 @@ Confirms payment and make changes in database
 **Path params:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `mid` | int | Yes | Mission identifier. |
+| `mid` | int | Yes | Service identifier. |
 <br>
 
 **Body (JSON):**
@@ -299,7 +299,7 @@ Confirms payment and make changes in database
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot confirm payment of a mission that don't belong to them.
+- `403 Forbidden`: user is unauthorized to do this action: cannot confirm payment of a service that don't belong to them.
 
   ```json
   {
@@ -309,12 +309,12 @@ Confirms payment and make changes in database
   }
   ```
 
-- `404 Not Found`: mission not found.
+- `404 Not Found`: service not found.
 
   ```json
   {
     "errors": {
-      "general": ["Mission not found."]
+      "general": ["Service not found."]
     }
   }
   ```
@@ -329,14 +329,14 @@ Confirms payment and make changes in database
   }
   ```
 
-**Workflow:** this endpoint takes the PI created on the previous endpoint, confirms with `Stripe` that the payment has been successful and changes database. This changes add the payments and updates mission and its vacancies. To avoid double payments, idempotency keys are used and to avoid data changes while payment, pessimistic concurrency is used over the mission that is being payed.
+**Workflow:** this endpoint takes the PI created on the previous endpoint, confirms with `Stripe` that the payment has been successful and changes database. This changes add the payments and updates service and its vacancies. To avoid double payments, idempotency keys are used and to avoid data changes while payment, pessimistic concurrency is used over the service that is being payed.
 <br>
 <br>
 <br>
 
-## - Connects user to a Stripe account as an adventurer: `POST /api/stripe/connect/onboard`
+## - Connects user to a Stripe account as an collaborator: `POST /api/stripe/connect/onboard`
 
-Creates an account in Stripe for the adventurer.
+Creates an account in Stripe for the collaborator.
 
 **Requires authentication:** Yes
 
@@ -348,7 +348,7 @@ Creates an account in Stripe for the adventurer.
   { "url": "<account_url>" }
   ```
 
-**Workflow:** the goal of this endpoint is very simple because it involves creating a Stripe account for the adventurer so they can receive money. However, Know Your Customer (KYC) regulations require Stripe to use a very long and difficult form with overly specific questions for each user who registers. This would cause most users to abandon the process because they wouldn't know how to answer the questions or found it too lengthy. Therefore, Hermyx creates this account in a express way, providing the user with the necessary data. Specifically, the following information is provided: "business type" set to "individual," meaning the account will belong to a private individual; "url" set to the Hermyx URL, as Stripe always requires the company's URL; "mcc" set to '8999', a code that characterizes the type of business the company operates, with 8999 serving as a wildcard for "Miscellaneous Professional Services", "product description" refers to a description of the Hermyx product; and "capabilities" adds the possibility that the user who creates the account can receive money. Additionally, there is optimistic concurrency control due to possibles double-clicks, so, the account is only updated if it didn't exist before.
+**Workflow:** the goal of this endpoint is very simple because it involves creating a Stripe account for the collaborator so they can receive money. However, Know Your Customer (KYC) regulations require Stripe to use a very long and difficult form with overly specific questions for each user who registers. This would cause most users to abandon the process because they wouldn't know how to answer the questions or found it too lengthy. Therefore, Hermyx creates this account in a express way, providing the user with the necessary data. Specifically, the following information is provided: "business type" set to "individual," meaning the account will belong to a private individual; "url" set to the Hermyx URL, as Stripe always requires the company's URL; "mcc" set to '8999', a code that characterizes the type of business the company operates, with 8999 serving as a wildcard for "Miscellaneous Professional Services", "product description" refers to a description of the Hermyx product; and "capabilities" adds the possibility that the user who creates the account can receive money. Additionally, there is optimistic concurrency control due to possibles double-clicks, so, the account is only updated if it didn't exist before.
 <br>
 <br>
 <br>

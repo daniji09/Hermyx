@@ -11,11 +11,11 @@ const missionFixture = JSON.parse(
 
 export const ownerUsername =
   process.env.PLAYWRIGHT_OWNER_USERNAME ||
-  missionFixture.ownerUsername ||
+  missionFixture.applicantUsername ||
   'dani';
 export const inviteeUsername =
   process.env.PLAYWRIGHT_INVITEE_USERNAME ||
-  missionFixture.inviteeUsername ||
+  missionFixture.collaboratorUsername ||
   'wen';
 export const ownerPassword =
   process.env.PLAYWRIGHT_OWNER_PASSWORD || process.env.PLAYWRIGHT_PASSWORD;
@@ -143,12 +143,12 @@ export const createMission = async (page, title) => {
 
 export const inviteUser = async (page, missionId) => {
   await page
-    .getByRole('button', { name: /Invite an adventurer|Add adventurer/ })
+    .getByRole('button', { name: /Invite a collaborator|Add collaborator/ })
     .click();
   await pauseAfterAction(page);
 
   const dialog = page.getByRole('alertdialog', {
-    name: 'Search adventurer',
+    name: 'Search collaborator',
   });
   await expect(dialog).toBeVisible();
   await fillAndPause(
@@ -250,7 +250,7 @@ export const closeMission = async (page, missionId, missionTitle) => {
   await pauseAfterAction(page);
 
   const closeDialog = page.getByRole('alertdialog', {
-    name: 'Are you sure you want to close the mission?',
+    name: 'Are you sure you want to close the service?',
   });
   await expect(closeDialog).toBeVisible();
   const closeResponse = page.waitForResponse(
@@ -259,7 +259,7 @@ export const closeMission = async (page, missionId, missionTitle) => {
       response.request().method() === 'POST',
   );
   await closeDialog
-    .getByRole('button', { name: 'Yes, close mission', exact: true })
+    .getByRole('button', { name: 'Yes, close service', exact: true })
     .click();
   expect((await closeResponse).status()).toBe(200);
   await pauseAfterAction(page);
@@ -307,16 +307,16 @@ export const startAndPayMission = async (page, missionId, missionTitle) => {
   await pauseAfterAction(page);
 
   const startDialog = page.getByRole('alertdialog', {
-    name: 'Are you sure you want to start the mission?',
+    name: 'Are you sure you want to start the service?',
   });
   await expect(startDialog).toBeVisible();
   await startDialog
-    .getByRole('button', { name: 'Yes, start mission', exact: true })
+    .getByRole('button', { name: 'Yes, start service', exact: true })
     .click();
 
   await expect(page).toHaveURL(new RegExp(`/missions/${missionId}/pay$`));
   await expect(
-    page.getByRole('heading', { name: 'Mission payment' }).first(),
+    page.getByRole('heading', { name: 'Service payment' }).first(),
   ).toBeVisible();
   await expect(page.getByText(missionTitle, { exact: true })).toBeVisible();
   await expect(page.getByText(/Tester/)).toBeVisible();

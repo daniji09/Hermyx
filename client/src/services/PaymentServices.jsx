@@ -1,6 +1,6 @@
 import api from '../config/api';
 
-// Finds mission by id
+// Finds a service by id
 export const saveNewCard = async (id) => {
   const { data } = await api.post(`/stripe/missions/${id.trim()}/pay/new`, {
     saveCard: true,

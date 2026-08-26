@@ -65,7 +65,7 @@ router.post(
   paymentController.confirmPayment,
 );
 
-// Route to register as a connected account (for adventurers)
+// Route to register as a connected account (for collaborators)
 router.post('/connect/onboard', paymentController.connectOnboard);
 
 // Route to get the dashboard link for connected accounts

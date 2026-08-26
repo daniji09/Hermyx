@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
-import { midBaseSchema } from './mission.validation.js';
+import { midBaseSchema } from './service.validation.js';
 
 /// Base validations, raw logic
 const paymentMethodIdBaseSchema = z

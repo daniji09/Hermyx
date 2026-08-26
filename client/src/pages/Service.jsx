@@ -8,7 +8,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   getMissionByIdQueryOptions,
   inviteToMissionMutationOptions,
-} from './../queries/MissionsQueries';
+} from './../queries/ServicesQueries';
 import { searchUsersByUsernameInfiniteQueryOptions } from '../queries/UsersQueries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { timestampToDayMonthYear } from './../utils/date';
@@ -40,7 +40,7 @@ import {
   reopenMission,
   closeMission,
   finishMission,
-} from '../services/MissionsServices';
+} from '../services/ServiceServices';
 import { reviewAdventurer, reviewOwner } from '../services/ReviewsServices';
 import { messages } from '../messages/messages';
 import { useAlert } from '../contexts/AlertContext';
@@ -105,7 +105,7 @@ import { NotFound } from './NotFound';
 import { useInView } from 'react-intersection-observer';
 
 export const Mission = () => {
-  // Mission id
+// Service id
   const { id } = useParams();
   const { currentUser } = useContext(AuthContext);
 
@@ -131,7 +131,7 @@ export const Mission = () => {
 
   let errorMessage = error?.message;
   if (error?.response?.status === 404) {
-    errorMessage = 'Oops! This mission does not exist or it has been deleted.';
+    errorMessage = 'Oops! This service does not exist or it has been deleted.';
   }
   return (
     <MissionPageContainer
@@ -151,7 +151,7 @@ const MissionPageContainer = ({ mission, currentUser, isLoading, isError }) => {
   return (
     <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
       <MissionLoading isLoading={isLoading}>
-        {'Seeking mission...'}
+        {'Loading service...'}
       </MissionLoading>
 
       {!isLoading && (
@@ -204,7 +204,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
       <title>{`${mission?.title} | Hermyx`}</title>
       <meta
         name='description'
-        content={`Mission ${mission?.title} information and actions.`}
+        content={`Service ${mission?.title} information and actions.`}
       ></meta>
       <div className='mx-auto max-w-7xl animate-in fade-in duration-500 pb-16 space-y-8 mt-4'>
         <div className='flex justify-between items-start gap-4'>
@@ -231,7 +231,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         to={`/missions/${mission?.mid}/edit`}
                         className='w-full justify-start font-normal h-auto px-2 py-1.5 cursor-default'
                       >
-                        Edit mission
+                        Edit service
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -283,7 +283,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     <CarouselItem key={index}>
                       <img
                         src={getImageUrl(photo.url)}
-                        alt={`Mission ${mission?.title} - Photo ${index + 1}`}
+                        alt={`Service ${mission?.title} - Photo ${index + 1}`}
                         className='w-full aspect-video object-cover'
                       />
                     </CarouselItem>
@@ -300,7 +300,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <div className='w-full rounded-2xl overflow-hidden border bg-muted/20 shadow-sm'>
                 <img
                   src='https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-                  alt='Mission placeholder'
+                  alt='Service placeholder'
                   className='w-full aspect-video object-cover'
                 />
               </div>
@@ -319,7 +319,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   </Avatar>
                   <div className='min-w-0'>
                     <p className='text-lg font-semibold text-muted-foreground'>
-                      Mission Owner
+                      Applicant
                     </p>
                     <p className='font-bold text-xl truncate'>
                       <Link
@@ -343,7 +343,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         className='mr-2 h-5 w-5'
                         aria-hidden='true'
                       />
-                      Open mission chat
+                      Open service chat
                     </Link>
                   </Button>
                 ) : !isCreator ? (
@@ -358,7 +358,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         className='mr-2 h-5 w-5'
                         aria-hidden='true'
                       />
-                      Chat with owner
+                      Chat with applicant
                     </Link>
                   </Button>
                 ) : null}
@@ -433,15 +433,15 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       </div>
                     ) : currentParticipation ? (
                       <div className='text-center text-sm font-medium text-muted-foreground bg-muted/20 border py-2 rounded-lg'>
-                        {messages.MISSION.MISSION_JOINED}
+                        {messages.SERVICE.SERVICE_JOINED}
                       </div>
                     ) : isFull ? (
                       <div className='text-center text-sm font-medium text-destructive bg-destructive/10 py-2 rounded-lg'>
-                        {messages.MISSION.MISSION_FILLED}
+                        {messages.SERVICE.SERVICE_FILLED}
                       </div>
                     ) : (
                       <div className='text-center text-sm font-medium text-green-700 bg-green-50 border border-green-200 py-2 rounded-lg'>
-                        {messages.MISSION.MISSION_OPEN}
+                        {messages.SERVICE.SERVICE_OPEN}
                       </div>
                     )}
                   </>
@@ -457,10 +457,10 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
               <div className='flex flex-wrap items-center justify-between gap-4 mb-4 px-2'>
                 <div>
                   <h2 className='text-2xl font-bold tracking-tight'>
-                    Mission Party
+                    Service team
                   </h2>
                   <p className='text-sm text-muted-foreground mt-1'>
-                    Check out the available slots and current adventurers.
+                    Check out the available slots and current collaborators.
                   </p>
                 </div>
                 <div className='flex items-center gap-2 text-primary bg-primary/10 px-4 py-1.5 rounded-full text-sm font-bold'>
@@ -478,7 +478,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       variant='secondary'
                     >
                       <UserPlus className='mr-2 h-4 w-4' aria-hidden='true' />{' '}
-                      Invite an adventurer
+                      Invite a collaborator
                     </Button>
                   </div>
                 )}
@@ -492,7 +492,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
 
             <section>
               <h2 className='text-2xl font-bold tracking-tight mb-4'>
-                Mission details
+                Service details
               </h2>
               <p className='text-lg leading-relaxed whitespace-pre-wrap text-muted-foreground wrap-break-words wrap-anywhere'>
                 {mission?.description}
@@ -632,15 +632,15 @@ const VacancyCard = ({
             e.stopPropagation();
             onReport(vacancy.vacancy_id);
           }}
-          title='Report adventurer'
-          aria-label='Report adventurer'
+          title='Report collaborator'
+          aria-label='Report collaborator'
         >
           <MessageSquareWarning className='h-4 w-4' aria-hidden='true' />
         </Button>
       )}
 
       <h3 className='font-semibold text-sm truncate min-h-5 mb-3 text-center mx-8'>
-        {vacancy.vacancy_title || 'Adventurer'}
+        {vacancy.vacancy_title || 'Collaborator'}
       </h3>
 
       <div className='flex justify-center mb-4'>
@@ -688,7 +688,7 @@ const VacancyCard = ({
             {hasOwnerReview && (
               <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 dark:bg-amber-100/80 dark:border-amber-200 px-2.5 py-1.5 rounded-md'>
                 <span className='text-xs font-medium text-muted-foreground dark:text-amber-800/70'>
-                  Adventurer rating
+                  Collaborator rating
                 </span>
                 <div className='flex items-center gap-1 text-sm font-bold text-amber-700 dark:text-amber-800'>
                   <Star
@@ -703,7 +703,7 @@ const VacancyCard = ({
             {hasAdventurerReview && (
               <div className='flex items-center justify-between bg-amber-50/50 border border-amber-100 dark:bg-amber-100/80 dark:border-amber-200 px-2.5 py-1.5 rounded-md'>
                 <span className='text-xs font-medium text-muted-foreground dark:text-amber-800/70'>
-                  Owner rating
+                  Applicant rating
                 </span>
                 <div className='flex items-center gap-1 text-sm font-bold text-amber-700 dark:text-amber-800'>
                   <Star
@@ -726,7 +726,7 @@ const VacancyCard = ({
             onKeyDown={(event) => event.stopPropagation()}
           >
             <Star className='h-4 w-4 mr-1.5' aria-hidden='true' />
-            Review adventurer
+            Review collaborator
           </Button>
         )}
 
@@ -740,7 +740,7 @@ const VacancyCard = ({
             onKeyDown={(event) => event.stopPropagation()}
           >
             <Star className='h-4 w-4 mr-1.5' aria-hidden='true' />
-            Review owner
+            Review applicant
           </Button>
         )}
       </div>
@@ -784,13 +784,13 @@ const ViewVacancyDialog = ({
       showAlert({
         title: 'Request sent',
         description:
-          'The mission owner received your request. You will join the mission only if they accept it.',
+          'The service applicant received your request. You will join the service only if they accept it.',
       });
       handleClose();
     },
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.JOIN_MISSION_ALERT.ERROR_TITLE,
+        title: messages.SERVICE.JOIN_SERVICE_ALERT.ERROR_TITLE,
         description:
           error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0],
@@ -821,7 +821,7 @@ const ViewVacancyDialog = ({
         <DialogHeader className='pb-4 border-b'>
           <div className='flex justify-between items-start gap-4 pr-6'>
             <DialogTitle className='text-2xl font-bold tracking-tight wrap-break-words wrap-anywhere'>
-              {vacancy.vacancy_title || 'Adventurer needed'}
+              {vacancy.vacancy_title || 'Collaborator needed'}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -857,7 +857,7 @@ const ViewVacancyDialog = ({
           {isAssigned && (
             <div>
               <h4 className='font-semibold text-sm mb-2'>
-                Assigned Adventurer
+                Assigned Collaborator
               </h4>
               <div className='flex items-center gap-3 p-3 bg-muted/10 border rounded-xl'>
                 <Avatar className='h-10 w-10 border border-primary/10'>
@@ -879,13 +879,13 @@ const ViewVacancyDialog = ({
 
           {(hasOwnerReview || hasAdventurerReview) && (
             <div>
-              <h4 className='font-semibold text-sm mb-2'>Mission Reviews</h4>
+              <h4 className='font-semibold text-sm mb-2'>Service reviews</h4>
               <div className='space-y-3'>
                 {hasOwnerReview && (
                   <div className='bg-amber-50/50 border border-amber-100  dark:bg-amber-100/80 dark:border-amber-200  p-4 rounded-xl'>
                     <div className='flex items-center justify-between mb-2'>
                       <span className='font-bold  text-amber-800/70'>
-                        Adventurer Rating
+                        Collaborator Rating
                       </span>
                       <div className='flex items-center gap-1 font-bold text-amber-700 dark:text-amber-800'>
                         <Star
@@ -911,7 +911,7 @@ const ViewVacancyDialog = ({
                   <div className='bg-amber-50/50 border border-amber-100 dark:bg-amber-100/80 dark:border-amber-200  p-4 rounded-xl'>
                     <div className='flex items-center justify-between mb-2'>
                       <span className='font-bold text-amber-800/70'>
-                        Owner Rating
+                        Applicant Rating
                       </span>
                       <div className='flex items-center gap-1 font-bold text-amber-700 dark:text-amber-800'>
                         <Star
@@ -948,7 +948,7 @@ const ViewVacancyDialog = ({
                 id='joinMessage'
                 value={joinMessage}
                 onChange={(e) => setJoinMessage(e.target.value)}
-                placeholder='Write a short message to the owner...'
+                placeholder='Write a short message to the applicant...'
                 maxLength={consts.NOTIFICATION.MESSAGE.MAX_LENGTH}
                 className='bg-background resize-none'
                 rows={4}
@@ -972,7 +972,7 @@ const ViewVacancyDialog = ({
                 !isCreator &&
                 !isAssigned &&
                 (mission.is_joined ? (
-                  <Button disabled>Already in mission</Button>
+                  <Button disabled>Already in service</Button>
                 ) : mission.has_pending_join_request ? (
                   <Button disabled>Request pending</Button>
                 ) : (
@@ -1032,7 +1032,7 @@ const UnjoinMissionButton = ({
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.UNJOIN_MISSION_ALERT.ERROR_TITLE,
+        title: messages.SERVICE.UNJOIN_SERVICE_ALERT.ERROR_TITLE,
         description:
           error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0],
@@ -1044,10 +1044,10 @@ const UnjoinMissionButton = ({
   const handleAttempt = () => {
     // This action needs confirmation
     showAlert({
-      title: messages.MISSION.UNJOIN_MISSION_ALERT.TITLE,
-      description: messages.MISSION.UNJOIN_MISSION_ALERT.DESCRIPTION,
+      title: messages.SERVICE.UNJOIN_SERVICE_ALERT.TITLE,
+      description: messages.SERVICE.UNJOIN_SERVICE_ALERT.DESCRIPTION,
       variant: 'warning',
-      confirmText: messages.MISSION.UNJOIN_MISSION_ALERT.CONFIRM_TEXT,
+      confirmText: messages.SERVICE.UNJOIN_SERVICE_ALERT.CONFIRM_TEXT,
       onConfirm: mutate,
     });
   };
@@ -1062,7 +1062,7 @@ const UnjoinMissionButton = ({
       variant={variant}
       size={size}
     >
-      {'Unjoin mission'}
+      {'Unjoin service'}
     </Button>
   );
 };
@@ -1166,12 +1166,12 @@ const ReportAdventurerDialog = ({ mid, vacancyId, isOpen, onClose }) => {
       <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
         <DialogHeader className='pb-3 border-b'>
           <DialogTitle>
-            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.TITLE ||
-              'Report adventurer'}
+            {messages.EDIT_SERVICE.REPORT_VACANCY_DIALOG.TITLE ||
+              'Report collaborator'}
           </DialogTitle>
           <DialogDescription>
-            {messages.EDIT_MISSION.REPORT_VACANCY_DIALOG.DESCRIPTION ||
-              'Please provide details about the issue with this adventurer.'}
+            {messages.EDIT_SERVICE.REPORT_VACANCY_DIALOG.DESCRIPTION ||
+              'Please provide details about the issue with this collaborator.'}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -1186,7 +1186,7 @@ const ReportAdventurerDialog = ({ mid, vacancyId, isOpen, onClose }) => {
                 name='message'
                 label='Message (required):'
                 type='text'
-                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                maxLength={consts.SERVICE.REPORT_MESSAGE.MAX}
                 defaultValue={state.data?.message || ''}
                 error={
                   !clearedFields.message && state.errors?.message
@@ -1226,7 +1226,7 @@ const ReportAdventurerDialog = ({ mid, vacancyId, isOpen, onClose }) => {
             disabled={isPending}
             form='reportAdventurerForm'
           >
-            {isPending ? 'Reporting...' : 'Report adventurer'}
+            {isPending ? 'Reporting...' : 'Report collaborator'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1257,9 +1257,9 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
         queryKey: ['getPublicUserProfile', participant.username],
       });
       showAlert({
-        title: messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_TITLE,
+        title: messages.SERVICE.REVIEW_COLLABORATOR_ALERT.SUCCESS_TITLE,
         description:
-          messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_DESCRIPTION,
+          messages.SERVICE.REVIEW_COLLABORATOR_ALERT.SUCCESS_DESCRIPTION,
       });
       setRating(5);
       setComment('');
@@ -1270,7 +1270,7 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
       setErrorMessage(
         error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0] ||
-          messages.MISSION.REVIEW_ADVENTURER_ALERT.ERROR_TITLE,
+          messages.SERVICE.REVIEW_COLLABORATOR_ALERT.ERROR_TITLE,
       );
     },
   });
@@ -1305,7 +1305,7 @@ const ReviewAdventurerDialog = ({ mission, participant, isOpen, onClose }) => {
         <DialogHeader className='pb-3 border-b'>
           <DialogTitle>Review {participant.username}</DialogTitle>
           <DialogDescription>
-            This review will be linked to this completed mission.
+            This review will be linked to this completed service.
           </DialogDescription>
         </DialogHeader>
 
@@ -1390,9 +1390,9 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
         queryKey: ['getUserReviews'],
       });
       showAlert({
-        title: messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_TITLE,
+        title: messages.SERVICE.REVIEW_COLLABORATOR_ALERT.SUCCESS_TITLE,
         description:
-          messages.MISSION.REVIEW_ADVENTURER_ALERT.SUCCESS_DESCRIPTION,
+          messages.SERVICE.REVIEW_COLLABORATOR_ALERT.SUCCESS_DESCRIPTION,
       });
       setRating(5);
       setComment('');
@@ -1403,7 +1403,7 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
       setErrorMessage(
         error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0] ||
-          messages.MISSION.REVIEW_ADVENTURER_ALERT.ERROR_TITLE,
+          messages.SERVICE.REVIEW_COLLABORATOR_ALERT.ERROR_TITLE,
       );
     },
   });
@@ -1436,9 +1436,9 @@ const ReviewOwnerDialog = ({ mission, isOpen, onClose }) => {
         onPointerDown={(event) => event.stopPropagation()}
       >
         <DialogHeader className='pb-3 border-b'>
-          <DialogTitle>Review mission owner</DialogTitle>
+          <DialogTitle>Review service applicant</DialogTitle>
           <DialogDescription>
-            This review will be linked to this completed mission.
+            This review will be linked to this completed service.
           </DialogDescription>
         </DialogHeader>
 
@@ -1563,7 +1563,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
     const trimmedUsername = username.trim();
 
     if (!trimmedUsername) {
-      setLocalError('Write a username to search for an adventurer.');
+      setLocalError('Write a username to search for a collaborator.');
       return;
     }
 
@@ -1593,9 +1593,9 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className='w-[min(92vw,42rem)] max-w-2xl'>
         <AlertDialogHeader className='pb-3 border-b'>
-          <AlertDialogTitle>Search adventurer</AlertDialogTitle>
+          <AlertDialogTitle>Search collaborator</AlertDialogTitle>
           <AlertDialogDescription>
-            Find the adventurer by username before sending the invitation.
+            Find the collaborator by username before sending the invitation.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -1610,7 +1610,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                 htmlFor='searchAdventurerByUsername'
                 className='text-sm font-medium text-primary'
               >
-                Adventurer username
+                Collaborator username
               </label>
               <div className='flex gap-3'>
                 <Input
@@ -1634,7 +1634,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
 
               {noResults && (
                 <p className='text-sm text-muted-foreground text-center py-4'>
-                  No adventurer found with that username.
+                  No collaborator found with that username.
                 </p>
               )}
 
@@ -1707,7 +1707,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                       {selectedUser.username}
                     </p>
                     <p className='truncate text-sm text-primary'>
-                      {selectedUser.email || 'Selected adventurer'}
+                      {selectedUser.email || 'Selected collaborator'}
                     </p>
                   </div>
                 </div>
@@ -1748,7 +1748,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                 id='notificationMessage'
                 value={notificationMessage}
                 onChange={(event) => setNotificationMessage(event.target.value)}
-                placeholder='Write a short message for the adventurer'
+                placeholder='Write a short message for the collaborator'
                 rows={5}
               />
 
@@ -1814,7 +1814,7 @@ const CloseMissionButton = ({ mission, className, variant, size }) => {
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE,
+        title: messages.SERVICE.CLOSE_SERVICE_ALERT.ERROR_TITLE,
         description: error?.response.data.errors?.general,
       });
     },
@@ -1825,30 +1825,31 @@ const CloseMissionButton = ({ mission, className, variant, size }) => {
     // This action needs confirmation
     if (mission.status === MISSION_STATUS.REOPENED.ID) {
       showAlert({
-        title: messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
+        title: messages.SERVICE.CLOSE_SERVICE_ALERT.TITLE,
         description:
-          messages.MISSION.CLOSE_MISSION_ALERT.NO_NEW_ADVENTURERS_AFTER_REOPEN,
-        confirmText: messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
+          messages.SERVICE.CLOSE_SERVICE_ALERT
+            .NO_NEW_COLLABORATORS_AFTER_REOPEN,
+        confirmText: messages.SERVICE.CLOSE_SERVICE_ALERT.CONFIRM_TEXT,
         onConfirm: mutate,
       });
     } else {
       showAlert({
         title:
           mission.occupied_vacancies === 0
-            ? messages.MISSION.CLOSE_MISSION_ALERT.ERROR_TITLE
-            : messages.MISSION.CLOSE_MISSION_ALERT.TITLE,
+            ? messages.SERVICE.CLOSE_SERVICE_ALERT.ERROR_TITLE
+            : messages.SERVICE.CLOSE_SERVICE_ALERT.TITLE,
         description:
           mission.occupied_vacancies === 0
-            ? messages.MISSION.CLOSE_MISSION_ALERT.NO_ADVENTURERS_DESCRIPTION
+            ? messages.SERVICE.CLOSE_SERVICE_ALERT.NO_COLLABORATORS_DESCRIPTION
             : mission.total_vacancies > mission.occupied_vacancies
-              ? messages.MISSION.CLOSE_MISSION_ALERT
+              ? messages.SERVICE.CLOSE_SERVICE_ALERT
                   .AVAILABLE_VACANCIES_DESCRIPTION
-              : messages.MISSION.CLOSE_MISSION_ALERT.START_DESCRIPTION,
+              : messages.SERVICE.CLOSE_SERVICE_ALERT.START_DESCRIPTION,
         variant: mission.occupied_vacancies === 0 ? 'info' : 'warning',
         confirmText:
           mission.occupied_vacancies === 0
             ? 'Ok'
-            : messages.MISSION.CLOSE_MISSION_ALERT.CONFIRM_TEXT,
+            : messages.SERVICE.CLOSE_SERVICE_ALERT.CONFIRM_TEXT,
         onConfirm: mission.occupied_vacancies === 0 ? null : mutate,
       });
     }
@@ -1864,7 +1865,7 @@ const CloseMissionButton = ({ mission, className, variant, size }) => {
       variant={variant}
       size={size}
     >
-      {'Close mission'}
+      {'Close service'}
     </Button>
   );
 };
@@ -1890,7 +1891,7 @@ const SubmitParticipationButton = ({
     },
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.ERROR_TITLE,
+        title: messages.SERVICE.SUBMIT_PARTICIPATION_ALERT.ERROR_TITLE,
         description:
           error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0],
@@ -1900,10 +1901,10 @@ const SubmitParticipationButton = ({
 
   const handleAttempt = () => {
     showAlert({
-      title: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.TITLE,
-      description: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.DESCRIPTION,
+      title: messages.SERVICE.SUBMIT_PARTICIPATION_ALERT.TITLE,
+      description: messages.SERVICE.SUBMIT_PARTICIPATION_ALERT.DESCRIPTION,
       variant: 'warning',
-      confirmText: messages.MISSION.SUBMIT_PARTICIPATION_ALERT.CONFIRM_TEXT,
+      confirmText: messages.SERVICE.SUBMIT_PARTICIPATION_ALERT.CONFIRM_TEXT,
       onConfirm: mutate,
     });
   };
@@ -1940,7 +1941,7 @@ const MissionOwnerStatusMessage = ({ status, canFinish }) => {
   if (canFinish) {
     return (
       <p className='p-1'>
-        Finish this mission for the records or add some more adventurers if
+        Finish this service for the records or add some more collaborators if
         needed!
       </p>
     );
@@ -1949,13 +1950,13 @@ const MissionOwnerStatusMessage = ({ status, canFinish }) => {
   if (status === MISSION_STATUS.IN_PROGRESS.ID) {
     return (
       <p className='p-1'>
-        Waiting for adventurers to submit their participation.
+        Waiting for collaborators to submit their participation.
       </p>
     );
   }
 
   if (status === MISSION_STATUS.IN_DISPUTE.ID) {
-    return <p className='p-1'>{messages.MISSION.MISSION_IN_DISPUTE}</p>;
+    return <p className='p-1'>{messages.SERVICE.SERVICE_IN_DISPUTE}</p>;
   }
 
   if (
@@ -1965,20 +1966,20 @@ const MissionOwnerStatusMessage = ({ status, canFinish }) => {
   )
     return <EndedStatusMessage status={status}></EndedStatusMessage>;
 
-  return <p className='p-1'>{messages.MISSION.MISSION_CLOSED}</p>;
+  return <p className='p-1'>{messages.SERVICE.SERVICE_CLOSED}</p>;
 };
 
 const EndedStatusMessage = ({ status }) => {
   if (status === MISSION_STATUS.CANCELLED.ID) {
-    return <p className='p-1 '>This mission has been cancelled.</p>;
+    return <p className='p-1 '>This service has been cancelled.</p>;
   }
 
   if (status === MISSION_STATUS.DELETED.ID) {
-    return <p className='p-1'>This mission has been deleted.</p>;
+    return <p className='p-1'>This service has been deleted.</p>;
   }
 
   if (status === MISSION_STATUS.REPORTED.ID) {
-    return <p className='p-1'>This mission has been reported.</p>;
+    return <p className='p-1'>This service has been reported.</p>;
   }
 };
 
@@ -1987,18 +1988,18 @@ const PayMissionButton = ({ mission, className, variant, size }) => {
   const navigate = useNavigate();
   const text =
     mission.status === MISSION_STATUS.CLOSED.ID
-      ? 'Start mission'
-      : 'Pay mission';
+      ? 'Start service'
+      : 'Pay service';
 
   // Interceptor
   const handleAttempt = () => {
     mission.status === MISSION_STATUS.CLOSED.ID
       ? // This action needs confirmation
         showAlert({
-          title: messages.MISSION.START_MISSION_ALERT.TITLE,
-          description: messages.MISSION.START_MISSION_ALERT.START_DESCRIPTION,
+          title: messages.SERVICE.START_SERVICE_ALERT.TITLE,
+          description: messages.SERVICE.START_SERVICE_ALERT.START_DESCRIPTION,
           variant: 'warning',
-          confirmText: messages.MISSION.START_MISSION_ALERT.CONFIRM_TEXT,
+          confirmText: messages.SERVICE.START_SERVICE_ALERT.CONFIRM_TEXT,
           onConfirm: () => {
             navigate(`/missions/${mission.mid}/pay`);
           },
@@ -2031,7 +2032,7 @@ const CancelMissionButton = ({ mission, className, variant, size }) => {
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.CANCEL_MISSION_ALERT.ERROR_TITLE,
+        title: messages.SERVICE.CANCEL_SERVICE_ALERT.ERROR_TITLE,
         description:
           error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0],
@@ -2043,12 +2044,12 @@ const CancelMissionButton = ({ mission, className, variant, size }) => {
   const handleAttempt = () => {
     // This action needs confirmation
     showAlert({
-      title: messages.MISSION.CANCEL_MISSION_ALERT.TITLE,
+      title: messages.SERVICE.CANCEL_SERVICE_ALERT.TITLE,
       description: MISSION_STATUS[mission.status].CAN_DELETE
-        ? messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_DELETE
-        : messages.MISSION.CANCEL_MISSION_ALERT.DESCRIPTION_CANCEL,
+        ? messages.SERVICE.CANCEL_SERVICE_ALERT.DESCRIPTION_DELETE
+        : messages.SERVICE.CANCEL_SERVICE_ALERT.DESCRIPTION_CANCEL,
       variant: 'warning',
-      confirmText: messages.MISSION.CANCEL_MISSION_ALERT.CONFIRM_TEXT,
+      confirmText: messages.SERVICE.CANCEL_SERVICE_ALERT.CONFIRM_TEXT,
       onConfirm: mutate,
     });
   };
@@ -2063,7 +2064,7 @@ const CancelMissionButton = ({ mission, className, variant, size }) => {
       variant={variant}
       size={size}
     >
-      {'Cancel mission'}
+      {'Cancel service'}
     </Button>
   );
 };
@@ -2080,7 +2081,7 @@ const ReopenMissionButton = ({ mission, className, variant, size }) => {
     onError: (error) => {
       console.log(error);
       showAlert({
-        title: messages.MISSION.REOPEN_MISSION_ALERT.ERROR_TITLE,
+        title: messages.SERVICE.REOPEN_SERVICE_ALERT.ERROR_TITLE,
         description:
           error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0],
@@ -2094,17 +2095,17 @@ const ReopenMissionButton = ({ mission, className, variant, size }) => {
     showAlert({
       title:
         mission.occupied_vacancies === mission.total_vacancies
-          ? messages.MISSION.REOPEN_MISSION_ALERT.ERROR_TITLE
-          : messages.MISSION.REOPEN_MISSION_ALERT.TITLE,
+          ? messages.SERVICE.REOPEN_SERVICE_ALERT.ERROR_TITLE
+          : messages.SERVICE.REOPEN_SERVICE_ALERT.TITLE,
       description:
         mission.occupied_vacancies === mission.total_vacancies
-          ? messagesShared.MISSION.REOPEN.CANNOT_WITHOUT_EMPTY_VACANCIES
-          : messages.MISSION.REOPEN_MISSION_ALERT.DESCRIPTION,
+          ? messagesShared.SERVICE.REOPEN.CANNOT_WITHOUT_EMPTY_VACANCIES
+          : messages.SERVICE.REOPEN_SERVICE_ALERT.DESCRIPTION,
       variant: 'error',
       confirmText:
         mission.occupied_vacancies === mission.total_vacancies
           ? 'Ok'
-          : messages.MISSION.REOPEN_MISSION_ALERT.CONFIRM_TEXT,
+          : messages.SERVICE.REOPEN_SERVICE_ALERT.CONFIRM_TEXT,
       onConfirm:
         mission.occupied_vacancies === mission.total_vacancies ? null : mutate,
     });
@@ -2120,7 +2121,7 @@ const ReopenMissionButton = ({ mission, className, variant, size }) => {
       variant={variant}
       size={size}
     >
-      {'Reopen mission'}
+      {'Reopen service'}
     </Button>
   );
 };
@@ -2136,7 +2137,7 @@ const FinishMissionButton = ({ mission, className, variant, size }) => {
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.MISSION.FINISH_MISSION_ALERT.ERROR_TITLE,
+        title: messages.SERVICE.FINISH_SERVICE_ALERT.ERROR_TITLE,
         description:
           error?.response?.data?.error ||
           error?.response?.data?.errors?.general?.[0],
@@ -2148,10 +2149,10 @@ const FinishMissionButton = ({ mission, className, variant, size }) => {
   const handleAttempt = () => {
     // This action needs confirmation
     showAlert({
-      title: messages.MISSION.FINISH_MISSION_ALERT.TITLE,
-      description: messages.MISSION.FINISH_MISSION_ALERT.DESCRIPTION,
+      title: messages.SERVICE.FINISH_SERVICE_ALERT.TITLE,
+      description: messages.SERVICE.FINISH_SERVICE_ALERT.DESCRIPTION,
       variant: 'warning',
-      confirmText: messages.MISSION.FINISH_MISSION_ALERT.CONFIRM_TEXT,
+      confirmText: messages.SERVICE.FINISH_SERVICE_ALERT.CONFIRM_TEXT,
       onConfirm: mutate,
     });
   };
@@ -2166,7 +2167,7 @@ const FinishMissionButton = ({ mission, className, variant, size }) => {
       variant={variant}
       size={size}
     >
-      {'Finish mission'}
+      {'Finish service'}
     </Button>
   );
 };
@@ -2233,16 +2234,16 @@ const ReportMissionButton = ({ mission, className, variant, size }) => {
           size={size}
         >
           <MessageSquareWarning className='w-4 h-4 mr-2' aria-hidden='true' />
-          {'Report mission'}
+          {'Report service'}
         </Button>
       </DialogTrigger>
       <DialogContent className='sm:max-w-sm max-h-[80vh] overflow-y-auto'>
         <DialogHeader className='pb-3 border-b'>
           <DialogTitle>
-            {messages.PUBLIC_PROFILE.REPORT_MISSION_DIALOG.TITLE}
+            {messages.PUBLIC_PROFILE.REPORT_SERVICE_DIALOG.TITLE}
           </DialogTitle>
           <DialogDescription>
-            {messages.PUBLIC_PROFILE.REPORT_MISSION_DIALOG.DESCRIPTION}
+            {messages.PUBLIC_PROFILE.REPORT_SERVICE_DIALOG.DESCRIPTION}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -2292,7 +2293,7 @@ const ReportMissionButton = ({ mission, className, variant, size }) => {
             </Button>
           </DialogClose>
           <Button type='submit' disabled={isPending} form='reportMissionForm'>
-            {isPending ? 'Reporting...' : 'Report mission'}
+            {isPending ? 'Reporting...' : 'Report service'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -2302,12 +2303,15 @@ const ReportMissionButton = ({ mission, className, variant, size }) => {
 
 const getParticipationStatusLabel = (status) => {
   if (!status) {
-    return messages.MISSION.MISSION_JOINED;
+    return messages.SERVICE.SERVICE_JOINED;
   }
 
   return (
     MISSION_PARTICIPATION_STATUS[status].LABEL ||
-    messages.MISSION.STATUS_LABELS[status] ||
+    messages.SERVICE.STATUS_LABELS[status] ||
+    (status === 'looking_for_adventurers'
+      ? messages.SERVICE.STATUS_LABELS.looking_for_collaborators
+      : null) ||
     status.replaceAll('_', ' ')
   );
 };

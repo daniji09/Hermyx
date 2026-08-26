@@ -5,7 +5,7 @@ import {
 import pool from '../config/db.config.js';
 
 /// INSERTS
-// Create mission participation
+// Create service participation
 export const create = async (mid, vacancy, client = pool) => {
   const query = `
     INSERT INTO mission_participation (mid, monetary_reward, title, description, status, amount_paid)
@@ -45,7 +45,7 @@ export const findByIdForUpdate = async (vacancyId, client = pool) => {
   return result.rows[0] || null;
 };
 
-// Finds by mid and adventurer id
+// Finds by mid and collaborator id
 export const findByMidAndAdventurerId = async (mid, adventurerId) => {
   const query = `
     SELECT *
@@ -56,7 +56,7 @@ export const findByMidAndAdventurerId = async (mid, adventurerId) => {
   return result.rows[0] || null;
 };
 
-// Get all participants from mission
+// Get all participants from service
 export const findAllByMid = async (mid) => {
   const query = `
     SELECT 
@@ -87,7 +87,7 @@ export const findAllByMid = async (mid) => {
   return result.rows;
 };
 
-// Finds mission payment by mid
+// Finds service payment by mid
 export const findMissionPaymentByMid = async (mid) => {
   const query = `SELECT SUM(monetary_reward - amount_paid) 
   FROM mission_participation 
@@ -136,7 +136,7 @@ export const findAllJoined = async (mid) => {
   return result.rows;
 };
 
-// Gets mission participation when reviewing
+// Gets service participation when reviewing
 export const findReviewContext = async (mid, adventurerId, client = pool) => {
   const result = await client.query(
     `SELECT mp.id, mp.status AS participation_status,
@@ -151,7 +151,7 @@ export const findReviewContext = async (mid, adventurerId, client = pool) => {
 };
 
 /// UPDATES
-// Update mission participation
+// Update service participation
 export const update = async (mid, vacancy, client = pool) => {
   // Only makes update if its actually different
   const updateQuery = `
@@ -175,9 +175,9 @@ export const update = async (mid, vacancy, client = pool) => {
   return result.rows[0];
 };
 
-// Update mission participation status
+// Update service participation status
 export const updateStatus = async (id, status, client = pool) => {
-  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  // Finds allowed previous status of status passed. This ensures concurrency, so the service state machines actually works
   const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
     .filter((config) => config.VALID_NEXT_STATES.includes(status))
     .map((config) => config.ID);
@@ -188,14 +188,14 @@ export const updateStatus = async (id, status, client = pool) => {
   return result.rowCount;
 };
 
-// Update status by mid and adventurer
+// Update status by mid and collaborator
 export const updateStatusByMidAndAdventurer = async (
   mid,
   adventurerId,
   status,
   client = pool,
 ) => {
-  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  // Finds allowed previous status of status passed. This ensures concurrency, so the service state machines actually works
   const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
     .filter((config) => config.VALID_NEXT_STATES.includes(status))
     .map((config) => config.ID);
@@ -248,14 +248,14 @@ export const updatePaymentStatusById = async (id, status, client = pool) => {
   return result.rowCount;
 };
 
-// Update adventurer and status
+// Update collaborator and status
 export const updateAdventurerAndStatus = async (
   id,
   adventurerId,
   status,
   client = pool,
 ) => {
-  // Finds allowed previous status of status passed. This ensures concurrency, so the mission state machines actually works
+  // Finds allowed previous status of status passed. This ensures concurrency, so the service state machines actually works
   const allowedPreviousStates = Object.values(MISSION_PARTICIPATION_STATUS)
     .filter((config) => config.VALID_NEXT_STATES.includes(status))
     .map((config) => config.ID);
@@ -328,7 +328,7 @@ export const startParticipants = async (mid, client = pool) => {
   return result.rows;
 };
 
-// Updates owner review
+// Updates applicant review
 export const updateOwnerReview = async (id, reviewId, client = pool) => {
   const result = await client.query(
     `UPDATE mission_participation SET owner_review_id = $2
@@ -338,7 +338,7 @@ export const updateOwnerReview = async (id, reviewId, client = pool) => {
   return result.rows[0] || null;
 };
 
-// Updates adventurer review
+// Updates collaborator review
 export const updateAdventurerReview = async (id, reviewId, client = pool) => {
   const result = await client.query(
     `UPDATE mission_participation SET adventurer_review_id = $2
@@ -348,7 +348,7 @@ export const updateAdventurerReview = async (id, reviewId, client = pool) => {
   return result.rows[0] || null;
 };
 
-// Refunds partial payment of mission participation
+// Refunds partial payment of service participation
 export const refundVacancyPartially = async (
   id,
   amountRefunded,
@@ -410,7 +410,7 @@ export const unjoinParticipant = async (mid, uid, client = pool) => {
 };
 
 /// DELETES
-// Deletes vacancies removed from the mission edit form
+// Deletes vacancies removed from the service edit form
 export const deleteAllUnoccupied = async (
   mid,
   existingIds,

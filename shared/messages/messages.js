@@ -6,7 +6,7 @@ export const messages = {
   GENERAL: {
     CONNECTION_ERROR: `Connection error, please check your network.`,
     FIELD_INTEGER: (field) => `${field} must be an integer.`,
-    FIELD_NOT_VALID: (field) => `Please, enter a valid ${field}.`,
+    FIELD_NOT_VALID: (field) => `Please enter a valid ${field}.`,
     FIELD_NUMBER: (field) => `${field} must be a number.`,
     FIELD_POSITIVE: (field) => `${field} must be positive.`,
     FIELD_REQUIRED: (field) => `${field} is required.`,
@@ -20,7 +20,7 @@ export const messages = {
     FORBIDDEN: `Action is not authorized.`,
     FORBIDDEN_BAN_USER: `This user is banned from Hermyx.`,
     IMAGE_INVALID_TYPE: `Only .jpeg, .png and .webp images are accepted.`,
-    IMAGE_TOO_BIG: `Photo must weight less than 5MB.`,
+    IMAGE_TOO_BIG: `Photo must weigh less than 5MB.`,
     INCOMPLETE_PAGINATION: `Pagination is incomplete. Please send both 'page' and 'limit'.`,
     INCOMPLETE_PETITION: (field1, field2) =>
       `Incomplete petition. Please send ${field1} and ${field2} together.`,
@@ -57,7 +57,7 @@ export const messages = {
       COULD_NOT_CHANGE: `Could not change the password.`,
     },
     SIGNUP: {
-      CONFIRM_PASSWORD: 'Please, confirm password.',
+      CONFIRM_PASSWORD: 'Please confirm your password.',
       PASSWORDS_NOT_MATCH: 'Passwords do not match.',
       EMAIL_ALREADY_EXISTS: (email) =>
         `User with email ${email} already exists.`,
@@ -94,82 +94,82 @@ export const messages = {
       EMAILS_NOT_MATCH: `E-mails do not match.`,
     },
     DELETE_ME: {
-      ACTIVE_MISSIONS: `You cant delete your account while you have active missions.`,
-      ACTIVE_DISPUTES: `You cant delete your account while you have active disputes.`,
+      ACTIVE_SERVICES: `You can't delete your account while you have active services.`,
+      ACTIVE_DISPUTES: `You can't delete your account while you have active disputes.`,
     },
   },
 
-  /// Mission messages
-  MISSION: {
+  /// Service messages
+  SERVICE: {
     GENERAL: {
-      MISSION_NOT_FOUND: `Mission not found.`,
-      MISSIONS_NOT_FOUND: `Missions not found.`,
-      VACANCY_NOT_IN_MISSION: `This vacancy is not in this mission.`,
+      SERVICE_NOT_FOUND: `Service not found.`,
+      SERVICES_NOT_FOUND: `Services not found.`,
+      VACANCY_NOT_IN_SERVICE: `This vacancy is not in this service.`,
     },
     VACANCY: {
       NOT_FOUND: `Vacancy not found`,
       ALREADY_MODIFIED: `Vacancy already modified`,
     },
-    TYPE: { INVALID_MISSION_TYPE: `Invalid type of mission.` },
+    TYPE: { INVALID_SERVICE_TYPE: `Invalid type of service.` },
     GET_ALL: {
       MIN_PAYMENT_GREATER_MAX_PAYMENT: `Min payment cannot be greater than max payment.`,
     },
     PUBLISH: {
-      MISSION_PHOTO_TOO_BIG: `Each photo must weight less than 5MB.`,
-      MISSION_PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
-      MISSION_WITH_SAME_TITLE: `You already have a mission titled like this.`,
-      MISSION_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
+      SERVICE_PHOTO_TOO_BIG: `Each photo must weigh less than 5MB.`,
+      SERVICE_PHOTO_INVALID_TYPE: `Photo format is invalid; please use .jpg, .png or .webp.`,
+      SERVICE_WITH_SAME_TITLE: `You already have a service titled like this.`,
+      SERVICE_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
     },
     EDIT: {
-      CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies when the mission is not opened anymore.`,
-      CANNOT_EDIT_MISSION: `Mission can't be edited on current state.`,
+      CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies when the service is not opened anymore.`,
+      CANNOT_EDIT_SERVICE: `Service can't be edited on current state.`,
       CANNOT_EDIT_VACANCY: `Vacancy can't be edited on current state.`,
     },
     CLOSE: {
-      CANNOT_WITHOUT_ADVENTURERS: `You can't close a mission without adventurers.`,
-      CANNOT_ON_CURRENT_STATE: `Can't close mission on current state.`,
+      CANNOT_WITHOUT_COLLABORATORS: `You can't close a service without collaborators.`,
+      CANNOT_ON_CURRENT_STATE: `Can't close service on current state.`,
     },
     REOPEN: {
-      CANNOT_CLOSE_ON_CURRENT_STATE: `Can't close reopened mission on current state.`,
-      CANNOT_WITHOUT_EMPTY_VACANCIES: `Can't reopen mission with no empty vacancies that can be filled.`,
-      CANNOT_REOPEN: `Can't reopen mission.`,
-      CANNOT_ON_CURRENT_STATE: `Can't reopen mission on current state.`,
+      CANNOT_CLOSE_ON_CURRENT_STATE: `Can't close reopened service on current state.`,
+      CANNOT_WITHOUT_EMPTY_VACANCIES: `Can't reopen service with no empty vacancies that can be filled.`,
+      CANNOT_REOPEN: `Can't reopen service.`,
+      CANNOT_ON_CURRENT_STATE: `Can't reopen service on current state.`,
     },
     JOIN: {
-      OWN_MISSION: `You can't join your own mission.`,
-      NOT_ACCEPTS_ADVENTURERS: `This mission is no longer accepting adventurers.`,
-      FILLED: `There are no vacancies open left in this mission. Try another one!`,
-      ALREADY_JOINED: `You have already joined this mission`,
+      OWN_SERVICE: `You can't join your own service.`,
+      NOT_ACCEPTS_COLLABORATORS: `This service is no longer accepting collaborators.`,
+      FILLED: `There are no vacancies open left in this service. Try another one!`,
+      ALREADY_JOINED: `You have already joined this service`,
       REQUEST_ALREADY_SENT: `You have already sent a join request for this vacancy.`,
-      ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first mission, please, configure your bank account so you can handle your earnings!`,
+      COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED: `Before joining your first service, please, configure your bank account so you can handle your earnings!`,
       FAILED: `Couldn't join vacancy.`,
     },
     INVITE: {
       CANNOT_INVITE_YOURSELF: `You can't invite yourself.`,
       VACANCY_ALREADY_OCCUPIED: `This vacancy is already occupied.`,
-      NO_VACANCIES_AVAILABLE: `There is no vacancies available.`,
+      NO_VACANCIES_AVAILABLE: `There are no vacancies available.`,
       INVITATION_ALREADY_SENT: `You have already sent an invitation for this vacancy to this user.`,
     },
     UNJOIN: {
       VACANCY_NOT_JOINED_BY_USER: `You can't unjoin a vacancy you are not in.`,
-      CANNOT_IN_PROGRESS_MISSION: `You can't unjoin a mission that has already closed.`,
+      CANNOT_IN_PROGRESS_SERVICE: `You can't unjoin a service that has already closed.`,
       CANNOT_IN_CURRENT_VACANCY_STATE: `Vacancy can't be unjoined on current state.`,
     },
     SUBMIT_PARTICIPATION: {
-      MISSION_PART_ALREADY_SUBMITTED: `Your have already submitted your participation.`,
-      CANNOT_SUBMIT_UNPAID: `Not completely paid adventurer can't submit their part.`,
-      CANNOT_IN_CURRENT_STATE: `Cannot submit participation in current mission state`,
+      SERVICE_PART_ALREADY_SUBMITTED: `You have already submitted your participation.`,
+      CANNOT_SUBMIT_UNPAID: `A collaborator who has not been fully paid can't submit their part.`,
+      CANNOT_IN_CURRENT_STATE: `Cannot submit participation in current service state`,
     },
     DELETE: {
-      CANNOT_DELETE_MISSION: `Can't delete mission.`,
-      CANNOT_DELETE_MISSION_STATE: `Can't delete mission on current state.`,
-      CANNOT_CANCEL_MISSION_STATE: `Can't cancel mission on current state.`,
-      CANNOT_ACTIVE_DISPUTES: `You cant delete this mission while it has active disputes.`,
+      CANNOT_DELETE_SERVICE: `Can't delete service.`,
+      CANNOT_DELETE_SERVICE_STATE: `Can't delete service on current state.`,
+      CANNOT_CANCEL_SERVICE_STATE: `Can't cancel service on current state.`,
+      CANNOT_ACTIVE_DISPUTES: `You can't delete this service while it has active disputes.`,
     },
     FINISH: {
-      CANNOT_ADVENTURERS_IN_PROGRESS: `Can't finish mission because there are adventurers that have not finished yet.`,
-      CANNOT_IN_CURRENT_MISSION_STATE: `Can't finish mission on current state.`,
-      CANNOT_FINISH: `Can't finish mission`,
+      CANNOT_COLLABORATORS_IN_PROGRESS: `Can't finish service because there are collaborators that have not finished yet.`,
+      CANNOT_IN_CURRENT_SERVICE_STATE: `Can't finish service on current state.`,
+      CANNOT_FINISH: `Can't finish service`,
     },
     BAN: {
       CANNOT_DELETE_VACANCIES: `Couldn't delete every occupied vacancy, please try again.`,
@@ -187,7 +187,7 @@ export const messages = {
         `Payment was not completed (status=${status})`,
     },
     CONFIRM_PAYMENT: {
-      CANNOT_PAY_MISSION_STATE: `Can't pay mission on current state.`,
+      CANNOT_PAY_SERVICE_STATE: `Can't pay service on current state.`,
       STRIPE_ONBOARDING_NOT_COMPLETED:
         'You have not completed the Stripe onboarding yet.',
     },
@@ -201,7 +201,7 @@ export const messages = {
         `This notification has already been ${status.toLowerCase()}.`,
       INVALID_NOTIFICATION_ACTION: `Invalid notification action.`,
       INVALID_RESPONSE_ACTION: `Invalid response action`,
-      NOT_ASSOCIATED_WITH_VACANCY: `This notification is not associated with a mission vacancy.`,
+      NOT_ASSOCIATED_WITH_VACANCY: `This notification is not associated with a service vacancy.`,
       CANNOT_ACCEPT_PARTICIPATION_STATE: `Can't accept participation on current state`,
       CANNOT_REOPEN_PARTICIPATION_STATE: `Can't reopen participation on current state`,
       CANNOT_JOIN_PARTICIPATION_STATE: `Can't join participation on current state`,
@@ -210,13 +210,13 @@ export const messages = {
       // General
       CANNOT_SUBMIT_PARTICIPATION: `Cannot respond to participation submit on current state.`,
       ALREADY_REVIEWED: `This participation has already been reviewed.`,
-      MISSION_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY: `Participation revision requested successfully.`,
+      SERVICE_PARTICIPATION_REVISION_REQUESTED_SUCCESSFULLY: `Participation revision requested successfully.`,
 
       // Disputed
       REQUIRES_RETRY:
-        'Participation can only be disputed by the owner after a retry.',
+        'Participation can only be disputed by the applicant after a retry.',
       CANNOT_DISPUTE_PARTICIPATION_STATE: `Can't dispute participation on current state`,
-      MISSION_PARTICIPATION_DISPUTED_SUCCESSFULLY: `Participation disputed successfully.`,
+      SERVICE_PARTICIPATION_DISPUTED_SUCCESSFULLY: `Participation disputed successfully.`,
 
       // Accepted
       ACCEPTED_SUCCESSFULLY: `Participation accepted successfully.`,
@@ -241,68 +241,68 @@ export const messages = {
 
     // Messages sent to users in a notification
     BAN_USER: {
-      OPENED_MISSION: (username, title) =>
-        `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied.`,
-      CLOSED_MISSION: {
+      OPENED_SERVICE: (username, title) =>
+        `Collaborator ${username} of your service ${title} has been banned by Hermyx administration, so this vacancy has been emptied.`,
+      CLOSED_SERVICE: {
         SUCCESSFUL: (username, title) =>
-          `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you.`,
+          `Collaborator ${username} of your service ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you.`,
         ISSUED: (username, title) =>
-          `Adventurer ${username} of your mission ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you. We had an issue transferring your compensation. Please contact support.`,
+          `Collaborator ${username} of your service ${title} has been banned by Hermyx administration, so this vacancy has been emptied. Their reward is being refunded to you. We had an issue transferring your compensation. Please contact support.`,
       },
     },
-    MISSION_EDIT: {
-      MISSION_INFO_CHANGED: (title, changes) =>
+    SERVICE_EDIT: {
+      SERVICE_INFO_CHANGED: (title, changes) =>
         `${title} info has been changed: ${changes.join(', ')}. Check it out!`,
       VACANCY_INFO_CHANGED: (title, changes) =>
         `Your vacancy at ${title} info has been changed: ${changes.join(', ')}. Check it out!`,
       NEW_REWARD_OFFER: (title, oldReward, newReward) =>
         `A new monetary reward offer at ${title} has been made: ${oldReward}€ -> ${newReward}€. Accept or reject it!`,
     },
-    MISSION_CLOSE: {
+    SERVICE_CLOSE: {
       CLOSED: (title) =>
-        `Mission ${title} has been closed. Waiting for owner payment to start. You can't unjoin anymore, but owner is able to cancel it yet.`,
-      CLOSE_AFTER_REOPENED_NEW_ADVENTURERS: (title) =>
-        `Mission ${title} has been closed after being reopened.  Waiting for owner payment to start new adventurers.`,
-      CLOSE_AFTER_REOPENED_NO_NEW_ADVENTURERS: (title) =>
-        `Mission ${title} has been closed after being reopened. No new adventurers have joined.`,
+        `Service ${title} has been closed. Waiting for applicant payment to start. You can't unjoin anymore, but applicant is able to cancel it yet.`,
+      CLOSE_AFTER_REOPENED_NEW_COLLABORATORS: (title) =>
+        `Service ${title} has been closed after being reopened.  Waiting for applicant payment to start new collaborators.`,
+      CLOSE_AFTER_REOPENED_NO_NEW_COLLABORATORS: (title) =>
+        `Service ${title} has been closed after being reopened. No new collaborators have joined.`,
     },
-    REOPEN_MISSION: (title) =>
-      `Mission ${title} has been reopened, so new teammates will enter!`,
-    MISSION_STARTED: (title) =>
-      `Mission ${title} has started! Talk to your team and start working.`,
+    REOPEN_SERVICE: (title) =>
+      `Service ${title} has been reopened, so new teammates will enter!`,
+    SERVICE_STARTED: (title) =>
+      `Service ${title} has started! Talk to your team and start working.`,
     SUBMIT_PARTICIPATION: (title, username) =>
       `The participation in "${title}" was submitted by ${username}.`,
-    UNJOIN_MISSION: (username, vacancyTitle, missionTitle) =>
-      `Adventurer ${username} fled the vacancy ${vacancyTitle} from your mission ${missionTitle}.`,
-    DELETE_MISSION: (title) =>
-      `Mission ${title} has been deleted, so it won't be done, we are sorry.`,
-    CANCEL_MISSION: {
+    UNJOIN_SERVICE: (username, vacancyTitle, serviceTitle) =>
+      `Collaborator ${username} fled the vacancy ${vacancyTitle} from your service ${serviceTitle}.`,
+    DELETE_SERVICE: (title) =>
+      `Service ${title} has been deleted, so it won't be done, we are sorry.`,
+    CANCEL_SERVICE: {
       SUCCESSFUL: (title) =>
-        `Mission ${title} has been cancelled, but don't worry, your reward is on your way!.`,
+        `Service ${title} has been cancelled, but don't worry, your reward is on your way!.`,
       ISSUED: (title) =>
-        `Mission ${title} has been cancelled. We had an issue transferring your compensation. Please contact support.`,
+        `Service ${title} has been cancelled. We had an issue transferring your compensation. Please contact support.`,
     },
-    BAN_MISSION: {
-      DELETE: `This mission has been banned by Hermyx administration, now is retired from the public and won't be done.`,
+    BAN_SERVICE: {
+      DELETE: `This service has been banned by Hermyx administration, now is retired from the public and won't be done.`,
       CANCEL: {
-        SUCCESSFUL: `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers.`,
-        ISSUED: `This mission has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the adventurers. We had an issue transferring your compensation. Please contact support.`,
+        SUCCESSFUL: `This service has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the collaborators.`,
+        ISSUED: `This service has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the collaborators. We had an issue transferring your compensation. Please contact support.`,
       },
     },
-    KICK_ADVENTURER_OUT: {
-      TO_OWNER: (username, title) =>
-        `Adventurer ${username} of your mission ${title} has been kicked out by Hermyx administration, so this vacancy has been emptied.`,
-      TO_ADVENTURER: (title) =>
-        `You have been kicked out of the mission ${title}, so you won't be able to receive the reward.`,
+    KICK_COLLABORATOR_OUT: {
+      TO_APPLICANT: (username, title) =>
+        `Collaborator ${username} of your service ${title} has been kicked out by Hermyx administration, so this vacancy has been emptied.`,
+      TO_COLLABORATOR: (title) =>
+        `You have been kicked out of the service ${title}, so you won't be able to receive the reward.`,
     },
-    MISSION_NEGOTIATION_EXTRA: (title) =>
+    SERVICE_NEGOTIATION_EXTRA: (title) =>
       `Your new monetary reward for ${title} has been funded. Now you can submit your part!`,
-    MISSION_RESTARTED: (title) =>
-      `Mission ${title} has started for you! Talk to your team and start working.`,
+    SERVICE_RESTARTED: (title) =>
+      `Service ${title} has started for you! Talk to your team and start working.`,
     DISPUTE_PARTICIPATION: (title, username) =>
       `A dispute was opened for "${truncateText(title, 20)}" by applicant ${username}.`,
     DISPUTE_REJECTED_PARTICIPATION: (title, username) =>
-      `Adventurer ${username} opened a dispute for "${truncateText(title, 20)}".`,
+      `Collaborator ${username} opened a dispute for "${truncateText(title, 20)}".`,
     REJECT_PARTICIPATION: (title, username) =>
       `Your participation in "${truncateText(title, 20)}" was rejected by ${username}. Please accept the revision or open a dispute.`,
     ACCEPT_PARTICIPATION: {
@@ -313,7 +313,7 @@ export const messages = {
       ISSUED: (title, username) =>
         `Your participation in "${title}" was approved by ${username}. We had an issue transferring your payment. Please contact support.`,
     },
-    JOIN_MISSION_DECISION: {
+    JOIN_SERVICE_DECISION: {
       REQUEST: {
         ACCEPTED: (title) =>
           `Your request to join "${title}" was accepted. You are now part of the team!`,
@@ -322,7 +322,7 @@ export const messages = {
       },
       INVITATION: {
         ACCEPTED: (title) =>
-          `Your invitation to join "${title}" was accepted. Welcome your new adventurer!`,
+          `Your invitation to join "${title}" was accepted. Welcome your new collaborator!`,
         REJECTED: (title) =>
           `Your invitation to join "${title}" was rejected. Keep searching for others!`,
       },
@@ -337,36 +337,36 @@ export const messages = {
           `${username} accepted your new monetary reward offer for "${title}": ${current} -> ${offer}.  We had an issue transferring your refund. Please contact support.`,
       },
     },
-    REPORT_ADVENTURER: (title) =>
-      `You have been reported by the applicant of the ${title} mission. You can respond in the dispute conversation.`,
-    ADVENTURER_WORK_ACCEPTED: {
-      TO_ADVENTURER: {
+    REPORT_COLLABORATOR: (title) =>
+      `You have been reported by the applicant of the ${title} service. You can respond in the dispute conversation.`,
+    COLLABORATOR_WORK_ACCEPTED: {
+      TO_COLLABORATOR: {
         SUCCESSFUL: (title) =>
           `Your participation in "${title}" was approved by the administration after resolving the dispute. Reward is being payed to you!`,
         ISSUED: (title) =>
           `Your participation in "${title}" was approved by the administration after resolving the dispute. We had an issue transferring your refund. Please contact support.`,
       },
-      TO_APPLICANT: (vacancyTitle, username, missionTitle) =>
-        `Participation ${vacancyTitle} disputed by ${username} in mission ${missionTitle} was accepted by the administration. Reward is being payed to the adventurer.`,
+      TO_APPLICANT: (vacancyTitle, username, serviceTitle) =>
+        `Participation ${vacancyTitle} disputed by ${username} in service ${serviceTitle} was accepted by the administration. Reward is being payed to the collaborator.`,
     },
-    ADVENTURER_WORK_REJECTED: {
-      TO_ADVENTURER: (title) =>
+    COLLABORATOR_WORK_REJECTED: {
+      TO_COLLABORATOR: (title) =>
         `Your participation in "${title}" was rejected by the administration after resolving the dispute. The vacancy is in progress again.`,
-      TO_APPLICANT: (vacancyTitle, username, missionTitle) =>
-        `Participation ${vacancyTitle} disputed by ${username} in mission ${missionTitle} was rejected by the administration. The vacancy is in progress again.`,
+      TO_APPLICANT: (vacancyTitle, username, serviceTitle) =>
+        `Participation ${vacancyTitle} disputed by ${username} in service ${serviceTitle} was rejected by the administration. The vacancy is in progress again.`,
     },
     DISMISS: {
-      REPORT_ADVENTURER: (username, title) =>
-        `Your report on adventurer ${username} from mission ${title} has been dismissed, so they will not be kicked out.`,
+      REPORT_COLLABORATOR: (username, title) =>
+        `Your report on collaborator ${username} from service ${title} has been dismissed, so they will not be kicked out.`,
     },
   },
 
   /// Review messages
   REVIEW: {
     GENERAL: {
-      MISSION_REVIEW_NOT_ALLOWED: `Only the mission owner can review adventurers from a completed mission.`,
-      MISSION_REVIEW_ALREADY_EXISTS: `This adventurer has already been reviewed for this mission.`,
-      MISSION_COMPLETED: `Only completed missions can be reviewed.`,
+      SERVICE_REVIEW_NOT_ALLOWED: `Only the service applicant can review collaborators from a completed service.`,
+      SERVICE_REVIEW_ALREADY_EXISTS: `This collaborator has already been reviewed for this service.`,
+      SERVICE_COMPLETED: `Only completed services can be reviewed.`,
     },
   },
 
@@ -381,15 +381,15 @@ export const messages = {
       APPLICANT_ALREADY_REPORTED: `You already have an active report for this applicant. Our team is checking it.`,
       BEING_ANSWERED: `Another administrator is answering this report, please check it again.`,
     },
-    REPORT_ADVENTURER: {
-      ACTIVE_REPORT: `You already have an active report for this adventurer. Our team is checking it.`,
+    REPORT_COLLABORATOR: {
+      ACTIVE_REPORT: `You already have an active report for this collaborator. Our team is checking it.`,
     },
     REPORT_USER: {
       ACTIVE_REPORT: `You already have an active report for this user. Our team is checking it.`,
     },
-    REPORT_MISSION: {
-      ACTIVE_REPORT: `You already have an active report for this mission. Our team is checking it.`,
-      CLOSED_BY_REPORT: `This mission has already been close by a report.`,
+    REPORT_SERVICE: {
+      ACTIVE_REPORT: `You already have an active report for this service. Our team is checking it.`,
+      CLOSED_BY_REPORT: `This service has already been close by a report.`,
     },
     BAN_USER: {
       USER_ALREADY_BANNED: `User already banned.`,
@@ -407,10 +407,10 @@ export const messages = {
       EMPTY: `Message cannot be empty.`,
       READ_ONLY: `This conversation is read-only.`,
       PHOTO_TOO_BIG: `Each photo must weight less than 5MB`,
-      PHOTO_INVALID_TYPE: `Photo format is invalid, please use .jpg, .png or .webp.`,
+      PHOTO_INVALID_TYPE: `Photo format is invalid; please use .jpg, .png or .webp.`,
     },
     // Conversation messages shown in a conversation
-    REPORT_ADVENTURER: (username, vacancyTitle, missionTitle) =>
-      `A dispute was opened after ${username} was reported for the vacancy "${truncateText(vacancyTitle, 20)}" in "${truncateText(missionTitle, 20)}".`,
+    REPORT_COLLABORATOR: (username, vacancyTitle, serviceTitle) =>
+      `A dispute was opened after ${username} was reported for the vacancy "${truncateText(vacancyTitle, 20)}" in "${truncateText(serviceTitle, 20)}".`,
   },
 };

@@ -1,0 +1,25 @@
+{
+  "user": "dani",
+  "services": [
+    {
+      "title": "Playwright - Test service",
+      "description": "I need a tester to validate the service creation and publishing flow.",
+      "location": "Madrid, Spain",
+      "vacancy": {
+        "title": "Tester",
+        "description": "Verify that the service is created and displayed correctly.",
+        "reward": 10
+      }
+    },
+    {
+      "title": "Playwright - Location service",
+      "description": "I need a tester to verify that the location and vacancy are saved correctly.",
+      "location": "Madrid, Spain",
+      "vacancy": {
+        "title": "Tester",
+        "description": "Review the displayed location and validate the vacancy data.",
+        "reward": 10
+      }
+    }
+  ]
+}

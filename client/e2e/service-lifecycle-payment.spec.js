@@ -9,16 +9,16 @@ import {
   hasRealCredentials,
   ownerUsername,
   startAndPayMission,
-} from './support/realMissionFlow.js';
+} from './support/realServiceFlow.js';
 
-test('closes, pays and starts a newly created mission', async ({
+test('closes, pays and starts a newly created service', async ({
   page,
   browser,
 }) => {
   test.setTimeout(180000);
   test.skip(
     !hasRealCredentials,
-    'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the real mission lifecycle payment flow.',
+    'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the real service lifecycle payment flow.',
   );
 
   const missionTitle = `Playwright - Lifecycle ${Date.now()}`;

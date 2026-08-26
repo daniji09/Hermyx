@@ -41,10 +41,10 @@ import {
   verifyToken,
 } from '../middlewares/auth.middleware.js';
 import { upload } from '../utils/file.utils.js';
-import * as missionController from '../controllers/mission.controller.js';
+import * as missionController from '../controllers/service.controller.js';
 
 /// GET
-// Get all missions
+// Get all services
 router.get(
   '/',
   validateQuerySchema(getMissionsQuerySchema),
@@ -52,7 +52,7 @@ router.get(
   missionController.getMissions,
 );
 
-// Get all opened missions
+// Get all opened services
 router.get(
   '/opened',
   verifyToken,
@@ -61,7 +61,7 @@ router.get(
   missionController.getMissionsOpened,
 );
 
-// Get mission by mid
+// Get service by mid
 router.get(
   '/:mid',
   verifyToken,
@@ -69,7 +69,7 @@ router.get(
   missionController.getMissionByMid,
 );
 
-// Get mission's payment information
+// Get service's payment information
 router.get(
   '/:mid/payment-info',
   verifyToken,
@@ -78,7 +78,7 @@ router.get(
 );
 
 /// POST
-// Publishes mission
+// Publishes service
 router.post(
   '/',
   verifyToken,
@@ -89,7 +89,7 @@ router.post(
   missionController.publishMission,
 );
 
-// Closes a mission
+// Closes a service
 router.post(
   '/:mid/close',
   verifyToken,
@@ -98,7 +98,7 @@ router.post(
   missionController.closeMission,
 );
 
-// Joins an adventurer into a mission
+// Joins an collaborator into a service
 router.post(
   '/:mid/join',
   verifyToken,
@@ -108,7 +108,7 @@ router.post(
   missionController.joinMission,
 );
 
-// Invites user to mission
+// Invites user to service
 router.post(
   '/:mid/invite',
   verifyToken,
@@ -118,7 +118,7 @@ router.post(
   missionController.inviteToMission,
 );
 
-// Unjoin adventurer from mission
+// Unjoin collaborator from service
 router.post(
   '/:mid/unjoin',
   verifyToken,
@@ -128,7 +128,7 @@ router.post(
   missionController.unjoinMission,
 );
 
-// Submits current adventurer participation for owner review
+// Submits current collaborator participation for applicant review
 router.post(
   '/:mid/submit',
   verifyToken,
@@ -137,7 +137,7 @@ router.post(
   missionController.submitMissionParticipation,
 );
 
-// Cancels a mission
+// Cancels a service
 router.post(
   '/:mid/cancel',
   verifyToken,
@@ -146,7 +146,7 @@ router.post(
   missionController.cancelMission,
 );
 
-// Reopens a mission
+// Reopens a service
 router.post(
   '/:mid/finish',
   verifyToken,
@@ -155,7 +155,7 @@ router.post(
   missionController.finishMission,
 );
 
-// Reopens a mission
+// Reopens a service
 router.post(
   '/:mid/reopen',
   verifyToken,
@@ -164,7 +164,7 @@ router.post(
   missionController.reopenMission,
 );
 
-// Bans mission
+// Bans service
 router.post(
   '/:mid/ban',
   verifyToken,
@@ -174,7 +174,7 @@ router.post(
   missionController.banMission,
 );
 
-// Kicks an adventurer out
+// Kicks an collaborator out
 router.post(
   '/:mid/kick/:vacancyId',
   verifyToken,
@@ -185,7 +185,7 @@ router.post(
 );
 
 /// PUT
-// Edits mission
+// Edits service
 router.put(
   '/:mid',
   verifyToken,

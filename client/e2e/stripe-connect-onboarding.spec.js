@@ -3,7 +3,7 @@ import {
   loginRealUser,
   ownerPassword,
   ownerUsername,
-} from './support/realMissionFlow.js';
+} from './support/realServiceFlow.js';
 
 test('opens Stripe Connect onboarding from the profile', async ({ page }) => {
   test.setTimeout(120000);

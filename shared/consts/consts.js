@@ -139,7 +139,7 @@ export const consts = {
     },
   },
 
-  // Mission consts
+  // Service consts
   MISSION: {
     TITLE: {
       MAX_LENGTH: 100,

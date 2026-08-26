@@ -29,7 +29,7 @@ router.get(
 );
 
 /// POST
-// Reviews an adventurer after a completed mission
+// Reviews an collaborator after a completed service
 router.post(
   '/missions/:mid/adventurers/:adventurerId',
   verifyRegularUser,

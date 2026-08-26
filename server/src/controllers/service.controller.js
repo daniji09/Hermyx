@@ -1,9 +1,9 @@
 //External modules
 import { USER_ROLE } from '@hermyx/shared';
-import * as missionService from '../services/mission.service.js';
+import * as missionService from '../services/service.service.js';
 
 /// Controller functions
-// Get all missions
+// Get all services
 export const getMissions = async (req, res, next) => {
   try {
     const { title } = req.query;
@@ -18,7 +18,7 @@ export const getMissions = async (req, res, next) => {
   }
 };
 
-// Get all opened missions
+// Get all opened services
 export const getMissionsOpened = async (req, res, next) => {
   try {
     const { title, minPayment, maxPayment, maxDistanceKm } = req.query;
@@ -40,7 +40,7 @@ export const getMissionsOpened = async (req, res, next) => {
   }
 };
 
-// Get mission by mid
+// Get service by mid
 export const getMissionByMid = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -54,7 +54,7 @@ export const getMissionByMid = async (req, res, next) => {
   }
 };
 
-// Get mission payment info
+// Get service payment info
 export const getMissionPaymentInfo = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -65,7 +65,7 @@ export const getMissionPaymentInfo = async (req, res, next) => {
   }
 };
 
-// Publishes mission
+// Publishes service
 export const publishMission = async (req, res, next) => {
   try {
     const { uid } = req.user;
@@ -94,7 +94,7 @@ export const publishMission = async (req, res, next) => {
   }
 };
 
-// Closes a mission
+// Closes a service
 export const closeMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -127,7 +127,7 @@ export const inviteToMission = async (req, res, next) => {
   }
 };
 
-// Sends a join request to the mission owner instead of joining immediately
+// Sends a join request to the service applicant instead of joining immediately
 export const joinMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -139,7 +139,7 @@ export const joinMission = async (req, res, next) => {
   }
 };
 
-// Unjoin mission by adventurer before mission has started
+// Unjoin service by collaborator before service has started
 export const unjoinMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -165,7 +165,7 @@ export const submitMissionParticipation = async (req, res, next) => {
   }
 };
 
-// Cancels or deletes mission
+// Cancels or deletes service
 export const cancelMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -176,7 +176,7 @@ export const cancelMission = async (req, res, next) => {
   }
 };
 
-// Reopens mission
+// Reopens service
 export const reopenMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -187,7 +187,7 @@ export const reopenMission = async (req, res, next) => {
   }
 };
 
-// Finishes mission
+// Finishes service
 export const finishMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -198,7 +198,7 @@ export const finishMission = async (req, res, next) => {
   }
 };
 
-// Bans mission
+// Bans service
 export const banMission = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -210,7 +210,7 @@ export const banMission = async (req, res, next) => {
   }
 };
 
-// Kick adventurer out
+// Kick collaborator out
 export const kickAdventurerOut = async (req, res, next) => {
   try {
     const { mid, vacancyId } = req.params;
@@ -228,7 +228,7 @@ export const kickAdventurerOut = async (req, res, next) => {
   }
 };
 
-// Edits a mission
+// Edits a service
 export const editMission = async (req, res, next) => {
   try {
     const user = req.user;

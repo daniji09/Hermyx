@@ -152,9 +152,9 @@ describe('Review API', () => {
   });
 
   it.each([
-    [403, messages.REVIEW.GENERAL.MISSION_REVIEW_NOT_ALLOWED],
-    [404, messages.MISSION.VACANCY.NOT_FOUND],
-    [409, messages.REVIEW.GENERAL.MISSION_COMPLETED],
+    [403, messages.REVIEW.GENERAL.SERVICE_REVIEW_NOT_ALLOWED],
+    [404, messages.SERVICE.VACANCY.NOT_FOUND],
+    [409, messages.REVIEW.GENERAL.SERVICE_COMPLETED],
   ])('maps a review service error with status %s', async (status, message) => {
     reviewService.reviewAdventurer.mockRejectedValue(
       new AppError(message, status),

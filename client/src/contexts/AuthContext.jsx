@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:edited', (payload) => {
-          console.log('Mission edit notification:', payload);
+          console.log('Service edit notification:', payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMissions'] });
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });

@@ -122,7 +122,7 @@ export const findByActionStatusAndMissionParticipationId = async (
   return result.rows;
 };
 
-// Find by action status, sender id and mission id
+// Find by action status, sender id and service id
 export const findByActionStatusSenderAndMission = async (
   action,
   status,
@@ -145,7 +145,7 @@ export const findByActionStatusSenderAndMission = async (
   return result.rows;
 };
 
-// Find by action status, recipient id and mission id
+// Find by action status, recipient id and service id
 export const findByActionStatusRecipientAndMission = async (
   action,
   status,

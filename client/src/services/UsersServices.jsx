@@ -39,7 +39,7 @@ export const getPublicUserProfile = async (username) => {
   return data;
 };
 
-//Get public profile missions by username
+// Get public profile services by username
 export const getPublicUserProfileMissions = async (
   username,
   type,

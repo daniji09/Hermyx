@@ -6,7 +6,7 @@ import {
   inviteeUsername as configuredInviteeUsername,
   ownerPassword,
   ownerUsername as configuredOwnerUsername,
-} from './support/realMissionFlow.js';
+} from './support/realServiceFlow.js';
 
 const missionFixture = JSON.parse(
   await readFile(
@@ -17,11 +17,11 @@ const missionFixture = JSON.parse(
 
 const ownerUsername =
   process.env.PLAYWRIGHT_OWNER_USERNAME ||
-  missionFixture.ownerUsername ||
+  missionFixture.applicantUsername ||
   configuredOwnerUsername;
 const inviteeUsername =
   process.env.PLAYWRIGHT_INVITEE_USERNAME ||
-  missionFixture.inviteeUsername ||
+  missionFixture.collaboratorUsername ||
   configuredInviteeUsername;
 const actionPauseMs = Number(process.env.PLAYWRIGHT_ACTION_PAUSE_MS || 700);
 
@@ -138,12 +138,12 @@ const createMission = async (page, title) => {
 
 const inviteUser = async (page, missionId) => {
   await page
-    .getByRole('button', { name: /Invite an adventurer|Add adventurer/ })
+    .getByRole('button', { name: /Invite a collaborator|Add collaborator/ })
     .click();
   await pauseAfterAction(page);
 
   const dialog = page.getByRole('alertdialog', {
-    name: 'Search adventurer',
+    name: 'Search collaborator',
   });
   await expect(dialog).toBeVisible();
   await fillAndPause(
@@ -198,7 +198,7 @@ const inviteUser = async (page, missionId) => {
   await pauseAfterAction(page);
 };
 
-test('invites an adventurer and accepts the invitation with a second account', async ({
+test('invites a collaborator and accepts the invitation with a second account', async ({
   page,
   browser,
 }) => {

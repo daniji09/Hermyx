@@ -352,15 +352,15 @@ const ReportSearchCard = ({ report }) => {
       case REPORT_TYPE.REPORT_ADVENTURER.ID:
         return (
           <>
-            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
-            {senderLink}.
+            Collaborator {otherUserLink} of service {missionLink} was reported
+            by {senderLink}.
           </>
         );
 
       case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
         return (
           <>
-            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
+            Applicant {otherUserLink} of service {missionLink} was reported by{' '}
             {senderLink}.
           </>
         );
@@ -368,7 +368,7 @@ const ReportSearchCard = ({ report }) => {
       case REPORT_TYPE.REVIEW_DISPUTE.ID:
         return (
           <>
-            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
+            Collaborator&lsquo;s {otherUserLink} participation in service{' '}
             {missionLink} was reported by {senderLink}.
           </>
         );
@@ -376,7 +376,7 @@ const ReportSearchCard = ({ report }) => {
       case REPORT_TYPE.REPORT_MISSION.ID:
         return (
           <>
-            Mission {missionLink} was reported by {senderLink}.
+            Service {missionLink} was reported by {senderLink}.
           </>
         );
 

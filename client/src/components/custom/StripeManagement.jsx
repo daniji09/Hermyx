@@ -192,7 +192,7 @@ export const StripeManagement = ({ user }) => {
             <p className='text-sm'>
               {user.bank_account.isConfigured
                 ? `Your earnings will be sent automatically to your ${user.bank_account.bankName} account ending in •••• ${user.bank_account.last4}.`
-                : `Set up your bank account to receive payouts for the missions you complete.`}
+                : `Set up your bank account to receive payouts for the services you complete.`}
             </p>
             <div className='mt-2 md:mt-0'>
               <AddBankAccountButton user={user}></AddBankAccountButton>
@@ -202,8 +202,8 @@ export const StripeManagement = ({ user }) => {
           <h3 className='text-lg mt-3 font-medium'>Payment cards</h3>
           <div className='flex flex-col md:flex-row md:items-center justify-between mb-1'>
             <p>
-              Add a credit or debit card to fund your missions and pay
-              adventurers.
+              Add a credit or debit card to fund your services and pay
+              collaborators.
             </p>
             <div className='mt-2 md:mt-0'>
               <Button

@@ -30,7 +30,7 @@ import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
 import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 import { ReviewCard } from './MyProfile.jsx';
-import { UserMissionsTable } from './UserMissions.jsx';
+import { UserMissionsTable } from './UserServices.jsx';
 import { NotFound } from './NotFound.jsx';
 import { useInView } from 'react-intersection-observer';
 
@@ -235,7 +235,7 @@ export const PublicProfile = () => {
           ``
         ) : !missionsVisible ? (
           <section className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
-            This user keeps their mission history private.
+            This user keeps their service history private.
           </section>
         ) : (
           <UserMissionsTable
@@ -247,14 +247,14 @@ export const PublicProfile = () => {
             fetchNextPage={fetchNextPage}
             isLoading={isMissionsLoading}
             isError={isMissionsError}
-            publishedMissionsMessage="It seems this user hasn't published any missions yet."
-            joinedMissionsMessage="It seems this user hasn't joined any missions yet."
+            publishedMissionsMessage="It seems this user hasn't published any services yet."
+            joinedMissionsMessage="It seems this user hasn't joined any services yet."
             sectionClassName={''}
             infiniteScroll={false}
           ></UserMissionsTable>
         )}
         {user.role !== USER_ROLE.ADMIN.ID && (
-          <AdventurerReviewsSection
+          <CollaboratorReviewsSection
             reviewsData={reviewsData}
             isLoading={isReviewsLoading}
             hasNextPage={hasNextReviewsPage}
@@ -278,7 +278,7 @@ const getReviewsDataFromPages = (pages = []) => {
   };
 };
 
-const AdventurerReviewsSection = ({
+const CollaboratorReviewsSection = ({
   reviewsData,
   isLoading,
   hasNextPage,
@@ -303,7 +303,7 @@ const AdventurerReviewsSection = ({
         <p className='text-muted-foreground'>Loading reviews...</p>
       ) : reviews.length === 0 ? (
         <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
-          This adventurer has no reviews yet.
+          This collaborator has no reviews yet.
         </p>
       ) : (
         <>
