@@ -78,7 +78,8 @@ export const findAllByMid = async (mid, viewerId = null) => {
       u.uid AS adventurer_id,
       u.username,
       u.avatar,
-      pending_offer.pending_reward_offer
+      pending_offer.pending_reward_offer,
+      pending_review.review_deadline
     FROM mission_participation mp
     LEFT JOIN app_user u ON mp.adventurer_id = u.uid
     LEFT JOIN review owner_review ON owner_review.id = mp.owner_review_id
@@ -94,6 +95,17 @@ export const findAllByMid = async (mid, viewerId = null) => {
       ORDER BY n.date DESC, n.nid DESC
       LIMIT 1
     ) pending_offer ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT n.date + INTERVAL '168 hours' AS review_deadline
+      FROM notification n
+      WHERE n.action = $5
+        AND n.status = $3
+        AND n.sender_id = mp.adventurer_id
+        AND n.payload->>'associated_mission_id' = mp.mid::text
+        AND $4 = mp.adventurer_id
+      ORDER BY n.date DESC, n.nid DESC
+      LIMIT 1
+    ) pending_review ON TRUE
     WHERE mp.mid = $1
     ORDER BY mp.id ASC
   `;
@@ -102,6 +114,7 @@ export const findAllByMid = async (mid, viewerId = null) => {
     NOTIFICATION_ACTION.MISSION_EDIT.ID,
     NOTIFICATION_STATUS.PENDING.ID,
     viewerId,
+    NOTIFICATION_ACTION.PARTICIPATION_REVIEW.ID,
   ]);
   return result.rows;
 };

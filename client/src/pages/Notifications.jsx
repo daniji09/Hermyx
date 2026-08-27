@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Bell, Check, ShieldAlert, X } from 'lucide-react';
+import { Bell, Check, Clock, ShieldAlert, X } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +16,10 @@ import {
   markAllNotificationsAsSeenMutationOptions,
   respondToNotificationMutationOptions,
 } from '../queries/NotificationsQueries';
-import { formatLastMessageTime } from '../utils/date';
+import {
+  formatLastMessageTime,
+  formatParticipationReviewTimeRemaining,
+} from '../utils/date';
 import { AuthContext } from '../contexts/AuthContext';
 import {
   NOTIFICATION_ACTION,
@@ -40,7 +43,16 @@ export const Notifications = () => {
   const { setLatestNotification } = useContext(AuthContext);
   const [filter, setFilter] = useState('all');
   const [disputeNotificationId, setDisputeNotificationId] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const { showAlert } = useAlert();
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const {
     data,
@@ -406,6 +418,19 @@ export const Notifications = () => {
                               </div>
                             )}
                           </div>
+
+                          {isPendingMissionReview && (
+                            <p className='flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground'>
+                              <Clock
+                                className='h-4 w-4 shrink-0'
+                                aria-hidden='true'
+                              />
+                              {formatParticipationReviewTimeRemaining(
+                                notification.date,
+                                currentTime,
+                              )}
+                            </p>
+                          )}
 
                           {isPendingAction ? (
                             <div className='flex flex-wrap gap-2'>

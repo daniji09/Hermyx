@@ -11,7 +11,10 @@ import {
 } from './../queries/ServicesQueries';
 import { searchUsersByUsernameInfiniteQueryOptions } from '../queries/UsersQueries';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { timestampToDayMonthYear } from './../utils/date';
+import {
+  formatParticipationReviewDeadlineTimeRemaining,
+  timestampToDayMonthYear,
+} from './../utils/date';
 import {
   Users,
   HandCoins,
@@ -21,6 +24,7 @@ import {
   UserPlus,
   MessageCircle,
   MessageSquareWarning,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthContext } from '../contexts/AuthContext';
@@ -105,7 +109,7 @@ import { NotFound } from './NotFound';
 import { useInView } from 'react-intersection-observer';
 
 export const Mission = () => {
-// Service id
+  // Service id
   const { id } = useParams();
   const { currentUser } = useContext(AuthContext);
 
@@ -186,6 +190,32 @@ const MissionError = ({ isError, mission }) => {
   if (isError || !mission) {
     return <NotFound />;
   }
+};
+
+const ParticipationReviewCountdown = ({ deadline, className }) => {
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  if (!deadline) return null;
+
+  return (
+    <p
+      className={cn(
+        'flex items-start gap-1.5 text-secondary-foreground',
+        className,
+      )}
+    >
+      <Clock className='mt-0.5 h-3.5 w-3.5 shrink-0' aria-hidden='true' />
+      {formatParticipationReviewDeadlineTimeRemaining(deadline, currentTime)}
+    </p>
+  );
 };
 
 const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
@@ -411,12 +441,22 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                     (!currentUser?.isAdmin &&
                       mission?.status === MISSION_STATUS.REOPENED.ID &&
                       currentParticipation) ? (
-                      <SubmitParticipationButton
-                        missionId={mission?.mid}
-                        participationStatus={currentParticipation?.status}
-                        className='w-full '
-                        size='lg'
-                      />
+                      <>
+                        <SubmitParticipationButton
+                          missionId={mission?.mid}
+                          participationStatus={currentParticipation?.status}
+                          className='w-full '
+                          size='lg'
+                        />
+                        {currentParticipation?.status ===
+                          MISSION_PARTICIPATION_STATUS.SUBMITTED.ID &&
+                          currentParticipation.review_deadline && (
+                            <ParticipationReviewCountdown
+                              deadline={currentParticipation.review_deadline}
+                              className='justify-center rounded-lg border border-border bg-secondary px-3 py-2 text-sm font-medium'
+                            />
+                          )}
+                      </>
                     ) : currentParticipation?.status ===
                       MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID ? (
                       <p className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
