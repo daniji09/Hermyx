@@ -108,7 +108,7 @@ export const Notifications = () => {
           'An unexpected error occurred.';
         const mustConfigureBankAccount =
           backendMessage ===
-          messagesShared.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED;
+          messagesShared.SERVICE.JOIN.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED;
 
         showAlert({
           title:

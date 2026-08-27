@@ -778,7 +778,12 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
       adventurerId,
       client,
     );
-    if (!adventurer.stripe_connected_id)
+    const stripeAccount = adventurer.stripe_connected_id
+      ? await paymentProvider.retrieveConnectAccount(
+          adventurer.stripe_connected_id,
+        )
+      : null;
+    if (!stripeAccount?.details_submitted || !stripeAccount?.payouts_enabled)
       throw new AppError(
         messages.SERVICE.JOIN.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED,
         403,
