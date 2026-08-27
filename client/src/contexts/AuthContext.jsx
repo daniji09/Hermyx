@@ -1,4 +1,4 @@
-import { createContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
 import { getMe } from '../services/UsersServices';
@@ -10,7 +10,7 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   // States for current user and loading state that happens when this component is mounted
-  const [currentUser, setCurrentUser] = useState();
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false); // Detects sync operation not finished, blocking automatic redirects
@@ -25,45 +25,68 @@ export const AuthProvider = ({ children }) => {
     isSyncingRef.current = value;
   };
 
-  // The state changed flag is only activated once per mount
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      // User Firebase information is added to user Hermyx information
-      if (firebaseUser) {
-        if (isSyncingRef.current) {
-          setLoading(false);
-          return;
-        }
-        let hermyxUser;
-        try {
-          const tokenResult = await firebaseUser.getIdTokenResult();
-          const userIsAdmin = !!tokenResult.claims.admin;
-          setIsAdmin(userIsAdmin);
-          hermyxUser = await getMe();
-          setCurrentUser({
-            firebaseUid: firebaseUser.uid,
-            email: firebaseUser.email,
-            id: hermyxUser.uid,
-            username: hermyxUser.username,
-            name: hermyxUser.name,
-            surnames: hermyxUser.surnames,
-            avatar: hermyxUser.avatar,
-            isAdmin: userIsAdmin,
-          });
-        } catch (e) {
-          console.log(e.message);
+  // Loads the Firebase role and Hermyx account into the shared user state.
+  const loadCurrentUser = useCallback(
+    async (firebaseUser = auth.currentUser) => {
+      if (!firebaseUser) return null;
+
+      try {
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        const userIsAdmin = !!tokenResult.claims.admin;
+        const hermyxUser = await getMe();
+
+        // Ignore the response if the authenticated user changed while loading.
+        if (auth.currentUser?.uid !== firebaseUser.uid) return null;
+
+        const nextUser = {
+          firebaseUid: firebaseUser.uid,
+          email: firebaseUser.email,
+          id: hermyxUser.uid ?? hermyxUser.id,
+          username: hermyxUser.username,
+          name: hermyxUser.name,
+          surnames: hermyxUser.surnames,
+          avatar: hermyxUser.avatar,
+          isAdmin: userIsAdmin,
+        };
+
+        setIsAdmin(userIsAdmin);
+        setCurrentUser(nextUser);
+        return nextUser;
+      } catch (error) {
+        if (auth.currentUser?.uid === firebaseUser.uid) {
+          console.error('Could not load the authenticated user:', error);
           setCurrentUser(null);
           setIsAdmin(false);
         }
-      } else {
+
+        throw error;
+      } finally {
+        if (auth.currentUser?.uid === firebaseUser.uid) {
+          setLoading(false);
+        }
+      }
+    },
+    [],
+  );
+
+  // The state changed flag is only activated once per mount
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      if (!firebaseUser) {
         setCurrentUser(null);
         setIsAdmin(false);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      // Google sign-in must finish its backend sync before /users/me is called.
+      if (isSyncingRef.current) return;
+
+      loadCurrentUser(firebaseUser).catch(() => {});
     });
 
     return unsubscribe;
-  }, []);
+  }, [loadCurrentUser]);
 
   useEffect(() => {
     const connectSocket = async () => {
@@ -238,6 +261,7 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser,
         isAdmin,
         loading,
+        loadCurrentUser,
         logout,
         isSyncing,
         setIsSyncing: updateIsSyncing,

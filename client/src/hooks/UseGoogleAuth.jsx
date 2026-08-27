@@ -7,7 +7,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export const UseGoogleAuth = () => {
-  const { logout, setIsSyncing, setCurrentUser } = useContext(AuthContext);
+  const { logout, setIsSyncing, loadCurrentUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   return useMutation({
@@ -27,15 +27,8 @@ export const UseGoogleAuth = () => {
           termsAccepted,
         );
 
-        // State is saved in React
-        const dbUser = data.user || data.checkedUser;
-        setCurrentUser({
-          firebaseUid: user.uid,
-          email: user.email,
-          id: dbUser.id || dbUser.uid,
-          username: dbUser.username,
-          avatar: dbUser.avatar,
-        });
+        // Load the complete user through the same path as regular login.
+        await loadCurrentUser(user);
 
         return data;
       } catch (error) {
