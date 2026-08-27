@@ -36,17 +36,15 @@ const PARTICIPATION_REVIEW_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
 const formatParticipationReviewDuration = (remainingMilliseconds) => {
   if (remainingMilliseconds <= 0) return 'Automatic approval pending.';
 
-  const totalHours = Math.ceil(remainingMilliseconds / (60 * 60 * 1000));
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
+  const totalMinutes = Math.ceil(remainingMilliseconds / (60 * 1000));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  const digitalTime = [hours, minutes]
+    .map((unit) => String(unit).padStart(2, '0'))
+    .join(':');
 
-  if (days === 0) {
-    return `Automatic approval in ${hours} ${hours === 1 ? 'hour' : 'hours'}.`;
-  }
-
-  return `Automatic approval in ${days} ${days === 1 ? 'day' : 'days'}${
-    hours > 0 ? ` and ${hours} ${hours === 1 ? 'hour' : 'hours'}` : ''
-  }.`;
+  return `Automatic approval in ${days > 0 ? `${days}d ` : ''}${digitalTime}`;
 };
 
 export const formatParticipationReviewTimeRemaining = (
