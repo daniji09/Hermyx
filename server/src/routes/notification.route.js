@@ -10,7 +10,7 @@ import {
 import {
   respondToNotificationBodySchema,
   respondToNotificationParamSchema,
-  paginationQuerySchema,
+  getNotificationsQuerySchema,
 } from '@hermyx/shared';
 import { pagination } from '../middlewares/pagination.middleware.js';
 import { verifyRegularUser } from '../middlewares/auth.middleware.js';
@@ -21,7 +21,7 @@ router.use(verifyRegularUser);
 // List current user notifications
 router.get(
   '/me',
-  validateQuerySchema(paginationQuerySchema),
+  validateQuerySchema(getNotificationsQuerySchema),
   pagination(),
   notificationController.getMyNotifications,
 );

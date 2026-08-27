@@ -50,11 +50,15 @@ export const Notifications = () => {
     isLoading,
     isError,
   } = useInfiniteQuery(
-    getMyNotificationsInfiniteQueryOptions(PAGINATION_LIMIT.NOTIFICATIONS, {
-      onSuccess: () => {
-        setLatestNotification(null);
+    getMyNotificationsInfiniteQueryOptions(
+      PAGINATION_LIMIT.NOTIFICATIONS,
+      filter,
+      {
+        onSuccess: () => {
+          setLatestNotification(null);
+        },
       },
-    }),
+    ),
   );
 
   // Observer for infinite scroll
@@ -133,13 +137,6 @@ export const Notifications = () => {
       notifications.filter((notification) => !notification.seen).length
     );
   }, [data, notifications]);
-  const filteredNotifications = useMemo(() => {
-    if (filter === 'all') return notifications;
-    return notifications.filter(
-      (notification) => notification.status === filter.toUpperCase(),
-    );
-  }, [filter, notifications]);
-
   useEffect(() => {
     const notificationId = searchParams.get('notification');
 
@@ -225,7 +222,7 @@ export const Notifications = () => {
           </div>
         </section>
 
-        {notifications.length === 0 ? (
+        {filter === 'all' && notifications.length === 0 ? (
           <Card>
             <CardContent className='p-8 text-center text-muted-foreground'>
               No notifications yet.
@@ -260,7 +257,7 @@ export const Notifications = () => {
               </TabsList>
             </Tabs>
 
-            {filteredNotifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <Card>
                 <CardContent className='p-8 text-center text-muted-foreground'>
                   No notifications for this filter.
@@ -268,7 +265,7 @@ export const Notifications = () => {
               </Card>
             ) : (
               <ul className='space-y-4' aria-label='Notifications list'>
-                {filteredNotifications.map((notification) => {
+                {notifications.map((notification) => {
                   const isSeen = notification.seen;
                   const isMissionNotification =
                     notification.type === NOTIFICATION_TYPE.MISSION.ID;

@@ -153,7 +153,7 @@ export const deleteAllUserNotifications = async (uid, client) => {
 
 /// Endpoint complex functions
 // Gets current user's notifications
-export const getMyNotifications = async (uid, pagination) => {
+export const getMyNotifications = async (uid, pagination, status) => {
   // Parameter checks
   checkRequired(uid, 'User id');
 
@@ -163,7 +163,7 @@ export const getMyNotifications = async (uid, pagination) => {
     rows: notifications,
     totalCount,
     totalUnseen,
-  } = await notificationModel.findByRecipientId(uid, pageData);
+  } = await notificationModel.findByRecipientId(uid, pageData, status);
 
   return {
     notifications,

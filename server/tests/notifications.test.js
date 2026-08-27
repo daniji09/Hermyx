@@ -76,7 +76,42 @@ describe('Notification API', () => {
     expect(notificationService.getMyNotifications).toHaveBeenCalledWith(
       currentUser.uid,
       { page: 1, limit: 10, offset: 0 },
+      'all',
     );
+  });
+
+  it('gets notifications filtered by status', async () => {
+    notificationService.getMyNotifications.mockResolvedValue({
+      notifications: [],
+      totalUnseen: 0,
+      pagination: {
+        currentPage: 1,
+        totalPages: 0,
+        totalItems: 0,
+        hasMore: false,
+      },
+    });
+
+    const response = await request(app)
+      .get('/api/notifications/me')
+      .query({ page: 1, limit: 10, status: 'accepted' });
+
+    expect(response.status).toBe(200);
+    expect(notificationService.getMyNotifications).toHaveBeenCalledWith(
+      currentUser.uid,
+      { page: 1, limit: 10, offset: 0 },
+      'accepted',
+    );
+  });
+
+  it('rejects an unsupported notification status filter', async () => {
+    const response = await request(app)
+      .get('/api/notifications/me')
+      .query({ page: 1, limit: 10, status: 'pending' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.errors.status).toBeDefined();
+    expect(notificationService.getMyNotifications).not.toHaveBeenCalled();
   });
 
   it('rejects incomplete notification pagination', async () => {
