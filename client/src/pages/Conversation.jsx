@@ -427,13 +427,13 @@ export const ConversationThread = ({
 
     if (!photo) return;
 
-    if (!consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(photo.type)) {
+    if (!consts.SERVICE.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(photo.type)) {
       setSelectedPhoto(null);
       setErrorMessage(messagesShared.GENERAL.IMAGE_INVALID_TYPE);
       return;
     }
 
-    if (photo.size > consts.MISSION.PHOTOS.MAX_FILE_SIZE) {
+    if (photo.size > consts.SERVICE.PHOTOS.MAX_FILE_SIZE) {
       setSelectedPhoto(null);
       setErrorMessage(messagesShared.GENERAL.IMAGE_TOO_BIG);
       return;
@@ -794,7 +794,7 @@ export const ConversationThread = ({
                       ref={photoInputRef}
                       type='file'
                       tabIndex={-1}
-                      accept={consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
+                      accept={consts.SERVICE.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
                         ',',
                       )}
                       className='sr-only'

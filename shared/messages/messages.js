@@ -118,7 +118,7 @@ export const messages = {
       SERVICE_PHOTO_TOO_BIG: `Each photo must weigh less than 5MB.`,
       SERVICE_PHOTO_INVALID_TYPE: `Photo format is invalid; please use .jpg, .png or .webp.`,
       SERVICE_WITH_SAME_TITLE: `You already have a service titled like this.`,
-      SERVICE_VACANCIES_SURPASSED: `You are adding more than ${consts.MISSION.VACANCIES.MAX} vacancies.`,
+      SERVICE_VACANCIES_SURPASSED: `You are adding more than ${consts.SERVICE.VACANCIES.MAX} vacancies.`,
     },
     EDIT: {
       CANNOT_DELETE_EXISTING_VACANCIES: `You can't delete vacancies when the service is not opened anymore.`,

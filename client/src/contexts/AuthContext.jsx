@@ -133,6 +133,23 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMission'] });
         });
 
+        const handleRewardOfferResponse = (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+        };
+
+        socketRef.current.on(
+          'mission:participation-negotiation-accepted',
+          handleRewardOfferResponse,
+        );
+        socketRef.current.on(
+          'mission:participation-negotiation-rejected',
+          handleRewardOfferResponse,
+        );
+
         socketRef.current.on('conversation:message-received', (payload) => {
           if (payload.conversationType === 'dispute') {
             queryClient.invalidateQueries({

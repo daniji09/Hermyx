@@ -425,7 +425,7 @@ const ReportUserButton = ({ user }) => {
                 name='message'
                 label='Message (required):'
                 type='text'
-                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                maxLength={consts.SERVICE.REPORT_MESSAGE.MAX}
                 defaultValue={state.data?.message || ''}
                 error={
                   !clearedFields.message && state.errors?.message

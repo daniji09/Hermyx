@@ -1,6 +1,8 @@
 import {
   MISSION_PARTICIPATION_STATUS,
   MISSION_PARTICIPATION_PAYMENT_STATUS,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_STATUS,
 } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 
@@ -57,7 +59,7 @@ export const findByMidAndAdventurerId = async (mid, adventurerId) => {
 };
 
 // Get all participants from service
-export const findAllByMid = async (mid) => {
+export const findAllByMid = async (mid, viewerId = null) => {
   const query = `
     SELECT 
       mp.id AS vacancy_id,
@@ -75,15 +77,32 @@ export const findAllByMid = async (mid) => {
       adventurer_review.created_at AS adventurer_review_created_at,
       u.uid AS adventurer_id,
       u.username,
-      u.avatar
+      u.avatar,
+      pending_offer.pending_reward_offer
     FROM mission_participation mp
     LEFT JOIN app_user u ON mp.adventurer_id = u.uid
     LEFT JOIN review owner_review ON owner_review.id = mp.owner_review_id
     LEFT JOIN review adventurer_review ON adventurer_review.id = mp.adventurer_review_id
+    LEFT JOIN LATERAL (
+      SELECT (n.payload->>'new_offer')::numeric AS pending_reward_offer
+      FROM notification n
+      WHERE n.action = $2
+        AND n.status = $3
+        AND n.sender_id = $4
+        AND n.recipient_id = mp.adventurer_id
+        AND n.payload->>'associated_vacancy_id' = mp.id::text
+      ORDER BY n.date DESC, n.nid DESC
+      LIMIT 1
+    ) pending_offer ON TRUE
     WHERE mp.mid = $1
     ORDER BY mp.id ASC
   `;
-  const result = await pool.query(query, [mid]);
+  const result = await pool.query(query, [
+    mid,
+    NOTIFICATION_ACTION.MISSION_EDIT.ID,
+    NOTIFICATION_STATUS.PENDING.ID,
+    viewerId,
+  ]);
   return result.rows;
 };
 

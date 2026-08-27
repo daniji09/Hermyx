@@ -35,8 +35,8 @@ const titleBaseSchema = z
   .string()
   .trim()
   .max(
-    consts.MISSION.TITLE.MAX_LENGTH,
-    messages.GENERAL.FIELD_TOO_LONG('Title', consts.MISSION.TITLE.MAX_LENGTH),
+    consts.SERVICE.TITLE.MAX_LENGTH,
+    messages.GENERAL.FIELD_TOO_LONG('Title', consts.SERVICE.TITLE.MAX_LENGTH),
   )
   .min(1, messages.GENERAL.FIELD_REQUIRED('Title'));
 
@@ -46,10 +46,10 @@ const descriptionBaseSchema = z
   .trim()
   .min(1, messages.GENERAL.FIELD_REQUIRED('Description'))
   .max(
-    consts.MISSION.DESCRIPTION.MAX_LENGTH,
+    consts.SERVICE.DESCRIPTION.MAX_LENGTH,
     messages.GENERAL.FIELD_TOO_LONG(
       'Description',
-      consts.MISSION.DESCRIPTION.MAX_LENGTH,
+      consts.SERVICE.DESCRIPTION.MAX_LENGTH,
     ),
   );
 
@@ -61,19 +61,19 @@ const photosBaseSchema = z
         size: z
           .number()
           .max(
-            consts.MISSION.PHOTOS.MAX_FILE_SIZE,
+            consts.SERVICE.PHOTOS.MAX_FILE_SIZE,
             messages.SERVICE.PUBLISH.SERVICE_PHOTO_TOO_BIG,
           ),
         mimetype: z.refine(
-          (type) => consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
+          (type) => consts.SERVICE.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(type),
           messages.SERVICE.PUBLISH.SERVICE_PHOTO_INVALID_TYPE,
         ),
       })
       .passthrough(), // Passthrough lets the validation check the fields, but leaves the rest on the object, even if those are not validated,
   )
   .max(
-    consts.MISSION.PHOTOS.MAX,
-    messages.GENERAL.FIELD_TOO_BIG('Photos', consts.MISSION.PHOTOS.MAX),
+    consts.SERVICE.PHOTOS.MAX,
+    messages.GENERAL.FIELD_TOO_BIG('Photos', consts.SERVICE.PHOTOS.MAX),
   )
   .optional()
   .default([]);
@@ -87,21 +87,21 @@ const vacancySchema = z.object({
   reward: z.coerce
     .number(messages.GENERAL.FIELD_NUMBER('Reward'))
     .min(
-      consts.MISSION.REWARD.MIN,
-      messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+      consts.SERVICE.REWARD.MIN,
+      messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.SERVICE.REWARD.MIN),
     )
     .max(
-      consts.MISSION.REWARD.MAX,
-      messages.GENERAL.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+      consts.SERVICE.REWARD.MAX,
+      messages.GENERAL.FIELD_TOO_BIG('Reward', consts.SERVICE.REWARD.MAX),
     ),
   title: z
     .string()
     .trim()
     .max(
-      consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      consts.SERVICE.VACANCIES.TITLE_MAX_LENGTH,
       messages.GENERAL.FIELD_TOO_LONG(
         'Title',
-        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+        consts.SERVICE.VACANCIES.TITLE_MAX_LENGTH,
       ),
     )
     .nullable()
@@ -111,10 +111,10 @@ const vacancySchema = z.object({
     .string()
     .trim()
     .max(
-      consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      consts.SERVICE.VACANCIES.DESCRIPTION_MAX_LENGTH,
       messages.GENERAL.FIELD_TOO_LONG(
         'Description',
-        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+        consts.SERVICE.VACANCIES.DESCRIPTION_MAX_LENGTH,
       ),
     )
     .nullable()
@@ -124,10 +124,10 @@ const vacancySchema = z.object({
     .string()
     .trim()
     .max(
-      consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
+      consts.SERVICE.VACANCIES.STATUS_MAX_LENGTH,
       messages.GENERAL.FIELD_TOO_LONG(
         'Status',
-        consts.MISSION.VACANCIES.STATUS_MAX_LENGTH,
+        consts.SERVICE.VACANCIES.STATUS_MAX_LENGTH,
       ),
     )
     .nullable()
@@ -165,12 +165,12 @@ const vacancyNumBaseSchema = z.coerce
   .number(messages.GENERAL.FIELD_NUMBER('Vacancies'))
   .int(messages.GENERAL.FIELD_INTEGER('Vacancies'))
   .min(
-    consts.MISSION.VACANCIES.MIN,
-    messages.GENERAL.FIELD_TOO_SMALL('Vacancies', consts.MISSION.VACANCIES.MIN),
+    consts.SERVICE.VACANCIES.MIN,
+    messages.GENERAL.FIELD_TOO_SMALL('Vacancies', consts.SERVICE.VACANCIES.MIN),
   )
   .max(
-    consts.MISSION.VACANCIES.MAX,
-    messages.GENERAL.FIELD_TOO_BIG('Vacancies', consts.MISSION.VACANCIES.MAX),
+    consts.SERVICE.VACANCIES.MAX,
+    messages.GENERAL.FIELD_TOO_BIG('Vacancies', consts.SERVICE.VACANCIES.MAX),
   );
 
 // Latitude
@@ -395,7 +395,7 @@ export const searchMissionByTitleSchema = z.object({
     .trim()
     .min(1, messages.GENERAL.FIELD_REQUIRED('Title'))
     .max(
-      consts.MISSION.TITLE.MAX_LENGTH,
+      consts.SERVICE.TITLE.MAX_LENGTH,
       messages.GENERAL.FIELD_TOO_LONG('Input'),
     ),
 });
@@ -407,17 +407,17 @@ export const addVacanciesSchema = z
       .number(messages.GENERAL.FIELD_NUMBER('Quantity'))
       .int(messages.GENERAL.FIELD_INTEGER('Quantity'))
       .min(
-        consts.MISSION.VACANCIES.MIN,
+        consts.SERVICE.VACANCIES.MIN,
         messages.GENERAL.FIELD_TOO_SMALL(
           'Quantity',
-          consts.MISSION.VACANCIES.MIN,
+          consts.SERVICE.VACANCIES.MIN,
         ),
       )
       .max(
-        consts.MISSION.VACANCIES.MAX,
+        consts.SERVICE.VACANCIES.MAX,
         messages.GENERAL.FIELD_TOO_BIG(
           'Quantity',
-          consts.MISSION.VACANCIES.MAX,
+          consts.SERVICE.VACANCIES.MAX,
         ),
       ),
     vacanciesTotalQuantity: z.coerce
@@ -426,21 +426,21 @@ export const addVacanciesSchema = z
     vacanciesReward: z.coerce
       .number(messages.GENERAL.FIELD_NUMBER('Reward'))
       .min(
-        consts.MISSION.REWARD.MIN,
-        messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+        consts.SERVICE.REWARD.MIN,
+        messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.SERVICE.REWARD.MIN),
       )
       .max(
-        consts.MISSION.REWARD.MAX,
-        messages.GENERAL.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+        consts.SERVICE.REWARD.MAX,
+        messages.GENERAL.FIELD_TOO_BIG('Reward', consts.SERVICE.REWARD.MAX),
       ),
     vacanciesTitle: z
       .string()
       .trim()
       .max(
-        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+        consts.SERVICE.VACANCIES.TITLE_MAX_LENGTH,
         messages.GENERAL.FIELD_TOO_LONG(
           'Title',
-          consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+          consts.SERVICE.VACANCIES.TITLE_MAX_LENGTH,
         ),
       )
       .optional(),
@@ -448,10 +448,10 @@ export const addVacanciesSchema = z
       .string()
       .trim()
       .max(
-        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+        consts.SERVICE.VACANCIES.DESCRIPTION_MAX_LENGTH,
         messages.GENERAL.FIELD_TOO_LONG(
           'Description',
-          consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+          consts.SERVICE.VACANCIES.DESCRIPTION_MAX_LENGTH,
         ),
       )
       .optional(),
@@ -466,21 +466,21 @@ export const editVacancySchema = z.object({
   vacanciesReward: z.coerce
     .number(messages.GENERAL.FIELD_NUMBER('Reward'))
     .min(
-      consts.MISSION.REWARD.MIN,
-      messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.MISSION.REWARD.MIN),
+      consts.SERVICE.REWARD.MIN,
+      messages.GENERAL.FIELD_TOO_SMALL('Reward', consts.SERVICE.REWARD.MIN),
     )
     .max(
-      consts.MISSION.REWARD.MAX,
-      messages.GENERAL.FIELD_TOO_BIG('Reward', consts.MISSION.REWARD.MAX),
+      consts.SERVICE.REWARD.MAX,
+      messages.GENERAL.FIELD_TOO_BIG('Reward', consts.SERVICE.REWARD.MAX),
     ),
   vacanciesTitle: z
     .string()
     .trim()
     .max(
-      consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+      consts.SERVICE.VACANCIES.TITLE_MAX_LENGTH,
       messages.GENERAL.FIELD_TOO_LONG(
         'Title',
-        consts.MISSION.VACANCIES.TITLE_MAX_LENGTH,
+        consts.SERVICE.VACANCIES.TITLE_MAX_LENGTH,
       ),
     )
     .optional()
@@ -489,10 +489,10 @@ export const editVacancySchema = z.object({
     .string()
     .trim()
     .max(
-      consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+      consts.SERVICE.VACANCIES.DESCRIPTION_MAX_LENGTH,
       messages.GENERAL.FIELD_TOO_LONG(
         'Description',
-        consts.MISSION.VACANCIES.DESCRIPTION_MAX_LENGTH,
+        consts.SERVICE.VACANCIES.DESCRIPTION_MAX_LENGTH,
       ),
     )
     .optional()

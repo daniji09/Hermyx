@@ -140,7 +140,7 @@ export const consts = {
   },
 
   // Service consts
-  MISSION: {
+  SERVICE: {
     TITLE: {
       MAX_LENGTH: 100,
     },
@@ -152,7 +152,6 @@ export const consts = {
       ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
       MAX: 5,
     },
-
     VACANCIES: {
       MIN: 1,
       STEP: 1,

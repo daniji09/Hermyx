@@ -592,6 +592,11 @@ const VacancyCard = ({
     isAssignedToUser && MISSION_PARTICIPATION_STATUS[vacancy.status].CAN_REVIEW;
   const hasOwnerReview = !!vacancy.owner_review_id;
   const hasAdventurerReview = !!vacancy.adventurer_review_id;
+  const hasPendingRewardOffer =
+    vacancy.pending_reward_offer !== null &&
+    vacancy.pending_reward_offer !== undefined;
+  const rewardOfferIncreases =
+    Number(vacancy.pending_reward_offer) > Number(vacancy.reward);
 
   const canReportAdventurer =
     isCreator &&
@@ -744,6 +749,19 @@ const VacancyCard = ({
           </Button>
         )}
       </div>
+      {isCreator && hasPendingRewardOffer && (
+        <p
+          className={cn(
+            'mt-auto border-t pt-3 text-center text-xs font-semibold',
+            rewardOfferIncreases
+              ? 'text-emerald-600 dark:text-emerald-400'
+              : 'text-red-600 dark:text-red-400',
+          )}
+          title={`Reward offer pending response from @${vacancy.username}`}
+        >
+          Pending offer: {vacancy.reward}€ → {vacancy.pending_reward_offer}€
+        </p>
+      )}
       <ReviewAdventurerDialog
         mission={mission}
         participant={vacancy}
@@ -2258,7 +2276,7 @@ const ReportMissionButton = ({ mission, className, variant, size }) => {
                 name='message'
                 label='Message (required):'
                 type='text'
-                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                maxLength={consts.SERVICE.REPORT_MESSAGE.MAX}
                 defaultValue={state.data?.message || ''}
                 error={
                   !clearedFields.message && state.errors?.message

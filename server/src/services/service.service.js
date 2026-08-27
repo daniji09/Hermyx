@@ -482,7 +482,7 @@ export const getMissionByMid = async (mid, uid, isAdmin = false) => {
   const [mission, participants, waitingForPaymentVacancies, photos] =
     await Promise.all([
       missionModel.findByMidExcludingUid(mid, uid),
-      missionParticipationModel.findAllByMid(mid),
+      missionParticipationModel.findAllByMid(mid, uid),
       missionParticipationModel.findAllWaitingForPaymentByMid(mid),
       missionPhotoModel.findAllByMid(mid),
     ]);
@@ -551,7 +551,7 @@ export const publishMission = async (
   checkRequired(vacanciesData, 'Mission vacancies data');
 
   // Checks if photo number is correct
-  if (photos.length > consts.MISSION.PHOTOS.MAX) throw buildTooManyFilesError();
+  if (photos.length > consts.SERVICE.PHOTOS.MAX) throw buildTooManyFilesError();
 
   // Checks if user has a service already with the same title
   await checkUserMissionWithSameTitle(uid, title);
@@ -2201,7 +2201,7 @@ const editMissionValidations = async (
   existingPhotos,
 ) => {
   // Checks if photo number is correct
-  if (newPhotos.length + existingPhotos.length > consts.MISSION.PHOTOS.MAX)
+  if (newPhotos.length + existingPhotos.length > consts.SERVICE.PHOTOS.MAX)
     throw buildTooManyFilesError();
 
   // Gets original service info
