@@ -1613,7 +1613,8 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
         },
         onError: (error) => {
           setLocalError(
-            error?.response?.data?.error || 'Could not send invitation.',
+            error?.response?.data?.errors?.general?.[0] ||
+              'Could not send invitation.',
           );
         },
       }),

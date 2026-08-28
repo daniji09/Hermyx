@@ -323,7 +323,8 @@ const AddBankAccountButton = ({ user }) => {
         showAlert({
           title: messages.MY_PROFILE.DASHBOARD_ACCOUNT_ALERT.ERROR_TITLE,
           description:
-            error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+            error?.response?.data?.errors?.general?.[0] ||
+            messagesShared.GENERAL.UNEXPECTED_ERROR,
         });
       },
     });
@@ -340,7 +341,8 @@ const AddBankAccountButton = ({ user }) => {
       showAlert({
         title: messages.MY_PROFILE.ADD_BANK_ACCOUNT_ALERT.ERROR_TITLE,
         description:
-          error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
