@@ -487,7 +487,9 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
           <span className='text-primary truncate text-sm'>
             {MISSION_PARTICIPATION_STATUS[vacancy.status].LABEL}
           </span>
-          <span className='text-primary text-sm'>{vacancy.reward}€</span>
+          <span className='text-primary text-sm'>
+            {Number(vacancy.reward).toFixed(2)}€
+          </span>
         </div>
         <p className='text-xs wrap-break-words wrap-anywhere line-clamp-2 leading-relaxed grow text-left'>
           {vacancy.description || 'No additional description.'}
@@ -650,6 +652,7 @@ const CreateVacanciesDialog = ({
                 type='number'
                 min='10'
                 max='10000'
+                step={consts.SERVICE.REWARD.STEP}
                 error={
                   !clearedFields.vacanciesReward &&
                   state.errors?.vacanciesReward
@@ -812,6 +815,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
                 type='number'
                 min='10'
                 max='10000'
+                step={consts.SERVICE.REWARD.STEP}
                 error={
                   !clearedFields.vacanciesReward &&
                   state.errors?.vacanciesReward

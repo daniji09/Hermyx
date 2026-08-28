@@ -720,7 +720,9 @@ const VacancyCard = ({
           <span className='text-primary truncate text-sm'>
             {MISSION_PARTICIPATION_STATUS[vacancy.status].LABEL}
           </span>
-          <span className='text-primary text-sm'>{vacancy.reward}€</span>
+          <span className='text-primary text-sm'>
+            {Number(vacancy.reward).toFixed(2)}€
+          </span>
         </div>
         <p className='text-xs wrap-break-words wrap-anywhere line-clamp-2 leading-relaxed grow text-left'>
           {vacancy.description || 'No additional description.'}
@@ -799,7 +801,8 @@ const VacancyCard = ({
           )}
           title={`Reward offer pending response from @${vacancy.username}`}
         >
-          Pending offer: {vacancy.reward}€ → {vacancy.pending_reward_offer}€
+          Pending offer: {Number(vacancy.reward).toFixed(2)}€ →{' '}
+          {Number(vacancy.pending_reward_offer).toFixed(2)}€
         </p>
       )}
       <ReviewAdventurerDialog
@@ -890,7 +893,7 @@ const ViewVacancyDialog = ({
               <h4 className='font-semibold mb-1'>Monetary reward</h4>
               <div className='bg-muted/20 p-4 rounded-xl border'>
                 <p className='text-2xl font-bold text-primary'>
-                  {vacancy.reward}€
+                  {Number(vacancy.reward).toFixed(2)}€
                 </p>
               </div>
             </div>
@@ -1790,7 +1793,7 @@ const SearchAdventurerModal = ({ missionId, vacancies, isOpen, onClose }) => {
                 {vacancies.map((vacancy) => (
                   <option key={vacancy.vacancy_id} value={vacancy.vacancy_id}>
                     {vacancy.vacancy_title || 'Untitled vacancy'} -{' '}
-                    {vacancy.reward} EUR
+                    {Number(vacancy.reward).toFixed(2)}€
                   </option>
                 ))}
               </select>

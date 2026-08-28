@@ -301,7 +301,7 @@ const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
       <div className='flex justify-between items-center font-medium mb-2 -mt-4'>
         <span className='truncate w-2/3 italic'>Unassigned</span>
         <span className='w-1/3 text-right text-primary text-sm'>
-          {vacancy.reward}€
+          {Number(vacancy.reward).toFixed(2)}€
         </span>
       </div>
 
@@ -462,6 +462,7 @@ const CreateVacanciesDialog = ({
                 type='number'
                 min='10'
                 max='10000'
+                step={consts.SERVICE.REWARD.STEP}
                 error={
                   !clearedFields.vacanciesReward &&
                   state.errors?.vacanciesReward
@@ -624,6 +625,7 @@ const EditVacancyDialog = ({ vacancy, isOpen, onClose, onConfirm }) => {
                 type='number'
                 min='10'
                 max='10000'
+                step={consts.SERVICE.REWARD.STEP}
                 error={
                   !clearedFields.vacanciesReward &&
                   state.errors?.vacanciesReward

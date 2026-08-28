@@ -160,7 +160,7 @@ export const consts = {
       DESCRIPTION_MAX_LENGTH: 500,
       STATUS_MAX_LENGTH: 20,
     },
-    REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
+    REWARD: { MIN: 10, STEP: 0.01, MAX: 10000 },
     REPORT_MESSAGE: { MAX: 1000 },
   },
 

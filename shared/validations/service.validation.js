@@ -93,6 +93,10 @@ const vacancySchema = z.object({
     .max(
       consts.SERVICE.REWARD.MAX,
       messages.GENERAL.FIELD_TOO_BIG('Reward', consts.SERVICE.REWARD.MAX),
+    )
+    .multipleOf(
+      consts.SERVICE.REWARD.STEP,
+      'Reward can have at most two decimal places.',
     ),
   title: z
     .string()
@@ -432,6 +436,10 @@ export const addVacanciesSchema = z
       .max(
         consts.SERVICE.REWARD.MAX,
         messages.GENERAL.FIELD_TOO_BIG('Reward', consts.SERVICE.REWARD.MAX),
+      )
+      .multipleOf(
+        consts.SERVICE.REWARD.STEP,
+        'Reward can have at most two decimal places.',
       ),
     vacanciesTitle: z
       .string()
@@ -472,6 +480,10 @@ export const editVacancySchema = z.object({
     .max(
       consts.SERVICE.REWARD.MAX,
       messages.GENERAL.FIELD_TOO_BIG('Reward', consts.SERVICE.REWARD.MAX),
+    )
+    .multipleOf(
+      consts.SERVICE.REWARD.STEP,
+      'Reward can have at most two decimal places.',
     ),
   vacanciesTitle: z
     .string()
