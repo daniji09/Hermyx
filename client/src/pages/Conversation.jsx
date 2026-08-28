@@ -863,6 +863,7 @@ export const ConversationThread = ({
                       onKeyDown={handleMessageKeyDown}
                       placeholder='Write a message'
                       maxLength={consts.CONVERSATION.MESSAGES.TEXT_LIMIT}
+                      disabled={isPending}
                       className='min-h-14 max-h-32 px-3 py-2.5'
                     />
                     <InputGroupAddon align='block-end' className='pt-1'>
