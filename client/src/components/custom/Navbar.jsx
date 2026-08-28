@@ -73,9 +73,16 @@ export function Navbar() {
           <div className='flex shrink-0 items-center gap-4'>
             <Link
               to='/'
-              className='font-extrabold text-2xl tracking-tight text-foreground hover:opacity-80 transition-opacity'
+              className='flex items-center gap-2 text-foreground hover:opacity-80 transition-opacity'
             >
-              Hermyx
+              <img
+                src='/images/logo.svg'
+                alt='Hermyx'
+                className='h-9 w-auto max-w-36'
+              />
+              <span className='font-extrabold text-2xl tracking-tight'>
+                Hermyx
+              </span>
             </Link>
           </div>
 
