@@ -33,7 +33,6 @@ import { truncateText } from '../../../server/src/utils/string.util';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
 import { getInitials } from '../utils/avatar';
-import { NotFound } from './NotFound';
 import { useInView } from 'react-intersection-observer';
 
 export const Notifications = () => {
@@ -205,7 +204,16 @@ export const Notifications = () => {
   }
 
   if (isError) {
-    return <NotFound></NotFound>;
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load notifications.
+        </div>
+      </main>
+    );
   }
 
   return (

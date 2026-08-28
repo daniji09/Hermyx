@@ -58,6 +58,7 @@ export const Payment = () => {
     data: missionPaymentInfo,
     isLoading,
     isError,
+    error,
   } = useQuery(
     getMissionPaymentInfoByIdQueryOptions(id, {
       enabled: enabledOption,
@@ -68,8 +69,8 @@ export const Payment = () => {
   // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: cardsInfo,
-    isLoadingCards,
-    isErrorCards,
+    isLoading: isLoadingCards,
+    isError: isErrorCards,
   } = useQuery(
     getSavedCardsQueryOptions({
       enabled: enabledOption,
@@ -87,9 +88,24 @@ export const Payment = () => {
     );
   }
 
-  if (isError || isErrorCards || !missionPaymentInfo) {
+  if (isError && error?.response?.status === 404) {
     return <NotFound></NotFound>;
   }
+
+  if (isError || isErrorCards) {
+    return (
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load service payment.
+        </div>
+      </main>
+    );
+  }
+
+  if (!missionPaymentInfo) return <NotFound></NotFound>;
 
   if (missionPaymentInfo.missionPayment.length === 0) {
     return (
@@ -197,7 +213,6 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
           errors: { general: [sharedMessages.GENERAL.UNEXPECTED_ERROR] },
         };
       } catch (e) {
-        console.log(e.response.data.errors.general[0]);
         return {
           success: false,
           errors: {

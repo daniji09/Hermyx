@@ -144,11 +144,18 @@ export const Mission = () => {
       isLoading={isLoading}
       isError={isError}
       error={errorMessage}
+      errorStatus={error?.response?.status}
     ></MissionPageContainer>
   );
 };
 
-const MissionPageContainer = ({ mission, currentUser, isLoading, isError }) => {
+const MissionPageContainer = ({
+  mission,
+  currentUser,
+  isLoading,
+  isError,
+  errorStatus,
+}) => {
   const isCreator =
     !currentUser?.isAdmin && currentUser?.id === mission?.owner_id;
   const isFull = mission?.total_vacancies === mission?.occupied_vacancies;
@@ -159,10 +166,14 @@ const MissionPageContainer = ({ mission, currentUser, isLoading, isError }) => {
       </MissionLoading>
 
       {!isLoading && (
-        <MissionError isError={isError} mission={mission}></MissionError>
+        <MissionError
+          isError={isError}
+          mission={mission}
+          errorStatus={errorStatus}
+        ></MissionError>
       )}
 
-      {!isLoading && !isError && (
+      {!isLoading && mission && (
         <MissionContent
           mission={mission}
           isCreator={isCreator}
@@ -186,10 +197,19 @@ const MissionLoading = ({ isLoading, children }) => {
   );
 };
 
-const MissionError = ({ isError, mission }) => {
-  if (isError || !mission) {
-    return <NotFound />;
+const MissionError = ({ isError, mission, errorStatus }) => {
+  if (isError && !mission && errorStatus !== 404) {
+    return (
+      <div
+        role='alert'
+        className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+      >
+        Could not load service.
+      </div>
+    );
   }
+
+  if (!mission) return <NotFound />;
 };
 
 const ParticipationReviewCountdown = ({ deadline, className }) => {
@@ -853,8 +873,8 @@ const ViewVacancyDialog = ({
       showAlert({
         title: messages.SERVICE.JOIN_SERVICE_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -1095,8 +1115,8 @@ const UnjoinMissionButton = ({
       showAlert({
         title: messages.SERVICE.UNJOIN_SERVICE_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -1877,7 +1897,9 @@ const CloseMissionButton = ({ mission, className, variant, size }) => {
     onError: (error) => {
       showAlert({
         title: messages.SERVICE.CLOSE_SERVICE_ALERT.ERROR_TITLE,
-        description: error?.response.data.errors?.general,
+        description:
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -1955,8 +1977,8 @@ const SubmitParticipationButton = ({
       showAlert({
         title: messages.SERVICE.SUBMIT_PARTICIPATION_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -2096,8 +2118,8 @@ const CancelMissionButton = ({ mission, className, variant, size }) => {
       showAlert({
         title: messages.SERVICE.CANCEL_SERVICE_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -2145,8 +2167,8 @@ const ReopenMissionButton = ({ mission, className, variant, size }) => {
       showAlert({
         title: messages.SERVICE.REOPEN_SERVICE_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -2201,8 +2223,8 @@ const FinishMissionButton = ({ mission, className, variant, size }) => {
       showAlert({
         title: messages.SERVICE.FINISH_SERVICE_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });

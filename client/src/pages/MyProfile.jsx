@@ -93,7 +93,7 @@ const initialForm = {
 };
 
 export const MyProfile = () => {
-  const { data, isLoading, isError } = useQuery(
+  const { data, isLoading, isError, error } = useQuery(
     getMyProfileQueryOptions({
       retry: (failureCount, error) => {
         if (error.response?.status === 401) return false;
@@ -143,7 +143,22 @@ export const MyProfile = () => {
     );
   }
 
-  if (isError || !data?.user) {
+  if (isError && !data?.user) {
+    if (error.response?.status === 404) return <NotFound></NotFound>;
+
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <Alert variant='destructive'>
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {messagesShared.GENERAL.UNEXPECTED_ERROR}
+          </AlertDescription>
+        </Alert>
+      </main>
+    );
+  }
+
+  if (!data?.user) {
     return <NotFound></NotFound>;
   }
 
@@ -519,7 +534,11 @@ const ProfileInformation = ({ data }) => {
         queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
       },
       onError: (error) => {
-        setErrors(error.response?.data?.errors || {});
+        setErrors(
+          error.response?.data?.errors || {
+            general: [messagesShared.GENERAL.UNEXPECTED_ERROR],
+          },
+        );
         setSuccessMessage('');
       },
     }),
@@ -830,7 +849,8 @@ const AddEmailAuthenticationButton = ({ hasPasswordProvider }) => {
             showAlert({
               title: messages.MY_PROFILE.ADD_EMAIL_AUTHENTICATION_ALERT.TITLE,
               description:
-                error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+                error?.errors?.general?.[0] ||
+                messagesShared.GENERAL.UNEXPECTED_ERROR,
             });
           }
         },
@@ -1317,7 +1337,8 @@ const LinkGoogleButton = ({
       showAlert({
         title: messages.MY_PROFILE.UNLINK_GOOGLE_ALERT.ERROR_TITLE,
         description:
-          error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+          error?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
     onSettled: () => {
@@ -1339,7 +1360,8 @@ const LinkGoogleButton = ({
       showAlert({
         title: messages.MY_PROFILE.LINK_GOOGLE_ALERT.ERROR_TITLE,
         description:
-          error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+          error?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
     onSettled: () => {
@@ -1510,7 +1532,9 @@ const DeleteAccountButton = () => {
     onError: (error) => {
       showAlert({
         title: messages.MY_PROFILE.DELETE_ACCOUNT_ALERT.ERROR_TITLE,
-        description: error?.response.data.errors?.general,
+        description:
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });

@@ -24,7 +24,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquareWarning } from 'lucide-react';
 import { truncateText } from '../../../server/src/utils/string.util';
-import { NotFound } from './NotFound';
 import { useInView } from 'react-intersection-observer';
 
 // Comboboxes options
@@ -240,7 +239,16 @@ const ReportsSearchLoading = ({ isLoading, children }) => {
 };
 
 const ReportsSearchError = ({ isError }) => {
-  return <>{isError && <NotFound></NotFound>}</>;
+  if (!isError) return null;
+
+  return (
+    <div
+      role='alert'
+      className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+    >
+      Could not load reports.
+    </div>
+  );
 };
 
 const NoReportsSearch = ({ reports, children }) => {

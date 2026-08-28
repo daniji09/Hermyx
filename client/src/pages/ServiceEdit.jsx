@@ -56,7 +56,7 @@ import { AuthContext } from '../contexts/AuthContext';
 import { NotFound } from './NotFound';
 
 export const EditMission = () => {
-// Service id
+  // Service id
   const { id } = useParams();
   const { currentUser } = useContext(AuthContext);
 
@@ -113,6 +113,19 @@ export const EditMission = () => {
   }
 
   if (isError) {
+    if (error?.response?.status !== 404) {
+      return (
+        <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+          <div
+            role='alert'
+            className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+          >
+            Could not load service.
+          </div>
+        </main>
+      );
+    }
+
     return <NotFound></NotFound>;
   }
 

@@ -50,6 +50,7 @@ export const PublicProfile = () => {
     data: profileData,
     isLoading: isProfileLoading,
     isError: isProfileError,
+    error: profileError,
   } = useQuery(
     getPublicUserProfileQueryOptions(username, {
       retry: retryOption,
@@ -122,7 +123,20 @@ export const PublicProfile = () => {
     );
   }
 
-  if (isProfileError || !user) {
+  if (isProfileError && !user && profileError?.response?.status !== 404) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load profile.
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
     return <NotFound></NotFound>;
   }
 

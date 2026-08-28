@@ -7,7 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { REPORT_DECISION, REPORT_TYPE, REPORT_STATUS } from '@hermyx/shared';
+import {
+  messages as messagesShared,
+  REPORT_DECISION,
+  REPORT_TYPE,
+  REPORT_STATUS,
+} from '@hermyx/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { getReportByIdQueryOptions } from '../queries/ReportQueries';
@@ -72,11 +77,18 @@ export const Report = () => {
       isLoading={isLoading}
       isError={isError}
       error={errorMessage}
+      errorStatus={error?.response?.status}
     ></ReportPageContainer>
   );
 };
 
-const ReportPageContainer = ({ report, isLoading, isError, error }) => {
+const ReportPageContainer = ({
+  report,
+  isLoading,
+  isError,
+  error,
+  errorStatus,
+}) => {
   return (
     <>
       <title>{`Report information | Hermyx`}</title>
@@ -89,7 +101,9 @@ const ReportPageContainer = ({ report, isLoading, isError, error }) => {
           {'Seeking report...'}
         </ReportLoading>
 
-        <ReportError isError={isError}>{`${error}`}</ReportError>
+        <ReportError isError={isError} errorStatus={errorStatus}>
+          {`${error}`}
+        </ReportError>
 
         <ReportContent report={report}></ReportContent>
       </main>
@@ -109,8 +123,18 @@ const ReportLoading = ({ isLoading, children }) => {
   );
 };
 
-const ReportError = ({ isError }) => {
-  return <>{isError && <NotFound></NotFound>}</>;
+const ReportError = ({ isError, errorStatus }) => {
+  if (!isError) return null;
+  if (errorStatus === 404) return <NotFound></NotFound>;
+
+  return (
+    <div
+      role='alert'
+      className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+    >
+      Could not load report.
+    </div>
+  );
 };
 
 const ReportContent = ({ report }) => {
@@ -338,8 +362,8 @@ const BanUserButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.BAN_USER_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -373,8 +397,8 @@ const BanMissionButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.BAN_SERVICE_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -418,8 +442,8 @@ const KickAdventurerOutButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.KICK_COLLABORATOR_OUT_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -457,8 +481,8 @@ const AcceptAdventurersWorkButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.ACCEPT_COLLABORATORS_WORK_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -496,8 +520,8 @@ const RejectAdventurersWorkButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.REJECT_COLLABORATORS_WORK_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -535,8 +559,8 @@ const DismissButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.DISMISS_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
