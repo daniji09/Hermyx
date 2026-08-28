@@ -1,5 +1,5 @@
 import { useActionState, useContext, useEffect, useRef, useState } from 'react';
-import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, MessageSquareWarning, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,6 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField.j
 import { consts, USER_ROLE } from '@hermyx/shared';
 import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
-import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 import { ReviewCard } from './MyProfile.jsx';
 import { UserMissionsTable } from './UserServices.jsx';
 import { NotFound } from './NotFound.jsx';
@@ -39,7 +38,6 @@ export const PublicProfile = () => {
   const navigate = useNavigate();
   const { currentUser } = useContext(AuthContext);
   const [filter, setFilter] = useState('published');
-  const [messageError, setMessageError] = useState('');
   const isOwnProfile =
     username?.toLowerCase() === currentUser?.username?.toLowerCase();
 
@@ -108,25 +106,6 @@ export const PublicProfile = () => {
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
-  const { mutate: openConversation, isPending: isOpeningConversation } =
-    useMutation({
-      mutationFn: () => getOrCreatePrivateConversation(user.uid),
-      onSuccess: (conversation) => {
-        setMessageError('');
-        navigate(`/conversations/${conversation.cid}`, {
-          state: {
-            from: `/users/${user.username}`,
-          },
-        });
-      },
-      onError: (error) => {
-        setMessageError(
-          error?.response?.data?.errors?.general?.[0] ||
-            'Could not open conversation.',
-        );
-      },
-    });
-
   if (isOwnProfile) {
     return (
       <Navigate to={currentUser?.isAdmin ? '/reports' : '/profile'} replace />
@@ -195,27 +174,25 @@ export const PublicProfile = () => {
                 </span>
               </div>
 
-              {messageError && (
-                <p className='mt-2 text-sm text-destructive'>{messageError}</p>
-              )}
               {!currentUser?.isAdmin && (
                 <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
                   <Button
                     type='button'
                     className='w-full'
-                    onClick={() => {
-                      setMessageError('');
-                      openConversation();
-                    }}
-                    disabled={isOpeningConversation}
+                    onClick={() =>
+                      navigate('/conversations/new', {
+                        state: {
+                          recipient: user,
+                          from: `/users/${user.username}`,
+                        },
+                      })
+                    }
                   >
                     <MessageCircle
                       className='h-4 w-4 mr-1 shrink-0'
                       aria-hidden='true'
                     />
-                    <span className='truncate'>
-                      {isOpeningConversation ? 'Opening...' : 'Message'}
-                    </span>
+                    <span className='truncate'>Message</span>
                   </Button>
                   <ReportUserButton user={user}></ReportUserButton>
                 </div>

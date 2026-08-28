@@ -12,7 +12,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUp,
@@ -59,6 +59,7 @@ import {
 } from '@/components/ui/message-scroller';
 import { AuthContext } from '../contexts/AuthContext';
 import {
+  getOrCreatePrivateConversation,
   markConversationAsRead,
   sendMessage,
 } from '../services/ConversationsServices';
@@ -163,7 +164,12 @@ export const ConversationThread = ({
 }) => {
   const { conversationId: routeConversationId } = useParams();
   const conversationId = providedConversationId || routeConversationId;
+  const location = useLocation();
+  const navigate = useNavigate();
   const { currentUser, isAdmin, socket } = useContext(AuthContext);
+  const isDraftRoute = conversationId === 'new';
+  const draftRecipient = isDraftRoute ? location.state?.recipient : null;
+  const isDraftPrivate = isDraftRoute && !!draftRecipient;
   const [content, setContent] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [liveMessages, setLiveMessages] = useState([]);
@@ -175,10 +181,25 @@ export const ConversationThread = ({
   const queryClient = useQueryClient();
 
   const {
-    data: conversationData,
+    data: fetchedConversationData,
     isLoading: isConversationLoading,
     isError: isConversationError,
-  } = useQuery(getConversationQueryOptions(conversationId));
+  } = useQuery(
+    getConversationQueryOptions(conversationId, { enabled: !isDraftRoute }),
+  );
+  const conversationData = useMemo(
+    () =>
+      isDraftPrivate
+        ? {
+            conversation: { type: 'private', closed_at: null },
+            participants: [
+              { uid: currentUser?.id, can_send: true },
+              draftRecipient,
+            ],
+          }
+        : fetchedConversationData,
+    [currentUser?.id, draftRecipient, fetchedConversationData, isDraftPrivate],
+  );
   const otherParticipant = conversationData?.participants?.find(
     (participant) => participant.uid !== currentUser?.id,
   );
@@ -206,7 +227,11 @@ export const ConversationThread = ({
   const canSendMessages =
     !conversation?.closed_at &&
     (canPreviewDispute || currentParticipant?.can_send === true);
-  const backTo = isDisputeConversation ? '/disputes' : '/conversations';
+  const backTo = isDraftPrivate
+    ? location.state?.from || '/conversations'
+    : isDisputeConversation
+      ? '/disputes'
+      : '/conversations';
 
   const {
     data: messagePages,
@@ -219,6 +244,7 @@ export const ConversationThread = ({
     getConversationMessagesInfiniteQueryOptions(
       conversationId,
       PAGINATION_LIMIT.MESSAGES,
+      { enabled: !isDraftRoute },
     ),
   );
 
@@ -291,6 +317,7 @@ export const ConversationThread = ({
 
   useEffect(() => {
     if (
+      isDraftPrivate ||
       !conversationData ||
       !conversationId ||
       (!currentParticipant && !canPreviewDispute)
@@ -319,11 +346,13 @@ export const ConversationThread = ({
     conversationData,
     conversationId,
     currentParticipant,
+    isDraftPrivate,
     queryClient,
   ]);
 
   useEffect(() => {
-    if (!socket || !conversationId || !canSendMessages) return;
+    if (isDraftPrivate || !socket || !conversationId || !canSendMessages)
+      return;
 
     socket.emit('conversation:join', conversationId);
 
@@ -370,13 +399,31 @@ export const ConversationThread = ({
     conversationId,
     currentUser?.id,
     currentParticipant,
+    isDraftPrivate,
     queryClient,
     canSendMessages,
   ]);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: () => sendMessage(conversationId, content, selectedPhoto),
-    onSuccess: (message) => {
+    mutationFn: async () => {
+      const activeConversationId = isDraftPrivate
+        ? (await getOrCreatePrivateConversation(draftRecipient.uid)).cid
+        : conversationId;
+      const message = await sendMessage(
+        activeConversationId,
+        content,
+        selectedPhoto,
+      );
+      return { activeConversationId, message };
+    },
+    onSuccess: ({ activeConversationId, message }) => {
+      if (isDraftPrivate) {
+        setContent('');
+        setSelectedPhoto(null);
+        setErrorMessage('');
+        navigate(`/conversations/${activeConversationId}`, { replace: true });
+        return;
+      }
       setLiveMessages((currentMessages) =>
         currentMessages.some(
           (currentMessage) => currentMessage.mid === message.mid,
@@ -475,7 +522,10 @@ export const ConversationThread = ({
     );
   }
 
-  if (isConversationError || !conversationData) {
+  if (
+    (isDraftRoute && !draftRecipient) ||
+    (!isDraftRoute && (isConversationError || !conversationData))
+  ) {
     return <NotFound></NotFound>;
   }
 
