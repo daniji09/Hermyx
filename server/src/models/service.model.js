@@ -125,6 +125,7 @@ export const findByUidAndTitle = async (uid, title, mid = undefined) => {
       FROM mission 
       WHERE owner_id = $1 
         AND LOWER(TRIM(title)) = LOWER($2)
+        AND status NOT IN ('DELETED', 'CANCELLED', 'FINISHED')
     ) AS "hasDuplicate";
   `;
     result = await pool.query(query, [uid, title]);
@@ -134,7 +135,9 @@ export const findByUidAndTitle = async (uid, title, mid = undefined) => {
       SELECT 1 
       FROM mission 
       WHERE owner_id = $1 
-        AND LOWER(TRIM(title)) = LOWER($2) AND mid <> $3
+        AND LOWER(TRIM(title)) = LOWER($2)
+        AND mid <> $3
+        AND status NOT IN ('DELETED', 'CANCELLED', 'FINISHED')
     ) AS "hasDuplicate";
   `;
     result = await pool.query(query, [uid, title, mid]);

@@ -2106,11 +2106,27 @@ const PayMissionButton = ({ mission, className, variant, size }) => {
 
 const CancelMissionButton = ({ mission, className, variant, size }) => {
   const { showAlert } = useAlert();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isPending, mutate } = useMutation({
     mutationFn: () => cancelMission(mission.mid),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+      const wasDeleted = MISSION_STATUS[mission.status].CAN_DELETE;
+
+      if (!wasDeleted) {
+        queryClient.invalidateQueries({
+          queryKey: ['getMission', String(mission.mid)],
+        });
+      }
+
+      showAlert({
+        title: wasDeleted ? 'Service deleted' : 'Service cancelled',
+        description: wasDeleted
+          ? 'The service was deleted successfully.'
+          : 'The service was cancelled successfully.',
+        onConfirm: wasDeleted ? () => navigate('/missions/mine') : undefined,
+      });
     },
     // Backend error handling
     onError: (error) => {
