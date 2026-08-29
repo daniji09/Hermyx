@@ -1225,6 +1225,9 @@ export const cancelMission = async (mid, user) => {
   // Gets occupied vacancies
   const occupied_vacancies =
     await missionParticipationModel.findAllOccupiedByMid(mid);
+  const vacanciesToCompensate = occupied_vacancies.filter(
+    (vacancy) => vacancy.status !== MISSION_PARTICIPATION_STATUS.RELEASED.ID,
+  );
 
   // Gets if is delete or cancel action
   const isDeleting = MISSION_STATUS[mission.status].CAN_DELETE;
@@ -1357,8 +1360,12 @@ export const cancelMission = async (mid, user) => {
   try {
     await client.query('BEGIN');
     // First, service has been updated to cancel status
-    if (occupied_vacancies.length === successfulPayments.length)
-      await missionModel.updateStatusByMid(mid, MISSION_STATUS.CANCELLED.ID);
+    if (vacanciesToCompensate.length === successfulPayments.length)
+      await missionModel.updateStatusByMid(
+        mid,
+        MISSION_STATUS.CANCELLED.ID,
+        client,
+      );
 
     // Conversation is ended
     await conversationService.closeMissionConversationType(mid, client);

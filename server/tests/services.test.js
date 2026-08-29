@@ -260,10 +260,10 @@ describe('Mission API', () => {
   });
 
   it.each([
-    ['title', 'a'.repeat(consts.MISSION.TITLE.MAX_LENGTH + 1)],
-    ['description', 'a'.repeat(consts.MISSION.DESCRIPTION.MAX_LENGTH + 1)],
-    ['vacancies', consts.MISSION.VACANCIES.MIN - 1],
-    ['vacancies', consts.MISSION.VACANCIES.MAX + 1],
+    ['title', 'a'.repeat(consts.SERVICE.TITLE.MAX_LENGTH + 1)],
+    ['description', 'a'.repeat(consts.SERVICE.DESCRIPTION.MAX_LENGTH + 1)],
+    ['vacancies', consts.SERVICE.VACANCIES.MIN - 1],
+    ['vacancies', consts.SERVICE.VACANCIES.MAX + 1],
     ['vacancies', 1.5],
   ])(
     'rejects a published mission when %s is outside its current contract',
