@@ -111,6 +111,13 @@ export const AuthProvider = ({ children }) => {
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+            queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          }
         });
 
         socketRef.current.on('mission:delete', () => {
