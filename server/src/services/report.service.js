@@ -85,6 +85,22 @@ export const getReport = async (rid) => {
   return await getReportByRidOrThrow(rid);
 };
 
+// Ensures an administrative report action targets the reported resource.
+export const assertReportMatchesTarget = (
+  report,
+  expectedType,
+  expectedPayload,
+) => {
+  const matchesTarget =
+    report?.type === expectedType &&
+    Object.entries(expectedPayload).every(
+      ([key, value]) => String(report.payload?.[key]) === String(value),
+    );
+
+  if (!matchesTarget)
+    throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+};
+
 // Get all reports filtered and paginated
 export const getReports = async ({ pagination, filters, userId }) => {
   // Parameter checks

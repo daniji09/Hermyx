@@ -3,6 +3,7 @@ import {
   messages,
   REPORT_DECISION,
   REPORT_STATUS,
+  REPORT_TYPE,
   USER_ROLE,
   USER_STATUS,
 } from '@hermyx/shared';
@@ -503,6 +504,11 @@ export const banUser = async (uid, rid, reason, admin) => {
 
   // Finds report and checks if it has already been answered
   const report = await reportService.getReport(rid);
+  reportService.assertReportMatchesTarget(
+    report,
+    REPORT_TYPE.REPORT_PROFILE.ID,
+    { associated_user_id: uid },
+  );
   if (report.status === REPORT_STATUS.ANSWERED.ID)
     throw new AppError(messages.REPORT.GENERAL.ALREADY_ANSWERED, 409);
 

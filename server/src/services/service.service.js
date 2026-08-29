@@ -12,6 +12,7 @@ import {
   NOTIFICATION_TYPE,
   REPORT_DECISION,
   REPORT_STATUS,
+  REPORT_TYPE,
   TRANSACTION_TYPE,
   USER_ROLE,
 } from '@hermyx/shared';
@@ -1621,6 +1622,11 @@ export const banMission = async (user, mid, rid, reason) => {
 
   // Gets report
   const report = await reportService.getReport(rid);
+  reportService.assertReportMatchesTarget(
+    report,
+    REPORT_TYPE.REPORT_MISSION.ID,
+    { associated_mission_id: mid },
+  );
 
   // Checks if report has not been answered yet
   if (report.status === REPORT_STATUS.ANSWERED.ID)
@@ -1881,6 +1887,18 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
   // Collaborator is got
   const adventurer = await userService.getUserByUidOrThrow(
     vacancy.adventurer_id,
+  );
+
+  // Gets report and checks that it belongs to this mission and collaborator
+  const report = await reportService.getReport(rid);
+  reportService.assertReportMatchesTarget(
+    report,
+    REPORT_TYPE.REPORT_ADVENTURER.ID,
+    {
+      associated_mission_id: mid,
+      associated_vacancy_id: vacancyId,
+      associated_user_id: adventurer.uid,
+    },
   );
 
   // Gets all payments of vacancy
