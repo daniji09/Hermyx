@@ -145,6 +145,10 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
   if (pi.customer !== user.stripe_customer_id)
     throw new AppError(messages.PAYMENT.GENERAL.PAYMENT_NOT_FROM_USER);
 
+  // Checks that the payment intent was created for this service
+  if (String(pi.metadata?.mid) !== String(mid))
+    throw new AppError(messages.PAYMENT.GENERAL.PAYMENT_NOT_FROM_SERVICE, 409);
+
   // Confirms payment
   if (pi.status !== 'succeeded')
     throw new AppError(
