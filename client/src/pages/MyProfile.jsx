@@ -1327,7 +1327,7 @@ const LinkGoogleButton = ({
     mutationFn: () => unlinkGoogleAccount(),
     onSuccess: async () => {
       setIsGoogleLinked(false);
-      queryClient.invalidateQueries(['getMyProfile']);
+      queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
     },
     // Backend error handling
     onError: (error) => {
@@ -1353,7 +1353,7 @@ const LinkGoogleButton = ({
     },
     onSuccess: () => {
       setIsGoogleLinked(true);
-      queryClient.invalidateQueries(['getMyProfile']);
+      queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
     },
     // Backend error handling
     onError: (error) => {

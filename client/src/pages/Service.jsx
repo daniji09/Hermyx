@@ -1106,7 +1106,7 @@ const UnjoinMissionButton = ({
   const { isPending, mutate } = useMutation({
     mutationFn: () => unjoinMission(missionId, vacancyId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      queryClient.invalidateQueries({ queryKey: ['getMissions'] });
     },
 
     // Backend error handling
@@ -1890,7 +1890,7 @@ const CloseMissionButton = ({ mission, className, variant, size }) => {
   const { isPending, mutate } = useMutation({
     mutationFn: () => closeMission(mission.mid),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      queryClient.invalidateQueries({ queryKey: ['getMissions'] });
     },
     // Backend error handling
     onError: (error) => {
@@ -2174,7 +2174,7 @@ const ReopenMissionButton = ({ mission, className, variant, size }) => {
   const { isPending, mutate } = useMutation({
     mutationFn: () => reopenMission(mission.mid),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      queryClient.invalidateQueries({ queryKey: ['getMissions'] });
     },
     // Backend error handling
     onError: (error) => {
@@ -2230,7 +2230,7 @@ const FinishMissionButton = ({ mission, className, variant, size }) => {
   const { isPending, mutate } = useMutation({
     mutationFn: () => finishMission(mission.mid),
     onSuccess: () => {
-      queryClient.invalidateQueries(['getMissions']);
+      queryClient.invalidateQueries({ queryKey: ['getMissions'] });
     },
     // Backend error handling
     onError: (error) => {

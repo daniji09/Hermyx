@@ -312,7 +312,7 @@ const AddBankAccountButton = ({ user }) => {
     useMutation({
       mutationFn: () => goToDashboard(),
       onSuccess: (data) => {
-        queryClient.invalidateQueries(['getMyProfile']);
+        queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
         window.open(data.url, '_blank', 'noopener,noreferrer');
       },
       // Backend error handling
@@ -333,7 +333,7 @@ const AddBankAccountButton = ({ user }) => {
     mutationFn: () => connectOnBoard(),
 
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['getMyProfile']);
+      queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
       window.location.href = data.url;
     },
     // Backend error handling
