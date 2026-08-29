@@ -522,8 +522,8 @@ export const updateMissionPayment = async (mid, payment, client = pool) => {
 };
 
 // Empties a service
-export const emptyMission = async (mid) => {
+export const emptyMission = async (mid, client = pool) => {
   const query = `UPDATE mission SET occupied_vacancies = 0 WHERE mid = $1 RETURNING *`;
-  const result = pool.query(query, [mid]);
+  const result = await client.query(query, [mid]);
   return result.rowCount;
 };
