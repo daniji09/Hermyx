@@ -20,7 +20,6 @@ export const UserMissions = () => {
     return failureCount < 3;
   };
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data,
     hasNextPage,

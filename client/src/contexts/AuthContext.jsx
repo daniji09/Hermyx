@@ -107,23 +107,13 @@ export const AuthProvider = ({ children }) => {
         socketRef.current = createSocketConnection(token);
         setSocket(socketRef.current);
 
-        socketRef.current.on('connect', () => {
-          console.log('Socket connected:', socketRef.current.id);
-        });
-
-        socketRef.current.on('disconnect', (reason) => {
-          console.log('Socket disconnected:', reason);
-        });
-
         socketRef.current.on('notification:created', (payload) => {
-          console.log('New notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
         socketRef.current.on('mission:edited', (payload) => {
-          console.log('Service edit notification:', payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMissions'] });
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
@@ -194,7 +184,6 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:participation-submitted', (payload) => {
-          console.log('Participation submitted notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
@@ -205,7 +194,6 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:participation-approved', (payload) => {
-          console.log('Participation approved notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
@@ -218,7 +206,6 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:participation-revision', (payload) => {
-          console.log('Participation revision notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
@@ -229,7 +216,6 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:participation-disputed', (payload) => {
-          console.log('Participation disputed notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({

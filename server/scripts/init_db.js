@@ -16,18 +16,15 @@ async function initDB() {
 
   try {
     // BD Schema is created
-    console.log('Executing database script...');
     await pool.query(schemaSql);
 
     // First admin user is introduced
-    console.log('Inserting initial Admin user...');
     const adminUid = ADMIN_FIREBASE_UID || '--error--';
     const insertAdminQuery = `INSERT INTO app_user(username, email, firebase_uid, role, description, name, surnames, status)
     VALUES('admin', 'admin@hermyx.com', $1, 'ADMIN', 'Hermyx admin account.', 'Hermyx', 'admin', 'ACTIVE')
     ON CONFLICT (firebase_uid) DO NOTHING;`;
     await pool.query(insertAdminQuery, [adminUid]);
 
-    console.log('Database successfully synchronized and seeded!');
     process.exit(0);
   } catch (error) {
     console.error(

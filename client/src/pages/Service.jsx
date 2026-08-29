@@ -120,7 +120,6 @@ export const Mission = () => {
     return failureCount < 3;
   };
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: mission,
     isLoading,
@@ -2163,7 +2162,6 @@ const ReopenMissionButton = ({ mission, className, variant, size }) => {
     },
     // Backend error handling
     onError: (error) => {
-      console.log(error);
       showAlert({
         title: messages.SERVICE.REOPEN_SERVICE_ALERT.ERROR_TITLE,
         description:

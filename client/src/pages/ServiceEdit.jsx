@@ -67,7 +67,6 @@ export const EditMission = () => {
     return failureCount < 3;
   };
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: mission,
     isLoading,
@@ -420,7 +419,6 @@ const EditMissionForm = ({ state, action, isPending, mission }) => {
 
 const CreationVacancyCard = ({ vacancy, onDelete, onClick }) => {
   const isAssigned = !!vacancy.adventurer_id;
-  console.log(vacancy);
   const isDeletable =
     vacancy.status === MISSION_PARTICIPATION_STATUS.JOINED.ID ||
     vacancy.status === MISSION_PARTICIPATION_STATUS.EMPTY.ID;

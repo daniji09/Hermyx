@@ -641,7 +641,6 @@ export const publishMission = async (
 
 // Close service
 export const closeMission = async (mid, user) => {
-  console.log('QUE CIERRO QUE CIERRO');
   // Parameter checks
   checkRequired(mid, 'Mission id');
   checkRequired(user, 'Current user');

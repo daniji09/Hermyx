@@ -9,29 +9,18 @@ async function grantAdminRole() {
   const targetUid = process.argv[2] || ADMIN_FIREBASE_UID;
 
   if (!targetUid) {
-    console.error('Error: you must provide a Firebase UID.');
-    console.log('Usage: npm run firebase:admin -- <FIREBASE_UID>');
-    console.log(
-      'Alternative usage: npm run firebase:admin. Only if ADMIN_FIREBASE_UID is defined in your .env',
+    console.error(
+      'Error: provide a Firebase UID with `npm run firebase:admin -- <FIREBASE_UID>` or define ADMIN_FIREBASE_UID in .env.',
     );
     process.exit(1);
   }
 
   try {
-    console.log(`Searching in Firebase user with UID: ${targetUid}...`);
-
     // Checks that the user actually exists on Firebase
-    const userRecord = await admin.auth().getUser(targetUid);
-    console.log(`User found: ${userRecord.email}`);
+    await admin.auth().getUser(targetUid);
 
     // Injects Custom Claim
     await admin.auth().setCustomUserClaims(targetUid, { admin: true });
-    console.log(
-      `User with UID ${targetUid} (${userRecord.email}) is now ADMIN on Firebase successfully.`,
-    );
-    console.log(
-      'Log out and log in again so the token refreshes with the new role.',
-    );
 
     process.exit(0);
   } catch (error) {

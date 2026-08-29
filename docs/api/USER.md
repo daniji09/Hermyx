@@ -567,6 +567,6 @@ Deletes current user's account.
 
   <br>
 
-**Workflow:** deleting an account is quite a complex function. In first place, for a user to being able to do it, they have to don't have any active services or reports. Then, all external objects are deleted, first the avatar if any, then the Stripe account if any and lastly the Firebase account. Finally, and inside of a transaction, user is removed from conversations (setting their left_at), their private conversations are closed so the other user knows they don't exist anymore, their received notifications are deleted because those are useless and is some space saved and, lastly, user is anonymize, there is no hard delete. (TODO: comprobar que con el RGPD todo bien).
+**Workflow:** deleting an account is quite a complex function. In first place, for a user to being able to do it, they have to don't have any active services or reports. Then, all external objects are deleted, first the avatar if any, then the Stripe account if any and lastly the Firebase account. Finally, and inside of a transaction, user is removed from conversations (setting their left_at), their private conversations are closed so the other user knows they don't exist anymore, their received notifications are deleted because those are useless and is some space saved and, lastly, user is anonymize, there is no hard delete. (TODO: verify GDPR compliance).
 <br>
 <br>

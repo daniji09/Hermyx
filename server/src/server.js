@@ -14,5 +14,4 @@ initializeSocketServer(httpServer);
 
 httpServer.listen(PORT, function (err) {
   if (err) console.error(`Error listening on port ${PORT}: ${err}`);
-  else console.log(`Server listening on port ${PORT}`);
 });

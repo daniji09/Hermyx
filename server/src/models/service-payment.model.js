@@ -13,7 +13,6 @@ export const create = async (missionPaymentData, client = pool) => {
     transaction_type,
     amount_paid,
   } = missionPaymentData;
-  console.log(missionPaymentData);
   const query = `INSERT INTO mission_payment (mid, vacancy_id, sender_id, receiver_id, stripe_transaction_id, transaction_type, amount_paid, amount_refunded, status, created_at)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8, NOW())
     RETURNING *`;

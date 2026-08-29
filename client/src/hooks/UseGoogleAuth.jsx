@@ -43,7 +43,7 @@ export const UseGoogleAuth = () => {
           throw { errors: error.response.data.errors };
         }
 
-        // Error inesperado
+        // Unexpected error
         const errorMessage =
           error.response?.data?.message || messages.GENERAL.UNEXPECTED_ERROR;
         throw { errors: { general: [errorMessage] } };

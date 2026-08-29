@@ -53,7 +53,6 @@ export const Payment = () => {
     return failureCount < 3;
   };
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: missionPaymentInfo,
     isLoading,
@@ -66,7 +65,6 @@ export const Payment = () => {
     }),
   );
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: cardsInfo,
     isLoading: isLoadingCards,

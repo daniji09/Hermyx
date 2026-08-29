@@ -57,7 +57,6 @@ export const PublicProfile = () => {
       enabled: !!username && !isOwnProfile,
     }),
   );
-  console.log(profileData);
   const {
     data: missionsData,
     hasNextPage,
