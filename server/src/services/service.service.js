@@ -1084,7 +1084,7 @@ export const unjoinMission = async (mid, vacancyId, user) => {
     client.release();
   }
 
-  socketProvider.emitToUser(vacancy.adventurer_id, 'mission:unjoined', {
+  const unjoinedPayload = {
     notificationId,
     missionId: mission.mid,
     vacancyId: vacancy.adventurer_id,
@@ -1094,7 +1094,20 @@ export const unjoinMission = async (mid, vacancyId, user) => {
     receiverId: mission.owner_id,
     type: NOTIFICATION_TYPE.MISSION.ID,
     message: message,
-  });
+  };
+
+  // Notify the owner and keep the collaborator's other sessions in sync.
+  socketProvider.emitToUser(
+    mission.owner_id,
+    'mission:unjoined',
+    unjoinedPayload,
+  );
+  if (vacancy.adventurer_id !== mission.owner_id)
+    socketProvider.emitToUser(
+      vacancy.adventurer_id,
+      'mission:unjoined',
+      unjoinedPayload,
+    );
 
   return;
 };

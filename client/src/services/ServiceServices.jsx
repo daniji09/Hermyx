@@ -157,9 +157,7 @@ export const joinMission = async (mid, vacancyId, message = '') => {
 
 // Unjoins a service
 export const unjoinMission = async (mid, vacancyId) => {
-  const { data } = await api.post(`/missions/${mid}/unjoin`, {
-    data: { vacancyId },
-  });
+  const { data } = await api.post(`/missions/${mid}/unjoin`, { vacancyId });
 
   return data;
 };

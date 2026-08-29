@@ -125,6 +125,50 @@ export const AuthProvider = ({ children }) => {
           queryClient.resetQueries({ queryKey: ['getMission'] });
         });
 
+        socketRef.current.on('mission:cancel', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:closed', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:started', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:reopened', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
         socketRef.current.on('mission:edited', (payload) => {
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMissions'] });
@@ -237,12 +281,20 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
         });
 
-        socketRef.current.on('mission:unjoined', () => {
+        socketRef.current.on('mission:unjoined', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getConversation'] });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
           queryClient.invalidateQueries({
             queryKey: ['getUnreadMessageCount'],
           });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
         });
       } catch (error) {
         console.error('Could not connect socket:', error);
