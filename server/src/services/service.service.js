@@ -1667,7 +1667,7 @@ export const banMission = async (user, mid, rid, reason) => {
             description: `mission_banned`,
             transfer_group: `mission_${mid}`,
           };
-          const idempotencyKey = `ban_${mid}`;
+          const idempotencyKey = `ban_${mid}_vac_${vacancy.id}`;
 
           // Makes transfer with idempotency key
           const transfer = await paymentProvider.createTransfer(
