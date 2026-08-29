@@ -44,7 +44,7 @@ export const getMyProfile = async (req, res, next) => {
 // Gets the services from the user, joined or published
 export const getUserMissions = async (req, res, next) => {
   try {
-    const { uid } = req.params;
+    const uid = req.user.uid;
     const { type } = req.query;
     const pagination = req.pagination;
     const { missions, pagination: paginationData } =

@@ -117,7 +117,7 @@ describe('User API', () => {
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ missions, pagination });
     expect(userService.getUserMissions).toHaveBeenCalledWith(
-      12,
+      currentUser.uid,
       'joined',
       expect.objectContaining({ page: 1, limit: 10 }),
     );
