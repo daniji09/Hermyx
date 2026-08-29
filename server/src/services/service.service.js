@@ -1715,10 +1715,7 @@ export const banMission = async (user, mid, rid, reason) => {
         }
       } catch (stripeError) {
         // Report is updated to sent status only if Stripe has failed
-        await reportService.updateStatusIfCurrent(
-          rid,
-          REPORT_STATUS.ANSWERED.ID,
-        );
+        await reportService.updateStatusIfCurrent(rid, REPORT_STATUS.SENT.ID);
         // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
         console.error(
           `Stripe Error while paying out vacancy ${vacancy.id} due to mission ban compensation:`,
@@ -1976,10 +1973,8 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
         }
       } catch (stripeError) {
         // Report is updated to sent status only if Stripe has failed
-        await reportService.updateStatusIfCurrent(
-          rid,
-          REPORT_STATUS.ANSWERED.ID,
-        );
+        refundSuccessful = false;
+        await reportService.updateStatusIfCurrent(rid, REPORT_STATUS.SENT.ID);
         // If a Stripe payment fails, for doesn't end, error should be saved in a log to fix it as soon as possible
         console.error(
           `Stripe Error while refunding out vacancy ${vacancy.id} due to adventurer kicked out:`,
@@ -3090,7 +3085,7 @@ export const expelBannedAdventurerFromMission = async (
       }
     } catch (stripeError) {
       // If a Stripe payment fails error should be saved in a log to fix it as soon as possible
-      refundSuccessful = true;
+      refundSuccessful = false;
       console.error(
         `Stripe Error when refunding vacancy ${mission.vacancy_id} due to user banned:`,
         stripeError.message,
