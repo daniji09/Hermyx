@@ -395,13 +395,17 @@ export const refundVacancyPartially = async (
 };
 
 // Refunds banned vacancy
-export const refundBannedVacancy = async (id, amount_refunded) => {
+export const refundBannedVacancy = async (
+  id,
+  amount_refunded,
+  client = pool,
+) => {
   const query = `
     UPDATE mission_participation 
     SET payment_status = $1, amount_paid = amount_paid - $2 
     WHERE id = $3 AND payment_status = $4`;
 
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     MISSION_PARTICIPATION_PAYMENT_STATUS.UNPAID.ID,
     amount_refunded,
     id,
@@ -411,9 +415,9 @@ export const refundBannedVacancy = async (id, amount_refunded) => {
 };
 
 // Unjoin every participant
-export const cleanMissionParticipation = async (mid) => {
+export const cleanMissionParticipation = async (mid, client = pool) => {
   const query = `UPDATE mission_participation SET adventurer_id = NULL, status = $1 WHERE mid = $2 AND status = $3`;
-  const result = await pool.query(query, [
+  const result = await client.query(query, [
     MISSION_PARTICIPATION_STATUS.EMPTY.ID,
     mid,
     MISSION_PARTICIPATION_STATUS.JOINED.ID,
