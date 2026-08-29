@@ -1,5 +1,11 @@
 import pool from '../config/db.config.js';
-import { MISSION_STATUS, MISSION_PARTICIPATION_STATUS } from '@hermyx/shared';
+import {
+  MISSION_STATUS,
+  MISSION_PARTICIPATION_STATUS,
+  NOTIFICATION_TYPE,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_STATUS,
+} from '@hermyx/shared';
 import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// INSERTS
@@ -106,8 +112,9 @@ export const findByMidExcludingUid = async (id, uid) => {
       WHERE payload->>'associated_mission_id' = m.mid::text
         AND n.sender_id = $2
         AND n.recipient_id = m.owner_id
-        AND n.type = 'invitation'
-        AND n.status = 'pending'
+        AND n.type = '${NOTIFICATION_TYPE.INVITATION.ID}'
+        AND n.action = '${NOTIFICATION_ACTION.JOIN_REQUEST.ID}'
+        AND n.status = '${NOTIFICATION_STATUS.PENDING.ID}'
     ) AS has_pending_join_request
     FROM mission m LEFT JOIN app_user u ON m.owner_id = u.uid WHERE mid = $1`;
   const result = await pool.query(query, [id, uid]);
@@ -315,18 +322,19 @@ export const findPublicPublishedByUid = async (userId, pagination = null) => {
       m.occupied_vacancies,
       m.total_payment,
       mph.photos,
+      m.status,
       CASE
-        WHEN m.status = 'funded' THEN 'looking_for_adventurers'
+        WHEN m.status IN ('OPENED', 'REOPENED') THEN 'looking_for_adventurers'
         WHEN m.status IN (
-          'in_progress',
-          'accepted',
-          'finished',
-          'releasing',
-          'in_dispute'
+          'IN_PROGRESS',
+          'IN_DISPUTE',
+          'CANCELLING'
         ) THEN 'in_progress'
         WHEN m.status IN (
-          'released',
-          'partially_released'
+          'CLOSED',
+          'CANCELLED',
+          'FINISHED',
+          'REPORTED'
         ) THEN 'closed'
       END AS public_status,
       CASE
