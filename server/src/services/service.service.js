@@ -1732,7 +1732,7 @@ export const banMission = async (user, mid, rid, reason) => {
   try {
     await client.query('BEGIN');
     // First, status is changed if every of each is correct
-    if (participations.length === successfulPayments.length)
+    if (isDeleting || participations.length === successfulPayments.length)
       await missionModel.updateStatusByMid(
         mid,
         MISSION_STATUS.REPORTED.ID,
