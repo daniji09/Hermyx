@@ -674,7 +674,7 @@ export const closeMission = async (mid, user) => {
     );
 
   return {
-    status: MISSION_STATUS.IN_PROGRESS.ID,
+    status: nextMissionStatus,
     participants: occupied_vacancies,
   };
 };

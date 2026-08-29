@@ -212,7 +212,7 @@ export const getUserMissions = async (
 // Closes a service
 export const closeMission = async (mid) => {
   const { data } = await api.post(`/missions/${mid}/close`);
-  return data.mission;
+  return data;
 };
 
 // Submits the current collaborator participation for applicant review
