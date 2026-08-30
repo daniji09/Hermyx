@@ -173,6 +173,14 @@ export const Terms = () => (
         in practice and on applicable law; this clause does not exclude
         responsibilities that legally belong to the operator.
       </p>
+      <p>
+        Collaborators decide independently whether, when and how to perform an
+        accepted service. Hermyx does not impose working schedules or
+        exclusivity, provide work tools or set a salary. Service conditions and
+        rewards are agreed between the users through the Application. Stripe
+        Connect handles connected-account onboarding and the related payment
+        transfers, while Hermyx may charge a platform service fee.
+      </p>
     </DocumentSection>
 
     <DocumentSection title='5. Payments, fees and refunds'>
