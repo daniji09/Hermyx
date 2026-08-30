@@ -1936,7 +1936,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
               reason: 'adventurer_kicked_out_refund',
             },
           },
-          `adventurer_kicked_out_refund_${mid}_${vacancyId}`,
+          `adventurer_kicked_out_refund_${mid}_${vacancyId}_${payment.pid}`,
         );
 
         // Transaction to save refund on db
@@ -3046,7 +3046,7 @@ export const expelBannedAdventurerFromMission = async (
               reason: 'user_banned_refund',
             },
           },
-          `user_banned_refund_${mission.mid}_${mission.vacancy_id}`,
+          `user_banned_refund_${mission.mid}_${mission.vacancy_id}_${payment.pid}`,
         );
 
         // Transaction to save refund on db
