@@ -165,8 +165,8 @@ export const findAll = async ({ title = undefined, pagination }) => {
       FROM mission_photo
       GROUP BY mid
     ) AS mph ON (m.mid = mph.mid)
-    WHERE 1=1`;
-  const values = [];
+    WHERE m.status IN ($1, $2)`;
+  const values = [MISSION_STATUS.OPENED.ID, MISSION_STATUS.REOPENED.ID];
 
   if (title) {
     values.push(title);
