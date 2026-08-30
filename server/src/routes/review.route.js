@@ -31,7 +31,7 @@ router.get(
 /// POST
 // Reviews an collaborator after a completed service
 router.post(
-  '/services/:mid/adventurers/:adventurerId',
+  '/services/:mid/collaborators/:adventurerId',
   verifyRegularUser,
   validateParamsSchema(reviewAdventurerParamSchema),
   validateBodySchema(reviewAdventurerBodySchema),

@@ -46,7 +46,7 @@ router.get(
 /// POST
 // Report collaborator
 router.post(
-  '/adventurer',
+  '/collaborator',
   verifyRegularUser,
   validateBodySchema(reportAdventurerValidation),
   reportController.reportAdventurer,

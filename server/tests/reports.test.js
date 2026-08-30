@@ -97,7 +97,7 @@ describe('Report API', () => {
     reportService.reportAdventurer.mockResolvedValue(report);
 
     const response = await request(app)
-      .post('/api/reports/adventurer')
+      .post('/api/reports/collaborator')
       .send(reportPayload);
 
     expect(response.status).toBe(201);
@@ -200,7 +200,7 @@ describe('Report API', () => {
     ['message', ''],
   ])('rejects an adventurer report with invalid %s', async (field, value) => {
     const response = await request(app)
-      .post('/api/reports/adventurer')
+      .post('/api/reports/collaborator')
       .send({ ...reportPayload, [field]: value });
 
     expect(response.status).toBe(400);
@@ -242,7 +242,7 @@ describe('Report API', () => {
       );
 
       const response = await request(app)
-        .post('/api/reports/adventurer')
+        .post('/api/reports/collaborator')
         .send(reportPayload);
 
       expect(response.status).toBe(status);
