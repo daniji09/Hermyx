@@ -325,6 +325,29 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
+        const handleDisputeResolution = (payload) => {
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getConversation'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        };
+
+        socketRef.current.on(
+          'mission:participation-approved-dispute',
+          handleDisputeResolution,
+        );
+        socketRef.current.on(
+          'mission:participation-rejected-dispute',
+          handleDisputeResolution,
+        );
+
         socketRef.current.on('mission:participation-revision', (payload) => {
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });

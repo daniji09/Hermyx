@@ -1901,9 +1901,17 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
 
   // Gets report and checks that it belongs to this mission and collaborator
   const report = await reportService.getReport(rid);
+  if (
+    ![
+      REPORT_TYPE.REPORT_ADVENTURER.ID,
+      REPORT_TYPE.REVIEW_DISPUTE.ID,
+    ].includes(report.type)
+  )
+    throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+
   reportService.assertReportMatchesTarget(
     report,
-    REPORT_TYPE.REPORT_ADVENTURER.ID,
+    report.type,
     {
       associated_mission_id: mid,
       associated_vacancy_id: vacancyId,
