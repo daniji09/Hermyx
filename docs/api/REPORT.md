@@ -204,7 +204,7 @@ Reporting a user on the application
 <br>
 <br>
 
-## - Report service: `POST /api/reports/mission`
+## - Report service: `POST /api/reports/service`
 
 Reporting a service on the application
 

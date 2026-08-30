@@ -3,7 +3,7 @@ import api from '../config/api';
 
 // Finds a service by id
 export const getMissionById = async (id) => {
-  const { data } = await api.get(`/missions/${id}`);
+  const { data } = await api.get(`/services/${id}`);
   return data.mission;
 };
 
@@ -15,7 +15,7 @@ export const getMissions = async (options = {}) => {
     params = {},
   } = options;
 
-  const { data } = await api.get('/missions', {
+  const { data } = await api.get('/services', {
     params: { ...params, page, limit },
   });
 
@@ -30,7 +30,7 @@ export const getMissionsOpened = async (options = {}) => {
     params = {},
   } = options;
 
-  const { data } = await api.get('/missions/opened', {
+  const { data } = await api.get('/services/opened', {
     params: { ...params, page, limit },
   });
 
@@ -39,7 +39,7 @@ export const getMissionsOpened = async (options = {}) => {
 
 // Finds service payment info by id
 export const getMissionPaymentInfoById = async (id) => {
-  const { data } = await api.get(`/missions/${id}/payment-info`);
+  const { data } = await api.get(`/services/${id}/payment-info`);
   return data;
 };
 
@@ -68,7 +68,7 @@ export const createMission = async (missionData) => {
   }
 
   // Sends formData
-  const response = await api.post('/missions', formData);
+  const response = await api.post('/services', formData);
 
   return response.data?.mission;
 };
@@ -140,14 +140,14 @@ export const editMission = async (missionData) => {
       }
     });
   }
-  const response = await api.put(`/missions/${missionData.mid}`, formData);
+  const response = await api.put(`/services/${missionData.mid}`, formData);
 
   return response.data;
 };
 
 // Sends a join request to a service applicant
 export const joinMission = async (mid, vacancyId, message = '') => {
-  const { data } = await api.post(`/missions/${mid}/join`, {
+  const { data } = await api.post(`/services/${mid}/join`, {
     vacancyId,
     message,
   });
@@ -157,7 +157,7 @@ export const joinMission = async (mid, vacancyId, message = '') => {
 
 // Unjoins a service
 export const unjoinMission = async (mid, vacancyId) => {
-  const { data } = await api.post(`/missions/${mid}/unjoin`, { vacancyId });
+  const { data } = await api.post(`/services/${mid}/unjoin`, { vacancyId });
 
   return data;
 };
@@ -168,7 +168,7 @@ export const inviteToMission = async ({
   vacancyId,
   message,
 }) => {
-  const { data } = await api.post(`/missions/${missionId}/invite`, {
+  const { data } = await api.post(`/services/${missionId}/invite`, {
     receiverId,
     vacancyId,
     message,
@@ -179,19 +179,19 @@ export const inviteToMission = async ({
 
 // Cancels a service
 export const cancelMission = async (mid) => {
-  const { data } = await api.post(`/missions/${mid}/cancel`);
+  const { data } = await api.post(`/services/${mid}/cancel`);
   return data;
 };
 
 // Reopens a service
 export const reopenMission = async (mid) => {
-  const { data } = await api.post(`/missions/${mid}/reopen`);
+  const { data } = await api.post(`/services/${mid}/reopen`);
   return data;
 };
 
 // Finishes a service
 export const finishMission = async (mid) => {
-  const { data } = await api.post(`/missions/${mid}/finish`);
+  const { data } = await api.post(`/services/${mid}/finish`);
   return data;
 };
 
@@ -202,7 +202,7 @@ export const getUserMissions = async (
   page = consts.PAGINATION.DEFAULT_PAGE,
   limit = consts.PAGINATION.DEFAULT_LIMIT,
 ) => {
-  const { data } = await api.get(`/users/${uid}/missions`, {
+  const { data } = await api.get(`/users/${uid}/services`, {
     params: { type, page, limit },
   });
 
@@ -211,20 +211,20 @@ export const getUserMissions = async (
 
 // Closes a service
 export const closeMission = async (mid) => {
-  const { data } = await api.post(`/missions/${mid}/close`);
+  const { data } = await api.post(`/services/${mid}/close`);
   return data;
 };
 
 // Submits the current collaborator participation for applicant review
 export const submitMissionParticipation = async (mid) => {
-  const { data } = await api.post(`/missions/${mid}/submit`);
+  const { data } = await api.post(`/services/${mid}/submit`);
   return data;
 };
 
 // Reviews a collaborator after a completed service
 export const reviewAdventurer = async (mid, adventurerId, review) => {
   const { data } = await api.post(
-    `/missions/${mid}/adventurers/${adventurerId}/review`,
+    `/services/${mid}/adventurers/${adventurerId}/review`,
     review,
   );
   return data;
@@ -232,19 +232,19 @@ export const reviewAdventurer = async (mid, adventurerId, review) => {
 
 // Reviews a service applicant after a completed participation
 export const reviewOwner = async (mid, review) => {
-  const { data } = await api.post(`/missions/${mid}/owner/review`, review);
+  const { data } = await api.post(`/services/${mid}/owner/review`, review);
   return data;
 };
 
 // Bans a service
 export const banMission = async (mid, rid, reason) => {
-  const { data } = await api.post(`/missions/${mid}/ban`, { rid, reason });
+  const { data } = await api.post(`/services/${mid}/ban`, { rid, reason });
   return data;
 };
 
 // Kicks a collaborator out
 export const kickAdventurerOut = async (mid, vacancyId, rid, reason) => {
-  const { data } = await api.post(`/missions/${mid}/kick/${vacancyId}`, {
+  const { data } = await api.post(`/services/${mid}/kick/${vacancyId}`, {
     rid,
     reason,
   });

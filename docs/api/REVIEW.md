@@ -54,7 +54,7 @@ both `page` and `limit` are required.
 <br>
 <br>
 
-## - Review collaborator: `POST /api/reviews/missions/:mid/adventurers/:adventurerId`
+## - Review collaborator: `POST /api/reviews/services/:mid/adventurers/:adventurerId`
 
 Applicant can review one of their service's collaborator after they finish
 
@@ -130,7 +130,7 @@ Applicant can review one of their service's collaborator after they finish
 <br>
 <br>
 
-## - Review service applicant: `POST /api/reviews/missions/:mid/owner`
+## - Review service applicant: `POST /api/reviews/services/:mid/owner`
 
 Collaborator can review their applicant after finish
 

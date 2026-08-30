@@ -79,7 +79,7 @@ test('creates the configured services through the real UI', async ({
   for (const missionData of services) {
     const title = `${missionData.title} ${Date.now()}`;
 
-    await page.goto('/missions/new');
+    await page.goto('/services/new');
     await page.locator('#newMissionTitle').waitFor({ state: 'visible' });
     await pauseAfterAction(page);
     await fillAndPause(page, page.locator('#newMissionTitle'), title);
@@ -113,7 +113,7 @@ test('creates the configured services through the real UI', async ({
 
     const createResponse = page.waitForResponse(
       (response) =>
-        response.url().includes('/api/missions') &&
+        response.url().includes('/api/services') &&
         response.request().method() === 'POST',
     );
     await page.locator('#sendNewMission').click();
@@ -124,7 +124,7 @@ test('creates the configured services through the real UI', async ({
     const responseBody = await response.json();
     expect(responseBody.mission.title).toBe(title);
     await expect(page).toHaveURL(
-      new RegExp(`/missions/${responseBody.mission.mid}$`),
+      new RegExp(`/services/${responseBody.mission.mid}$`),
     );
     await expect(page.getByRole('heading', { name: title })).toBeVisible();
     await pauseAfterAction(page);

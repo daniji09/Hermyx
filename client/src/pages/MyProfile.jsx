@@ -395,7 +395,7 @@ export const ReviewCard = ({ review, isClamped = false }) => (
     <div className='mb-1 flex flex-wrap items-center justify-between gap-2'>
       <span className='text-lg truncate min-w-0 flex-1 me-4'>
         <Link
-          to={`/missions/${review.mission_id}`}
+          to={`/services/${review.mission_id}`}
           className='hover:underline-offset-2 hover:underline transition-colors'
         >
           {review.mission_title}

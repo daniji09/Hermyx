@@ -3,11 +3,12 @@
 Manages services action on the platform
 <br><br>
 
-## - Get all services: `GET /api/missions`
+## - Get all services: `GET /api/services`
 
-Gets all services from Hermyx, being able to query them by title.
+Gets all opened and reopened services from Hermyx, being able to query them by
+title.
 
-**Requires authentication:** Yes
+**Requires authentication:** No
 
 **Query parameters:**
 | Field | Type | Required | Description |
@@ -53,11 +54,12 @@ that is insensitive to accents.
 <br>
 <br>
 
-## - Get all opened services: `GET /api/missions/opened`
+## - Get all opened services: `GET /api/services/opened`
 
 Gets all service opened from Hermyx, being able to query them by title, minimum payment, maximum payment and maximum distance.
 
-**Requires authentication:** Yes
+**Requires authentication:** No. The distance filter is applied only when an
+authenticated user with a saved location makes the request.
 
 **Query parameters:**
 | Field | Type | Required | Description |
@@ -107,7 +109,7 @@ minimum payment, maximum payment and maximum distance.
 <br>
 <br>
 
-## - Get service by mid: `GET /api/missions/:mid`
+## - Get service by mid: `GET /api/services/:mid`
 
 Gets the service specified by its identifier, mid.
 
@@ -154,7 +156,7 @@ Gets the service specified by its identifier, mid.
 <br>
 <br>
 
-## - Get service payment info by mid: `GET /api/missions/:mid/payment-info`
+## - Get service payment info by mid: `GET /api/services/:mid/payment-info`
 
 Gets payment info of the service specified by its identifier, mid.
 
@@ -201,7 +203,7 @@ Gets payment info of the service specified by its identifier, mid.
 <br>
 <br>
 
-## - Publish service: `POST /api/missions`
+## - Publish service: `POST /api/services`
 
 Publishes a new service.
 
@@ -259,7 +261,7 @@ _> Note: `latitude` and `longitude` are optional, but if one is provided, both m
 <br>
 <br>
 
-## - Close service: `POST /api/missions/:mid/close`
+## - Close service: `POST /api/services/:mid/close`
 
 Close a service after been opened or reopened.
 
@@ -331,7 +333,7 @@ Close a service after been opened or reopened.
 <br>
 <br>
 
-## - Join service: `POST /api/missions/:mid/join`
+## - Join service: `POST /api/services/:mid/join`
 
 Collaborators sends a join request notification to the applicant of the service, linking a specific vacancy.
 
@@ -405,7 +407,7 @@ Collaborators sends a join request notification to the applicant of the service,
 <br>
 <br>
 
-## - Invite to service: `POST /api/missions/:mid/invite`
+## - Invite to service: `POST /api/services/:mid/invite`
 
 Applicant sends an invitation to a user, so they can join a vacancy of a service.
 
@@ -480,7 +482,7 @@ Applicant sends an invitation to a user, so they can join a vacancy of a service
 <br>
 <br>
 
-## - Unjoin service: `POST /api/missions/:mid/unjoin`
+## - Unjoin service: `POST /api/services/:mid/unjoin`
 
 User unjoins a service they are participating in.
 
@@ -553,7 +555,7 @@ User unjoins a service they are participating in.
 <br>
 <br>
 
-## - Submit service participation: `POST /api/missions/:mid/submit`
+## - Submit service participation: `POST /api/services/:mid/submit`
 
 Collaborators submits their part for the service.
 
@@ -610,7 +612,7 @@ Collaborators submits their part for the service.
 <br>
 <br>
 
-## - Cancel or delete service: `POST /api/missions/:mid/cancel`
+## - Cancel or delete service: `POST /api/services/:mid/cancel`
 
 Cancels a service, if it hadn't been started, then is a deletion.
 
@@ -677,7 +679,7 @@ Cancels a service, if it hadn't been started, then is a deletion.
 <br>
 <br>
 
-## - Reopen service: `POST /api/missions/:mid/reopen`
+## - Reopen service: `POST /api/services/:mid/reopen`
 
 Reopens a service after being closed.
 
@@ -744,7 +746,7 @@ Reopens a service after being closed.
 <br>
 <br>
 
-## - Finish service: `POST /api/missions/:mid/finish`
+## - Finish service: `POST /api/services/:mid/finish`
 
 Finishes a service.
 
@@ -811,7 +813,7 @@ Finishes a service.
 <br>
 <br>
 
-## - Ban service: `POST /api/missions/:mid/ban`
+## - Ban service: `POST /api/services/:mid/ban`
 
 Bans a service.
 
@@ -885,7 +887,7 @@ Bans a service.
 <br>
 <br>
 
-## - Kick collaborator out: `POST /api/missions/:mid/kick/:vacancyId`
+## - Kick collaborator out: `POST /api/services/:mid/kick/:vacancyId`
 
 Kicks an collaborator out of a specified service
 
@@ -960,7 +962,7 @@ Kicks an collaborator out of a specified service
 <br>
 <br>
 
-## - Edit service: `PUT /api/missions/:mid`
+## - Edit service: `PUT /api/services/:mid`
 
 Edits information from a service that has already been published.
 

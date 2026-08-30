@@ -132,7 +132,7 @@ export const EditMission = () => {
     !MISSION_STATUS[mission?.status].CAN_EDIT ||
     currentUser.id !== mission.owner_id
   )
-    return <Navigate to={`/missions/${id}`} replace={true} />;
+    return <Navigate to={`/services/${id}`} replace={true} />;
 
   return (
     <EditMissionPageContainer

@@ -27,7 +27,7 @@ test('submits a participation and lets the applicant approve it', async ({
   await inviteUser(page, missionId);
   await acceptInvitation(browser, missionTitle);
 
-  await page.goto(`/missions/${missionId}`);
+  await page.goto(`/services/${missionId}`);
   await expect(page.getByRole('heading', { name: missionTitle })).toBeVisible();
   await closeMission(page, missionId, missionTitle);
   await startAndPayMission(page, missionId, missionTitle);
@@ -37,7 +37,7 @@ test('submits a participation and lets the applicant approve it', async ({
 
   try {
     await loginRealUser(inviteePage, inviteeUsername);
-    await inviteePage.goto(`/missions/${missionId}`);
+    await inviteePage.goto(`/services/${missionId}`);
     await expect(
       inviteePage.getByRole('heading', { name: missionTitle }),
     ).toBeVisible();
@@ -55,7 +55,7 @@ test('submits a participation and lets the applicant approve it', async ({
     await expect(submitDialog).toBeVisible();
     const submitResponse = inviteePage.waitForResponse(
       (response) =>
-        response.url().includes(`/api/missions/${missionId}/submit`) &&
+        response.url().includes(`/api/services/${missionId}/submit`) &&
         response.request().method() === 'POST',
     );
     await submitDialog

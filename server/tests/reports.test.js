@@ -132,7 +132,7 @@ describe('Report API', () => {
     reportService.reportMission.mockResolvedValue(report);
 
     const response = await request(app)
-      .post('/api/reports/mission')
+      .post('/api/reports/service')
       .send(payload);
 
     expect(response.status).toBe(201);
@@ -151,7 +151,7 @@ describe('Report API', () => {
     );
 
     const response = await request(app)
-      .post('/api/reports/mission')
+      .post('/api/reports/service')
       .send(payload);
 
     expect(response.status).toBe(409);

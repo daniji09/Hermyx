@@ -103,7 +103,7 @@ Searches current user profile.
 <br>
 <br>
 
-## - Get services from user: `GET /api/users/:uid/missions`
+## - Get services from user: `GET /api/users/:uid/services`
 
 Searches services from the user specified, either joined or published.
 
@@ -213,7 +213,7 @@ Gets user information to show it on their public profile.
 <br>
 <br>
 
-## - Get services from public profile: `GET /api/users/:username/profile/missions`
+## - Get services from public profile: `GET /api/users/:username/profile/services`
 
 Searches services from the user specified by username, either joined or published, which will show in their profile.
 

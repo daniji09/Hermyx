@@ -105,7 +105,7 @@ export function Navbar() {
               ) : (
                 <>
                   <Button asChild size='sm'>
-                    <Link to='/missions/new'>
+                    <Link to='/services/new'>
                       <Plus
                         className='mr-0 lg:mr-2 h-4 w-4'
                         aria-hidden='true'
@@ -175,14 +175,14 @@ export function Navbar() {
                 </Link>
 
                 <MobileNavLink
-                  to='/missions/new'
+                  to='/services/new'
                   icon={Plus}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Create service
                 </MobileNavLink>
                 <MobileNavLink
-                  to='/missions/mine'
+                  to='/services/mine'
                   icon={Map}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -309,7 +309,7 @@ const UserDropdown = ({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to='/missions/mine' className='cursor-pointer'>
+              <Link to='/services/mine' className='cursor-pointer'>
                 <Map className='mr-2 h-4 w-4' aria-hidden='true' /> My services
               </Link>
             </DropdownMenuItem>

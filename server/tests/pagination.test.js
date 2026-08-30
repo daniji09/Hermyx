@@ -22,6 +22,10 @@ vi.mock('../src/middlewares/auth.middleware.js', () => ({
     req.user = { ...currentUser };
     next();
   },
+  optionalVerifyToken: (req, _res, next) => {
+    req.user = { ...currentUser };
+    next();
+  },
   verifyAdmin: (_req, _res, next) => next(),
   verifyRegularUser: (_req, _res, next) => next(),
 }));

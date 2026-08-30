@@ -120,7 +120,7 @@ Sets a card to be the default one.
 <br>
 <br>
 
-## - Create payment intent with default card: `POST /api/stripe/missions/:mid/pay/default`
+## - Create payment intent with default card: `POST /api/stripe/services/:mid/pay/default`
 
 Creates a payment intent using the user's default card.
 
@@ -189,7 +189,7 @@ Creates a payment intent using the user's default card.
   <br>
   <br>
 
-## - Create payment intent with a new card: `POST /api/stripe/missions/:mid/pay/new`
+## - Create payment intent with a new card: `POST /api/stripe/services/:mid/pay/new`
 
 Creates a payment intent using a new card.
 
@@ -263,7 +263,7 @@ Creates a payment intent using a new card.
 <br>
 <br>
 
-## - Confirm service payment: `POST /api/stripe/missions/:mid/confirm`
+## - Confirm service payment: `POST /api/stripe/services/:mid/confirm`
 
 Confirms payment and make changes in database
 

@@ -35,7 +35,7 @@ test('lets a collaborator dispute an applicant rejection', async ({
   await inviteUser(page, missionId);
   await acceptInvitation(browser, missionTitle);
 
-  await page.goto(`/missions/${missionId}`);
+  await page.goto(`/services/${missionId}`);
   await closeMission(page, missionId, missionTitle);
   await startAndPayMission(page, missionId, missionTitle);
 
@@ -44,7 +44,7 @@ test('lets a collaborator dispute an applicant rejection', async ({
 
   try {
     await loginRealUser(inviteePage, inviteeUsername);
-    await inviteePage.goto(`/missions/${missionId}`);
+    await inviteePage.goto(`/services/${missionId}`);
     await expect(
       inviteePage.getByRole('heading', { name: missionTitle }),
     ).toBeVisible();
@@ -56,7 +56,7 @@ test('lets a collaborator dispute an applicant rejection', async ({
     });
     const submitResponse = inviteePage.waitForResponse(
       (response) =>
-        response.url().includes(`/api/missions/${missionId}/submit`) &&
+        response.url().includes(`/api/services/${missionId}/submit`) &&
         response.request().method() === 'POST',
     );
     await submitDialog
@@ -133,7 +133,7 @@ test('lets a collaborator dispute an applicant rejection', async ({
       disputedNotification.getByRole('link', { name: 'Open dispute' }),
     ).toBeVisible();
 
-    await inviteePage.goto(`/missions/${missionId}`);
+    await inviteePage.goto(`/services/${missionId}`);
     await expect(
       inviteePage.getByText('Your participation has been disputed.'),
     ).toBeVisible();

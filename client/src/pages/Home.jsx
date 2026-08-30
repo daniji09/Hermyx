@@ -41,7 +41,7 @@ export const Home = () => {
     return failureCount < 3;
   };
 
-// Published services
+  // Published services
   const {
     data: publishedData,
     isLoading: publishedIsLoading,
@@ -75,7 +75,7 @@ export const Home = () => {
     }
   }, [publishedInView, hasNextPublishedPage, fetchNextPublishedPage]);
 
-// Joined services
+  // Joined services
   const {
     data: joinedData,
     isLoading: joinedIsLoading,
@@ -109,7 +109,7 @@ export const Home = () => {
     }
   }, [joinedInView, hasNextJoinedPage, fetchNextJoinedPage]);
 
-// Services of interest
+  // Services of interest
   const {
     data: interestData,
     hasNextPage: interestHasNextPage,
@@ -321,7 +321,7 @@ export const Home = () => {
           </div>
           <div className='flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row'>
             <Button asChild className='w-full sm:w-auto truncate'>
-              <Link to='/missions/new'>
+              <Link to='/services/new'>
                 <Plus className='mr-2 h-4 w-4 truncate' aria-hidden='true' />
                 Post a service
               </Link>

@@ -80,7 +80,7 @@ const selectMissionLocation = async (page, location) => {
 };
 
 const createMission = async (page, title) => {
-  await page.goto('/missions/new');
+  await page.goto('/services/new');
   await page.locator('#newMissionTitle').waitFor({ state: 'visible' });
   await pauseAfterAction(page);
   await fillAndPause(page, page.locator('#newMissionTitle'), title);
@@ -118,7 +118,7 @@ const createMission = async (page, title) => {
 
   const createResponse = page.waitForResponse(
     (response) =>
-      response.url().includes('/api/missions') &&
+      response.url().includes('/api/services') &&
       response.request().method() === 'POST',
   );
   await page.locator('#sendNewMission').click();
@@ -128,7 +128,7 @@ const createMission = async (page, title) => {
   const responseBody = await response.json();
   expect(responseBody.mission.title).toBe(title);
   await expect(page).toHaveURL(
-    new RegExp(`/missions/${responseBody.mission.mid}$`),
+    new RegExp(`/services/${responseBody.mission.mid}$`),
   );
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await pauseAfterAction(page);
@@ -186,7 +186,7 @@ const inviteUser = async (page, missionId) => {
 
   const invitationResponse = page.waitForResponse(
     (response) =>
-      response.url().includes(`/api/missions/${missionId}/invite`) &&
+      response.url().includes(`/api/services/${missionId}/invite`) &&
       response.request().method() === 'POST',
   );
   await dialog.getByRole('button', { name: 'Send invitation' }).click();
@@ -253,7 +253,7 @@ test('invites a collaborator and accepts the invitation with a second account', 
     await inviteeContext.close();
   }
 
-  await page.goto(`/missions/${missionId}`);
+  await page.goto(`/services/${missionId}`);
   await expect(page.getByRole('heading', { name: missionTitle })).toBeVisible();
   await expect(
     page.getByText(inviteeUsername, { exact: true }).first(),

@@ -601,7 +601,7 @@ export const ConversationThread = ({
                         <Link
                           to={
                             isMissionConversation
-                              ? `/missions/${conversation?.mission_id}`
+                              ? `/services/${conversation?.mission_id}`
                               : `/users/${conversationTitle}`
                           }
                           className='hover:underline'

@@ -62,7 +62,7 @@ router.post(
 
 // Report service
 router.post(
-  '/mission',
+  '/service',
   verifyRegularUser,
   validateBodySchema(reportMissionValidation),
   reportController.reportMission,

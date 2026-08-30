@@ -31,7 +31,7 @@ export const NotFound = () => {
               </Link>
             </Button>
             <Button asChild variant='outline' size='lg' className='gap-2'>
-              <Link to='/missions'>
+              <Link to='/services'>
                 <Compass className='h-4 w-4' aria-hidden='true' />
                 Explore services
               </Link>

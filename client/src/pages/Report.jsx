@@ -168,7 +168,7 @@ const ReportContent = ({ report }) => {
     if (!missionId) return null;
     return (
       <Link
-        to={`/missions/${missionId}`}
+        to={`/services/${missionId}`}
         className={linkClass}
         title={title}
         aria-label={title}

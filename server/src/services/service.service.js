@@ -442,7 +442,7 @@ export const getOpenedMissions = async (
     minPayment,
     maxPayment,
     maxDistanceKm,
-    originUserId: maxDistanceKm !== undefined ? user.uid : undefined,
+    originUserId: maxDistanceKm !== undefined ? user?.uid : undefined,
     pagination,
     excludeOwnerId,
   });

@@ -2,14 +2,14 @@ import api from '../config/api';
 
 // Finds a service by id
 export const saveNewCard = async (id) => {
-  const { data } = await api.post(`/stripe/missions/${id.trim()}/pay/new`, {
+  const { data } = await api.post(`/stripe/services/${id.trim()}/pay/new`, {
     saveCard: true,
   });
   return data;
 };
 
 export const confirmPayment = async (id, result) => {
-  await api.post(`/stripe/missions/${id.trim()}/confirm`, {
+  await api.post(`/stripe/services/${id.trim()}/confirm`, {
     paymentIntentId: result.paymentIntent.id,
   });
 };

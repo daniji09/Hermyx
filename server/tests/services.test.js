@@ -32,6 +32,13 @@ vi.mock('../src/middlewares/auth.middleware.js', async (importOriginal) => ({
     req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
     next();
   },
+  optionalVerifyToken: (req, _res, next) => {
+    if (req.headers.authorization) {
+      req.user = { ...currentUser };
+      req.firebaseToken = { admin: currentUser.role === USER_ROLE.ADMIN.ID };
+    }
+    next();
+  },
   verifyAdmin: (_req, _res, next) => next(),
 }));
 
@@ -62,7 +69,7 @@ describe('Mission API', () => {
   it('forbids an administrator from publishing missions', async () => {
     currentUser.role = USER_ROLE.ADMIN.ID;
 
-    const response = await request(app).post('/api/missions').send({});
+    const response = await request(app).post('/api/services').send({});
 
     expect(response.status).toBe(403);
     expect(response.body.errors.general).toEqual([messages.GENERAL.FORBIDDEN]);
@@ -80,7 +87,7 @@ describe('Mission API', () => {
     missionService.getMissions.mockResolvedValue({ missions, paginationData });
 
     const response = await request(app)
-      .get('/api/missions')
+      .get('/api/services')
       .query({ title: 'relic', page: 1, limit: 10 });
 
     expect(response.status).toBe(200);
@@ -96,7 +103,7 @@ describe('Mission API', () => {
     ['limit', -1],
   ])('rejects invalid %s pagination values', async (field, value) => {
     const response = await request(app)
-      .get('/api/missions')
+      .get('/api/services')
       .query({ page: 1, limit: 10, [field]: value });
 
     expect(response.status).toBe(400);
@@ -110,14 +117,17 @@ describe('Mission API', () => {
       paginationData: { currentPage: 1 },
     });
 
-    const response = await request(app).get('/api/missions/opened').query({
-      title: 'relic',
-      minPayment: '10,5',
-      maxPayment: 100,
-      maxDistanceKm: 20,
-      page: 1,
-      limit: 10,
-    });
+    const response = await request(app)
+      .get('/api/services/opened')
+      .set('Authorization', 'Bearer test-token')
+      .query({
+        title: 'relic',
+        minPayment: '10,5',
+        maxPayment: 100,
+        maxDistanceKm: 20,
+        page: 1,
+        limit: 10,
+      });
 
     expect(response.status).toBe(200);
     expect(missionService.getOpenedMissions).toHaveBeenCalledWith(
@@ -131,9 +141,31 @@ describe('Mission API', () => {
     );
   });
 
+  it('allows anonymous searches for opened services', async () => {
+    missionService.getOpenedMissions.mockResolvedValue({
+      missions: [],
+      paginationData: { currentPage: 1 },
+    });
+
+    const response = await request(app)
+      .get('/api/services/opened')
+      .query({ title: 'relic', page: 1, limit: 10 });
+
+    expect(response.status).toBe(200);
+    expect(missionService.getOpenedMissions).toHaveBeenCalledWith(
+      'relic',
+      undefined,
+      undefined,
+      undefined,
+      expect.objectContaining({ page: 1, limit: 10 }),
+      undefined,
+      undefined,
+    );
+  });
+
   it('rejects an inverted payment range', async () => {
     const response = await request(app)
-      .get('/api/missions/opened')
+      .get('/api/services/opened')
       .query({ minPayment: 100, maxPayment: 10, page: 1, limit: 10 });
 
     expect(response.status).toBe(400);
@@ -151,7 +183,7 @@ describe('Mission API', () => {
     };
     missionService.getMissionByMid.mockResolvedValue(mission);
 
-    const response = await request(app).get('/api/missions/5');
+    const response = await request(app).get('/api/services/5');
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(mission);
@@ -167,7 +199,7 @@ describe('Mission API', () => {
     const mission = { mission: { mid: 5, status: 'DELETED' } };
     missionService.getMissionByMid.mockResolvedValue(mission);
 
-    const response = await request(app).get('/api/missions/5');
+    const response = await request(app).get('/api/services/5');
 
     expect(response.status).toBe(200);
     expect(missionService.getMissionByMid).toHaveBeenCalledWith(
@@ -183,7 +215,7 @@ describe('Mission API', () => {
       isOwner: false,
     });
 
-    const response = await request(app).get('/api/missions/5');
+    const response = await request(app).get('/api/services/5');
 
     expect(response.status).toBe(200);
     expect(response.body.mission.is_joined).toBe(true);
@@ -195,7 +227,7 @@ describe('Mission API', () => {
       isOwner: false,
     });
 
-    const response = await request(app).get('/api/missions/5');
+    const response = await request(app).get('/api/services/5');
 
     expect(response.status).toBe(200);
     expect(response.body.mission.has_pending_join_request).toBe(true);
@@ -204,7 +236,7 @@ describe('Mission API', () => {
   it.each(['not-a-number', '1.5', '-1'])(
     'rejects the invalid mission identifier %s',
     async (missionId) => {
-      const response = await request(app).get(`/api/missions/${missionId}`);
+      const response = await request(app).get(`/api/services/${missionId}`);
 
       expect(response.status).toBe(400);
       expect(response.body.errors.mid).toBeDefined();
@@ -217,7 +249,7 @@ describe('Mission API', () => {
     missionService.publishMission.mockResolvedValue(mission);
 
     const response = await request(app)
-      .post('/api/missions')
+      .post('/api/services')
       .send(missionPayload);
 
     expect(response.status).toBe(201);
@@ -236,7 +268,7 @@ describe('Mission API', () => {
 
   it('rejects a mission with malformed vacancy data', async () => {
     const response = await request(app)
-      .post('/api/missions')
+      .post('/api/services')
       .send({ ...missionPayload, vacanciesData: '{invalid-json' });
 
     expect(response.status).toBe(400);
@@ -251,7 +283,7 @@ describe('Mission API', () => {
     ['vacanciesData', undefined],
   ])('rejects a published mission without valid %s', async (field, value) => {
     const response = await request(app)
-      .post('/api/missions')
+      .post('/api/services')
       .send({ ...missionPayload, [field]: value });
 
     expect(response.status).toBe(400);
@@ -269,7 +301,7 @@ describe('Mission API', () => {
     'rejects a published mission when %s is outside its current contract',
     async (field, value) => {
       const response = await request(app)
-        .post('/api/missions')
+        .post('/api/services')
         .send({ ...missionPayload, [field]: value });
 
       expect(response.status).toBe(400);
@@ -284,7 +316,7 @@ describe('Mission API', () => {
     );
 
     const response = await request(app)
-      .post('/api/missions')
+      .post('/api/services')
       .send(missionPayload);
 
     expect(response.status).toBe(400);
@@ -297,7 +329,7 @@ describe('Mission API', () => {
     const result = { status: 'in_progress', participants: [{ id: 1 }] };
     missionService.closeMission.mockResolvedValue(result);
 
-    const response = await request(app).post('/api/missions/6/close');
+    const response = await request(app).post('/api/services/6/close');
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual(result);
@@ -309,7 +341,7 @@ describe('Mission API', () => {
       new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403),
     );
 
-    const response = await request(app).post('/api/missions/6/close');
+    const response = await request(app).post('/api/services/6/close');
 
     expect(response.status).toBe(403);
     expect(response.body.errors.general).toEqual([
@@ -322,7 +354,7 @@ describe('Mission API', () => {
       new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404),
     );
 
-    const response = await request(app).post('/api/missions/999/close');
+    const response = await request(app).post('/api/services/999/close');
 
     expect(response.status).toBe(404);
     expect(response.body.errors.general).toEqual([
@@ -341,7 +373,7 @@ describe('Mission API', () => {
     async (_case, message) => {
       missionService.closeMission.mockRejectedValue(new AppError(message, 409));
 
-      const response = await request(app).post('/api/missions/6/close');
+      const response = await request(app).post('/api/services/6/close');
 
       expect(response.status).toBe(409);
       expect(response.body.errors.general).toEqual([message]);
@@ -349,7 +381,7 @@ describe('Mission API', () => {
   );
 
   it('sends a join request', async () => {
-    const response = await request(app).post('/api/missions/6/join').send({
+    const response = await request(app).post('/api/services/6/join').send({
       vacancyId: 9,
       message: 'I can help.',
     });
@@ -369,7 +401,7 @@ describe('Mission API', () => {
   ])('returns a conflict when joining because %s', async (_case, message) => {
     missionService.joinMission.mockRejectedValue(new AppError(message, 409));
 
-    const response = await request(app).post('/api/missions/6/join').send({
+    const response = await request(app).post('/api/services/6/join').send({
       vacancyId: 9,
       message: 'I can help.',
     });
@@ -381,7 +413,7 @@ describe('Mission API', () => {
   it('invites a user to a vacancy', async () => {
     missionService.inviteToMission.mockResolvedValue(41);
 
-    const response = await request(app).post('/api/missions/6/invite').send({
+    const response = await request(app).post('/api/services/6/invite').send({
       receiverId: 22,
       vacancyId: 9,
       message: 'Join us.',
@@ -417,7 +449,7 @@ describe('Mission API', () => {
       new AppError(message, 409),
     );
 
-    const response = await request(app).post('/api/missions/6/invite').send({
+    const response = await request(app).post('/api/services/6/invite').send({
       receiverId: 22,
       vacancyId: 9,
       message: 'Join us.',
@@ -429,7 +461,7 @@ describe('Mission API', () => {
 
   it('unjoins a vacancy', async () => {
     const response = await request(app)
-      .post('/api/missions/6/unjoin')
+      .post('/api/services/6/unjoin')
       .send({ vacancyId: 9 });
 
     expect(response.status).toBe(200);
@@ -446,7 +478,7 @@ describe('Mission API', () => {
     );
 
     const response = await request(app)
-      .post('/api/missions/6/unjoin')
+      .post('/api/services/6/unjoin')
       .send({ vacancyId: 9 });
 
     expect(response.status).toBe(500);
@@ -459,7 +491,7 @@ describe('Mission API', () => {
     const participation = { id: 9, status: 'submitted' };
     missionService.submitMissionParticipation.mockResolvedValue(participation);
 
-    const response = await request(app).post('/api/missions/6/submit');
+    const response = await request(app).post('/api/services/6/submit');
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -472,14 +504,14 @@ describe('Mission API', () => {
   });
 
   it('finishes a mission', async () => {
-    const response = await request(app).post('/api/missions/6/finish');
+    const response = await request(app).post('/api/services/6/finish');
 
     expect(response.status).toBe(200);
     expect(missionService.finishMission).toHaveBeenCalledWith(6, currentUser);
   });
 
   it('reopens a mission', async () => {
-    const response = await request(app).post('/api/missions/6/reopen');
+    const response = await request(app).post('/api/services/6/reopen');
 
     expect(response.status).toBe(200);
     expect(missionService.reopenMission).toHaveBeenCalledWith(6, currentUser);
@@ -494,7 +526,7 @@ describe('Mission API', () => {
     const mission = { mid: 6, title: payload.title };
     missionService.editMission.mockResolvedValue(mission);
 
-    const response = await request(app).put('/api/missions/6').send(payload);
+    const response = await request(app).put('/api/services/6').send(payload);
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ mission });
@@ -511,7 +543,7 @@ describe('Mission API', () => {
       new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404),
     );
 
-    const response = await request(app).get('/api/missions/999');
+    const response = await request(app).get('/api/services/999');
 
     expect(response.status).toBe(404);
     expect(response.body.errors.general).toEqual([

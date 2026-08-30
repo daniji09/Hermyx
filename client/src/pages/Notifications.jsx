@@ -335,7 +335,7 @@ export const Notifications = () => {
 
                     return (
                       <Link
-                        to={`/missions/${missionId}`}
+                        to={`/services/${missionId}`}
                         className={linkClass}
                         title={title}
                         aria-label={title}

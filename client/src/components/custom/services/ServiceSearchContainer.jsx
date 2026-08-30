@@ -182,7 +182,7 @@ export const MissionSearchCard = ({ mission }) => {
       >
         <article className='flex flex-col h-full'>
           <Link
-            to={`/missions/${mission.mid}`}
+            to={`/services/${mission.mid}`}
             className='absolute inset-0 z-10'
             target='_blank'
             rel='noopener noreferrer'

@@ -46,7 +46,7 @@ export const getPublicUserProfileMissions = async (
   page = consts.PAGINATION.DEFAULT_PAGE,
   limit = consts.PAGINATION.DEFAULT_LIMIT,
 ) => {
-  const { data } = await api.get(`/users/${username}/profile/missions`, {
+  const { data } = await api.get(`/users/${username}/profile/services`, {
     params: { type, page, limit },
   });
   return data;

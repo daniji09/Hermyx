@@ -111,7 +111,7 @@ describe('User API', () => {
     userService.getUserMissions.mockResolvedValue({ missions, pagination });
 
     const response = await request(app)
-      .get('/api/users/12/missions')
+      .get('/api/users/12/services')
       .query({ type: 'joined', page: 1, limit: 10 });
 
     expect(response.status).toBe(200);
@@ -148,7 +148,7 @@ describe('User API', () => {
     });
 
     const response = await request(app)
-      .get('/api/users/public_hero/profile/missions')
+      .get('/api/users/public_hero/profile/services')
       .query({ type: 'published', page: 1, limit: 10 });
 
     expect(response.status).toBe(200);

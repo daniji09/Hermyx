@@ -63,7 +63,7 @@ export const createMissionAction = async (previousState, formData) => {
     //Success
     return {
       success: true,
-      redirectTo: `/missions/${success.mid}`,
+      redirectTo: `/services/${success.mid}`,
       errors: {},
       data: null,
     };
@@ -143,8 +143,8 @@ export const editMissionAction = async (previousState, formData) => {
     return {
       success: true,
       redirectTo: success.requiresExtraPayment
-        ? `/missions/${success.mission.mid}/pay`
-        : `/missions/${success.mission.mid}`,
+        ? `/services/${success.mission.mid}/pay`
+        : `/services/${success.mission.mid}`,
       errors: {},
       data: null,
     };

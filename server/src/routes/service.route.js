@@ -38,6 +38,7 @@ import { pagination } from '../middlewares/pagination.middleware.js';
 import {
   verifyAdmin,
   verifyRegularUser,
+  optionalVerifyToken,
   verifyToken,
 } from '../middlewares/auth.middleware.js';
 import { upload } from '../utils/file.utils.js';
@@ -55,7 +56,7 @@ router.get(
 // Get all opened services
 router.get(
   '/opened',
-  verifyToken,
+  optionalVerifyToken,
   validateQuerySchema(getOpenedMissionsQuerySchema),
   pagination(),
   missionController.getMissionsOpened,

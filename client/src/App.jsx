@@ -41,6 +41,7 @@ function App() {
         {/* --- Public routes --- */}
         {/* Home */}
         <Route path='/' element={<Home />}></Route>
+        <Route path='/services' element={<SearchMission />}></Route>
         <Route path='/auth/action' element={<AuthAction />}></Route>
         <Route path='/terms' element={<Terms />}></Route>
         <Route path='/legal' element={<LegalNotice />}></Route>
@@ -62,8 +63,7 @@ function App() {
         {/* --- Protected routes (log in needed) --- */}
         <Route element={<ProtectedRoute />}>
           {/* Read-only routes available to users and administrators */}
-          <Route path='/missions/:id' element={<Mission />}></Route>
-          <Route path='/missions' element={<SearchMission />}></Route>
+          <Route path='/services/:id' element={<Mission />}></Route>
           <Route path='/users/search' element={<SearchUsers />} />
           <Route path='/users/:username' element={<PublicProfile />} />
           <Route path='/disputes/:id' element={<Dispute />} />
@@ -72,10 +72,10 @@ function App() {
         {/* --- Regular user routes (administrators are read-only) --- */}
         <Route element={<ProtectedRoute requireRegularUser />}>
           {/* Services */}
-          <Route path='/missions/new' element={<NewMission />}></Route>
-          <Route path='/missions/:id/pay' element={<Payment />} />
-          <Route path='/missions/:id/edit' element={<EditMission />}></Route>
-          <Route path='/missions/mine' element={<UserMissions />}></Route>
+          <Route path='/services/new' element={<NewMission />}></Route>
+          <Route path='/services/:id/pay' element={<Payment />} />
+          <Route path='/services/:id/edit' element={<EditMission />}></Route>
+          <Route path='/services/mine' element={<UserMissions />}></Route>
 
           {/* Users */}
           <Route path='/profile' element={<MyProfile />} />

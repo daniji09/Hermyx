@@ -124,7 +124,7 @@ describe('Payment API', () => {
     });
 
     const response = await request(app).post(
-      '/api/stripe/missions/42/pay/default',
+      '/api/stripe/services/42/pay/default',
     );
 
     expect(response.status).toBe(200);
@@ -142,7 +142,7 @@ describe('Payment API', () => {
     );
 
     const response = await request(app).post(
-      '/api/stripe/missions/42/pay/default',
+      '/api/stripe/services/42/pay/default',
     );
 
     expect(response.status).toBe(409);
@@ -160,7 +160,7 @@ describe('Payment API', () => {
       });
 
       const response = await request(app)
-        .post('/api/stripe/missions/42/pay/new')
+        .post('/api/stripe/services/42/pay/new')
         .send({ saveCard });
 
       expect(response.status).toBe(200);
@@ -178,7 +178,7 @@ describe('Payment API', () => {
 
   it('confirms a successful mission payment', async () => {
     const response = await request(app)
-      .post('/api/stripe/missions/42/confirm')
+      .post('/api/stripe/services/42/confirm')
       .send({ paymentIntentId: 'pi_confirmed' });
 
     expect(response.status).toBe(201);
@@ -196,7 +196,7 @@ describe('Payment API', () => {
     paymentService.confirmPayment.mockRejectedValue(new AppError(message, 409));
 
     const response = await request(app)
-      .post('/api/stripe/missions/42/confirm')
+      .post('/api/stripe/services/42/confirm')
       .send({ paymentIntentId: 'pi_failed' });
 
     expect(response.status).toBe(409);

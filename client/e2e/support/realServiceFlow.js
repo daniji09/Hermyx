@@ -85,7 +85,7 @@ const selectMissionLocation = async (page, location) => {
 };
 
 export const createMission = async (page, title) => {
-  await page.goto('/missions/new');
+  await page.goto('/services/new');
   await page.locator('#newMissionTitle').waitFor({ state: 'visible' });
   await pauseAfterAction(page);
   await fillAndPause(page, page.locator('#newMissionTitle'), title);
@@ -123,7 +123,7 @@ export const createMission = async (page, title) => {
 
   const createResponse = page.waitForResponse(
     (response) =>
-      response.url().includes('/api/missions') &&
+      response.url().includes('/api/services') &&
       response.request().method() === 'POST',
   );
   await page.locator('#sendNewMission').click();
@@ -133,7 +133,7 @@ export const createMission = async (page, title) => {
   const responseBody = await response.json();
   expect(responseBody.mission.title).toBe(title);
   await expect(page).toHaveURL(
-    new RegExp(`/missions/${responseBody.mission.mid}$`),
+    new RegExp(`/services/${responseBody.mission.mid}$`),
   );
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await pauseAfterAction(page);
@@ -191,7 +191,7 @@ export const inviteUser = async (page, missionId) => {
 
   const invitationResponse = page.waitForResponse(
     (response) =>
-      response.url().includes(`/api/missions/${missionId}/invite`) &&
+      response.url().includes(`/api/services/${missionId}/invite`) &&
       response.request().method() === 'POST',
   );
   await dialog.getByRole('button', { name: 'Send invitation' }).click();
@@ -255,7 +255,7 @@ export const closeMission = async (page, missionId, missionTitle) => {
   await expect(closeDialog).toBeVisible();
   const closeResponse = page.waitForResponse(
     (response) =>
-      response.url().includes(`/api/missions/${missionId}/close`) &&
+      response.url().includes(`/api/services/${missionId}/close`) &&
       response.request().method() === 'POST',
   );
   await closeDialog
@@ -314,7 +314,7 @@ export const startAndPayMission = async (page, missionId, missionTitle) => {
     .getByRole('button', { name: 'Yes, start service', exact: true })
     .click();
 
-  await expect(page).toHaveURL(new RegExp(`/missions/${missionId}/pay$`));
+  await expect(page).toHaveURL(new RegExp(`/services/${missionId}/pay$`));
   await expect(
     page.getByRole('heading', { name: 'Service payment' }).first(),
   ).toBeVisible();
@@ -324,13 +324,13 @@ export const startAndPayMission = async (page, missionId, missionTitle) => {
 
   const paymentResponse = page.waitForResponse(
     (response) =>
-      response.url().includes(`/api/stripe/missions/${missionId}/pay/new`) &&
+      response.url().includes(`/api/stripe/services/${missionId}/pay/new`) &&
       response.request().method() === 'POST',
   );
   const confirmResponse = page
     .waitForResponse(
       (response) =>
-        response.url().includes(`/api/stripe/missions/${missionId}/confirm`) &&
+        response.url().includes(`/api/stripe/services/${missionId}/confirm`) &&
         response.request().method() === 'POST',
       { timeout: 60000 },
     )
@@ -341,7 +341,7 @@ export const startAndPayMission = async (page, missionId, missionTitle) => {
   expect(confirmedPayment).not.toBeNull();
   expect(confirmedPayment.status()).toBe(201);
 
-  await expect(page).toHaveURL(new RegExp(`/missions/${missionId}$`), {
+  await expect(page).toHaveURL(new RegExp(`/services/${missionId}$`), {
     timeout: 60000,
   });
   await expect(page.getByRole('heading', { name: missionTitle })).toBeVisible();

@@ -38,7 +38,7 @@ describe('Review API', () => {
     currentUser.role = USER_ROLE.ADMIN.ID;
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/owner')
+      .post('/api/reviews/services/6/owner')
       .send({ rating: 5, comment: 'Administrative review.' });
 
     expect(response.status).toBe(403);
@@ -74,7 +74,7 @@ describe('Review API', () => {
     reviewService.reviewAdventurer.mockResolvedValue(review);
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/adventurers/82')
+      .post('/api/reviews/services/6/adventurers/82')
       .send({ rating: review.rating, comment: review.comment });
 
     expect(response.status).toBe(201);
@@ -93,7 +93,7 @@ describe('Review API', () => {
     reviewService.reviewOwner.mockResolvedValue(review);
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/owner')
+      .post('/api/reviews/services/6/owner')
       .send({ rating: review.rating, comment: review.comment });
 
     expect(response.status).toBe(201);
@@ -129,7 +129,7 @@ describe('Review API', () => {
     'rejects the out-of-range rating %s',
     async (rating) => {
       const response = await request(app)
-        .post('/api/reviews/missions/6/adventurers/82')
+        .post('/api/reviews/services/6/adventurers/82')
         .send({ rating, comment: 'Invalid rating.' });
 
       expect(response.status).toBe(400);
@@ -139,8 +139,8 @@ describe('Review API', () => {
   );
 
   it.each([
-    ['/api/reviews/missions/invalid/adventurers/82', 'mid'],
-    ['/api/reviews/missions/6/adventurers/invalid', 'adventurerId'],
+    ['/api/reviews/services/invalid/adventurers/82', 'mid'],
+    ['/api/reviews/services/6/adventurers/invalid', 'adventurerId'],
   ])('rejects invalid review parameter %s', async (url, field) => {
     const response = await request(app)
       .post(url)
@@ -161,7 +161,7 @@ describe('Review API', () => {
     );
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/adventurers/82')
+      .post('/api/reviews/services/6/adventurers/82')
       .send({ rating: 4, comment: 'Good work.' });
 
     expect(response.status).toBe(status);

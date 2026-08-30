@@ -27,7 +27,7 @@ test('closes, pays and starts a newly created service', async ({
   await inviteUser(page, missionId);
   await acceptInvitation(browser, missionTitle);
 
-  await page.goto(`/missions/${missionId}`);
+  await page.goto(`/services/${missionId}`);
   await expect(page.getByRole('heading', { name: missionTitle })).toBeVisible();
   await expect(
     page.getByText(inviteeUsername, { exact: true }).first(),

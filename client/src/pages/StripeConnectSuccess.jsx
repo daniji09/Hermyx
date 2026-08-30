@@ -39,7 +39,7 @@ export const StripeSuccess = () => {
 
             <div className='flex justify-center'>
               <Button asChild size='lg' className='w-full sm:w-auto'>
-                <Link to='/missions/mine'>Go to my services</Link>
+                <Link to='/services/mine'>Go to my services</Link>
               </Button>
             </div>
           </CardContent>

@@ -277,7 +277,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   {isCreator && MISSION_STATUS[mission?.status].CAN_EDIT && (
                     <DropdownMenuItem asChild>
                       <Link
-                        to={`/missions/${mission?.mid}/edit`}
+                        to={`/services/${mission?.mid}/edit`}
                         className='w-full justify-start font-normal h-auto px-2 py-1.5 cursor-default'
                       >
                         Edit service
@@ -386,7 +386,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   <Button asChild className='w-full' size='lg'>
                     <Link
                       to={`/conversations/${mission?.conversation_id}`}
-                      state={{ from: `/missions/${mission?.mid}` }}
+                      state={{ from: `/services/${mission?.mid}` }}
                     >
                       <MessageCircle
                         className='mr-2 h-5 w-5'
@@ -2084,10 +2084,10 @@ const PayMissionButton = ({ mission, className, variant, size }) => {
           variant: 'warning',
           confirmText: messages.SERVICE.START_SERVICE_ALERT.CONFIRM_TEXT,
           onConfirm: () => {
-            navigate(`/missions/${mission.mid}/pay`);
+            navigate(`/services/${mission.mid}/pay`);
           },
         })
-      : navigate(`/missions/${mission.mid}/pay`);
+      : navigate(`/services/${mission.mid}/pay`);
   };
 
   return (
@@ -2125,7 +2125,7 @@ const CancelMissionButton = ({ mission, className, variant, size }) => {
         description: wasDeleted
           ? 'The service was deleted successfully.'
           : 'The service was cancelled successfully.',
-        onConfirm: wasDeleted ? () => navigate('/missions/mine') : undefined,
+        onConfirm: wasDeleted ? () => navigate('/services/mine') : undefined,
       });
     },
     // Backend error handling

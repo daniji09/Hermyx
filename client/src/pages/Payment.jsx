@@ -107,7 +107,7 @@ export const Payment = () => {
 
   if (missionPaymentInfo.missionPayment.length === 0) {
     return (
-      <Navigate to={`/missions/${missionPaymentInfo.mission.mid}`} replace />
+      <Navigate to={`/services/${missionPaymentInfo.mission.mid}`} replace />
     );
   }
 
@@ -228,7 +228,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
   );
 
   useEffect(() => {
-    if (state?.success) navigate(`/missions/${missionId}`);
+    if (state?.success) navigate(`/services/${missionId}`);
   }, [state?.success, missionId, navigate]);
 
   const [prevServerState, setPrevServerState] = useState(state);
@@ -330,7 +330,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
             <CardHeader className='pb-4 border-b bg-muted/20'>
               <CardTitle className='min-w-0 wrap-break-words wrap-anywhere text-3xl'>
                 <Link
-                  to={`/missions/${missionId}`}
+                  to={`/services/${missionId}`}
                   className='hover:text-primary hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm'
                   title='Go back to service details'
                 >

@@ -26,7 +26,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (trimmedQuery) {
-      navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
+      navigate(`/services?title=${encodeURIComponent(trimmedQuery)}`);
       setIsMenuOpen(false);
       setFocusedIndex(-1);
     }
@@ -34,7 +34,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
 
   const handleMissionSearch = () => {
     if (trimmedQuery) {
-      navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
+      navigate(`/services?title=${encodeURIComponent(trimmedQuery)}`);
       setIsMenuOpen(false);
       setFocusedIndex(-1);
     }
