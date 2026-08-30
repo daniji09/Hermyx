@@ -408,16 +408,22 @@ const acceptParticipationReview = async ({
     messages.NOTIFICATION.GENERAL.CANNOT_ACCEPT_PARTICIPATION_STATE,
   );
 
-  // Creates payment and modifies database
-  let successfulPayment = false;
-  try {
-    // Updates participation status to accepted
+  // Updates participation status to accepted
+  const acceptedParticipation =
     await missionService.updateParticipationStatusByMidAndAdventurer(
       mission.mid,
       adventurer.uid,
       MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
     );
+  if (!acceptedParticipation)
+    throw new AppError(
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION.ALREADY_REVIEWED,
+      409,
+    );
 
+  // Creates payment and modifies database
+  let successfulPayment = false;
+  try {
     // Creates participation transfer on Stripe outside of database transaction
     const transfer = await createParticipationTransfer(
       mission.mid,
