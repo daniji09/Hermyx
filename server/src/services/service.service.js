@@ -1054,8 +1054,7 @@ export const unjoinMission = async (mid, vacancyId, user) => {
       -1,
       client,
     );
-    if (updateMission.length < 1)
-      throw new AppError(messages.SERVICE.NOT_FOUND, 404);
+    if (updateMission < 1) throw new AppError(messages.SERVICE.NOT_FOUND, 404);
 
     // Collaborator leaves conversation
     const leaveMissionConversation =
@@ -2025,7 +2024,7 @@ export const kickAdventurerOut = async (user, mid, vacancyId, rid, reason) => {
       -1,
       client,
     );
-    if (unjoinMission.length < 1)
+    if (unjoinMission < 1)
       throw new AppError(messages.SERVICE.GENERAL.SERVICES_NOT_FOUND, 404);
 
     let newStatus;
@@ -2946,7 +2945,7 @@ export const expelBannedAdventurerFromMission = async (
         -1,
         client,
       );
-      if (unjoinMission.length < 1)
+      if (unjoinMission < 1)
         throw new AppError(messages.SERVICE.GENERAL.SERVICE_NOT_FOUND, 404);
 
       // Chooses message
