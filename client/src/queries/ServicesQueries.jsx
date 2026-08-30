@@ -18,7 +18,7 @@ export const getMissionByIdQueryOptions = (params, options) => {
 
 export const getAllMissionsInfiniteQueryOptions = (limit, params, options) => {
   return infiniteQueryOptions({
-    queryKey: ['getMissions', params],
+    queryKey: ['getMissions', 'all', params],
     queryFn: ({ pageParam }) => getMissions({ page: pageParam, limit, params }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
@@ -32,7 +32,7 @@ export const getAllMissionsInfiniteQueryOptions = (limit, params, options) => {
 
 export const getMissionsInfiniteQueryOptions = (limit, params, options) => {
   return infiniteQueryOptions({
-    queryKey: ['getMissions', params],
+    queryKey: ['getMissions', 'opened', params],
     queryFn: ({ pageParam }) =>
       getMissionsOpened({ page: pageParam, limit, params }),
     initialPageParam: 1,
