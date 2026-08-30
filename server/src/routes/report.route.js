@@ -44,7 +44,7 @@ router.get(
 );
 
 /// POST
-// Report adventurer
+// Report collaborator
 router.post(
   '/adventurer',
   verifyRegularUser,
@@ -60,15 +60,15 @@ router.post(
   reportController.reportUser,
 );
 
-// Report mission
+// Report service
 router.post(
-  '/mission',
+  '/service',
   verifyRegularUser,
   validateBodySchema(reportMissionValidation),
   reportController.reportMission,
 );
 
-// Accept adventurer's work
+// Accept collaborator's work
 router.post(
   '/:rid/accept',
   verifyAdmin,
@@ -77,7 +77,7 @@ router.post(
   reportController.acceptAdventurersWork,
 );
 
-// Reject adventurer's work
+// Reject collaborator's work
 router.post(
   '/:rid/reject',
   verifyAdmin,

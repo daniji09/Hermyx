@@ -12,7 +12,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUp,
@@ -59,6 +59,7 @@ import {
 } from '@/components/ui/message-scroller';
 import { AuthContext } from '../contexts/AuthContext';
 import {
+  getOrCreatePrivateConversation,
   markConversationAsRead,
   sendMessage,
 } from '../services/ConversationsServices';
@@ -163,7 +164,12 @@ export const ConversationThread = ({
 }) => {
   const { conversationId: routeConversationId } = useParams();
   const conversationId = providedConversationId || routeConversationId;
+  const location = useLocation();
+  const navigate = useNavigate();
   const { currentUser, isAdmin, socket } = useContext(AuthContext);
+  const isDraftRoute = conversationId === 'new';
+  const draftRecipient = isDraftRoute ? location.state?.recipient : null;
+  const isDraftPrivate = isDraftRoute && !!draftRecipient;
   const [content, setContent] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [liveMessages, setLiveMessages] = useState([]);
@@ -175,10 +181,26 @@ export const ConversationThread = ({
   const queryClient = useQueryClient();
 
   const {
-    data: conversationData,
+    data: fetchedConversationData,
     isLoading: isConversationLoading,
     isError: isConversationError,
-  } = useQuery(getConversationQueryOptions(conversationId));
+    error: conversationError,
+  } = useQuery(
+    getConversationQueryOptions(conversationId, { enabled: !isDraftRoute }),
+  );
+  const conversationData = useMemo(
+    () =>
+      isDraftPrivate
+        ? {
+            conversation: { type: 'private', closed_at: null },
+            participants: [
+              { uid: currentUser?.id, can_send: true },
+              draftRecipient,
+            ],
+          }
+        : fetchedConversationData,
+    [currentUser?.id, draftRecipient, fetchedConversationData, isDraftPrivate],
+  );
   const otherParticipant = conversationData?.participants?.find(
     (participant) => participant.uid !== currentUser?.id,
   );
@@ -206,7 +228,11 @@ export const ConversationThread = ({
   const canSendMessages =
     !conversation?.closed_at &&
     (canPreviewDispute || currentParticipant?.can_send === true);
-  const backTo = isDisputeConversation ? '/disputes' : '/conversations';
+  const backTo = isDraftPrivate
+    ? location.state?.from || '/conversations'
+    : isDisputeConversation
+      ? '/disputes'
+      : '/conversations';
 
   const {
     data: messagePages,
@@ -219,6 +245,7 @@ export const ConversationThread = ({
     getConversationMessagesInfiniteQueryOptions(
       conversationId,
       PAGINATION_LIMIT.MESSAGES,
+      { enabled: !isDraftRoute },
     ),
   );
 
@@ -291,6 +318,7 @@ export const ConversationThread = ({
 
   useEffect(() => {
     if (
+      isDraftPrivate ||
       !conversationData ||
       !conversationId ||
       (!currentParticipant && !canPreviewDispute)
@@ -319,11 +347,13 @@ export const ConversationThread = ({
     conversationData,
     conversationId,
     currentParticipant,
+    isDraftPrivate,
     queryClient,
   ]);
 
   useEffect(() => {
-    if (!socket || !conversationId || !canSendMessages) return;
+    if (isDraftPrivate || !socket || !conversationId || !canSendMessages)
+      return;
 
     socket.emit('conversation:join', conversationId);
 
@@ -370,13 +400,31 @@ export const ConversationThread = ({
     conversationId,
     currentUser?.id,
     currentParticipant,
+    isDraftPrivate,
     queryClient,
     canSendMessages,
   ]);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: () => sendMessage(conversationId, content, selectedPhoto),
-    onSuccess: (message) => {
+    mutationFn: async () => {
+      const activeConversationId = isDraftPrivate
+        ? (await getOrCreatePrivateConversation(draftRecipient.uid)).cid
+        : conversationId;
+      const message = await sendMessage(
+        activeConversationId,
+        content,
+        selectedPhoto,
+      );
+      return { activeConversationId, message };
+    },
+    onSuccess: ({ activeConversationId, message }) => {
+      if (isDraftPrivate) {
+        setContent('');
+        setSelectedPhoto(null);
+        setErrorMessage('');
+        navigate(`/conversations/${activeConversationId}`, { replace: true });
+        return;
+      }
       setLiveMessages((currentMessages) =>
         currentMessages.some(
           (currentMessage) => currentMessage.mid === message.mid,
@@ -427,13 +475,13 @@ export const ConversationThread = ({
 
     if (!photo) return;
 
-    if (!consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(photo.type)) {
+    if (!consts.SERVICE.PHOTOS.ACCEPTED_IMAGE_TYPES.includes(photo.type)) {
       setSelectedPhoto(null);
       setErrorMessage(messagesShared.GENERAL.IMAGE_INVALID_TYPE);
       return;
     }
 
-    if (photo.size > consts.MISSION.PHOTOS.MAX_FILE_SIZE) {
+    if (photo.size > consts.SERVICE.PHOTOS.MAX_FILE_SIZE) {
       setSelectedPhoto(null);
       setErrorMessage(messagesShared.GENERAL.IMAGE_TOO_BIG);
       return;
@@ -475,8 +523,25 @@ export const ConversationThread = ({
     );
   }
 
-  if (isConversationError || !conversationData) {
+  if (
+    (isDraftRoute && !draftRecipient) ||
+    (!isDraftRoute && conversationError?.response?.status === 404) ||
+    (!isDraftRoute && !isConversationError && !conversationData)
+  ) {
     return <NotFound></NotFound>;
+  }
+
+  if (!isDraftRoute && isConversationError && !conversationData) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load conversation.
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -485,7 +550,7 @@ export const ConversationThread = ({
         {isDisputeConversation
           ? `Dispute conversation | Hermyx`
           : isMissionConversation
-            ? `Mission ${conversation?.mission_title} conversation | Hermyx`
+            ? `Service ${conversation?.mission_title} conversation | Hermyx`
             : `Conversation with ${otherParticipant?.username} | Hermyx`}
       </title>
       <meta
@@ -493,7 +558,7 @@ export const ConversationThread = ({
         content={
           isDisputeConversation
             ? `Dispute conversation of current user with other users and the administration.`
-            : `Private or mission conversation with other users.`
+            : `Private or service conversation with other users.`
         }
       ></meta>
       <section className='container mx-auto flex flex-col gap-4 p-4 sm:p-6 max-w-4xl'>
@@ -536,7 +601,7 @@ export const ConversationThread = ({
                         <Link
                           to={
                             isMissionConversation
-                              ? `/missions/${conversation?.mission_id}`
+                              ? `/services/${conversation?.mission_id}`
                               : `/users/${conversationTitle}`
                           }
                           className='hover:underline'
@@ -552,14 +617,14 @@ export const ConversationThread = ({
                       {description ||
                         (isHistoryView ? (
                           <>
-                            Mission history:{' '}
+                            Service history:{' '}
                             {isHistoryOnly
                               ? 'messages up to the end of your participation'
-                              : 'mission finished'}
+                              : 'service finished'}
                           </>
                         ) : (
                           <>
-                            Mission group ·{' '}
+                            Service group ·{' '}
                             {conversationData.participants.length}{' '}
                             {conversationData.participants.length === 1
                               ? 'participant'
@@ -794,7 +859,7 @@ export const ConversationThread = ({
                       ref={photoInputRef}
                       type='file'
                       tabIndex={-1}
-                      accept={consts.MISSION.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
+                      accept={consts.SERVICE.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
                         ',',
                       )}
                       className='sr-only'
@@ -813,6 +878,7 @@ export const ConversationThread = ({
                       onKeyDown={handleMessageKeyDown}
                       placeholder='Write a message'
                       maxLength={consts.CONVERSATION.MESSAGES.TEXT_LIMIT}
+                      disabled={isPending}
                       className='min-h-14 max-h-32 px-3 py-2.5'
                     />
                     <InputGroupAddon align='block-end' className='pt-1'>
@@ -855,18 +921,18 @@ export const ConversationThread = ({
                     ? isHistoryOnly
                       ? frontendMessages.CONVERSATION.HISTORY_ONLY
                           .PARTICIPATION_FINISHED
-                      : frontendMessages.CONVERSATION.HISTORY_ONLY.MISSION_ENDED
+                      : frontendMessages.CONVERSATION.HISTORY_ONLY.SERVICE_ENDED
                     : isDisputeConversation
                       ? decision === REPORT_DECISION.ACCEPT_ADVENTURERS_WORK.ID
                         ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                            .ACCEPT_ADVENTURERS_WORK
+                            .ACCEPT_COLLABORATORS_WORK
                         : decision ===
                             REPORT_DECISION.REJECT_ADVENTURERS_WORK.ID
                           ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                              .REJECT_ADVENTURERS_WORK
+                              .REJECT_COLLABORATORS_WORK
                           : decision === REPORT_DECISION.KICK_ADVENTURER_OUT.ID
                             ? frontendMessages.CONVERSATION.DISPUTE_DECISION
-                                .KICK_ADVENTURER_OUT
+                                .KICK_COLLABORATOR_OUT
                             : frontendMessages.CONVERSATION.DISPUTE_DECISION
                                 .DISMISS
                       : frontendMessages.CONVERSATION.HISTORY_ONLY

@@ -4,7 +4,7 @@ import { executePaginatedQuery } from '../utils/pagination.util.js';
 /// INSERTS
 // Creates a new conversation
 export const create = async (type, missionId = null, client = pool) => {
-  // Mission case
+  // Service case
   if (type === 'mission') {
     const query = `
       INSERT INTO conversation (type, mission_id)
@@ -42,7 +42,7 @@ export const findById = async (conversationId, client = pool) => {
   return result.rows[0];
 };
 
-// Checks whether a user can access a mission conversation
+// Checks whether a user can access a service conversation
 export const isMissionConversationParticipant = async (
   conversationId,
   userId,

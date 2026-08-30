@@ -102,7 +102,7 @@ export const Disputes = () => {
                   <div className='flex items-center justify-between gap-3'>
                     <h2 className='text-xl font-bold min-w-0 truncate'>
                       {dispute.mission_title ||
-                        `Mission ${dispute.payload.associated_mission_id}`}
+                        `Service ${dispute.payload.associated_mission_id}`}
                     </h2>
                     {dispute.unread_count > 0 && (
                       <span className='flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground'>

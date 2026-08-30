@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import { expect, test } from 'playwright/test';
+import {
+  inviteePassword,
+  inviteeUsername as configuredInviteeUsername,
+  ownerPassword,
+  ownerUsername as configuredOwnerUsername,
+} from './support/realServiceFlow.js';
 
 const missionFixture = JSON.parse(
   await readFile(
@@ -9,9 +15,14 @@ const missionFixture = JSON.parse(
   ),
 );
 
-const ownerUsername = process.env.PLAYWRIGHT_OWNER_USERNAME || 'e1';
-const inviteeUsername = process.env.PLAYWRIGHT_INVITEE_USERNAME || 'e2';
-const password = process.env.PLAYWRIGHT_PASSWORD;
+const ownerUsername =
+  process.env.PLAYWRIGHT_OWNER_USERNAME ||
+  missionFixture.applicantUsername ||
+  configuredOwnerUsername;
+const inviteeUsername =
+  process.env.PLAYWRIGHT_INVITEE_USERNAME ||
+  missionFixture.collaboratorUsername ||
+  configuredInviteeUsername;
 const actionPauseMs = Number(process.env.PLAYWRIGHT_ACTION_PAUSE_MS || 700);
 
 const pauseAfterAction = (page) => page.waitForTimeout(actionPauseMs);
@@ -22,6 +33,8 @@ const fillAndPause = async (page, locator, value) => {
 };
 
 const loginRealUser = async (page, username) => {
+  const password = username === ownerUsername ? ownerPassword : inviteePassword;
+
   await page.goto('/login');
   await pauseAfterAction(page);
   await fillAndPause(page, page.locator('#logInUsernameEmail'), username);
@@ -67,7 +80,7 @@ const selectMissionLocation = async (page, location) => {
 };
 
 const createMission = async (page, title) => {
-  await page.goto('/missions/new');
+  await page.goto('/services/new');
   await page.locator('#newMissionTitle').waitFor({ state: 'visible' });
   await pauseAfterAction(page);
   await fillAndPause(page, page.locator('#newMissionTitle'), title);
@@ -105,7 +118,7 @@ const createMission = async (page, title) => {
 
   const createResponse = page.waitForResponse(
     (response) =>
-      response.url().includes('/api/missions') &&
+      response.url().includes('/api/services') &&
       response.request().method() === 'POST',
   );
   await page.locator('#sendNewMission').click();
@@ -115,7 +128,7 @@ const createMission = async (page, title) => {
   const responseBody = await response.json();
   expect(responseBody.mission.title).toBe(title);
   await expect(page).toHaveURL(
-    new RegExp(`/missions/${responseBody.mission.mid}$`),
+    new RegExp(`/services/${responseBody.mission.mid}$`),
   );
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await pauseAfterAction(page);
@@ -124,11 +137,13 @@ const createMission = async (page, title) => {
 };
 
 const inviteUser = async (page, missionId) => {
-  await page.getByRole('button', { name: 'Add adventurer' }).click();
+  await page
+    .getByRole('button', { name: /Invite a collaborator|Add collaborator/ })
+    .click();
   await pauseAfterAction(page);
 
   const dialog = page.getByRole('alertdialog', {
-    name: 'Search adventurer',
+    name: 'Search collaborator',
   });
   await expect(dialog).toBeVisible();
   await fillAndPause(
@@ -149,9 +164,19 @@ const inviteUser = async (page, missionId) => {
   ).toBeVisible();
   await pauseAfterAction(page);
 
-  await dialog.getByRole('button', { name: 'Invite' }).click();
+  const userResult = dialog
+    .getByText(inviteeUsername, { exact: true })
+    .locator('xpath=ancestor::div[.//button[normalize-space()="Invite"]][1]');
+  await userResult.getByRole('button', { name: 'Invite', exact: true }).click();
   await pauseAfterAction(page);
-  await dialog.locator('#invitationVacancy').selectOption({ index: 1 });
+  const vacancyOption = dialog
+    .locator('#invitationVacancy option')
+    .filter({ hasText: missionFixture.vacancy.title })
+    .first();
+  await expect(vacancyOption).toHaveCount(1);
+  const vacancyValue = await vacancyOption.getAttribute('value');
+  expect(vacancyValue).toBeTruthy();
+  await dialog.locator('#invitationVacancy').selectOption(vacancyValue);
   await pauseAfterAction(page);
   await fillAndPause(
     page,
@@ -161,7 +186,7 @@ const inviteUser = async (page, missionId) => {
 
   const invitationResponse = page.waitForResponse(
     (response) =>
-      response.url().includes(`/api/missions/${missionId}/invite`) &&
+      response.url().includes(`/api/services/${missionId}/invite`) &&
       response.request().method() === 'POST',
   );
   await dialog.getByRole('button', { name: 'Send invitation' }).click();
@@ -173,14 +198,14 @@ const inviteUser = async (page, missionId) => {
   await pauseAfterAction(page);
 };
 
-test('invites an adventurer and accepts the invitation with a second account', async ({
+test('invites a collaborator and accepts the invitation with a second account', async ({
   page,
   browser,
 }) => {
   test.setTimeout(120000);
   test.skip(
-    !password,
-    'Set PLAYWRIGHT_PASSWORD to run the real invitation acceptance flow.',
+    !ownerPassword || !inviteePassword,
+    'Set PLAYWRIGHT_OWNER_PASSWORD and PLAYWRIGHT_INVITEE_PASSWORD (or PLAYWRIGHT_PASSWORD) to run the real invitation acceptance flow.',
   );
 
   const missionTitle = `${missionFixture.title} ${Date.now()}`;
@@ -228,11 +253,11 @@ test('invites an adventurer and accepts the invitation with a second account', a
     await inviteeContext.close();
   }
 
-  await page.goto(`/missions/${missionId}`);
+  await page.goto(`/services/${missionId}`);
   await expect(page.getByRole('heading', { name: missionTitle })).toBeVisible();
   await expect(
     page.getByText(inviteeUsername, { exact: true }).first(),
   ).toBeVisible();
-  await expect(page.getByText('JOINED', { exact: true })).toBeVisible();
+  await expect(page.getByText('Joined', { exact: true })).toBeVisible();
   await pauseAfterAction(page);
 });

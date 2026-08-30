@@ -76,7 +76,7 @@ export const createRefund = async (data, idempotencyKey) => {
   return await stripe.refunds.create(data, { idempotencyKey });
 };
 
-// Creates a "Connect Express" account for the adventurer so they can receive money.
+// Creates a "Connect Express" account for the collaborator so they can receive money.
 export const createExpressAccount = async (email) => {
   return await stripe.accounts.create({
     type: 'express',
@@ -103,12 +103,12 @@ export const createAccountLink = async (accountId, refreshUrl, returnUrl) => {
   });
 };
 
-// Generates a link to the Stripe Dashboard so the adventurer can see their balance.
+// Generates a link to the Stripe Dashboard so the collaborator can see their balance.
 export const createLoginLink = async (accountId) => {
   return await stripe.accounts.createLoginLink(accountId);
 };
 
-// Transfers funds from your platform to the adventurer's connected account.
+// Transfers funds from your platform to the collaborator's connected account.
 export const createTransfer = async (data, idempotencyKey) => {
   return await stripe.transfers.create(data, { idempotencyKey });
 };

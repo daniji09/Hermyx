@@ -43,7 +43,7 @@ export const createConversationParticipant = async (cid, uid, client) => {
   return await conversationParticipantModel.create(cid, uid, client);
 };
 
-// Creates a mission conversation participant
+// Creates a service conversation participant
 export const createMissionConversationParticipant = async (
   mid,
   userId,
@@ -110,7 +110,7 @@ export const markConversationAsReadByUserId = async (
   );
 };
 
-// Leaves mission conversation
+// Leaves service conversation
 export const leaveMissionConversation = async (mid, uid, client) => {
   checkRequired(mid, 'Mission id');
   checkRequired(uid, 'User id');
@@ -133,7 +133,7 @@ export const getActiveConversationParticipantIds = async (
   );
 };
 
-// Freeze mission conversation history
+// Freeze service conversation history
 export const freezeMissionConversationHistory = async (
   missionId,
   userId,
@@ -148,11 +148,11 @@ export const freezeMissionConversationHistory = async (
   );
 };
 
-// Closes mission conversation by mid
+// Closes service conversation by mid
 export const closeMissionConversationType = async (mid, client) => {
   checkRequired(mid, 'Mission id');
 
-  // Closes mission conversation type
+  // Closes service conversation type
   return await conversationModel.closeByMid(mid, client);
 };
 
@@ -491,7 +491,7 @@ const getConversationAccess = async (conversationId, user) => {
   return { conversation, isAdminPreview, isParticipant };
 };
 
-// Checks whether a user still belongs to a mission conversation
+// Checks whether a user still belongs to a service conversation
 const canAccessMissionConversation = async (conversation, userId, client) => {
   if (conversation.type !== 'mission') return true;
   return await conversationModel.isMissionConversationParticipant(

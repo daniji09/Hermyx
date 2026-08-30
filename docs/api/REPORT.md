@@ -97,17 +97,17 @@ Gets the report specified by its identifier, rid.
 <br>
 <br>
 
-## - Report adventurer: `POST /api/reports/adventurer`
+## - Report collaborator: `POST /api/reports/adventurer`
 
-Applicant reports an adventurer of their mission
+Applicant reports an collaborator of their service
 
 **Requires authentication:** Yes
 
 **Body (JSON):**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `mid` | integer | Yes | Mission identifier. |
-| `adventurerId` | integer | Yes | Adventurer user identifier. |
+| `mid` | integer | Yes | Service identifier. |
+| `adventurerId` | integer | Yes | Collaborator user identifier. |
 | `message` | string | Yes | Report message. |
 <br>
 
@@ -131,7 +131,7 @@ Applicant reports an adventurer of their mission
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot report an adventurer from a mission that not belongs to current user.
+- `403 Forbidden`: user is unauthorized to do this action: cannot report an collaborator from a service that not belongs to current user.
 
   ```json
   {
@@ -151,7 +151,7 @@ Applicant reports an adventurer of their mission
   ```
   <br>
 
-**Workflow:** when reporting an adventurer, report is created over that adventurer, but dispute and conversation is also created.
+**Workflow:** when reporting an collaborator, report is created over that collaborator, but dispute and conversation is also created.
 <br>
 <br>
 <br>
@@ -204,16 +204,16 @@ Reporting a user on the application
 <br>
 <br>
 
-## - Report mission: `POST /api/reports/mission`
+## - Report service: `POST /api/reports/service`
 
-Reporting a mission on the application
+Reporting a service on the application
 
 **Requires authentication:** Yes
 
 **Body (JSON):**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `mid` | integer | Yes | Mission identifier. |
+| `mid` | integer | Yes | Service identifier. |
 | `message` | string | Yes | Report message. |
 <br>
 
@@ -237,12 +237,12 @@ Reporting a mission on the application
   }
   ```
 
-- `403 Forbidden`: user is unauthorized to do this action: cannot report its own mission.
+- `403 Forbidden`: user is unauthorized to do this action: cannot report its own service.
 
   ```json
   {
     "errors": {
-      "general": ["You can't report your own mission."]
+      "general": ["You can't report your own service."]
     }
   }
   ```
@@ -257,14 +257,14 @@ Reporting a mission on the application
   ```
   <br>
 
-**Workflow:** when reporting a mission, report is created over that user.
+**Workflow:** when reporting a service, report is created over that user.
 <br>
 <br>
 <br>
 
-## - Accept adventurer's work: `POST /api/reports/:rid/accept`
+## - Accept collaborator's work: `POST /api/reports/:rid/accept`
 
-Decision to accept adventurer's work is taken, closing report; used for participation reports
+Decision to accept collaborator's work is taken, closing report; used for participation reports
 
 **Requires authentication:** Yes
 
@@ -308,11 +308,11 @@ Decision to accept adventurer's work is taken, closing report; used for particip
   }
   ```
 
-- `404 Not Found`: report, mission, vacancy or adventurer not found, report with that rid does not exist.
+- `404 Not Found`: report, service, vacancy or collaborator not found, report with that rid does not exist.
   ```json
   {
     "errors": {
-      "general": ["Report/Mission/Vacancy/Adventurer not found."]
+      "general": ["Report/Service/Vacancy/Collaborator not found."]
     }
   }
   ```
@@ -328,14 +328,14 @@ Decision to accept adventurer's work is taken, closing report; used for particip
 
 <br>
 
-**Workflow:** when admins are checking participation reports, one possible decision is to accept's the adventurer's work, finishing participation of adventurer in mission, paying them and closing report and its associated conversation. Since there is a payout, same mechanism is used as in the rest of the functions, payment is first made in Stripe outside of the transaction but in a own try so, if it fails, it can be logged and tried later (not implemented); then, database changes are made in a transaction, and, if something fails, it can be also logged to fix the inconsistency. Since this operation implies a money transaction and implies a report, the following mechanism is used: report is locked by updating it to 'answered' state, then `Stripe` transaction is done, and, after that, all operations left are done inside a database transaction. If Stripe transaction fails, report block is reverted, otherwise it will still be standing even if anything else fails, so a database inconsistency is expected.
+**Workflow:** when admins are checking participation reports, one possible decision is to accept's the collaborator's work, finishing participation of collaborator in service, paying them and closing report and its associated conversation. Since there is a payout, same mechanism is used as in the rest of the functions, payment is first made in Stripe outside of the transaction but in a own try so, if it fails, it can be logged and tried later (not implemented); then, database changes are made in a transaction, and, if something fails, it can be also logged to fix the inconsistency. Since this operation implies a money transaction and implies a report, the following mechanism is used: report is locked by updating it to 'answered' state, then `Stripe` transaction is done, and, after that, all operations left are done inside a database transaction. If Stripe transaction fails, report block is reverted, otherwise it will still be standing even if anything else fails, so a database inconsistency is expected.
 <br>
 <br>
 <br>
 
-## - Reject adventurer's work: `POST /api/reports/:rid/reject`
+## - Reject collaborator's work: `POST /api/reports/:rid/reject`
 
-Decision to reject adventurer's work is taken, closing report; used for participation reports
+Decision to reject collaborator's work is taken, closing report; used for participation reports
 
 **Requires authentication:** Yes
 
@@ -379,11 +379,11 @@ Decision to reject adventurer's work is taken, closing report; used for particip
   }
   ```
 
-- `404 Not Found`: report, mission, vacancy or adventurer not found, report with that rid does not exist.
+- `404 Not Found`: report, service, vacancy or collaborator not found, report with that rid does not exist.
   ```json
   {
     "errors": {
-      "general": ["Report/Mission/Vacancy/Adventurer not found."]
+      "general": ["Report/Service/Vacancy/Collaborator not found."]
     }
   }
   ```
@@ -399,14 +399,14 @@ Decision to reject adventurer's work is taken, closing report; used for particip
 
 <br>
 
-**Workflow:** when admins are checking participation reports, one possible decision is to reject's the adventurer's work, changing participation to be in progress again and closing report and associated conversation. Report locked mechanism is used as a optimistic concurrency approach, changing status to 'answered' at the first moment of the transaction so any other admin is unable to change it at the same time.
+**Workflow:** when admins are checking participation reports, one possible decision is to reject's the collaborator's work, changing participation to be in progress again and closing report and associated conversation. Report locked mechanism is used as a optimistic concurrency approach, changing status to 'answered' at the first moment of the transaction so any other admin is unable to change it at the same time.
 <br>
 <br>
 <br>
 
-## - Reject adventurer's work: `POST /api/reports/:rid/dismiss`
+## - Reject collaborator's work: `POST /api/reports/:rid/dismiss`
 
-Decision to dismiss report, used for mission, user or adventurer reports
+Decision to dismiss report, used for service, user or collaborator reports
 
 **Requires authentication:** Yes
 
@@ -450,11 +450,11 @@ Decision to dismiss report, used for mission, user or adventurer reports
   }
   ```
 
-- `404 Not Found`: report, mission, vacancy or adventurer not found, report with that rid does not exist.
+- `404 Not Found`: report, service, vacancy or collaborator not found, report with that rid does not exist.
   ```json
   {
     "errors": {
-      "general": ["Report/Mission/Vacancy/Adventurer not found."]
+      "general": ["Report/Service/Vacancy/Collaborator not found."]
     }
   }
   ```
@@ -470,7 +470,7 @@ Decision to dismiss report, used for mission, user or adventurer reports
 
 <br>
 
-**Workflow:** when admins are checking user, mission or adventurer reports, they can dismiss the report, doing nothing and finishing that report. Report locked mechanism is used as a optimistic concurrency approach, changing status to 'answered' at the first moment of the transaction so any other admin is unable to change it at the same time.
+**Workflow:** when admins are checking user, service or collaborator reports, they can dismiss the report, doing nothing and finishing that report. Report locked mechanism is used as a optimistic concurrency approach, changing status to 'answered' at the first moment of the transaction so any other admin is unable to change it at the same time.
 <br>
 <br>
 <br>

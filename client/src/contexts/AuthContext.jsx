@@ -1,4 +1,4 @@
-import { createContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { auth } from '../config/firebase';
 import { signOut } from 'firebase/auth';
 import { getMe } from '../services/UsersServices';
@@ -10,7 +10,7 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   // States for current user and loading state that happens when this component is mounted
-  const [currentUser, setCurrentUser] = useState();
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false); // Detects sync operation not finished, blocking automatic redirects
@@ -25,45 +25,68 @@ export const AuthProvider = ({ children }) => {
     isSyncingRef.current = value;
   };
 
-  // The state changed flag is only activated once per mount
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
-      // User Firebase information is added to user Hermyx information
-      if (firebaseUser) {
-        if (isSyncingRef.current) {
-          setLoading(false);
-          return;
-        }
-        let hermyxUser;
-        try {
-          const tokenResult = await firebaseUser.getIdTokenResult();
-          const userIsAdmin = !!tokenResult.claims.admin;
-          setIsAdmin(userIsAdmin);
-          hermyxUser = await getMe();
-          setCurrentUser({
-            firebaseUid: firebaseUser.uid,
-            email: firebaseUser.email,
-            id: hermyxUser.uid,
-            username: hermyxUser.username,
-            name: hermyxUser.name,
-            surnames: hermyxUser.surnames,
-            avatar: hermyxUser.avatar,
-            isAdmin: userIsAdmin,
-          });
-        } catch (e) {
-          console.log(e.message);
+  // Loads the Firebase role and Hermyx account into the shared user state.
+  const loadCurrentUser = useCallback(
+    async (firebaseUser = auth.currentUser) => {
+      if (!firebaseUser) return null;
+
+      try {
+        const tokenResult = await firebaseUser.getIdTokenResult();
+        const userIsAdmin = !!tokenResult.claims.admin;
+        const hermyxUser = await getMe();
+
+        // Ignore the response if the authenticated user changed while loading.
+        if (auth.currentUser?.uid !== firebaseUser.uid) return null;
+
+        const nextUser = {
+          firebaseUid: firebaseUser.uid,
+          email: firebaseUser.email,
+          id: hermyxUser.uid ?? hermyxUser.id,
+          username: hermyxUser.username,
+          name: hermyxUser.name,
+          surnames: hermyxUser.surnames,
+          avatar: hermyxUser.avatar,
+          isAdmin: userIsAdmin,
+        };
+
+        setIsAdmin(userIsAdmin);
+        setCurrentUser(nextUser);
+        return nextUser;
+      } catch (error) {
+        if (auth.currentUser?.uid === firebaseUser.uid) {
+          console.error('Could not load the authenticated user:', error);
           setCurrentUser(null);
           setIsAdmin(false);
         }
-      } else {
+
+        throw error;
+      } finally {
+        if (auth.currentUser?.uid === firebaseUser.uid) {
+          setLoading(false);
+        }
+      }
+    },
+    [],
+  );
+
+  // The state changed flag is only activated once per mount
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      if (!firebaseUser) {
         setCurrentUser(null);
         setIsAdmin(false);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      // Google sign-in must finish its backend sync before /users/me is called.
+      if (isSyncingRef.current) return;
+
+      loadCurrentUser(firebaseUser).catch(() => {});
     });
 
     return unsubscribe;
-  }, []);
+  }, [loadCurrentUser]);
 
   useEffect(() => {
     const connectSocket = async () => {
@@ -84,23 +107,122 @@ export const AuthProvider = ({ children }) => {
         socketRef.current = createSocketConnection(token);
         setSocket(socketRef.current);
 
-        socketRef.current.on('connect', () => {
-          console.log('Socket connected:', socketRef.current.id);
-        });
-
-        socketRef.current.on('disconnect', (reason) => {
-          console.log('Socket disconnected:', reason);
-        });
-
         socketRef.current.on('notification:created', (payload) => {
-          console.log('New notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+            queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          }
+        });
+
+        socketRef.current.on('mission:delete', () => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          queryClient.resetQueries({ queryKey: ['getMission'] });
+        });
+
+        socketRef.current.on('mission:ban', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:adventurer-kicked-out', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:adventurer-ban', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:cancel', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:closed', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:started', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:reopened', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('mission:finished', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('review:created', (payload) => {
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
         });
 
         socketRef.current.on('mission:edited', (payload) => {
-          console.log('Mission edit notification:', payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMissions'] });
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
@@ -109,6 +231,23 @@ export const AuthProvider = ({ children }) => {
           });
           queryClient.invalidateQueries({ queryKey: ['getMission'] });
         });
+
+        const handleRewardOfferResponse = (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({
+            queryKey: ['getMission', String(payload.missionId)],
+          });
+          queryClient.invalidateQueries({ queryKey: ['getMission'] });
+        };
+
+        socketRef.current.on(
+          'mission:participation-negotiation-accepted',
+          handleRewardOfferResponse,
+        );
+        socketRef.current.on(
+          'mission:participation-negotiation-rejected',
+          handleRewardOfferResponse,
+        );
 
         socketRef.current.on('conversation:message-received', (payload) => {
           if (payload.conversationType === 'dispute') {
@@ -153,8 +292,18 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getReport'] });
         });
 
+        socketRef.current.on('dispute:dismissed', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
         socketRef.current.on('mission:participation-submitted', (payload) => {
-          console.log('Participation submitted notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
@@ -165,7 +314,6 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:participation-approved', (payload) => {
-          console.log('Participation approved notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
@@ -177,8 +325,30 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
         });
 
+        const handleDisputeResolution = (payload) => {
+          setLatestNotification(payload);
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getConversation'] });
+          queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        };
+
+        socketRef.current.on(
+          'mission:participation-approved-dispute',
+          handleDisputeResolution,
+        );
+        socketRef.current.on(
+          'mission:participation-rejected-dispute',
+          handleDisputeResolution,
+        );
+
         socketRef.current.on('mission:participation-revision', (payload) => {
-          console.log('Participation revision notification:', payload);
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
@@ -189,8 +359,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:participation-disputed', (payload) => {
-          console.log('Participation disputed notification:', payload);
-          setLatestNotification(payload);
+          if (payload?.notificationId) setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
             queryKey: ['getMission', String(payload.missionId)],
@@ -199,12 +368,20 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
         });
 
-        socketRef.current.on('mission:unjoined', () => {
+        socketRef.current.on('mission:unjoined', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getConversation'] });
           queryClient.invalidateQueries({ queryKey: ['getMyConversations'] });
           queryClient.invalidateQueries({
             queryKey: ['getUnreadMessageCount'],
           });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
         });
       } catch (error) {
         console.error('Could not connect socket:', error);
@@ -238,6 +415,7 @@ export const AuthProvider = ({ children }) => {
         setCurrentUser,
         isAdmin,
         loading,
+        loadCurrentUser,
         logout,
         isSyncing,
         setIsSyncing: updateIsSyncing,

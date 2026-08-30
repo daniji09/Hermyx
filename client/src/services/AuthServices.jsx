@@ -239,11 +239,13 @@ export const syncUserWithGoogleAccount = async (
   email,
   username,
   firebaseUid,
+  termsAccepted = false,
 ) => {
   const { data } = await api.post('/auth/sync-google', {
     email,
     username,
     firebaseUid,
+    termsAccepted,
   });
 
   return data;

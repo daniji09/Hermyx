@@ -18,6 +18,7 @@ const validSignup = {
   username: 'test_hero',
   password: 'StrongPassword1!',
   confirmPassword: 'StrongPassword1!',
+  termsAccepted: true,
 };
 
 beforeEach(() => {
@@ -40,7 +41,18 @@ describe('Authentication API', () => {
         validSignup.email,
         validSignup.username,
         validSignup.password,
+        true,
       );
+    });
+
+    it('rejects signup without accepting the terms', async () => {
+      const response = await request(app)
+        .post('/api/auth/signup')
+        .send({ ...validSignup, termsAccepted: undefined });
+
+      expect(response.status).toBe(400);
+      expect(response.body.errors.termsAccepted).toBeDefined();
+      expect(authService.signup).not.toHaveBeenCalled();
     });
 
     it('rejects mismatching passwords before calling the service', async () => {
@@ -140,6 +152,7 @@ describe('Authentication API', () => {
       email: 'google@example.com',
       username: 'google_hero',
       firebaseUid: 'firebase-google-uid',
+      termsAccepted: true,
     };
 
     it.each([
@@ -161,6 +174,7 @@ describe('Authentication API', () => {
           payload.email,
           payload.username,
           payload.firebaseUid,
+          true,
         );
       },
     );

@@ -41,7 +41,7 @@ router.post(
 
 // Pay with a predetermined card
 router.post(
-  '/missions/:mid/pay/default',
+  '/services/:mid/pay/default',
   requireStripeCustomerId,
   validateParamsSchema(payDefaultParamSchema),
   paymentController.payDefault,
@@ -49,7 +49,7 @@ router.post(
 
 // Pay with a new card
 router.post(
-  '/missions/:mid/pay/new',
+  '/services/:mid/pay/new',
   requireStripeCustomerId,
   validateParamsSchema(payNewParamSchema),
   validateBodySchema(payNewBodySchema),
@@ -58,14 +58,14 @@ router.post(
 
 // Confirms payment and changes db
 router.post(
-  '/missions/:mid/confirm',
+  '/services/:mid/confirm',
   requireStripeCustomerId,
   validateParamsSchema(confirmPaymentParamSchema),
   validateBodySchema(confirmPaymentBodySchema),
   paymentController.confirmPayment,
 );
 
-// Route to register as a connected account (for adventurers)
+// Route to register as a connected account (for collaborators)
 router.post('/connect/onboard', paymentController.connectOnboard);
 
 // Route to get the dashboard link for connected accounts

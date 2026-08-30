@@ -5,17 +5,17 @@ import { ForgotPassword } from './pages/ForgotPassword';
 import { AuthAction } from './pages/AuthAction';
 import { Home } from './pages/Home';
 import { ProtectedRoute } from './components/custom/routes/ProtectedRoute';
-import { Mission } from './pages/Mission';
-import { NewMission } from './pages/MissionCreate';
+import { Mission } from './pages/Service';
+import { NewMission } from './pages/ServiceCreate';
 import { Payment } from './pages/Payment';
-import { SearchMission } from './pages/MissionSearch';
-import { UserMissions } from './pages/UserMissions';
+import { SearchMission } from './pages/ServiceSearch';
+import { UserMissions } from './pages/UserServices';
 import { Navbar } from './components/custom/Navbar';
 import { PublicProfile } from './pages/PublicProfile';
 import { MyProfile } from './pages/MyProfile';
 import { Notifications } from './pages/Notifications';
 import { SearchUsers } from './pages/SearchUsers';
-import { EditMission } from './pages/MissionEdit';
+import { EditMission } from './pages/ServiceEdit';
 import { StripeSuccess } from './pages/StripeConnectSuccess';
 import { Conversation } from './pages/Conversation';
 import { Conversations } from './pages/Conversations';
@@ -24,6 +24,14 @@ import { Report } from './pages/Report';
 import { Dispute } from './pages/Dispute';
 import { Disputes } from './pages/Disputes';
 import { NotFound } from './pages/NotFound';
+import {
+  Terms,
+  LegalNotice,
+  PrivacyPolicy,
+  CookiePolicy,
+  CommunityGuidelines,
+} from './pages/LegalPages';
+import { Footer } from './components/custom/Footer';
 
 function App() {
   return (
@@ -33,7 +41,16 @@ function App() {
         {/* --- Public routes --- */}
         {/* Home */}
         <Route path='/' element={<Home />}></Route>
+        <Route path='/services' element={<SearchMission />}></Route>
         <Route path='/auth/action' element={<AuthAction />}></Route>
+        <Route path='/terms' element={<Terms />}></Route>
+        <Route path='/legal' element={<LegalNotice />}></Route>
+        <Route path='/privacy' element={<PrivacyPolicy />}></Route>
+        <Route path='/cookies' element={<CookiePolicy />}></Route>
+        <Route
+          path='/community-guidelines'
+          element={<CommunityGuidelines />}
+        ></Route>
 
         {/* --- Authentication routes (not log in needed) --- */}
         <Route element={<ProtectedRoute reverseLogic />}>
@@ -46,8 +63,7 @@ function App() {
         {/* --- Protected routes (log in needed) --- */}
         <Route element={<ProtectedRoute />}>
           {/* Read-only routes available to users and administrators */}
-          <Route path='/missions/:id' element={<Mission />}></Route>
-          <Route path='/missions' element={<SearchMission />}></Route>
+          <Route path='/services/:id' element={<Mission />}></Route>
           <Route path='/users/search' element={<SearchUsers />} />
           <Route path='/users/:username' element={<PublicProfile />} />
           <Route path='/disputes/:id' element={<Dispute />} />
@@ -55,11 +71,11 @@ function App() {
 
         {/* --- Regular user routes (administrators are read-only) --- */}
         <Route element={<ProtectedRoute requireRegularUser />}>
-          {/* Missions */}
-          <Route path='/missions/new' element={<NewMission />}></Route>
-          <Route path='/missions/:id/pay' element={<Payment />} />
-          <Route path='/missions/:id/edit' element={<EditMission />}></Route>
-          <Route path='/missions/mine' element={<UserMissions />}></Route>
+          {/* Services */}
+          <Route path='/services/new' element={<NewMission />}></Route>
+          <Route path='/services/:id/pay' element={<Payment />} />
+          <Route path='/services/:id/edit' element={<EditMission />}></Route>
+          <Route path='/services/mine' element={<UserMissions />}></Route>
 
           {/* Users */}
           <Route path='/profile' element={<MyProfile />} />
@@ -82,6 +98,7 @@ function App() {
         {/* --- Catch routes --- */}
         <Route path='*' element={<NotFound />} />
       </Routes>
+      <Footer />
     </>
   );
 }

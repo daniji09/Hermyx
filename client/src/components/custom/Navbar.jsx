@@ -73,9 +73,16 @@ export function Navbar() {
           <div className='flex shrink-0 items-center gap-4'>
             <Link
               to='/'
-              className='font-extrabold text-2xl tracking-tight text-foreground hover:opacity-80 transition-opacity'
+              className='flex items-center gap-2 text-foreground hover:opacity-80 transition-opacity'
             >
-              Hermyx
+              <img
+                src='/images/logo.svg'
+                alt='Hermyx'
+                className='h-9 w-auto max-w-36'
+              />
+              <span className='font-extrabold text-2xl tracking-tight'>
+                Hermyx
+              </span>
             </Link>
           </div>
 
@@ -83,7 +90,7 @@ export function Navbar() {
             <div className='flex-1 max-w-5xl mr-auto'>
               <SearchBar
                 id='searchMissionByTitle'
-                legend='Search mission by title bar.'
+                legend='Search service by title bar.'
                 maxLength={consts.SEARCH_MISSION_TITLE_MAX_LENGTH}
               />
             </div>
@@ -98,13 +105,13 @@ export function Navbar() {
               ) : (
                 <>
                   <Button asChild size='sm'>
-                    <Link to='/missions/new'>
+                    <Link to='/services/new'>
                       <Plus
                         className='mr-0 lg:mr-2 h-4 w-4'
                         aria-hidden='true'
-                        aria-label='Create mission'
+                        aria-label='Create service'
                       />
-                      <span className='hidden lg:flex'>Create Mission</span>
+                      <span className='hidden lg:flex'>Create Service</span>
                     </Link>
                   </Button>
                   <NotificationsButton />
@@ -142,7 +149,7 @@ export function Navbar() {
           <div className='md:hidden border-t bg-background px-4 py-4 space-y-4 shadow-lg'>
             <SearchBar
               id='searchMissionByTitleMobile'
-              legend='Search mission by title bar.'
+              legend='Search service by title bar.'
               maxLength={consts.SEARCH_MISSION_TITLE_MAX_LENGTH}
             />
 
@@ -168,18 +175,18 @@ export function Navbar() {
                 </Link>
 
                 <MobileNavLink
-                  to='/missions/new'
+                  to='/services/new'
                   icon={Plus}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  Create mission
+                  Create service
                 </MobileNavLink>
                 <MobileNavLink
-                  to='/missions/mine'
+                  to='/services/mine'
                   icon={Map}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
-                  My missions
+                  My services
                 </MobileNavLink>
                 <MobileNavLink
                   to='/notifications'
@@ -288,7 +295,7 @@ const UserDropdown = ({
               {currentUser.username}
             </p>
             <p className='text-xs leading-none text-muted-foreground'>
-              {currentUser.email || 'Adventurer account'}
+              {currentUser.email || 'Collaborator account'}
             </p>
           </div>
         </DropdownMenuLabel>
@@ -302,8 +309,8 @@ const UserDropdown = ({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to='/missions/mine' className='cursor-pointer'>
-                <Map className='mr-2 h-4 w-4' aria-hidden='true' /> My missions
+              <Link to='/services/mine' className='cursor-pointer'>
+                <Map className='mr-2 h-4 w-4' aria-hidden='true' /> My services
               </Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -507,7 +514,7 @@ const NotificationsButton = () => {
           <div className='space-y-1'>
             {isTransient && hasMissionCompletion && (
               <DropdownMenuItem className='cursor-default rounded-xl bg-muted/50 p-3 text-sm'>
-                Mission {latestNotification.missionTitle} was completed by{' '}
+                Service {latestNotification.missionTitle} was completed by{' '}
                 {latestNotification.adventurerUsername}
               </DropdownMenuItem>
             )}

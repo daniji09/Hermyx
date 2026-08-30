@@ -38,6 +38,8 @@ CREATE TABLE APP_USER (
 	avatar TEXT,
 	configuration JSONB NOT NULL DEFAULT '{"show_missions_to_others": true}'::jsonb,
 	rating NUMERIC(3,2) NOT NULL DEFAULT 0 CHECK (rating >= 0 AND rating <= 5), -- Cached aggregate for profile reads
+	terms_version VARCHAR(20),
+	terms_accepted_at TIMESTAMP,
 	stripe_customer_id VARCHAR(255),
   	stripe_connected_id VARCHAR(255)
 );
@@ -77,7 +79,9 @@ CREATE TABLE MISSION (
 	owner_id INT NOT NULL,
 	FOREIGN KEY (owner_id) REFERENCES APP_USER(uid) ON DELETE CASCADE
 );
-CREATE UNIQUE INDEX unique_mission_owner_title ON mission (owner_id, LOWER(BTRIM(title)));
+CREATE UNIQUE INDEX unique_mission_owner_title
+  ON mission (owner_id, LOWER(BTRIM(title)))
+  WHERE status NOT IN ('DELETED', 'CANCELLED', 'FINISHED');
 CREATE INDEX idx_mission_owner_publication_date ON mission (owner_id, publication_date DESC);
 CREATE INDEX idx_mission_status_publication_date ON mission (status, publication_date DESC);
 CREATE INDEX idx_mission_location ON mission USING GIST (location) WHERE location IS NOT NULL;
@@ -151,8 +155,7 @@ CREATE TABLE MISSION_PARTICIPATION (
 		'PAID', 
 		'PARTIALLY_PAID', 
 		'PARTIALLY_REFUNDED',
-		'LIQUIDATED', 
-		'REFUNDED'
+		'LIQUIDATED'
 		)),
 	status VARCHAR(20) NOT NULL DEFAULT 'EMPTY' CHECK (status IN (
 		'EMPTY',

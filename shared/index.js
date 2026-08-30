@@ -1,6 +1,6 @@
 export * from './messages/messages.js';
 export * from './consts/consts.js';
-export * from './enums/mission.enum.js';
+export * from './enums/service.enum.js';
 export * from './enums/notification.enum.js';
 export * from './enums/payment.enum.js';
 export * from './enums/report.enum.js';
@@ -8,7 +8,7 @@ export * from './enums/user.enum.js';
 export * from './regex/regex.js';
 export * from './validations/auth.validation.js';
 export * from './validations/user.validation.js';
-export * from './validations/mission.validation.js';
+export * from './validations/service.validation.js';
 export * from './validations/notification.validation.js';
 export * from './validations/payment.validation.js';
 export * from './validations/pagination.validation.js';

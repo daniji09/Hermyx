@@ -8,7 +8,9 @@ import App from './App.jsx';
 import { AlertProvider } from './contexts/AlertContext';
 import { ThemeProvider } from './contexts/ThemeProvider.jsx';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { mutations: { networkMode: 'always' } },
+});
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

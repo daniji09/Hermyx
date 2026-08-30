@@ -1,11 +1,14 @@
 {
-  "title": "Playwright - Invitacion",
-  "description": "Necesito un tester para validar el flujo de invitacion y aceptacion.",
+  "applicantUsername": "dani",
+  "collaboratorUsername": "wen",
+  "title": "Playwright - Invitation",
+  "description": "I need a tester to validate the invitation and acceptance flow.",
   "location": "Madrid, Spain",
   "vacancy": {
     "title": "Tester",
-    "description": "Aceptar la invitacion y comprobar la asignacion.",
+    "description": "Accept the invitation and verify the assignment.",
     "reward": 10
   },
-  "invitationMessage": "Te invito a participar en esta mision de prueba."
+  "invitationMessage": "I invite you to collaborate on this test service.",
+  "disputeReason": "I disagree with the rejection of my delivery because it meets the vacancy description."
 }

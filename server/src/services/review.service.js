@@ -2,8 +2,9 @@ import { consts, messages, MISSION_PARTICIPATION_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import { AppError, checkRequired } from '../utils/error.util.js';
 import * as reviewModel from '../models/review.model.js';
-import * as missionService from './mission.service.js';
+import * as missionService from './service.service.js';
 import * as userService from './user.service.js';
+import * as socketProvider from '../providers/socket.provider.js';
 
 /// Endpoint complex functions
 // Get user reviews
@@ -27,7 +28,7 @@ export const getUserReviews = async (uid, pagination) => {
   };
 };
 
-// Reviews adventurer
+// Reviews collaborator
 export const reviewAdventurer = async ({
   mid,
   adventurerId,
@@ -81,7 +82,7 @@ const createReview = async ({
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // Gets participation blocking row for update because two adventurers could review the same applicant at the same time or viceversa
+    // Gets participation blocking row for update because two collaborators could review the same applicant at the same time or viceversa
     const participation =
       await missionService.getMissionParticipationReviewContext(
         mid,
@@ -99,25 +100,32 @@ const createReview = async ({
     // Creates review
     const review = await reviewModel.create({ rating, comment }, client);
     if (reviewerRole === 'owner') {
-      // Updates mission participation with owner review
+      // Updates service participation with applicant review
       await missionService.updateMissionParticipationOwnerReview(
         participation.id,
         review.id,
         client,
       );
-      // Updates adventurer rating
+      // Updates collaborator rating
       await userService.updateRating(adventurerId, client);
     } else {
-      // Updates mission participation with adventurer review
+      // Updates service participation with collaborator review
       await missionService.updateMissionParticipationAdventurerReview(
         participation.id,
         review.id,
         client,
       );
-      // Updates owner rating
+      // Updates applicant rating
       await userService.updateRating(participation.owner_id, client);
     }
     await client.query('COMMIT');
+
+    const receiverId =
+      reviewerRole === 'owner' ? adventurerId : participation.owner_id;
+    socketProvider.emitToUser(receiverId, 'review:created', {
+      missionId: mid,
+    });
+
     return review;
   } catch (error) {
     await client.query('ROLLBACK');
@@ -131,17 +139,17 @@ const createReview = async ({
 const validateReview = (participation, reviewerId, reviewerRole) => {
   // Checks if participation exists
   if (!participation)
-    throw new AppError(messages.MISSION.VACANCY.NOT_FOUND, 404);
+    throw new AppError(messages.SERVICE.VACANCY.NOT_FOUND, 404);
 
-  // Checks if mission owner is the correct one which review is been applied to
+  // Checks if service applicant is the correct one which review is been applied to
   if (reviewerRole === 'owner' && participation.owner_id !== reviewerId)
-    throw new AppError(messages.REVIEW.GENERAL.MISSION_REVIEW_NOT_ALLOWED, 403);
+    throw new AppError(messages.REVIEW.GENERAL.SERVICE_REVIEW_NOT_ALLOWED, 403);
 
   // Checks if participation is in a status that can be reviewed or can review
   if (
     !MISSION_PARTICIPATION_STATUS[participation.participation_status].CAN_REVIEW
   )
-    throw new AppError(messages.REVIEW.GENERAL.MISSION_COMPLETED, 409);
+    throw new AppError(messages.REVIEW.GENERAL.SERVICE_COMPLETED, 409);
 
   // Gets rid and checks if already exists
   const reviewId =
@@ -150,7 +158,7 @@ const validateReview = (participation, reviewerId, reviewerRole) => {
       : participation.adventurer_review_id;
   if (reviewId)
     throw new AppError(
-      messages.REVIEW.GENERAL.MISSION_REVIEW_ALREADY_EXISTS,
+      messages.REVIEW.GENERAL.SERVICE_REVIEW_ALREADY_EXISTS,
       409,
     );
 };

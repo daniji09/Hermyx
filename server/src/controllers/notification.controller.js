@@ -4,9 +4,11 @@ import * as notificationService from '../services/notification.service.js';
 // Get current user's notifications
 export const getMyNotifications = async (req, res, next) => {
   try {
+    const { status } = req.query;
     const result = await notificationService.getMyNotifications(
       req.user.uid,
       req.pagination,
+      status,
     );
     return res.status(200).json(result);
   } catch (error) {

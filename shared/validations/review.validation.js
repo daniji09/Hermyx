@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 import { paginationQuerySchema } from './pagination.validation.js';
-import { midBaseSchema } from './mission.validation.js';
+import { midBaseSchema } from './service.validation.js';
 import { uidBaseSchema } from './user.validation.js';
 
 /// Base validations, raw logic
@@ -38,7 +38,7 @@ export const getUserReviewsParamSchema = z.object({
 
 export const getUserReviewsQuerySchema = paginationQuerySchema;
 
-// Review adventurer
+// Review collaborator
 export const reviewAdventurerParamSchema = z.object({
   mid: midBaseSchema,
   adventurerId: uidBaseSchema,
@@ -49,7 +49,7 @@ export const reviewAdventurerBodySchema = z.object({
   comment: reviewCommentBaseSchema.optional().or(z.literal('')),
 });
 
-// Review owner
+// Review applicant
 export const reviewOwnerParamSchema = z.object({
   mid: midBaseSchema,
 });

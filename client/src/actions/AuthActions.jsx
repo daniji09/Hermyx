@@ -33,7 +33,7 @@ export const signUpAction = async (previousState, formData) => {
 
   // API call
   try {
-    const success = await createUser(fieldsData);
+    const success = await createUser(validatedFields.data);
 
     if (!success)
       throw {

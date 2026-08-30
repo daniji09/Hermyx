@@ -4,8 +4,13 @@ import * as authService from '../services/auth.service.js';
 // Signup
 export const signup = async (req, res, next) => {
   try {
-    const { email, username, password } = req.body;
-    const user = await authService.signup(email, username, password);
+    const { email, username, password, termsAccepted } = req.body;
+    const user = await authService.signup(
+      email,
+      username,
+      password,
+      termsAccepted,
+    );
     return res.status(201).json({ user });
   } catch (error) {
     next(error);
@@ -26,11 +31,12 @@ export const login = async (req, res, next) => {
 // Sync with Google
 export const syncGoogle = async (req, res, next) => {
   try {
-    const { email, username, firebaseUid } = req.body;
+    const { email, username, firebaseUid, termsAccepted } = req.body;
     const { user, isLogin } = await authService.syncGoogle(
       email,
       username,
       firebaseUid,
+      termsAccepted,
     );
     return res.status(isLogin ? 200 : 201).json({ user });
   } catch (error) {

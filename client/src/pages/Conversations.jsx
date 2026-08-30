@@ -81,10 +81,10 @@ const ConversationCard = ({ conversation }) => {
         {isMissionConversation && (
           <p className='text-xs text-muted-foreground'>
             {isHistory ? (
-              'Mission history'
+              'Service history'
             ) : (
               <>
-                Mission chat &middot; {conversation.participant_count}{' '}
+                Service chat &middot; {conversation.participant_count}{' '}
                 {conversation.participant_count === 1
                   ? 'participant'
                   : 'participants'}
@@ -173,7 +173,7 @@ export const Conversations = () => {
               Conversations
             </h1>
             <p className='text-muted-foreground'>
-              Your direct messages, active mission chats and mission history.
+              Your direct messages, active service chats and service history.
             </p>
           </div>
         </section>

@@ -1,9 +1,9 @@
-# API - Payment documentation
+# API - Reviews documentation
 
 Manages reviews in the platform
 <br><br>
 
-## - Get all reviews: `GET /api/reviews/user/:uid`
+## - Get all reviews: `GET /api/reviews/users/:uid`
 
 Gets all reviews that user has received.
 
@@ -28,7 +28,7 @@ _> Both `page` and `limit` must be sent for every request._
 
   ```json
   {
-    "missions": ["<reviews>"],
+    "reviews": ["<reviews>"],
     "pagination": {
       "currentPage": "<currentPage>",
       "totalPages": "<totalPages>",
@@ -54,17 +54,17 @@ both `page` and `limit` are required.
 <br>
 <br>
 
-## - Review adventurer: `POST /missions/:mid/adventurers/:adventurerId`
+## - Review collaborator: `POST /api/reviews/services/:mid/adventurers/:adventurerId`
 
-Applicant can review one of their mission's adventurer after they finish
+Applicant can review one of their service's collaborator after they finish
 
 **Requires authentication:** Yes
 
 **Path parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `mid` | integer | Yes | Mission identifier. |
-| `adventurerId` | integer | Yes | Adventurer user identifier. |
+| `mid` | integer | Yes | Service identifier. |
+| `adventurerId` | integer | Yes | Collaborator user identifier. |
 
 **Body (JSON):**
 | Field | Type | Required | Description |
@@ -75,7 +75,7 @@ Applicant can review one of their mission's adventurer after they finish
 
 **Responses:**
 
-- `200 OK`: adventurer review successfully.
+- `200 OK`: collaborator review successfully.
 
   ```json
   {
@@ -95,7 +95,7 @@ Applicant can review one of their mission's adventurer after they finish
 
   <br>
 
-- `403 Forbidden`: user is unauthorized to do this action: applicant can only review their mission's adventurers.
+- `403 Forbidden`: user is unauthorized to do this action: applicant can only review their service's collaborators.
 
   ```json
   {
@@ -105,12 +105,12 @@ Applicant can review one of their mission's adventurer after they finish
   }
   ```
 
-- `404 Not Found`: mission, vacancy or user not found.
+- `404 Not Found`: service, vacancy or user not found.
 
   ```json
   {
     "errors": {
-      "general": ["Mission/Vacancy/User not found."]
+      "general": ["Service/Vacancy/User not found."]
     }
   }
   ```
@@ -125,21 +125,21 @@ Applicant can review one of their mission's adventurer after they finish
   }
   ```
 
-**Workflow:** after basic checks, review is added to the adventurer and they global rating is updated. Since two applicants could review the same adventurer at the same time, an optimistic transaction is needed, so rating is updated correctly. A pessimistic concurrency approach is used so 'rating' column in user table is never inconsistent, and, for UX purposes, in this case is better than an optimistic approach.
+**Workflow:** after basic checks, review is added to the collaborator and they global rating is updated. Since two applicants could review the same collaborator at the same time, an optimistic transaction is needed, so rating is updated correctly. A pessimistic concurrency approach is used so 'rating' column in user table is never inconsistent, and, for UX purposes, in this case is better than an optimistic approach.
 <br>
 <br>
 <br>
 
-## - Review adventurer: `POST /missions/:mid/owner`
+## - Review service applicant: `POST /api/reviews/services/:mid/owner`
 
-Adventurer can review their applicant after finish
+Collaborator can review their applicant after finish
 
 **Requires authentication:** Yes
 
 **Path parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `mid` | integer | Yes | Mission identifier. |
+| `mid` | integer | Yes | Service identifier. |
 
 **Body (JSON):**
 | Field | Type | Required | Description |
@@ -150,7 +150,7 @@ Adventurer can review their applicant after finish
 
 **Responses:**
 
-- `200 OK`: adventurer review successfully.
+- `200 OK`: collaborator review successfully.
 
   ```json
   {
@@ -170,7 +170,7 @@ Adventurer can review their applicant after finish
 
   <br>
 
-- `403 Forbidden`: user is unauthorized to do this action: applicant can only review their mission's adventurers.
+- `403 Forbidden`: user is unauthorized to do this action: applicant can only review their service's collaborators.
 
   ```json
   {
@@ -180,12 +180,12 @@ Adventurer can review their applicant after finish
   }
   ```
 
-- `404 Not Found`: mission, vacancy or user not found.
+- `404 Not Found`: service, vacancy or user not found.
 
   ```json
   {
     "errors": {
-      "general": ["Mission/Vacancy/User not found."]
+      "general": ["Service/Vacancy/User not found."]
     }
   }
   ```
@@ -200,7 +200,7 @@ Adventurer can review their applicant after finish
   }
   ```
 
-**Workflow:** after basic checks, review is added to the applicant and they global rating is updated. Since two adventurers could review the same applicant at the same time, an optimistic transaction is needed, so rating is updated correctly. A pessimistic concurrency approach is used so 'rating' column in user table is never inconsistent, and, for UX purposes, in this case is better than an optimistic approach.
+**Workflow:** after basic checks, review is added to the applicant and they global rating is updated. Since two collaborators could review the same applicant at the same time, an optimistic transaction is needed, so rating is updated correctly. A pessimistic concurrency approach is used so 'rating' column in user table is never inconsistent, and, for UX purposes, in this case is better than an optimistic approach.
 <br>
 <br>
 <br>

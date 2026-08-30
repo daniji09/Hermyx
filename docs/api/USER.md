@@ -103,9 +103,9 @@ Searches current user profile.
 <br>
 <br>
 
-## - Get missions from user: `GET /api/users/:uid/missions`
+## - Get services from user: `GET /api/users/:uid/services`
 
-Searches missions from the user specified, either joined or published.
+Searches services from the user specified, either joined or published.
 
 **Requires authentication:** Yes
 
@@ -118,7 +118,7 @@ Searches missions from the user specified, either joined or published.
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `type` | string | Yes | Type of mission to search: joined or published. |
+| `type` | string | Yes | Type of service to search: joined or published. |
 | `page` | integer | Yes | Page number for pagination (starts at 1). |
 | `limit` | integer | Yes | Maximum number of results per page. |
 _> Both `page` and `limit` must be sent for every request._
@@ -126,7 +126,7 @@ _> Both `page` and `limit` must be sent for every request._
 
 **Responses:**
 
-- `200 OK`: search done successfully (could not retrieve any missions). Example with pagination.
+- `200 OK`: search done successfully (could not retrieve any services). Example with pagination.
 
   ```json
   {
@@ -152,7 +152,7 @@ _> Both `page` and `limit` must be sent for every request._
 
   <br>
 
-**Workflow:** user missions are searched by their uid, being the joined or
+**Workflow:** user services are searched by their uid, being the joined or
 published ones which is decided by the type query param. Both `page` and
 `limit` are required.
 <br>
@@ -173,7 +173,7 @@ Gets user information to show it on their public profile.
 
 **Responses:**
 
-- `200 OK`: search done successfully, finding user with `username` provided. Missions visible provides user's configuration allowing to show their missions to others or not.
+- `200 OK`: search done successfully, finding user with `username` provided. Services visible provides user's configuration allowing to show their services to others or not.
 
   ```json
   {
@@ -208,27 +208,27 @@ Gets user information to show it on their public profile.
 
   <br>
 
-**Workflow:** an exact match is performed on the username passed as a parameter to display its public information, as well as any settings chosen by that user, which can affect the information shown, such as whether or not to reveal their missions to others. It's worth noting that, thanks to this endpoint, the way usernames were restricted was changed. Previously, users were allowed to have the same username as another user if the capitalization didn't match (for example, "username" and "Username" were different and could coexist), which prevented this endpoint from functioning correctly in a browser, but, more importantly, because it made phishing easier.
+**Workflow:** an exact match is performed on the username passed as a parameter to display its public information, as well as any settings chosen by that user, which can affect the information shown, such as whether or not to reveal their services to others. It's worth noting that, thanks to this endpoint, the way usernames were restricted was changed. Previously, users were allowed to have the same username as another user if the capitalization didn't match (for example, "username" and "Username" were different and could coexist), which prevented this endpoint from functioning correctly in a browser, but, more importantly, because it made phishing easier.
 <br>
 <br>
 <br>
 
-## - Get missions from public profile: `GET /api/users/:username/profile/missions`
+## - Get services from public profile: `GET /api/users/:username/profile/services`
 
-Searches missions from the user specified by username, either joined or published, which will show in their profile.
+Searches services from the user specified by username, either joined or published, which will show in their profile.
 
 **Requires authentication:** Yes
 
 **Path parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `uid` | integer | Yes | Uid of user. |
+| `username` | string | Yes | Username from the public profile. |
 <br>
 
 **Query parameters:**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `type` | string | Yes | Type of mission to search: joined or published. |
+| `type` | string | Yes | Type of service to search: joined or published. |
 | `page` | integer | Yes | Page number for pagination (starts at 1). |
 | `limit` | integer | Yes | Maximum number of results per page. |
 _> Both `page` and `limit` must be sent for every request._
@@ -236,7 +236,7 @@ _> Both `page` and `limit` must be sent for every request._
 
 **Responses:**
 
-- `200 OK`: search done successfully (could not retrieve any missions). Example with pagination.
+- `200 OK`: search done successfully (could not retrieve any services). Example with pagination.
 
   ```json
   {
@@ -262,10 +262,10 @@ _> Both `page` and `limit` must be sent for every request._
 
   <br>
 
-**Workflow:** user missions are searched by their uid, being the joined or
+**Workflow:** user services are searched by their uid, being the joined or
 published ones which is decided by the type query param. Both `page` and
 `limit` are required. This endpoint exists due to the different information
-needed from the missions, compared to the endpoint that retrieves the missions
+needed from the services, compared to the endpoint that retrieves the services
 of a user by their username (used for the current user).
 <br>
 <br>
@@ -352,7 +352,7 @@ _> Note: only one `avatar` file is treated._
 
   <br>
 
-**Workflow:** to process the image, Multer library is used, which allows to configure the number of files per endpoint, their size, and the expected format of each file. Regarding image storage, for development purposes, images are saved locally in the /public/uploads/avatars folder, while in production, Azure Blob is used (TODO:). It's worth noting that this is another backend which does not use any database transactions, as the industry standard prioritizes UX. This means that the image is first saved to storage, then to the database, and finally, the previous avatar image is deleted if it exists. Therefore, in the worst-case scenario, only a dirty image remains stored (TODO:).
+**Workflow:** to process the image, Multer library is used, which allows to configure the number of files per endpoint, their size, and the expected format of each file. Regarding image storage, development uses the local uploads directory and a configured production environment can use Azure Blob through the storage provider. The image is first saved to storage, then to the database, and finally the previous avatar image is deleted if it exists; therefore, an orphaned file can remain if a later step fails.
 <br>
 <br>
 <br>
@@ -537,7 +537,7 @@ Bans a user.
 
   <br>
 
-**Workflow:** banning a user can be done if subject doesn't have any other disputes active. This will reject it account on `Stripe`, meaning not only access will be denied to the account but that Stripe is aware of that user as a suspicious one and won't let him enter in any other account Stripe. `Firebase` also bans the account and its avatar is deleted. Then, all their conversations are closed, and all missions are cleared: deleting or cancelling the ones that they own; and kicking him out, with refund to applicant if needed, from the ones that they are an adventurer. It is also marked as banned in database. Various transactions are needed and payment mechanism where intent is marked and failures are catch for logging and retrying them is used (logs not implemented). Since this operation can imply a money transaction and implies a report, the following mechanism is used: report is locked by updating it to 'answered' state, then `Stripe` transaction is done, and, after that, all operations left are done inside a database transaction. If Stripe transaction fails, report block is reverted, otherwise it will still be standing even if anything else fails, so a database inconsistency is expected.
+**Workflow:** banning a user can be done if subject doesn't have any other disputes active. This will reject it account on `Stripe`, meaning not only access will be denied to the account but that Stripe is aware of that user as a suspicious one and won't let him enter in any other account Stripe. `Firebase` also bans the account and its avatar is deleted. Then, all their conversations are closed, and all services are cleared: deleting or cancelling the ones that they own; and kicking him out, with refund to applicant if needed, from the ones that they are an collaborator. It is also marked as banned in database. Various transactions are needed and payment mechanism where intent is marked and failures are catch for logging and retrying them is used (logs not implemented). Since this operation can imply a money transaction and implies a report, the following mechanism is used: report is locked by updating it to 'answered' state, then `Stripe` transaction is done, and, after that, all operations left are done inside a database transaction. If Stripe transaction fails, report block is reverted, otherwise it will still be standing even if anything else fails, so a database inconsistency is expected.
 <br>
 <br>
 
@@ -567,6 +567,6 @@ Deletes current user's account.
 
   <br>
 
-**Workflow:** deleting an account is quite a complex function. In first place, for a user to being able to do it, they have to don't have any active missions or reports. Then, all external objects are deleted, first the avatar if any, then the Stripe account if any and lastly the Firebase account. Finally, and inside of a transaction, user is removed from conversations (setting their left_at), their private conversations are closed so the other user knows they don't exist anymore, their received notifications are deleted because those are useless and is some space saved and, lastly, user is anonymize, there is no hard delete. (TODO: comprobar que con el RGPD todo bien).
+**Workflow:** deleting an account is quite a complex function. In first place, for a user to being able to do it, they have to don't have any active services or reports. Then, all external objects are deleted, first the avatar if any, then the Stripe account if any and lastly the Firebase account. Finally, and inside of a transaction, user is removed from conversations (setting their left_at), their private conversations are closed so the other user knows they don't exist anymore, their received notifications are deleted because those are useless and is some space saved and, lastly, user is anonymize, there is no hard delete. (TODO: verify GDPR compliance).
 <br>
 <br>

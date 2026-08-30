@@ -14,7 +14,7 @@ import { errorHandler } from './middlewares/error.middleware.js';
 import authRouter from './routes/auth.route.js';
 import usersRouter from './routes/user.route.js';
 import paymentRouter from './routes/payment.route.js';
-import missionsRouter from './routes/mission.route.js';
+import missionsRouter from './routes/service.route.js';
 import notificationRouter from './routes/notification.route.js';
 import reviewsRouter from './routes/review.route.js';
 import reportsRouter from './routes/report.route.js';
@@ -45,7 +45,7 @@ app.use(express.static(staticFiles));
 // Application routes
 app.use('/api/auth', authRouter);
 app.use('/api/users', verifyToken, usersRouter);
-app.use('/api/missions', missionsRouter);
+app.use('/api/services', missionsRouter);
 app.use('/api/stripe', verifyToken, paymentRouter);
 app.use('/api/notifications', verifyToken, notificationRouter);
 app.use('/api/reviews', verifyToken, reviewsRouter);
