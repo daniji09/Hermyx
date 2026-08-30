@@ -95,6 +95,9 @@ export const messages = {
     SERVICE_FILLED: 'Service already filled!',
     SERVICE_OPEN: 'Join any open vacancy of this service!',
     SERVICE_JOINED: 'You are already part of this service.',
+    SERVICE_FINISHED:
+      'This service has finished. Your participation was released.',
+    SERVICE_FINISHED_OWNER: 'This service has finished.',
     SERVICE_NOT_ACCEPTING_COLLABORATORS:
       'This service is no longer accepting collaborators.',
     SERVICE_PENDING_PAYMENT: `Service can't be opened until payment is done.`,

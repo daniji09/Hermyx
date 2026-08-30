@@ -444,7 +444,8 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                       mission?.status === MISSION_STATUS.IN_DISPUTE.ID ||
                       mission?.status === MISSION_STATUS.CANCELLED.ID ||
                       mission?.status === MISSION_STATUS.DELETED.ID ||
-                      mission?.status === MISSION_STATUS.REPORTED.ID) && (
+                      mission?.status === MISSION_STATUS.REPORTED.ID ||
+                      mission?.status === MISSION_STATUS.FINISHED.ID) && (
                       <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
                         <MissionOwnerStatusMessage
                           status={mission?.status}
@@ -456,7 +457,8 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                 ) : (
                   <>
                     {(!currentUser?.isAdmin &&
-                      mission?.status === MISSION_STATUS.IN_PROGRESS.ID) ||
+                      mission?.status === MISSION_STATUS.IN_PROGRESS.ID &&
+                      currentParticipation) ||
                     (!currentUser?.isAdmin &&
                       mission?.status === MISSION_STATUS.REOPENED.ID &&
                       currentParticipation) ? (
@@ -489,6 +491,12 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         <EndedStatusMessage
                           status={mission?.status}
                         ></EndedStatusMessage>
+                      </div>
+                    ) : mission?.status === MISSION_STATUS.FINISHED.ID &&
+                      currentParticipation?.status ===
+                        MISSION_PARTICIPATION_STATUS.RELEASED.ID ? (
+                      <div className='text-center text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 py-2 rounded-lg'>
+                        {messages.SERVICE.SERVICE_FINISHED}
                       </div>
                     ) : currentParticipation ? (
                       <div className='text-center text-sm font-medium text-muted-foreground bg-muted/20 border py-2 rounded-lg'>
@@ -1107,6 +1115,9 @@ const UnjoinMissionButton = ({
     mutationFn: () => unjoinMission(missionId, vacancyId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(missionId)],
+      });
     },
 
     // Backend error handling
@@ -1891,6 +1902,9 @@ const CloseMissionButton = ({ mission, className, variant, size }) => {
     mutationFn: () => closeMission(mission.mid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(mission.mid)],
+      });
     },
     // Backend error handling
     onError: (error) => {
@@ -2021,6 +2035,10 @@ const SubmitParticipationButton = ({
 };
 
 const MissionOwnerStatusMessage = ({ status, canFinish }) => {
+  if (status === MISSION_STATUS.FINISHED.ID) {
+    return <p className='p-1'>{messages.SERVICE.SERVICE_FINISHED_OWNER}</p>;
+  }
+
   if (canFinish) {
     return (
       <p className='p-1'>
@@ -2175,6 +2193,9 @@ const ReopenMissionButton = ({ mission, className, variant, size }) => {
     mutationFn: () => reopenMission(mission.mid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(mission.mid)],
+      });
     },
     // Backend error handling
     onError: (error) => {
@@ -2231,6 +2252,9 @@ const FinishMissionButton = ({ mission, className, variant, size }) => {
     mutationFn: () => finishMission(mission.mid),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+      queryClient.invalidateQueries({
+        queryKey: ['getMission', String(mission.mid)],
+      });
     },
     // Backend error handling
     onError: (error) => {

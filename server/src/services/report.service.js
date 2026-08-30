@@ -203,6 +203,7 @@ export const reportAdventurer = async ({
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
           associated_user_id: adventurer.uid,
+          previous_participation_status: vacancy.status,
         },
         conversationId: conversation.cid,
       },
@@ -211,12 +212,15 @@ export const reportAdventurer = async ({
     );
 
     // Marks participation as disputed
-    await missionService.updateParticipationStatusByMidAndAdventurer(
-      missionId,
-      adventurer.uid,
-      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
-      client,
-    );
+    const disputedParticipation =
+      await missionService.updateParticipationStatusByMidAndAdventurer(
+        missionId,
+        adventurer.uid,
+        MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
+        client,
+      );
+    if (!disputedParticipation)
+      throw new AppError(messages.SERVICE.VACANCY.ALREADY_MODIFIED, 409);
 
     // Syncs service
     await missionService.syncMissionCompletionStatus(missionId, client);
@@ -285,6 +289,13 @@ export const reportAdventurer = async ({
   } finally {
     client.release();
   }
+
+  // Updates the owner's mission immediately after reporting the collaborator
+  emitToUser(sender.uid, 'mission:participation-disputed', {
+    missionId,
+    vacancyId,
+  });
+
   // Send notification to collaborator
   emitToUser(adventurer.uid, 'notification:created', {
     notificationId,
@@ -780,6 +791,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
 
   let notificationData;
   let notificationEvent;
+  let participationToRestore;
   if (report.type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
     // Gets service info
     const mission = await missionService.getMissionByIdOrThrow(
@@ -798,6 +810,15 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     const adventurer = await userService.getUserByUidOrThrow(
       vacancy.adventurer_id,
     );
+
+    participationToRestore = {
+      missionId: mission.mid,
+      adventurerId: adventurer.uid,
+      currentStatus: vacancy.status,
+      previousStatus:
+        report.payload.previous_participation_status ||
+        MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
+    };
 
     // Creates notification data
     const message = messages.NOTIFICATION.DISMISS.REPORT_COLLABORATOR(
@@ -837,6 +858,26 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     if (!reportLocked)
       throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
 
+    if (
+      participationToRestore?.currentStatus ===
+      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID
+    ) {
+      const restoredParticipation =
+        await missionService.updateParticipationStatusByMidAndAdventurer(
+          participationToRestore.missionId,
+          participationToRestore.adventurerId,
+          participationToRestore.previousStatus,
+          client,
+        );
+      if (!restoredParticipation)
+        throw new AppError(messages.SERVICE.VACANCY.ALREADY_MODIFIED, 409);
+
+      await missionService.syncMissionCompletionStatus(
+        participationToRestore.missionId,
+        client,
+      );
+    }
+
     // Closes report and associated conversation on db
     ({ report: closedReport, participantIds } =
       await closeReportAndConversation(
@@ -863,11 +904,14 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
 
   // Sends conversation closed and notification if necessary
   emitConversationClosed(participantIds, closedReport);
-  if (notificationEvent)
-    emitToUser(report.sender_id, 'dispute:dismissed', {
-      notificationId,
-      ...notificationEvent,
-    });
+  if (notificationEvent) {
+    for (const participantId of participantIds) {
+      emitToUser(participantId, 'dispute:dismissed', {
+        ...(participantId === report.sender_id ? { notificationId } : {}),
+        ...notificationEvent,
+      });
+    }
+  }
 
   return closedReport;
 };

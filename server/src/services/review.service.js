@@ -4,6 +4,7 @@ import { AppError, checkRequired } from '../utils/error.util.js';
 import * as reviewModel from '../models/review.model.js';
 import * as missionService from './service.service.js';
 import * as userService from './user.service.js';
+import * as socketProvider from '../providers/socket.provider.js';
 
 /// Endpoint complex functions
 // Get user reviews
@@ -118,6 +119,13 @@ const createReview = async ({
       await userService.updateRating(participation.owner_id, client);
     }
     await client.query('COMMIT');
+
+    const receiverId =
+      reviewerRole === 'owner' ? adventurerId : participation.owner_id;
+    socketProvider.emitToUser(receiverId, 'review:created', {
+      missionId: mid,
+    });
+
     return review;
   } catch (error) {
     await client.query('ROLLBACK');

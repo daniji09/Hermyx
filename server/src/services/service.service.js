@@ -1587,6 +1587,10 @@ export const finishMission = async (mid, user) => {
       409,
     );
 
+  const collaborators = participants.filter(
+    (participant) => participant.adventurer_id,
+  );
+
   // Then, service status update and conversation closure are made
   const client = await pool.connect();
   try {
@@ -1601,12 +1605,19 @@ export const finishMission = async (mid, user) => {
     // And conversation is ended
     await conversationService.closeMissionConversationType(mid, client);
     await client.query('COMMIT');
-    return;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
   } finally {
     client.release();
+  }
+
+  for (const collaborator of collaborators) {
+    socketProvider.emitToUser(
+      collaborator.adventurer_id,
+      'mission:finished',
+      { missionId: mission.mid },
+    );
   }
 };
 

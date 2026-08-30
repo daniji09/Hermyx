@@ -157,7 +157,7 @@ export const MISSION_PARTICIPATION_STATUS = {
     LABEL: 'In progress',
     CAN_EDIT: true,
     CAN_INTERACT: true,
-    VALID_NEXT_STATES: ['SUBMITTED', 'PENDING_PAYMENT'],
+    VALID_NEXT_STATES: ['SUBMITTED', 'PENDING_PAYMENT', 'IN_DISPUTE'],
   },
   SUBMITTED: {
     ID: 'SUBMITTED',
@@ -189,7 +189,14 @@ export const MISSION_PARTICIPATION_STATUS = {
     CAN_EDIT: false,
     CAN_INTERACT: true,
     CAN_REVIEW: false,
-    VALID_NEXT_STATES: ['IN_PROGRESS', 'ACCEPTED', 'REOPENED'],
+    VALID_NEXT_STATES: [
+      'IN_PROGRESS',
+      'ACCEPTED',
+      'REOPENED',
+      'PENDING_PAYMENT',
+      'SUBMITTED',
+      'REJECTED',
+    ],
   },
   RELEASED: {
     ID: 'RELEASED',

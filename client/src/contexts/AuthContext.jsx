@@ -204,6 +204,24 @@ export const AuthProvider = ({ children }) => {
           }
         });
 
+        socketRef.current.on('mission:finished', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
+        socketRef.current.on('review:created', (payload) => {
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
         socketRef.current.on('mission:edited', (payload) => {
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({ queryKey: ['getMissions'] });
@@ -274,6 +292,17 @@ export const AuthProvider = ({ children }) => {
           queryClient.invalidateQueries({ queryKey: ['getReport'] });
         });
 
+        socketRef.current.on('dispute:dismissed', (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
+          queryClient.invalidateQueries({ queryKey: ['getMissions'] });
+          queryClient.invalidateQueries({ queryKey: ['getUserMissions'] });
+          if (payload?.missionId) {
+            queryClient.invalidateQueries({
+              queryKey: ['getMission', String(payload.missionId)],
+            });
+          }
+        });
+
         socketRef.current.on('mission:participation-submitted', (payload) => {
           setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
@@ -307,7 +336,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         socketRef.current.on('mission:participation-disputed', (payload) => {
-          setLatestNotification(payload);
+          if (payload?.notificationId) setLatestNotification(payload);
           queryClient.invalidateQueries({ queryKey: ['getMyNotifications'] });
           queryClient.invalidateQueries({
             queryKey: ['getMission', String(payload.missionId)],

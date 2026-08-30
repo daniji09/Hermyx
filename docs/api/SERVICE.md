@@ -8,7 +8,8 @@ Manages services action on the platform
 Gets all opened and reopened services from Hermyx, being able to query them by
 title.
 
-**Requires authentication:** No
+**Requires authentication:** No. This endpoint is public and can be requested
+without a bearer token.
 
 **Query parameters:**
 | Field | Type | Required | Description |
@@ -58,8 +59,10 @@ that is insensitive to accents.
 
 Gets all service opened from Hermyx, being able to query them by title, minimum payment, maximum payment and maximum distance.
 
-**Requires authentication:** No. The distance filter is applied only when an
-authenticated user with a saved location makes the request.
+**Requires authentication:** No. This is the public service search endpoint.
+The distance filter is applied only when an authenticated user with a saved
+location makes the request; title and payment filters are available to all
+users.
 
 **Query parameters:**
 | Field | Type | Required | Description |

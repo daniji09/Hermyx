@@ -10,7 +10,6 @@ export const MISSION_PARTICIPATION_PAYMENT_STATUS = {
   PARTIALLY_PAID: { ID: 'PARTIALLY_PAID', LABEL: 'Partially paid' },
   PARTIALLY_REFUNDED: { ID: 'PARTIALLY_REFUNDED', LABEL: 'Partially refunded' },
   LIQUIDATED: { ID: 'LIQUIDATED', LABEL: 'Liquidated' },
-  REFUNDED: { ID: 'REFUNDED', LABEL: 'Refunded' },
 };
 
 export const TRANSACTION_TYPE = {
