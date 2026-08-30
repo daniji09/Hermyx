@@ -188,6 +188,19 @@ export const confirmPayment = async (mid, paymentIntentId, user) => {
     const waitingForPaymentVacancies =
       await missionService.getAllWaitingForPaymentByMid(mid, client);
 
+    const expectedPaymentAmount = Math.round(
+      waitingForPaymentVacancies.reduce(
+        (sum, vacancy) =>
+          sum + Number(vacancy.monetary_reward) - Number(vacancy.amount_paid),
+        0,
+      ) *
+        100 *
+        HERMYX_FEE,
+    );
+
+    if (pi.amount !== expectedPaymentAmount)
+      throw new AppError(messages.PAYMENT.GENERAL.PAYMENT_AMOUNT_MISMATCH, 409);
+
     const occupied_vacancies = await missionService.getAllOccupiedByMid(
       mission.mid,
       client,

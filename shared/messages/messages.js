@@ -184,6 +184,7 @@ export const messages = {
       NO_DEFAULT_CARD: `User doesn't have a default card selected.`,
       PAYMENT_NOT_FROM_USER: `Payment does not belong to the current user.`,
       PAYMENT_NOT_FROM_SERVICE: `Payment does not belong to the current service.`,
+      PAYMENT_AMOUNT_MISMATCH: `Payment amount does not match the amount required by the current service.`,
       PAYMENT_NOT_SUCCEEDED: (status) =>
         `Payment was not completed (status=${status})`,
     },
