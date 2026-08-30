@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { getMissionsInfiniteQueryOptions } from '../queries/ServicesQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import { useSearchParams } from 'react-router-dom';
@@ -7,8 +7,10 @@ import { MissionSearchContainer } from '../components/custom/services/ServiceSea
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Map } from 'lucide-react';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const SearchMission = () => {
+  const { currentUser } = useContext(AuthContext);
   // Search params, if they exists
   const [searchParams, setSearchParams] = useSearchParams();
   const title = searchParams.get('title') || '';
@@ -20,9 +22,9 @@ export const SearchMission = () => {
   const [maxDistanceInput, setMaxDistanceInput] = useState(maxDistanceKm);
   const searchFilters = {
     ...(title ? { title } : {}),
-    ...(minPayment ? { minPayment } : {}),
-    ...(maxPayment ? { maxPayment } : {}),
-    ...(maxDistanceKm ? { maxDistanceKm } : {}),
+    ...(currentUser && minPayment ? { minPayment } : {}),
+    ...(currentUser && maxPayment ? { maxPayment } : {}),
+    ...(currentUser && maxDistanceKm ? { maxDistanceKm } : {}),
   };
 
   // Query options
@@ -117,77 +119,84 @@ export const SearchMission = () => {
             </div>
           </div>
         </section>
-        <section className='w-full' aria-label='Filters section'>
-          <div className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
-            <form
-              onSubmit={handleFiltersSubmit}
-              className='mt-4 flex flex-col gap-3 sm:flex-row sm:items-end'
-            >
-              <div className='grid gap-1.5'>
-                <label htmlFor='minPayment' className='text-sm font-medium'>
-                  Min price
-                </label>
-                <Input
-                  id='minPayment'
-                  name='minPayment'
-                  type='number'
-                  min='0'
-                  step='0.1'
-                  value={minPaymentInput}
-                  onChange={(event) => setMinPaymentInput(event.target.value)}
-                  placeholder='0'
-                  className='sm:w-36'
-                />
-              </div>
+        {currentUser && (
+          <section className='w-full' aria-label='Filters section'>
+            <div className='mb-8 flex flex-col items-start gap-4 border-b pb-6 sm:flex-row sm:items-center'>
+              <form
+                onSubmit={handleFiltersSubmit}
+                className='mt-4 flex flex-col gap-3 sm:flex-row sm:items-end'
+              >
+                <div className='grid gap-1.5'>
+                  <label htmlFor='minPayment' className='text-sm font-medium'>
+                    Min price
+                  </label>
+                  <Input
+                    id='minPayment'
+                    name='minPayment'
+                    type='number'
+                    min='0'
+                    step='0.1'
+                    value={minPaymentInput}
+                    onChange={(event) => setMinPaymentInput(event.target.value)}
+                    placeholder='0'
+                    className='sm:w-36'
+                  />
+                </div>
 
-              <div className='grid gap-1.5'>
-                <label htmlFor='maxPayment' className='text-sm font-medium'>
-                  Max price
-                </label>
-                <Input
-                  id='maxPayment'
-                  name='maxPayment'
-                  type='number'
-                  min='0'
-                  step='0.1'
-                  value={maxPaymentInput}
-                  onChange={(event) => setMaxPaymentInput(event.target.value)}
-                  placeholder='Any'
-                  className='sm:w-36'
-                />
-              </div>
+                <div className='grid gap-1.5'>
+                  <label htmlFor='maxPayment' className='text-sm font-medium'>
+                    Max price
+                  </label>
+                  <Input
+                    id='maxPayment'
+                    name='maxPayment'
+                    type='number'
+                    min='0'
+                    step='0.1'
+                    value={maxPaymentInput}
+                    onChange={(event) => setMaxPaymentInput(event.target.value)}
+                    placeholder='Any'
+                    className='sm:w-36'
+                  />
+                </div>
 
-              <div className='grid gap-1.5'>
-                <label htmlFor='maxDistanceKm' className='text-sm font-medium'>
-                  Max distance
-                </label>
-                <Input
-                  id='maxDistanceKm'
-                  name='maxDistanceKm'
-                  type='number'
-                  min='0'
-                  step='0.1'
-                  value={maxDistanceInput}
-                  onChange={(event) => setMaxDistanceInput(event.target.value)}
-                  placeholder='Any'
-                  className='sm:w-36'
-                />
-              </div>
+                <div className='grid gap-1.5'>
+                  <label
+                    htmlFor='maxDistanceKm'
+                    className='text-sm font-medium'
+                  >
+                    Max distance
+                  </label>
+                  <Input
+                    id='maxDistanceKm'
+                    name='maxDistanceKm'
+                    type='number'
+                    min='0'
+                    step='0.1'
+                    value={maxDistanceInput}
+                    onChange={(event) =>
+                      setMaxDistanceInput(event.target.value)
+                    }
+                    placeholder='Any'
+                    className='sm:w-36'
+                  />
+                </div>
 
-              <div className='flex gap-2'>
-                <Button type='submit'>Apply</Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  onClick={handleClearFilters}
-                  disabled={!minPayment && !maxPayment && !maxDistanceKm}
-                >
-                  Clear
-                </Button>
-              </div>
-            </form>
-          </div>
-        </section>
+                <div className='flex gap-2'>
+                  <Button type='submit'>Apply</Button>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    onClick={handleClearFilters}
+                    disabled={!minPayment && !maxPayment && !maxDistanceKm}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </section>
+        )}
         <MissionSearchContainer
           missions={missions}
           hasNextPage={hasNextPage}
