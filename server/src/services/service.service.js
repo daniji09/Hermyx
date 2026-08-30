@@ -921,6 +921,9 @@ export const inviteToMission = async (
     getMissionParticipationByIdOrThrow(vacancyId),
   ]);
 
+  // Only the service owner can invite collaborators
+  checkMissionBelongsToUser(mission.owner_id, senderId);
+
   // Checks that vacancy exists in that service
   checkVacancyNotMission(vacancy.mid, mid);
 
