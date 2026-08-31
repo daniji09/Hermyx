@@ -268,6 +268,7 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                   <Button
                     variant='outline'
                     size='icon'
+                    aria-label='Open service options'
                     className='shrink-0 rounded-full h-10 w-10'
                   >
                     <MoreVertical className='h-5 w-5 text-muted-foreground' />
