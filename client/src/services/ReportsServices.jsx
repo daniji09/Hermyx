@@ -3,7 +3,7 @@ import api from '../config/api';
 
 // Reports a collaborator
 export const reportAdventurer = async ({ message, mid, vacancyId }) => {
-  const { data } = await api.post(`/reports/adventurer`, {
+  const { data } = await api.post(`/reports/collaborator`, {
     message,
     mid,
     vacancyId,

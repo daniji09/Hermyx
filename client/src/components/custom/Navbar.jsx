@@ -79,6 +79,8 @@ export function Navbar() {
                 src='/images/logo.svg'
                 alt='Hermyx'
                 className='h-9 w-auto max-w-36'
+                width='42'
+                height='36'
               />
               <span className='font-extrabold text-2xl tracking-tight'>
                 Hermyx
@@ -135,6 +137,9 @@ export function Navbar() {
               variant='ghost'
               size='icon'
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls='mobile-navigation-menu'
             >
               {isMobileMenuOpen ? (
                 <X className='h-6 w-6' aria-hidden='true' />
@@ -146,7 +151,10 @@ export function Navbar() {
           </div>
         </nav>
         {isMobileMenuOpen && (
-          <div className='md:hidden border-t bg-background px-4 py-4 space-y-4 shadow-lg'>
+          <div
+            id='mobile-navigation-menu'
+            className='md:hidden border-t bg-background px-4 py-4 space-y-4 shadow-lg'
+          >
             <SearchBar
               id='searchMissionByTitleMobile'
               legend='Search service by title bar.'

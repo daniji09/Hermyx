@@ -224,7 +224,7 @@ export const submitMissionParticipation = async (mid) => {
 // Reviews a collaborator after a completed service
 export const reviewAdventurer = async (mid, adventurerId, review) => {
   const { data } = await api.post(
-    `/services/${mid}/adventurers/${adventurerId}/review`,
+    `/services/${mid}/collaborators/${adventurerId}/review`,
     review,
   );
   return data;

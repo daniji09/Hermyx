@@ -97,7 +97,7 @@ Gets the report specified by its identifier, rid.
 <br>
 <br>
 
-## - Report collaborator: `POST /api/reports/adventurer`
+## - Report collaborator: `POST /api/reports/collaborator`
 
 Applicant reports an collaborator of their service
 

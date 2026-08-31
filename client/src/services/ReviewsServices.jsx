@@ -16,7 +16,7 @@ export const getUserReviews = async (
 // Reviews a collaborator after a completed service
 export const reviewAdventurer = async (mid, adventurerId, review) => {
   const { data } = await api.post(
-    `/reviews/services/${mid}/adventurers/${adventurerId}`,
+    `/reviews/services/${mid}/collaborators/${adventurerId}`,
     review,
   );
   return data;
