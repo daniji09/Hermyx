@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnswerReportDialog } from '@/components/custom/reports/AnswerReportDialog';
 import { useAlert } from '../contexts/AlertContext';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   getMyNotificationsInfiniteQueryOptions,
   markAllNotificationsAsSeenMutationOptions,
@@ -275,6 +275,9 @@ export const Notifications = () => {
                   Rejected
                 </TabsTrigger>
               </TabsList>
+              <TabsContent value='all' forceMount className='hidden' />
+              <TabsContent value='accepted' forceMount className='hidden' />
+              <TabsContent value='rejected' forceMount className='hidden' />
             </Tabs>
 
             {notifications.length === 0 ? (
@@ -530,7 +533,7 @@ export const Notifications = () => {
                   );
                 })}
                 {hasNextPage && (
-                  <div
+                  <li
                     ref={isFetchingNextPage ? null : loadMoreRef}
                     className='flex justify-center py-4 h-12 w-full'
                   >
@@ -539,12 +542,12 @@ export const Notifications = () => {
                         Loading notifications...
                       </span>
                     )}
-                  </div>
+                  </li>
                 )}
                 {!hasNextPage && (
-                  <div className='text-center text-xs text-muted-foreground py-2'>
+                  <li className='text-center text-xs text-muted-foreground py-2'>
                     No more notifications found.
-                  </div>
+                  </li>
                 )}
               </ul>
             )}
