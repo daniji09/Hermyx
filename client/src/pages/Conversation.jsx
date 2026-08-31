@@ -859,6 +859,7 @@ export const ConversationThread = ({
                       ref={photoInputRef}
                       type='file'
                       tabIndex={-1}
+                      aria-label='Photo attachment'
                       accept={consts.SERVICE.PHOTOS.ACCEPTED_IMAGE_TYPES.join(
                         ',',
                       )}
