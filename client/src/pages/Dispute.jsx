@@ -16,6 +16,7 @@ export const Dispute = () => {
     data: dispute,
     isLoading,
     isError,
+    error,
   } = useQuery(getDisputeQueryOptions(id));
 
   const linkClass =
@@ -40,7 +41,7 @@ export const Dispute = () => {
     if (!missionId) return null;
     return (
       <Link
-        to={`/missions/${missionId}`}
+        to={`/services/${missionId}`}
         className={linkClass}
         title={title}
         aria-label={title}
@@ -61,15 +62,15 @@ export const Dispute = () => {
       case REPORT_TYPE.REPORT_ADVENTURER.ID:
         return (
           <>
-            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
-            {senderLink}.
+            Collaborator {otherUserLink} of service {missionLink} was reported
+            by {senderLink}.
           </>
         );
 
       case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
         return (
           <>
-            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
+            Applicant {otherUserLink} of service {missionLink} was reported by{' '}
             {senderLink}.
           </>
         );
@@ -77,7 +78,7 @@ export const Dispute = () => {
       default:
         return (
           <>
-            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
+            Collaborator&lsquo;s {otherUserLink} participation in service{' '}
             {missionLink} was reported by {senderLink}.
           </>
         );
@@ -99,7 +100,20 @@ export const Dispute = () => {
       </main>
     );
 
-  if (isError || !dispute) {
+  if (isError && !dispute && error?.response?.status !== 404) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load dispute.
+        </div>
+      </main>
+    );
+  }
+
+  if (!dispute) {
     return <NotFound></NotFound>;
   }
 

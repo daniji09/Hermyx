@@ -29,9 +29,9 @@ router.get(
 );
 
 /// POST
-// Reviews an adventurer after a completed mission
+// Reviews an collaborator after a completed service
 router.post(
-  '/missions/:mid/adventurers/:adventurerId',
+  '/services/:mid/collaborators/:adventurerId',
   verifyRegularUser,
   validateParamsSchema(reviewAdventurerParamSchema),
   validateBodySchema(reviewAdventurerBodySchema),
@@ -40,7 +40,7 @@ router.post(
 
 // Reviews an applicant after a completed participation
 router.post(
-  '/missions/:mid/owner',
+  '/services/:mid/owner',
   verifyRegularUser,
   validateParamsSchema(reviewOwnerParamSchema),
   validateBodySchema(reviewOwnerBodySchema),

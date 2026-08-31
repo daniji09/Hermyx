@@ -167,7 +167,7 @@ const moduleMocks = [
   },
 ];
 
-export const installHermyxLoginMocks = async (page) => {
+export const installHermyxLoginMocks = async (page, { meDelayMs = 0 } = {}) => {
   for (const moduleMock of moduleMocks) {
     await page.route(moduleMock.pattern, async (route) => {
       await route.fulfill({
@@ -195,6 +195,10 @@ export const installHermyxLoginMocks = async (page) => {
   });
 
   await page.route('**/api/users/me', async (route) => {
+    if (meDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, meDelayMs));
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

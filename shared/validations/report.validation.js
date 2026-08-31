@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
 import { limitBaseSchema, pageBaseSchema } from './pagination.validation.js';
-import { midBaseSchema } from './mission.validation.js';
+import { midBaseSchema } from './service.validation.js';
 import { uidBaseSchema } from './user.validation.js';
 
 /// Base validations, raw logic
@@ -49,7 +49,7 @@ export const getReportByIdValidation = z.object({
   rid: reportIdBaseSchema,
 });
 
-// Report adventurer
+// Report collaborator
 export const reportAdventurerValidation = z.object({
   mid: midBaseSchema,
   vacancyId: vacancyIdBaseSchema,
@@ -62,13 +62,13 @@ export const reportUserValidation = z.object({
   message: reportMessageBaseSchema,
 });
 
-// Report mission
+// Report service
 export const reportMissionValidation = z.object({
   mid: midBaseSchema,
   message: reportMessageBaseSchema,
 });
 
-// Accept adventurer's work
+// Accept collaborator's work
 export const acceptAdventurersWorkParamsValidation = z.object({
   rid: reportIdBaseSchema,
 });
@@ -77,7 +77,7 @@ export const acceptAdventurersWorkBodyValidation = z.object({
   reason: reportReasonBaseSchema,
 });
 
-// Reject adventurer's work
+// Reject collaborator's work
 export const rejectAdventurersWorkParamValidation = z.object({
   rid: reportIdBaseSchema,
 });

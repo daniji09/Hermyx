@@ -1,4 +1,4 @@
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useContext, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { logInAction } from '../actions/AuthActions';
 import { initialStateUseStateAction } from '../consts/consts.js';
@@ -13,8 +13,11 @@ import { GoogleSignInButton } from '../components/custom/GoogleSignInButton';
 import { UseGoogleAuth } from '../hooks/UseGoogleAuth.jsx';
 import { Separator } from '../components/ui/separator.jsx';
 import { AlertStatic } from '../components/custom/AlertStatic.jsx';
+import { AuthContext } from '../contexts/AuthContext';
 
 export const LogIn = () => {
+  const { currentUser } = useContext(AuthContext);
+
   // Form action handling
   const [state, logInFormAction, isPending] = useActionState(
     logInAction,
@@ -29,8 +32,8 @@ export const LogIn = () => {
   );
 
   useEffect(() => {
-    if (state.success) navigate('/');
-  }, [state.success, navigate]);
+    if (state.success && currentUser) navigate('/');
+  }, [currentUser, state.success, navigate]);
 
   // Consumes the navigation state so the notice is shown only once
   useEffect(() => {

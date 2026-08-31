@@ -4,10 +4,15 @@ import { executePaginatedQuery } from '../utils/pagination.util.js';
 
 /// CREATES
 // Creates new user
-export const create = async (email, username, firebaseUid) => {
+export const create = async (email, username, firebaseUid, termsVersion) => {
   const query =
-    'INSERT INTO app_user(email, username, firebase_uid) VALUES($1, $2, $3) RETURNING *';
-  const result = await pool.query(query, [email, username, firebaseUid]);
+    'INSERT INTO app_user(email, username, firebase_uid, terms_version, terms_accepted_at) VALUES($1, $2, $3, $4, CURRENT_TIMESTAMP) RETURNING *';
+  const result = await pool.query(query, [
+    email,
+    username,
+    firebaseUid,
+    termsVersion,
+  ]);
   return result.rows[0];
 };
 
@@ -185,7 +190,7 @@ export const updateRating = async (uid, client = pool) => {
     `UPDATE app_user
      SET rating = COALESCE((
        WITH all_ratings AS (
-         -- As adventurer
+         -- As collaborator
          SELECT r.rating
          FROM mission_participation mp
          JOIN review r ON r.id = mp.owner_review_id

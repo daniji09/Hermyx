@@ -9,6 +9,9 @@ export const consts = {
 
   /// Auth consts
   AUTH: {
+    LEGAL: {
+      TERMS_VERSION: '1.0',
+    },
     // Firebase consts
     FIREBASE_ERRORS: {
       //Auth/account-exists-with-different-credential?
@@ -136,8 +139,8 @@ export const consts = {
     },
   },
 
-  // Mission consts
-  MISSION: {
+  // Service consts
+  SERVICE: {
     TITLE: {
       MAX_LENGTH: 100,
     },
@@ -149,7 +152,6 @@ export const consts = {
       ACCEPTED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/webp'],
       MAX: 5,
     },
-
     VACANCIES: {
       MIN: 1,
       STEP: 1,
@@ -158,7 +160,7 @@ export const consts = {
       DESCRIPTION_MAX_LENGTH: 500,
       STATUS_MAX_LENGTH: 20,
     },
-    REWARD: { MIN: 10, STEP: 1, MAX: 10000 },
+    REWARD: { MIN: 10, STEP: 0.01, MAX: 10000 },
     REPORT_MESSAGE: { MAX: 1000 },
   },
 

@@ -50,6 +50,7 @@ export const findByNid = async (nid, client = pool) => {
 export const findByRecipientId = async (
   recipientId,
   pagination,
+  status = 'all',
   client = pool,
 ) => {
   let query = `
@@ -75,16 +76,25 @@ export const findByRecipientId = async (
     JOIN app_user sender ON sender.uid = n.sender_id
     JOIN mission m ON m.mid = (n.payload->>'associated_mission_id')::int
     WHERE n.recipient_id = $1
+  `;
+  const values = [recipientId, NOTIFICATION_STATUS.PENDING.ID];
+
+  if (status !== 'all') {
+    values.push(status.toUpperCase());
+    query += ` AND n.status = $${values.length}`;
+  }
+
+  query += `
     ORDER BY
       CASE WHEN n.seen = FALSE THEN 0 ELSE 1 END,
       CASE WHEN COALESCE(n.status, '') = $2 THEN 0 ELSE 1 END,
       n.date DESC,
       n.nid DESC
   `;
-  const values = [recipientId, NOTIFICATION_STATUS.PENDING.ID];
+
   if (pagination) {
     values.push(pagination.limit, pagination.offset);
-    query += ` LIMIT $3 OFFSET $4`;
+    query += ` LIMIT $${values.length - 1} OFFSET $${values.length}`;
   }
 
   const result = await client.query(query, values);
@@ -122,7 +132,7 @@ export const findByActionStatusAndMissionParticipationId = async (
   return result.rows;
 };
 
-// Find by action status, sender id and mission id
+// Find by action status, sender id and service id
 export const findByActionStatusSenderAndMission = async (
   action,
   status,
@@ -145,7 +155,7 @@ export const findByActionStatusSenderAndMission = async (
   return result.rows;
 };
 
-// Find by action status, recipient id and mission id
+// Find by action status, recipient id and service id
 export const findByActionStatusRecipientAndMission = async (
   action,
   status,

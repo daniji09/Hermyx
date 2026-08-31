@@ -30,3 +30,45 @@ export const formatLastMessageTime = (timestamp) => {
 
   return messageDate.toLocaleDateString();
 };
+
+const PARTICIPATION_REVIEW_PERIOD_MS = 7 * 24 * 60 * 60 * 1000;
+
+const formatParticipationReviewDuration = (remainingMilliseconds) => {
+  if (remainingMilliseconds <= 0) return 'Automatic approval pending.';
+
+  const totalMinutes = Math.ceil(remainingMilliseconds / (60 * 1000));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+  const digitalTime = [hours, minutes]
+    .map((unit) => String(unit).padStart(2, '0'))
+    .join(':');
+
+  return `Automatic approval in ${days > 0 ? `${days}d ` : ''}${digitalTime}`;
+};
+
+export const formatParticipationReviewTimeRemaining = (
+  timestamp,
+  currentTime = Date.now(),
+) => {
+  if (!timestamp) return '';
+
+  const reviewStartedAt = new Date(timestamp).getTime();
+  if (Number.isNaN(reviewStartedAt)) return '';
+
+  return formatParticipationReviewDuration(
+    reviewStartedAt + PARTICIPATION_REVIEW_PERIOD_MS - currentTime,
+  );
+};
+
+export const formatParticipationReviewDeadlineTimeRemaining = (
+  deadline,
+  currentTime = Date.now(),
+) => {
+  if (!deadline) return '';
+
+  const reviewDeadline = new Date(deadline).getTime();
+  if (Number.isNaN(reviewDeadline)) return '';
+
+  return formatParticipationReviewDuration(reviewDeadline - currentTime);
+};

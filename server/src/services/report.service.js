@@ -15,7 +15,7 @@ import {
 import pool from '../config/db.config.js';
 import * as reportModel from '../models/report.model.js';
 import * as conversationService from './conversation.service.js';
-import * as missionService from './mission.service.js';
+import * as missionService from './service.service.js';
 import * as notificationService from './notification.service.js';
 import * as userService from './user.service.js';
 import * as paymentProvider from '../providers/payment.provider.js';
@@ -85,6 +85,22 @@ export const getReport = async (rid) => {
   return await getReportByRidOrThrow(rid);
 };
 
+// Ensures an administrative report action targets the reported resource.
+export const assertReportMatchesTarget = (
+  report,
+  expectedType,
+  expectedPayload,
+) => {
+  const matchesTarget =
+    report?.type === expectedType &&
+    Object.entries(expectedPayload).every(
+      ([key, value]) => String(report.payload?.[key]) === String(value),
+    );
+
+  if (!matchesTarget)
+    throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+};
+
 // Get all reports filtered and paginated
 export const getReports = async ({ pagination, filters, userId }) => {
   // Parameter checks
@@ -120,7 +136,7 @@ export const getReports = async ({ pagination, filters, userId }) => {
     );
 };
 
-// Reports adventurer
+// Reports collaborator
 export const reportAdventurer = async ({
   message,
   missionId,
@@ -133,10 +149,10 @@ export const reportAdventurer = async ({
   checkRequired(sender, 'Sender user');
   checkRequired(vacancyId, 'Mission participation id');
 
-  // Gets mission info
+  // Gets service info
   const mission = await missionService.getMissionByIdOrThrow(missionId);
 
-  // Checks if report sender is mission owner
+  // Checks if report sender is service applicant
   if (mission.owner_id !== sender.uid) {
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
@@ -145,17 +161,17 @@ export const reportAdventurer = async ({
   const vacancy =
     await missionService.getMissionParticipationByIdOrThrow(vacancyId);
   if (vacancy.mid !== missionId) {
-    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+    throw new AppError(messages.SERVICE.GENERAL.VACANCY_NOT_IN_SERVICE, 409);
   }
 
-  // Gets adventurer reported info
+  // Gets collaborator reported info
   const adventurer = await userService.getUserByUidOrThrow(
     vacancy.adventurer_id,
   );
-  const notificationMessage = messages.NOTIFICATION.REPORT_ADVENTURER(
+  const notificationMessage = messages.NOTIFICATION.REPORT_COLLABORATOR(
     mission.title,
   );
-  const systemMessage = messages.CONVERSATION.REPORT_ADVENTURER(
+  const systemMessage = messages.CONVERSATION.REPORT_COLLABORATOR(
     adventurer.username,
     vacancy.title,
     mission.title,
@@ -187,22 +203,26 @@ export const reportAdventurer = async ({
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
           associated_user_id: adventurer.uid,
+          previous_participation_status: vacancy.status,
         },
         conversationId: conversation.cid,
       },
-      messages.REPORT.REPORT_ADVENTURER.ACTIVE_REPORT,
+      messages.REPORT.REPORT_COLLABORATOR.ACTIVE_REPORT,
       client,
     );
 
     // Marks participation as disputed
-    await missionService.updateParticipationStatusByMidAndAdventurer(
-      missionId,
-      adventurer.uid,
-      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
-      client,
-    );
+    const disputedParticipation =
+      await missionService.updateParticipationStatusByMidAndAdventurer(
+        missionId,
+        adventurer.uid,
+        MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID,
+        client,
+      );
+    if (!disputedParticipation)
+      throw new AppError(messages.SERVICE.VACANCY.ALREADY_MODIFIED, 409);
 
-    // Syncs mission
+    // Syncs service
     await missionService.syncMissionCompletionStatus(missionId, client);
 
     // Creates conversation between reporter and reported
@@ -244,7 +264,7 @@ export const reportAdventurer = async ({
       client,
     );
 
-    // Creates notification to adventurer
+    // Creates notification to collaborator
     notificationId = await notificationService.createNotification(
       {
         type: NOTIFICATION_TYPE.REPORT.ID,
@@ -269,7 +289,14 @@ export const reportAdventurer = async ({
   } finally {
     client.release();
   }
-  // Send notification to adventurer
+
+  // Updates the owner's mission immediately after reporting the collaborator
+  emitToUser(sender.uid, 'mission:participation-disputed', {
+    missionId,
+    vacancyId,
+  });
+
+  // Send notification to collaborator
   emitToUser(adventurer.uid, 'notification:created', {
     notificationId,
     missionId,
@@ -282,7 +309,7 @@ export const reportAdventurer = async ({
     message: notificationMessage,
   });
 
-  // Creates immediately the dispute conversation to the adventurer
+  // Creates immediately the dispute conversation to the collaborator
   emitToUser(adventurer.uid, 'conversation:message-received', {
     conversationId: conversation.cid,
     conversationType: 'dispute',
@@ -319,23 +346,23 @@ export const reportUser = async ({ message, senderId, userId }) => {
   );
 };
 
-// Report mission
+// Report service
 export const reportMission = async ({ message, mid, senderId }) => {
   // Check parameter
   checkRequired(mid, 'Mission id');
   checkRequired(senderId, 'Sender id');
   checkRequired(message, 'Message');
 
-  // Get mission information
+  // Get service information
   const mission = await missionService.getMissionByIdOrThrow(mid);
-  // Check if sender is not mission owner
+  // Check if sender is not service applicant
   if (mission.owner_id === senderId) {
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
   }
 
-  // Checks if mission has already been reported
+  // Checks if service has already been reported
   if (mission.status === MISSION_STATUS.REPORTED.ID) {
-    throw new AppError(messages.REPORT.REPORT_MISSION.CLOSED_BY_REPORT, 409);
+    throw new AppError(messages.REPORT.REPORT_SERVICE.CLOSED_BY_REPORT, 409);
   }
 
   // Creates report with transaction
@@ -347,11 +374,11 @@ export const reportMission = async ({ message, mid, senderId }) => {
       lookupPayload: { missionId: mid },
       payload: { associated_mission_id: mid },
     },
-    messages.REPORT.REPORT_MISSION.ACTIVE_REPORT,
+    messages.REPORT.REPORT_SERVICE.ACTIVE_REPORT,
   );
 };
 
-// Creates a standard report (user or mission) with a transaction
+// Creates a standard report (user or service) with a transaction
 const createReportTransaction = async (reportData, activeReportMessage) => {
   const client = await pool.connect();
   try {
@@ -432,14 +459,14 @@ export const closeReportAndConversation = async (
   return { participantIds: participantIds || [], report };
 };
 
-// Accepts adventurer work
+// Accepts collaborator work
 export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   // Parameter check
   checkRequired(adminId, 'Admin user id');
   checkRequired(reason, 'Resolution reason');
   checkRequired(reportId, 'Report id');
 
-  // Gets adventurer, mission, vacancy and report info and basic checks
+  // Gets collaborator, service, vacancy and report info and basic checks
   const { adventurer, mission, report, vacancy } =
     await getDisputeResolutionContext(reportId);
   let closedReport,
@@ -528,7 +555,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
             client,
           );
 
-        // User stops participating on the mission conversation, but can see the history
+        // User stops participating on the service conversation, but can see the history
         if (participation)
           await conversationService.freezeMissionConversationHistory(
             mission.mid,
@@ -536,7 +563,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
             client,
           );
       }
-      // Mission completion status is synced
+      // Service completion status is synced
       await missionService.syncMissionCompletionStatus(mission.mid, client);
 
       // Closes report and associated conversation on db
@@ -571,14 +598,14 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   }
 
   const adventurerMessage = successfulPayment
-    ? messages.NOTIFICATION.ADVENTURER_WORK_ACCEPTED.TO_ADVENTURER.SUCCESSFUL(
+    ? messages.NOTIFICATION.COLLABORATOR_WORK_ACCEPTED.TO_COLLABORATOR.SUCCESSFUL(
         mission.title,
       )
-    : messages.NOTIFICATION.ADVENTURER_WORK_ACCEPTED.TO_ADVENTURER.ISSUED(
+    : messages.NOTIFICATION.COLLABORATOR_WORK_ACCEPTED.TO_COLLABORATOR.ISSUED(
         mission.title,
       );
   const applicantMessage =
-    messages.NOTIFICATION.ADVENTURER_WORK_ACCEPTED.TO_APPLICANT(
+    messages.NOTIFICATION.COLLABORATOR_WORK_ACCEPTED.TO_APPLICANT(
       vacancy.title || vacancy.id,
       adventurer.username,
       mission.title,
@@ -587,7 +614,7 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    // Creates adventurer notification
+    // Creates collaborator notification
     adventurerNotificationId = await notificationService.createNotification(
       buildResolutionNotification(
         adventurer.uid,
@@ -635,14 +662,14 @@ export const acceptAdventurersWork = async ({ adminId, reason, reportId }) => {
   return { report: closedReport, previousReport: report };
 };
 
-// Rejects adventurer work
+// Rejects collaborator work
 export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
   // Parameter check
   checkRequired(adminId, 'Admin user id');
   checkRequired(reason, 'Resolution reason');
   checkRequired(reportId, 'Report id');
 
-  // Gets adventurer, mission, vacancy and report info and basic checks
+  // Gets collaborator, service, vacancy and report info and basic checks
   const { adventurer, mission, vacancy } =
     await getDisputeResolutionContext(reportId);
 
@@ -653,9 +680,11 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
   let adventurerNotificationId;
   let applicantNotificationId;
   const adventurerMessage =
-    messages.NOTIFICATION.ADVENTURER_WORK_REJECTED.TO_ADVENTURER(mission.title);
+    messages.NOTIFICATION.COLLABORATOR_WORK_REJECTED.TO_COLLABORATOR(
+      mission.title,
+    );
   const applicantMessage =
-    messages.NOTIFICATION.ADVENTURER_WORK_REJECTED.TO_APPLICANT(
+    messages.NOTIFICATION.COLLABORATOR_WORK_REJECTED.TO_APPLICANT(
       vacancy.title || vacancy.id,
       adventurer.username,
       mission.title,
@@ -679,7 +708,7 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
       client,
     );
 
-    // Mission status is synced
+    // Service status is synced
     await missionService.syncMissionCompletionStatus(mission.mid, client);
 
     // Report and associated conversation is closed
@@ -692,7 +721,7 @@ export const rejectAdventurersWork = async ({ adminId, reason, reportId }) => {
         client,
       ));
 
-    // Adventurer follow-up notification is created
+    // Collaborator follow-up notification is created
     adventurerNotificationId = await notificationService.createNotification(
       buildResolutionNotification(
         adventurer.uid,
@@ -762,8 +791,9 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
 
   let notificationData;
   let notificationEvent;
+  let participationToRestore;
   if (report.type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
-    // Gets mission info
+    // Gets service info
     const mission = await missionService.getMissionByIdOrThrow(
       report.payload.associated_mission_id,
     );
@@ -773,16 +803,25 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
       report.payload.associated_vacancy_id,
     );
     if (vacancy.mid !== mission.mid) {
-      throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+      throw new AppError(messages.SERVICE.GENERAL.VACANCY_NOT_IN_SERVICE, 409);
     }
 
-    // Gets adventurer info
+    // Gets collaborator info
     const adventurer = await userService.getUserByUidOrThrow(
       vacancy.adventurer_id,
     );
 
+    participationToRestore = {
+      missionId: mission.mid,
+      adventurerId: adventurer.uid,
+      currentStatus: vacancy.status,
+      previousStatus:
+        report.payload.previous_participation_status ||
+        MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
+    };
+
     // Creates notification data
-    const message = messages.NOTIFICATION.DISMISS.REPORT_ADVENTURER(
+    const message = messages.NOTIFICATION.DISMISS.REPORT_COLLABORATOR(
       adventurer.username,
       mission.title,
     );
@@ -819,6 +858,26 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     if (!reportLocked)
       throw new AppError(messages.REPORT.GENERAL.BEING_ANSWERED, 409);
 
+    if (
+      participationToRestore?.currentStatus ===
+      MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID
+    ) {
+      const restoredParticipation =
+        await missionService.updateParticipationStatusByMidAndAdventurer(
+          participationToRestore.missionId,
+          participationToRestore.adventurerId,
+          participationToRestore.previousStatus,
+          client,
+        );
+      if (!restoredParticipation)
+        throw new AppError(messages.SERVICE.VACANCY.ALREADY_MODIFIED, 409);
+
+      await missionService.syncMissionCompletionStatus(
+        participationToRestore.missionId,
+        client,
+      );
+    }
+
     // Closes report and associated conversation on db
     ({ report: closedReport, participantIds } =
       await closeReportAndConversation(
@@ -845,11 +904,14 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
 
   // Sends conversation closed and notification if necessary
   emitConversationClosed(participantIds, closedReport);
-  if (notificationEvent)
-    emitToUser(report.sender_id, 'dispute:dismissed', {
-      notificationId,
-      ...notificationEvent,
-    });
+  if (notificationEvent) {
+    for (const participantId of participantIds) {
+      emitToUser(participantId, 'dispute:dismissed', {
+        ...(participantId === report.sender_id ? { notificationId } : {}),
+        ...notificationEvent,
+      });
+    }
+  }
 
   return closedReport;
 };
@@ -871,18 +933,18 @@ const getDisputeResolutionContext = async (reportId) => {
   const report = await getReportByRidOrThrow(reportId);
   assertReportCanBeResolved(report);
 
-  // Gets mission, vacancy and adventurer info
+  // Gets service, vacancy and collaborator info
   const missionId = report.payload.associated_mission_id;
   const vacancyId = report.payload.associated_vacancy_id;
   const mission = await missionService.getMissionByIdOrThrow(missionId);
   if (mission.status === MISSION_STATUS.REPORTED.ID) {
-    throw new AppError(messages.REPORT.REPORT_MISSION.CLOSED_BY_REPORT, 409);
+    throw new AppError(messages.REPORT.REPORT_SERVICE.CLOSED_BY_REPORT, 409);
   }
 
   const vacancy =
     await missionService.getMissionParticipationByIdOrThrow(vacancyId);
   if (vacancy.mid !== missionId) {
-    throw new AppError(messages.MISSION.GENERAL.VACANCY_NOT_IN_MISSION, 409);
+    throw new AppError(messages.SERVICE.GENERAL.VACANCY_NOT_IN_SERVICE, 409);
   }
   if (vacancy.status !== MISSION_PARTICIPATION_STATUS.IN_DISPUTE.ID) {
     throw new AppError(messages.REPORT.GENERAL.VACANCY_NOT_DISPUTED, 409);

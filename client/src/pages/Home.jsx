@@ -5,12 +5,12 @@ import { Link } from 'react-router-dom';
 import {
   getAllMissionsInfiniteQueryOptions,
   getUserMissionsInfiniteQueryOptions,
-} from '../queries/MissionsQueries';
+} from '../queries/ServicesQueries';
 import { PAGINATION_LIMIT } from '../consts/consts';
 import {
   MissionSearchContainer,
   MissionSearchCard,
-} from '../components/custom/missions/MissionSearchContainer';
+} from '../components/custom/services/ServiceSearchContainer';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -41,7 +41,7 @@ export const Home = () => {
     return failureCount < 3;
   };
 
-  // Published missions
+  // Published services
   const {
     data: publishedData,
     isLoading: publishedIsLoading,
@@ -75,7 +75,7 @@ export const Home = () => {
     }
   }, [publishedInView, hasNextPublishedPage, fetchNextPublishedPage]);
 
-  // Joined missions
+  // Joined services
   const {
     data: joinedData,
     isLoading: joinedIsLoading,
@@ -109,7 +109,7 @@ export const Home = () => {
     }
   }, [joinedInView, hasNextJoinedPage, fetchNextJoinedPage]);
 
-  // Interest missions
+  // Services of interest
   const {
     data: interestData,
     hasNextPage: interestHasNextPage,
@@ -134,8 +134,8 @@ export const Home = () => {
             Turn your daily tasks into rewarding services
           </h1>
           <p className='text-xl text-muted-foreground max-w-2xl mx-auto'>
-            Hermyx connects people who need a hand with adventurers ready to
-            earn rewards. Post a mission, gather your party, and get things done
+            Hermyx connects people who need a hand with collaborators ready to
+            earn rewards. Post a service, gather your team, and get things done
             securely.
           </p>
           <div className='flex flex-col sm:flex-row justify-center gap-4 pt-4'>
@@ -148,7 +148,7 @@ export const Home = () => {
               size='lg'
               className='text-lg px-8 h-14'
             >
-              <a href='#missions'>Explore missions</a>
+              <a href='#missions'>Explore services</a>
             </Button>
           </div>
         </section>
@@ -158,7 +158,7 @@ export const Home = () => {
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
               <Map className='h-7 w-7' aria-hidden='true' />
             </div>
-            <h3 className='text-xl font-bold mb-2'>1. Post a mission</h3>
+            <h2 className='text-xl font-bold mb-2'>1. Post a service</h2>
             <p className='text-muted-foreground'>
               Define the task, set the reward, and publish it to board.
             </p>
@@ -167,19 +167,19 @@ export const Home = () => {
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
               <Users className='h-7 w-7' aria-hidden='true' />
             </div>
-            <h3 className='text-xl font-bold mb-2'>2. Choose adventurers</h3>
+            <h2 className='text-xl font-bold mb-2'>2. Choose collaborators</h2>
             <p className='text-muted-foreground'>
-              Review applications and pick the best adventurers for your party.
+              Review applications and pick the best collaborators for your team.
             </p>
           </div>
           <div className='flex flex-col items-center text-center p-6 rounded-2xl bg-muted/20 border'>
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
               <ShieldCheck className='h-7 w-7' aria-hidden='true' />
             </div>
-            <h3 className='text-xl font-bold mb-2'>3. Pay securely</h3>
+            <h2 className='text-xl font-bold mb-2'>3. Use test payments</h2>
             <p className='text-muted-foreground'>
-              Payments are safely held in escrow via Stripe until the mission is
-              completed.
+              The prototype uses Stripe in test mode to demonstrate the payment
+              flow. No real payment or escrow service is provided.
             </p>
           </div>
         </section>
@@ -191,11 +191,11 @@ export const Home = () => {
                 Guild Board Sneak Peek
               </h2>
               <p className='mt-1 text-muted-foreground'>
-                Check out some of the latest missions posted by our community.
+                Check out some of the latest services posted by our community.
               </p>
             </div>
             <Button asChild variant='ghost' className='hidden sm:flex'>
-              <Link to='/signup'>See all missions →</Link>
+              <Link to='/signup'>See all services →</Link>
             </Button>
           </div>
 
@@ -203,17 +203,21 @@ export const Home = () => {
             <p className='text-muted-foreground'>Loading the guild board...</p>
           ) : interestMissions.length === 0 ? (
             <div className='rounded-xl border border-dashed bg-muted/10 p-8 text-center text-muted-foreground'>
-              The board is quiet today. Be the first to post a mission!
+              The board is quiet today. Be the first to post a service!
             </div>
           ) : (
             <Carousel opts={{ align: 'start' }} className='w-full'>
               <CarouselContent className='-ml-4 py-4'>
-                {interestMissions.slice(0, 6).map((mission) => (
+                {interestMissions.slice(0, 6).map((mission, index) => (
                   <CarouselItem
                     key={mission.mid}
                     className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
                   >
-                    <MissionSearchCard mission={mission} />
+                    <MissionSearchCard
+                      mission={mission}
+                      priority={index === 0}
+                      asListItem={false}
+                    />
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -226,7 +230,7 @@ export const Home = () => {
 
           <div className='sm:hidden pt-4'>
             <Button asChild variant='outline' className='w-full'>
-              <Link to='/signup'>See all missions</Link>
+              <Link to='/signup'>See all services</Link>
             </Button>
           </div>
         </section>
@@ -270,10 +274,10 @@ export const Home = () => {
         <section className='space-y-4'>
           <div>
             <h2 className='text-2xl font-bold tracking-tight'>
-              All Platform Missions
+              All Platform Services
             </h2>
             <p className='mt-1 text-muted-foreground'>
-              Browse and moderate all active missions on Hermyx.
+              Browse and moderate all active services on Hermyx.
             </p>
           </div>
 
@@ -284,7 +288,7 @@ export const Home = () => {
             fetchNextPage={interestFetchNextPage}
             isLoading={interestIsLoading}
             isError={interestIsError}
-            noMissionsMessage='There are no missions available right now.'
+            noMissionsMessage='There are no services available right now.'
             sectionClassName=''
             infiniteScroll={true}
           />
@@ -299,7 +303,7 @@ export const Home = () => {
       <title>{`Hermyx | The ultimate board to manage services securely and connect with the community.`}</title>
       <meta
         name='description'
-        content={`Hermyx, a web application that will allow users to manage service securely via escrow type payment and connecting with high-rated users.`}
+        content={`Hermyx, an academic prototype for managing services and connecting users through a test payment flow.`}
       ></meta>
       <main className='container mx-auto max-w-6xl space-y-12 p-4 sm:p-6 mb-12 overflow-hidden'>
         <section className='flex flex-col gap-6 rounded-2xl border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-8'>
@@ -312,7 +316,7 @@ export const Home = () => {
             </Avatar>
             <div className='min-w-0 text-center sm:text-left'>
               <h1 className='wrap-break-words text-3xl font-bold tracking-tight sm:text-4xl'>
-                Welcome back, {currentUser?.username || 'Adventurer'}!
+                Welcome back, {currentUser?.username || 'Collaborator'}!
               </h1>
               <p className='ms-1 text-muted-foreground'>
                 Ready for your next great adventure?
@@ -321,9 +325,9 @@ export const Home = () => {
           </div>
           <div className='flex w-full shrink-0 flex-col gap-3 sm:w-auto sm:flex-row'>
             <Button asChild className='w-full sm:w-auto truncate'>
-              <Link to='/missions/new'>
+              <Link to='/services/new'>
                 <Plus className='mr-2 h-4 w-4 truncate' aria-hidden='true' />
-                Post a mission
+                Post a service
               </Link>
             </Button>
             <Button
@@ -333,7 +337,7 @@ export const Home = () => {
             >
               <a href='#quest-board'>
                 <Compass className='mr-2 h-4 w-4 truncate' aria-hidden='true' />
-                Find missions
+                Find services
               </a>
             </Button>
           </div>
@@ -342,26 +346,30 @@ export const Home = () => {
         <section className='space-y-10'>
           <div className='relative'>
             <h2 className='text-2xl font-bold tracking-tight'>
-              Your joined missions
+              Your joined services
             </h2>
             {joinedIsLoading ? (
               <p className='text-muted-foreground'>
-                Loading your joined missions...
+                Loading your joined services...
               </p>
             ) : joinedMissions.length === 0 ? (
               <div className='rounded-xl border border-dashed bg-muted/10 p-8 mt-4 text-center text-muted-foreground'>
-                You haven&lsquo;t joined any active missions yet. Check out the
-                missions of interest below!
+                You haven&lsquo;t joined any active services yet. Check out the
+                services of interest below!
               </div>
             ) : (
               <Carousel opts={{ align: 'start' }} className='w-full'>
                 <CarouselContent className='-ml-4 py-4'>
-                  {joinedMissions.map((mission) => (
+                  {joinedMissions.map((mission, index) => (
                     <CarouselItem
                       key={mission.mid}
                       className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
                     >
-                      <MissionSearchCard mission={mission} />
+                      <MissionSearchCard
+                        mission={mission}
+                        priority={index === 0}
+                        asListItem={false}
+                      />
                     </CarouselItem>
                   ))}
                   {hasNextJoinedPage && (
@@ -371,7 +379,7 @@ export const Home = () => {
                     >
                       {isFetchingNextJoinedPage && (
                         <span className='text-sm text-muted-foreground animate-pulse'>
-                          Loading missions...
+                          Loading services...
                         </span>
                       )}
                     </CarouselItem>
@@ -388,26 +396,30 @@ export const Home = () => {
 
           <div className='relative'>
             <h2 className='text-2xl font-bold tracking-tight'>
-              Your published missions
+              Your published services
             </h2>
             {publishedIsLoading ? (
               <p className='text-muted-foreground'>
-                Loading your published missions...
+                Loading your published services...
               </p>
             ) : publishedMissions.length === 0 ? (
               <div className='rounded-xl border border-dashed mt-4 bg-muted/10 p-8 text-center text-muted-foreground'>
-                You don&lsquo;t have any published missions. Need help? Post a
+                You don&lsquo;t have any published services. Need help? Post a
                 new one!
               </div>
             ) : (
               <Carousel opts={{ align: 'start' }} className='w-full'>
                 <CarouselContent className='-ml-4 py-4'>
-                  {publishedMissions.map((mission) => (
+                  {publishedMissions.map((mission, index) => (
                     <CarouselItem
                       key={mission.mid}
                       className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
                     >
-                      <MissionSearchCard mission={mission} />
+                      <MissionSearchCard
+                        mission={mission}
+                        priority={index === 0}
+                        asListItem={false}
+                      />
                     </CarouselItem>
                   ))}
                   {hasNextPublishedPage && (
@@ -421,7 +433,7 @@ export const Home = () => {
                     >
                       {isFetchingNextPublishedPage && (
                         <span className='text-sm text-muted-foreground animate-pulse'>
-                          Loading missions...
+                          Loading services...
                         </span>
                       )}
                     </CarouselItem>
@@ -441,10 +453,10 @@ export const Home = () => {
         <section id='quest-board' className='scroll-mt-8 space-y-4'>
           <div>
             <h2 className='text-2xl font-bold tracking-tight'>
-              Missions of interest
+              Services of interest
             </h2>
             <p className='mt-1 text-muted-foreground'>
-              Discover new missions available right now.
+              Discover new services available right now.
             </p>
           </div>
 
@@ -455,7 +467,7 @@ export const Home = () => {
             fetchNextPage={interestFetchNextPage}
             isLoading={interestIsLoading}
             isError={interestIsError}
-            noMissionsMessage='There are no missions available right now. Be the first to post one!'
+            noMissionsMessage='There are no services available right now. Be the first to post one!'
             sectionClassName=''
             infiniteScroll={true}
           />

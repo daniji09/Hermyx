@@ -20,7 +20,6 @@ import {
   Mail,
   Save,
   Star,
-  User,
   UserRoundX,
   X,
 } from 'lucide-react';
@@ -94,7 +93,7 @@ const initialForm = {
 };
 
 export const MyProfile = () => {
-  const { data, isLoading, isError } = useQuery(
+  const { data, isLoading, isError, error } = useQuery(
     getMyProfileQueryOptions({
       retry: (failureCount, error) => {
         if (error.response?.status === 401) return false;
@@ -144,7 +143,22 @@ export const MyProfile = () => {
     );
   }
 
-  if (isError || !data?.user) {
+  if (isError && !data?.user) {
+    if (error.response?.status === 404) return <NotFound></NotFound>;
+
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <Alert variant='destructive'>
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>
+            {messagesShared.GENERAL.UNEXPECTED_ERROR}
+          </AlertDescription>
+        </Alert>
+      </main>
+    );
+  }
+
+  if (!data?.user) {
     return <NotFound></NotFound>;
   }
 
@@ -276,9 +290,7 @@ const ProfileAvatar = ({ user }) => {
           alt={`${user.username} avatar`}
           className='h-full w-full object-cover'
         />
-        <AvatarFallback>
-          {getInitials(getDisplayName(user))}
-        </AvatarFallback>
+        <AvatarFallback>{getInitials(getDisplayName(user))}</AvatarFallback>
       </Avatar>
 
       {!isPending && (
@@ -336,7 +348,7 @@ const ProfileReviews = ({
 
         {isPrivate ? (
           <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
-            Reviews are hidden while your mission history is private.
+            Reviews are hidden while your service history is private.
           </p>
         ) : isLoading ? (
           <p className='text-muted-foreground'>Loading reviews...</p>
@@ -383,7 +395,7 @@ export const ReviewCard = ({ review, isClamped = false }) => (
     <div className='mb-1 flex flex-wrap items-center justify-between gap-2'>
       <span className='text-lg truncate min-w-0 flex-1 me-4'>
         <Link
-          to={`/missions/${review.mission_id}`}
+          to={`/services/${review.mission_id}`}
           className='hover:underline-offset-2 hover:underline transition-colors'
         >
           {review.mission_title}
@@ -409,7 +421,7 @@ export const ReviewCard = ({ review, isClamped = false }) => (
     )}
     <div className='mt-2 flex flex-wrap items-center justify-between gap-2'>
       <p className='text-xs text-muted-foreground'>
-        By {review.reviewed_role === 'owner' ? 'adventurer' : 'applicant'}{' '}
+        By {review.reviewed_role === 'owner' ? 'collaborator' : 'applicant'}{' '}
         <Link
           to={`/users/${review.owner_username}`}
           className='font-medium hover:underline-offset-2 hover:underline hover:text-primary transition-colors'
@@ -449,7 +461,7 @@ const AllReviewsDialog = ({
         <DialogHeader className='px-6 py-4 border-b shrink-0'>
           <DialogTitle>All Reviews</DialogTitle>
           <DialogDescription>
-            History of all reviews received in your missions.
+            History of all reviews received in your services.
           </DialogDescription>
         </DialogHeader>
 
@@ -522,7 +534,11 @@ const ProfileInformation = ({ data }) => {
         queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
       },
       onError: (error) => {
-        setErrors(error.response?.data?.errors || {});
+        setErrors(
+          error.response?.data?.errors || {
+            general: [messagesShared.GENERAL.UNEXPECTED_ERROR],
+          },
+        );
         setSuccessMessage('');
       },
     }),
@@ -833,7 +849,8 @@ const AddEmailAuthenticationButton = ({ hasPasswordProvider }) => {
             showAlert({
               title: messages.MY_PROFILE.ADD_EMAIL_AUTHENTICATION_ALERT.TITLE,
               description:
-                error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+                error?.errors?.general?.[0] ||
+                messagesShared.GENERAL.UNEXPECTED_ERROR,
             });
           }
         },
@@ -1310,7 +1327,7 @@ const LinkGoogleButton = ({
     mutationFn: () => unlinkGoogleAccount(),
     onSuccess: async () => {
       setIsGoogleLinked(false);
-      queryClient.invalidateQueries(['getMyProfile']);
+      queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
     },
     // Backend error handling
     onError: (error) => {
@@ -1320,7 +1337,8 @@ const LinkGoogleButton = ({
       showAlert({
         title: messages.MY_PROFILE.UNLINK_GOOGLE_ALERT.ERROR_TITLE,
         description:
-          error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+          error?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
     onSettled: () => {
@@ -1335,14 +1353,15 @@ const LinkGoogleButton = ({
     },
     onSuccess: () => {
       setIsGoogleLinked(true);
-      queryClient.invalidateQueries(['getMyProfile']);
+      queryClient.invalidateQueries({ queryKey: ['getMyProfile'] });
     },
     // Backend error handling
     onError: (error) => {
       showAlert({
         title: messages.MY_PROFILE.LINK_GOOGLE_ALERT.ERROR_TITLE,
         description:
-          error?.errors?.general?.[0] || messagesShared.UNEXPECTED_ERROR,
+          error?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
     onSettled: () => {
@@ -1429,10 +1448,10 @@ const ProfileConfiguration = ({ user }) => {
             action={userConfigurationFormAction}
             noValidate
           >
-            <p className='text-lg font-medium'>Show missions to others</p>
+            <p className='text-lg font-medium'>Show services to others</p>
             <div className='flex items-center justify-between mt-2'>
               <p className='text-sm me-5'>
-                {messages.MY_PROFILE.CONFIGURATION.SHOW_MISSIONS_TEXT}
+                {messages.MY_PROFILE.CONFIGURATION.SHOW_SERVICES_TEXT}
               </p>
               <div className='flex items-center space-x-2'>
                 <Switch
@@ -1513,7 +1532,9 @@ const DeleteAccountButton = () => {
     onError: (error) => {
       showAlert({
         title: messages.MY_PROFILE.DELETE_ACCOUNT_ALERT.ERROR_TITLE,
-        description: error?.response.data.errors?.general,
+        description:
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });

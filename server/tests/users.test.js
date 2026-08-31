@@ -111,13 +111,13 @@ describe('User API', () => {
     userService.getUserMissions.mockResolvedValue({ missions, pagination });
 
     const response = await request(app)
-      .get('/api/users/12/missions')
+      .get('/api/users/12/services')
       .query({ type: 'joined', page: 1, limit: 10 });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ missions, pagination });
     expect(userService.getUserMissions).toHaveBeenCalledWith(
-      12,
+      currentUser.uid,
       'joined',
       expect.objectContaining({ page: 1, limit: 10 }),
     );
@@ -148,7 +148,7 @@ describe('User API', () => {
     });
 
     const response = await request(app)
-      .get('/api/users/public_hero/profile/missions')
+      .get('/api/users/public_hero/profile/services')
       .query({ type: 'published', page: 1, limit: 10 });
 
     expect(response.status).toBe(200);
@@ -257,7 +257,7 @@ describe('User API', () => {
   });
 
   it.each([
-    ['active missions', messages.USER.DELETE_ME.ACTIVE_MISSIONS],
+    ['active missions', messages.USER.DELETE_ME.ACTIVE_SERVICES],
     ['active disputes', messages.USER.DELETE_ME.ACTIVE_DISPUTES],
   ])('prevents account deletion with %s', async (_case, message) => {
     userService.deleteMe.mockRejectedValue(new AppError(message, 409));

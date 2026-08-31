@@ -10,14 +10,13 @@ export const MISSION_PARTICIPATION_PAYMENT_STATUS = {
   PARTIALLY_PAID: { ID: 'PARTIALLY_PAID', LABEL: 'Partially paid' },
   PARTIALLY_REFUNDED: { ID: 'PARTIALLY_REFUNDED', LABEL: 'Partially refunded' },
   LIQUIDATED: { ID: 'LIQUIDATED', LABEL: 'Liquidated' },
-  REFUNDED: { ID: 'REFUNDED', LABEL: 'Refunded' },
 };
 
 export const TRANSACTION_TYPE = {
   INITIAL_FUNDING: { ID: 'INITIAL_FUNDING', LABEL: 'Initial funding' },
   NEW_ADVENTURER_FUNDING: {
     ID: 'NEW_ADVENTURER_FUNDING',
-    LABEL: 'New adventurer funding',
+    LABEL: 'New collaborator funding',
   },
   NEGOTIATION_EXTRA: { ID: 'NEGOTIATION_EXTRA', LABEL: 'Negotiation extra' },
   NEGOTIATION_REFUND: {
@@ -34,7 +33,7 @@ export const TRANSACTION_TYPE = {
   },
   ADVENTURER_KICKED_OUT_COMPENSATION: {
     ID: 'ADVENTURER_KICKED_OUT_COMPENSATION',
-    LABEL: 'Adventurer kicked out compensation',
+    LABEL: 'Collaborator kicked out compensation',
   },
   PAYOUT: { ID: 'PAYOUT', LABEL: 'Payout' },
 };

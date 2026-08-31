@@ -7,7 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { REPORT_DECISION, REPORT_TYPE, REPORT_STATUS } from '@hermyx/shared';
+import {
+  messages as messagesShared,
+  REPORT_DECISION,
+  REPORT_TYPE,
+  REPORT_STATUS,
+} from '@hermyx/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { getReportByIdQueryOptions } from '../queries/ReportQueries';
@@ -15,7 +20,7 @@ import { timestampToDayMonthYear } from '../utils/date';
 import { Button } from '@/components/ui/button';
 import { useAlert } from '../contexts/AlertContext';
 import { messages } from '../messages/messages';
-import { banMission, kickAdventurerOut } from '../services/MissionsServices';
+import { banMission, kickAdventurerOut } from '../services/ServiceServices';
 import { banUser } from '../services/UsersServices';
 import {
   acceptAdventurersWork,
@@ -50,7 +55,6 @@ export const Report = () => {
     return failureCount < 3;
   };
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: report,
     isLoading,
@@ -72,11 +76,18 @@ export const Report = () => {
       isLoading={isLoading}
       isError={isError}
       error={errorMessage}
+      errorStatus={error?.response?.status}
     ></ReportPageContainer>
   );
 };
 
-const ReportPageContainer = ({ report, isLoading, isError, error }) => {
+const ReportPageContainer = ({
+  report,
+  isLoading,
+  isError,
+  error,
+  errorStatus,
+}) => {
   return (
     <>
       <title>{`Report information | Hermyx`}</title>
@@ -89,7 +100,9 @@ const ReportPageContainer = ({ report, isLoading, isError, error }) => {
           {'Seeking report...'}
         </ReportLoading>
 
-        <ReportError isError={isError}>{`${error}`}</ReportError>
+        <ReportError isError={isError} errorStatus={errorStatus}>
+          {`${error}`}
+        </ReportError>
 
         <ReportContent report={report}></ReportContent>
       </main>
@@ -109,8 +122,18 @@ const ReportLoading = ({ isLoading, children }) => {
   );
 };
 
-const ReportError = ({ isError }) => {
-  return <>{isError && <NotFound></NotFound>}</>;
+const ReportError = ({ isError, errorStatus }) => {
+  if (!isError) return null;
+  if (errorStatus === 404) return <NotFound></NotFound>;
+
+  return (
+    <div
+      role='alert'
+      className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+    >
+      Could not load report.
+    </div>
+  );
 };
 
 const ReportContent = ({ report }) => {
@@ -145,7 +168,7 @@ const ReportContent = ({ report }) => {
     if (!missionId) return null;
     return (
       <Link
-        to={`/missions/${missionId}`}
+        to={`/services/${missionId}`}
         className={linkClass}
         title={title}
         aria-label={title}
@@ -168,15 +191,15 @@ const ReportContent = ({ report }) => {
       case REPORT_TYPE.REPORT_ADVENTURER.ID:
         return (
           <>
-            Adventurer {otherUserLink} of mission {missionLink} was reported by{' '}
-            {senderLink}.
+            Collaborator {otherUserLink} of service {missionLink} was reported
+            by {senderLink}.
           </>
         );
 
       case REPORT_TYPE.REJECTED_REVIEW_DISPUTE.ID:
         return (
           <>
-            Applicant {otherUserLink} of mission {missionLink} was reported by{' '}
+            Applicant {otherUserLink} of service {missionLink} was reported by{' '}
             {senderLink}.
           </>
         );
@@ -184,7 +207,7 @@ const ReportContent = ({ report }) => {
       case REPORT_TYPE.REVIEW_DISPUTE.ID:
         return (
           <>
-            Adventurer&lsquo;s {otherUserLink} participation of mission{' '}
+            Collaborator&lsquo;s {otherUserLink} participation in service{' '}
             {missionLink} was reported by {senderLink}.
           </>
         );
@@ -192,7 +215,7 @@ const ReportContent = ({ report }) => {
       case REPORT_TYPE.REPORT_MISSION.ID:
         return (
           <>
-            Mission {missionLink} was reported by {senderLink}.
+            Service {missionLink} was reported by {senderLink}.
           </>
         );
 
@@ -338,8 +361,8 @@ const BanUserButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.BAN_USER_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
@@ -371,19 +394,19 @@ const BanMissionButton = ({ report }) => {
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.REPORT.BAN_MISSION_ALERT.ERROR_TITLE,
+        title: messages.REPORT.BAN_SERVICE_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
 
   return (
     <AnswerReportDialog
-      title={messages.REPORT.BAN_MISSION_ALERT.TITLE}
-      description={messages.REPORT.BAN_MISSION_ALERT.DESCRIPTION}
-      confirmText={messages.REPORT.BAN_MISSION_ALERT.CONFIRM_TEXT}
+      title={messages.REPORT.BAN_SERVICE_ALERT.TITLE}
+      description={messages.REPORT.BAN_SERVICE_ALERT.DESCRIPTION}
+      confirmText={messages.REPORT.BAN_SERVICE_ALERT.CONFIRM_TEXT}
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
@@ -393,7 +416,7 @@ const BanMissionButton = ({ report }) => {
         id='banMissionButton'
         disabled={isPending}
       >
-        {'Ban mission'}
+        {'Ban service'}
       </Button>
     </AnswerReportDialog>
   );
@@ -416,19 +439,19 @@ const KickAdventurerOutButton = ({ report }) => {
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.REPORT.KICK_ADVENTURER_OUT_ALERT.ERROR_TITLE,
+        title: messages.REPORT.KICK_COLLABORATOR_OUT_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
 
   return (
     <AnswerReportDialog
-      title={messages.REPORT.KICK_ADVENTURER_OUT_ALERT.TITLE}
-      description={messages.REPORT.KICK_ADVENTURER_OUT_ALERT.DESCRIPTION}
-      confirmText={messages.REPORT.KICK_ADVENTURER_OUT_ALERT.CONFIRM_TEXT}
+      title={messages.REPORT.KICK_COLLABORATOR_OUT_ALERT.TITLE}
+      description={messages.REPORT.KICK_COLLABORATOR_OUT_ALERT.DESCRIPTION}
+      confirmText={messages.REPORT.KICK_COLLABORATOR_OUT_ALERT.CONFIRM_TEXT}
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
@@ -438,7 +461,7 @@ const KickAdventurerOutButton = ({ report }) => {
         id='kickAdventurerOutButton'
         disabled={isPending}
       >
-        {'Kick adventurer out'}
+        {'Kick collaborator out'}
       </Button>
     </AnswerReportDialog>
   );
@@ -455,19 +478,19 @@ const AcceptAdventurersWorkButton = ({ report }) => {
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.ERROR_TITLE,
+        title: messages.REPORT.ACCEPT_COLLABORATORS_WORK_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
 
   return (
     <AnswerReportDialog
-      title={messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.TITLE}
-      description={messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.DESCRIPTION}
-      confirmText={messages.REPORT.ACCEPT_ADVENTURERS_WORK_ALERT.CONFIRM_TEXT}
+      title={messages.REPORT.ACCEPT_COLLABORATORS_WORK_ALERT.TITLE}
+      description={messages.REPORT.ACCEPT_COLLABORATORS_WORK_ALERT.DESCRIPTION}
+      confirmText={messages.REPORT.ACCEPT_COLLABORATORS_WORK_ALERT.CONFIRM_TEXT}
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
@@ -477,7 +500,7 @@ const AcceptAdventurersWorkButton = ({ report }) => {
         id='acceptAdventurersWorkOutButton'
         disabled={isPending}
       >
-        {`Accept adventurer's work`}
+        {`Accept collaborator's work`}
       </Button>
     </AnswerReportDialog>
   );
@@ -494,19 +517,19 @@ const RejectAdventurersWorkButton = ({ report }) => {
     // Backend error handling
     onError: (error) => {
       showAlert({
-        title: messages.REPORT.REJECT_ADVENTURERS_WORK_ALERT.ERROR_TITLE,
+        title: messages.REPORT.REJECT_COLLABORATORS_WORK_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });
 
   return (
     <AnswerReportDialog
-      title={messages.REPORT.REJECT_ADVENTURERS_WORK_ALERT.TITLE}
-      description={messages.REPORT.REJECT_ADVENTURERS_WORK_ALERT.DESCRIPTION}
-      confirmText={messages.REPORT.REJECT_ADVENTURERS_WORK_ALERT.CONFIRM_TEXT}
+      title={messages.REPORT.REJECT_COLLABORATORS_WORK_ALERT.TITLE}
+      description={messages.REPORT.REJECT_COLLABORATORS_WORK_ALERT.DESCRIPTION}
+      confirmText={messages.REPORT.REJECT_COLLABORATORS_WORK_ALERT.CONFIRM_TEXT}
       isPending={isPending}
       onConfirm={(reason) => mutate(reason)}
     >
@@ -516,7 +539,7 @@ const RejectAdventurersWorkButton = ({ report }) => {
         id='rejectAdventurersWorkOutButton'
         disabled={isPending}
       >
-        {`Reject adventurer's work`}
+        {`Reject collaborator's work`}
       </Button>
     </AnswerReportDialog>
   );
@@ -535,8 +558,8 @@ const DismissButton = ({ report }) => {
       showAlert({
         title: messages.REPORT.DISMISS_ALERT.ERROR_TITLE,
         description:
-          error?.response?.data?.error ||
-          error?.response?.data?.errors?.general?.[0],
+          error?.response?.data?.errors?.general?.[0] ||
+          messagesShared.GENERAL.UNEXPECTED_ERROR,
       });
     },
   });

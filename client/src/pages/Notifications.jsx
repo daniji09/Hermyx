@@ -4,19 +4,22 @@ import {
   useMutation,
   useQueryClient,
 } from '@tanstack/react-query';
-import { Bell, Check, ShieldAlert, X } from 'lucide-react';
+import { Bell, Check, Clock, ShieldAlert, X } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnswerReportDialog } from '@/components/custom/reports/AnswerReportDialog';
 import { useAlert } from '../contexts/AlertContext';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   getMyNotificationsInfiniteQueryOptions,
   markAllNotificationsAsSeenMutationOptions,
   respondToNotificationMutationOptions,
 } from '../queries/NotificationsQueries';
-import { formatLastMessageTime } from '../utils/date';
+import {
+  formatLastMessageTime,
+  formatParticipationReviewTimeRemaining,
+} from '../utils/date';
 import { AuthContext } from '../contexts/AuthContext';
 import {
   NOTIFICATION_ACTION,
@@ -30,7 +33,6 @@ import { truncateText } from '../../../server/src/utils/string.util';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { getImageUrl } from '../utils/media';
 import { getInitials } from '../utils/avatar';
-import { NotFound } from './NotFound';
 import { useInView } from 'react-intersection-observer';
 
 export const Notifications = () => {
@@ -40,7 +42,16 @@ export const Notifications = () => {
   const { setLatestNotification } = useContext(AuthContext);
   const [filter, setFilter] = useState('all');
   const [disputeNotificationId, setDisputeNotificationId] = useState(null);
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
   const { showAlert } = useAlert();
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60 * 1000);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const {
     data,
@@ -50,11 +61,15 @@ export const Notifications = () => {
     isLoading,
     isError,
   } = useInfiniteQuery(
-    getMyNotificationsInfiniteQueryOptions(PAGINATION_LIMIT.NOTIFICATIONS, {
-      onSuccess: () => {
-        setLatestNotification(null);
+    getMyNotificationsInfiniteQueryOptions(
+      PAGINATION_LIMIT.NOTIFICATIONS,
+      filter,
+      {
+        onSuccess: () => {
+          setLatestNotification(null);
+        },
       },
-    }),
+    ),
   );
 
   // Observer for infinite scroll
@@ -92,7 +107,7 @@ export const Notifications = () => {
           'An unexpected error occurred.';
         const mustConfigureBankAccount =
           backendMessage ===
-          messagesShared.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED;
+          messagesShared.SERVICE.JOIN.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED;
 
         showAlert({
           title:
@@ -133,13 +148,6 @@ export const Notifications = () => {
       notifications.filter((notification) => !notification.seen).length
     );
   }, [data, notifications]);
-  const filteredNotifications = useMemo(() => {
-    if (filter === 'all') return notifications;
-    return notifications.filter(
-      (notification) => notification.status === filter.toUpperCase(),
-    );
-  }, [filter, notifications]);
-
   useEffect(() => {
     const notificationId = searchParams.get('notification');
 
@@ -196,7 +204,16 @@ export const Notifications = () => {
   }
 
   if (isError) {
-    return <NotFound></NotFound>;
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load notifications.
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -225,7 +242,7 @@ export const Notifications = () => {
           </div>
         </section>
 
-        {notifications.length === 0 ? (
+        {filter === 'all' && notifications.length === 0 ? (
           <Card>
             <CardContent className='p-8 text-center text-muted-foreground'>
               No notifications yet.
@@ -258,9 +275,12 @@ export const Notifications = () => {
                   Rejected
                 </TabsTrigger>
               </TabsList>
+              <TabsContent value='all' forceMount className='hidden' />
+              <TabsContent value='accepted' forceMount className='hidden' />
+              <TabsContent value='rejected' forceMount className='hidden' />
             </Tabs>
 
-            {filteredNotifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <Card>
                 <CardContent className='p-8 text-center text-muted-foreground'>
                   No notifications for this filter.
@@ -268,7 +288,7 @@ export const Notifications = () => {
               </Card>
             ) : (
               <ul className='space-y-4' aria-label='Notifications list'>
-                {filteredNotifications.map((notification) => {
+                {notifications.map((notification) => {
                   const isSeen = notification.seen;
                   const isMissionNotification =
                     notification.type === NOTIFICATION_TYPE.MISSION.ID;
@@ -318,7 +338,7 @@ export const Notifications = () => {
 
                     return (
                       <Link
-                        to={`/missions/${missionId}`}
+                        to={`/services/${missionId}`}
                         className={linkClass}
                         title={title}
                         aria-label={title}
@@ -331,21 +351,21 @@ export const Notifications = () => {
                   const getNotificationPrefix = () => {
                     const missionLink = renderMissionLink();
 
-                    // Lógica si ES una notificación de misión
+                    // Handle service notifications.
                     if (isMissionNotification) {
                       if (isPendingMissionReview)
                         return <>Participation review of {missionLink}</>;
                       if (isPendingRevisionResponse)
                         return <>Revision request of {missionLink}</>;
-                      return <>Mission {missionLink} update</>;
+                      return <>Service {missionLink} update</>;
                     }
 
                     const action = notification?.action;
                     if (action === NOTIFICATION_ACTION.MISSION_INVITE.ID) {
-                      return <>Mission {missionLink} invitation</>;
+                      return <>Service {missionLink} invitation</>;
                     }
                     if (action === NOTIFICATION_ACTION.JOIN_REQUEST.ID) {
-                      return <>Join mission {missionLink} request</>;
+                      return <>Join service {missionLink} request</>;
                     }
 
                     return <>Message</>;
@@ -409,6 +429,19 @@ export const Notifications = () => {
                               </div>
                             )}
                           </div>
+
+                          {isPendingMissionReview && (
+                            <p className='flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground'>
+                              <Clock
+                                className='h-4 w-4 shrink-0'
+                                aria-hidden='true'
+                              />
+                              {formatParticipationReviewTimeRemaining(
+                                notification.date,
+                                currentTime,
+                              )}
+                            </p>
+                          )}
 
                           {isPendingAction ? (
                             <div className='flex flex-wrap gap-2'>
@@ -500,7 +533,7 @@ export const Notifications = () => {
                   );
                 })}
                 {hasNextPage && (
-                  <div
+                  <li
                     ref={isFetchingNextPage ? null : loadMoreRef}
                     className='flex justify-center py-4 h-12 w-full'
                   >
@@ -509,12 +542,12 @@ export const Notifications = () => {
                         Loading notifications...
                       </span>
                     )}
-                  </div>
+                  </li>
                 )}
                 {!hasNextPage && (
-                  <div className='text-center text-xs text-muted-foreground py-2'>
+                  <li className='text-center text-xs text-muted-foreground py-2'>
                     No more notifications found.
-                  </div>
+                  </li>
                 )}
               </ul>
             )}

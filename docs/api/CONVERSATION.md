@@ -141,7 +141,7 @@ Gets conversation by its id
 <br>
 <br>
 
-## - Get conversation: `GET /api/conversations/:cid/messages`
+## - Get conversation messages: `GET /api/conversations/:cid/messages`
 
 Gets conversation's messages by its id
 
@@ -329,7 +329,7 @@ Creates private conversation between two users
 <br>
 <br>
 
-## - Send message: `POST /api/conversations/:cid/message`
+## - Send message: `POST /api/conversations/:cid/messages`
 
 Sends a message to the conversation, it can be an image
 
@@ -344,7 +344,7 @@ Sends a message to the conversation, it can be an image
 **Body (JSON):**
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `message` | string | No | Written message. |
+| `content` | string | No | Written message content. |
 <br>
 
 **File parameters:**
@@ -407,6 +407,9 @@ Sends a message to the conversation, it can be an image
 
   <br>
 
-**Workflow:** creates a message conversation and sends it, being message or image. When an administrator sends the first message in a dispute, the backend adds the administrator to that conversation. Images are handled by the `multer` (Azure TODO:)library.
+**Workflow:** creates a message in the conversation and sends it, as text, an
+image, or both. When an administrator sends the first message in a dispute,
+the backend adds the administrator to that conversation. Images are received
+by Multer and stored through the configured storage provider.
 <br>
 <br>

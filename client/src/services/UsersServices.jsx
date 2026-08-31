@@ -39,14 +39,14 @@ export const getPublicUserProfile = async (username) => {
   return data;
 };
 
-//Get public profile missions by username
+// Get public profile services by username
 export const getPublicUserProfileMissions = async (
   username,
   type,
   page = consts.PAGINATION.DEFAULT_PAGE,
   limit = consts.PAGINATION.DEFAULT_LIMIT,
 ) => {
-  const { data } = await api.get(`/users/${username}/profile/missions`, {
+  const { data } = await api.get(`/users/${username}/profile/services`, {
     params: { type, page, limit },
   });
   return data;

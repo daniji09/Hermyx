@@ -1,5 +1,5 @@
 import { useActionState, useContext, useEffect, useRef, useState } from 'react';
-import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, MessageSquareWarning, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,8 @@ import { FormTextareaField } from '../components/custom/form/FormTextareaField.j
 import { consts, USER_ROLE } from '@hermyx/shared';
 import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { getUserReviewsInfiniteQueryOptions } from '../queries/ReviewsQueries';
-import { getOrCreatePrivateConversation } from '../services/ConversationsServices';
 import { ReviewCard } from './MyProfile.jsx';
-import { UserMissionsTable } from './UserMissions.jsx';
+import { UserMissionsTable } from './UserServices.jsx';
 import { NotFound } from './NotFound.jsx';
 import { useInView } from 'react-intersection-observer';
 
@@ -39,7 +38,6 @@ export const PublicProfile = () => {
   const navigate = useNavigate();
   const { currentUser } = useContext(AuthContext);
   const [filter, setFilter] = useState('published');
-  const [messageError, setMessageError] = useState('');
   const isOwnProfile =
     username?.toLowerCase() === currentUser?.username?.toLowerCase();
 
@@ -52,13 +50,13 @@ export const PublicProfile = () => {
     data: profileData,
     isLoading: isProfileLoading,
     isError: isProfileError,
+    error: profileError,
   } = useQuery(
     getPublicUserProfileQueryOptions(username, {
       retry: retryOption,
       enabled: !!username && !isOwnProfile,
     }),
   );
-  console.log(profileData);
   const {
     data: missionsData,
     hasNextPage,
@@ -108,25 +106,6 @@ export const PublicProfile = () => {
   const missionsVisible = profileData?.missionsVisible;
   const missions = missionsData?.pages.flatMap((page) => page.missions) || [];
   const reviewsData = getReviewsDataFromPages(reviewsPagesData?.pages);
-  const { mutate: openConversation, isPending: isOpeningConversation } =
-    useMutation({
-      mutationFn: () => getOrCreatePrivateConversation(user.uid),
-      onSuccess: (conversation) => {
-        setMessageError('');
-        navigate(`/conversations/${conversation.cid}`, {
-          state: {
-            from: `/users/${user.username}`,
-          },
-        });
-      },
-      onError: (error) => {
-        setMessageError(
-          error?.response?.data?.errors?.general?.[0] ||
-            'Could not open conversation.',
-        );
-      },
-    });
-
   if (isOwnProfile) {
     return (
       <Navigate to={currentUser?.isAdmin ? '/reports' : '/profile'} replace />
@@ -143,7 +122,20 @@ export const PublicProfile = () => {
     );
   }
 
-  if (isProfileError || !user) {
+  if (isProfileError && !user && profileError?.response?.status !== 404) {
+    return (
+      <main className='container mx-auto max-w-4xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load profile.
+        </div>
+      </main>
+    );
+  }
+
+  if (!user) {
     return <NotFound></NotFound>;
   }
 
@@ -195,27 +187,25 @@ export const PublicProfile = () => {
                 </span>
               </div>
 
-              {messageError && (
-                <p className='mt-2 text-sm text-destructive'>{messageError}</p>
-              )}
               {!currentUser?.isAdmin && (
                 <div className='mt-5 flex flex-col gap-2 sm:grid w-full sm:grid-cols-2 sm:gap-4'>
                   <Button
                     type='button'
                     className='w-full'
-                    onClick={() => {
-                      setMessageError('');
-                      openConversation();
-                    }}
-                    disabled={isOpeningConversation}
+                    onClick={() =>
+                      navigate('/conversations/new', {
+                        state: {
+                          recipient: user,
+                          from: `/users/${user.username}`,
+                        },
+                      })
+                    }
                   >
                     <MessageCircle
                       className='h-4 w-4 mr-1 shrink-0'
                       aria-hidden='true'
                     />
-                    <span className='truncate'>
-                      {isOpeningConversation ? 'Opening...' : 'Message'}
-                    </span>
+                    <span className='truncate'>Message</span>
                   </Button>
                   <ReportUserButton user={user}></ReportUserButton>
                 </div>
@@ -235,7 +225,7 @@ export const PublicProfile = () => {
           ``
         ) : !missionsVisible ? (
           <section className='rounded-lg border border-dashed p-8 text-center text-muted-foreground'>
-            This user keeps their mission history private.
+            This user keeps their service history private.
           </section>
         ) : (
           <UserMissionsTable
@@ -247,12 +237,14 @@ export const PublicProfile = () => {
             fetchNextPage={fetchNextPage}
             isLoading={isMissionsLoading}
             isError={isMissionsError}
+            publishedMissionsMessage="It seems this user hasn't published any services yet."
+            joinedMissionsMessage="It seems this user hasn't joined any services yet."
             sectionClassName={''}
             infiniteScroll={false}
           ></UserMissionsTable>
         )}
         {user.role !== USER_ROLE.ADMIN.ID && (
-          <AdventurerReviewsSection
+          <CollaboratorReviewsSection
             reviewsData={reviewsData}
             isLoading={isReviewsLoading}
             hasNextPage={hasNextReviewsPage}
@@ -276,7 +268,7 @@ const getReviewsDataFromPages = (pages = []) => {
   };
 };
 
-const AdventurerReviewsSection = ({
+const CollaboratorReviewsSection = ({
   reviewsData,
   isLoading,
   hasNextPage,
@@ -301,7 +293,7 @@ const AdventurerReviewsSection = ({
         <p className='text-muted-foreground'>Loading reviews...</p>
       ) : reviews.length === 0 ? (
         <p className='rounded-lg border border-dashed p-6 text-center text-muted-foreground'>
-          This adventurer has no reviews yet.
+          This collaborator has no reviews yet.
         </p>
       ) : (
         <>
@@ -423,7 +415,7 @@ const ReportUserButton = ({ user }) => {
                 name='message'
                 label='Message (required):'
                 type='text'
-                maxLength={consts.MISSION.REPORT_MESSAGE.MAX}
+                maxLength={consts.SERVICE.REPORT_MESSAGE.MAX}
                 defaultValue={state.data?.message || ''}
                 error={
                   !clearedFields.message && state.errors?.message

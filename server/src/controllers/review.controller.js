@@ -13,7 +13,7 @@ export const getUserReviews = async (req, res, next) => {
   }
 };
 
-// Reviews adventurer
+// Reviews collaborator
 export const reviewAdventurer = async (req, res, next) => {
   try {
     const review = await reviewService.reviewAdventurer({
@@ -31,7 +31,7 @@ export const reviewAdventurer = async (req, res, next) => {
   }
 };
 
-// Reviews owner
+// Reviews applicant
 export const reviewOwner = async (req, res, next) => {
   try {
     const review = await reviewService.reviewOwner({

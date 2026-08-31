@@ -13,17 +13,17 @@ export const getUserReviews = async (
   return data;
 };
 
-// Reviews an adventurer after a completed mission
+// Reviews a collaborator after a completed service
 export const reviewAdventurer = async (mid, adventurerId, review) => {
   const { data } = await api.post(
-    `/reviews/missions/${mid}/adventurers/${adventurerId}`,
+    `/reviews/services/${mid}/collaborators/${adventurerId}`,
     review,
   );
   return data;
 };
 
-// Reviews a mission owner after a completed participation
+// Reviews a service applicant after a completed participation
 export const reviewOwner = async (mid, review) => {
-  const { data } = await api.post(`/reviews/missions/${mid}/owner`, review);
+  const { data } = await api.post(`/reviews/services/${mid}/owner`, review);
   return data;
 };

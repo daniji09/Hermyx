@@ -24,7 +24,7 @@ import {
 } from '../utils/pagination.util.js';
 import * as notificationModel from '../models/notification.model.js';
 import * as disputeService from './dispute.service.js';
-import * as missionService from './mission.service.js';
+import * as missionService from './service.service.js';
 import * as userService from './user.service.js';
 import * as conversationService from './conversation.service.js';
 import * as paymentProvider from '../providers/payment.provider.js';
@@ -39,8 +39,8 @@ export const createNotification = async (notificationData, client) => {
     if (isUniqueConstraintError(error, 'unique_pending_join_notification')) {
       const message =
         notificationData.action === NOTIFICATION_ACTION.JOIN_REQUEST.ID
-          ? messages.MISSION.JOIN.REQUEST_ALREADY_SENT
-          : messages.MISSION.INVITE.INVITATION_ALREADY_SENT;
+          ? messages.SERVICE.JOIN.REQUEST_ALREADY_SENT
+          : messages.SERVICE.INVITE.INVITATION_ALREADY_SENT;
       throw new AppError(message, 409);
     }
     throw error;
@@ -153,7 +153,7 @@ export const deleteAllUserNotifications = async (uid, client) => {
 
 /// Endpoint complex functions
 // Gets current user's notifications
-export const getMyNotifications = async (uid, pagination) => {
+export const getMyNotifications = async (uid, pagination, status) => {
   // Parameter checks
   checkRequired(uid, 'User id');
 
@@ -163,7 +163,7 @@ export const getMyNotifications = async (uid, pagination) => {
     rows: notifications,
     totalCount,
     totalUnseen,
-  } = await notificationModel.findByRecipientId(uid, pageData);
+  } = await notificationModel.findByRecipientId(uid, pageData, status);
 
   return {
     notifications,
@@ -222,14 +222,14 @@ export const respondToNotification = async ({
   )
     return await respondToParticipationRejection(responseData);
 
-  // Mission join notification
+  // Service join notification
   if (
     notification.action === NOTIFICATION_ACTION.JOIN_REQUEST.ID ||
     notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
   )
     return await respondToMissionJoinNotification(responseData);
 
-  // Mission monetary reward edit notification
+  // Service monetary reward edit notification
   if (notification.action === NOTIFICATION_ACTION.MISSION_EDIT.ID)
     return await respondToVacancyMonetaryRewardEdition(responseData);
 
@@ -247,15 +247,15 @@ const respondToParticipationReview = async ({
   message: disputeReason,
   user,
 }) => {
-  // Gets mission information
+  // Gets service information
   const mid = notification.payload.associated_mission_id;
   const mission = await missionService.getMissionByIdOrThrow(mid);
 
-  // Checks if mission owner is current user, so they can respond
+  // Checks if service applicant is current user, so they can respond
   if (mission.owner_id !== user.uid)
     throw new AppError(messages.GENERAL.UNAUTHORIZED_ERROR, 403);
 
-  // Checks if mission is in a correct status to receive participations
+  // Checks if service is in a correct status to receive participations
   if (!MISSION_STATUS[mission.status].CAN_SUBMIT_PARTICIPATION)
     throw new AppError(
       messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION
@@ -337,7 +337,7 @@ const rejectParticipationReview = async ({
       client,
     );
 
-    // Updates mission status, syncing it using the status of all participations
+    // Updates service status, syncing it using the status of all participations
     await missionService.syncMissionCompletionStatus(mission.mid, client);
 
     // Updates notification status and marks it as seen
@@ -389,15 +389,15 @@ const acceptParticipationReview = async ({
   user,
   isAutomatic = false,
 }) => {
-  // Gets adventurer that sent the notification
+  // Gets collaborator that sent the notification
   const adventurer = await userService.getUserByUidOrThrow(
     notification.sender_id,
   );
 
-  // Checks that the adventurer has configured their account
+  // Checks that the collaborator has configured their account
   if (!adventurer.stripe_connected_id)
     throw new AppError(
-      messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+      messages.SERVICE.JOIN.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED,
       403,
     );
 
@@ -408,16 +408,22 @@ const acceptParticipationReview = async ({
     messages.NOTIFICATION.GENERAL.CANNOT_ACCEPT_PARTICIPATION_STATE,
   );
 
-  // Creates payment and modifies database
-  let successfulPayment = false;
-  try {
-    // Updates participation status to accepted
+  // Updates participation status to accepted
+  const acceptedParticipation =
     await missionService.updateParticipationStatusByMidAndAdventurer(
       mission.mid,
       adventurer.uid,
       MISSION_PARTICIPATION_STATUS.ACCEPTED.ID,
     );
+  if (!acceptedParticipation)
+    throw new AppError(
+      messages.NOTIFICATION.RESPOND_TO_SUBMIT_PARTICIPATION.ALREADY_REVIEWED,
+      409,
+    );
 
+  // Creates payment and modifies database
+  let successfulPayment = false;
+  try {
     // Creates participation transfer on Stripe outside of database transaction
     const transfer = await createParticipationTransfer(
       mission.mid,
@@ -555,21 +561,21 @@ const completeParticipationApproval = async ({
       client,
     );
 
-    // Marks mission participation as paid out
+    // Marks service participation as paid out
     await missionService.updateParticipationPaymentStatusById(
       participation.id,
       MISSION_PARTICIPATION_PAYMENT_STATUS.LIQUIDATED.ID,
       client,
     );
 
-    // User stops participating on the mission conversation, but can see the history
+    // User stops participating on the service conversation, but can see the history
     await conversationService.freezeMissionConversationHistory(
       mission.mid,
       adventurer.uid,
       client,
     );
   }
-  // Syncs mission completion status
+  // Syncs service completion status
   await missionService.syncMissionCompletionStatus(mission.mid, client);
 };
 
@@ -580,7 +586,7 @@ const respondToParticipationRejection = async ({
   message: disputeReason,
   user,
 }) => {
-  // Gets mission information
+  // Gets service information
   const mid = notification.payload.associated_mission_id;
   const mission = await missionService.getMissionByIdOrThrow(mid);
 
@@ -611,14 +617,14 @@ const respondToParticipationRejection = async ({
   // If user accepts the rejection
   checkAcceptedResponse(response);
 
-  // Checks if mission can be in progress by status again
+  // Checks if service can be in progress by status again
   checkParticipationTransition(
     participation,
     MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
     messages.NOTIFICATION.GENERAL.CANNOT_REOPEN_PARTICIPATION_STATE,
   );
 
-  // Reopens participation, syncs mission and responds to notification, all in a database transaction
+  // Reopens participation, syncs service and responds to notification, all in a database transaction
   await withTransaction(async (client) => {
     // Participation is in progress again
     await missionService.updateParticipationStatusByMidAndAdventurer(
@@ -628,7 +634,7 @@ const respondToParticipationRejection = async ({
       client,
     );
 
-    // Syncs mission state
+    // Syncs service state
     await missionService.syncMissionCompletionStatus(mid, client);
 
     // Resolves notification
@@ -725,9 +731,9 @@ const disputeParticipationReview = async ({
   };
 };
 
-// Responds to mission join notification, can be done by adventurer or applicant
+// Responds to service join notification, can be done by collaborator or applicant
 const respondToMissionJoinNotification = async ({ notification, response }) => {
-  // Gets mission info
+  // Gets service info
   const mid = notification.payload.associated_mission_id;
   const mission = await missionService.getMissionByIdOrThrow(mid);
 
@@ -738,7 +744,7 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
   // If join is accepted
   checkAcceptedResponse(response);
 
-  // Finally, joins mission in a transaction
+  // Finally, joins service in a transaction
   const events = await withTransaction(async (client) => {
     // Gets participation info using pessimistic approach
     const vacancyId = notification.payload.associated_vacancy_id;
@@ -760,7 +766,7 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
       messages.NOTIFICATION.GENERAL.CANNOT_JOIN_PARTICIPATION_STATE,
     );
 
-    // Check if adventurer has already joined the mission
+    // Check if collaborator has already joined the service
     const adventurerId =
       mission.owner_id === notification.sender_id
         ? notification.recipient_id
@@ -771,16 +777,21 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
         adventurerId,
       );
     if (alreadyJoined)
-      throw new AppError(messages.MISSION.JOIN.ALREADY_JOINED, 409);
+      throw new AppError(messages.SERVICE.JOIN.ALREADY_JOINED, 409);
 
-    // Gets adventurer info
+    // Gets collaborator info
     const adventurer = await userService.getUserByUidOrThrow(
       adventurerId,
       client,
     );
-    if (!adventurer.stripe_connected_id)
+    const stripeAccount = adventurer.stripe_connected_id
+      ? await paymentProvider.retrieveConnectAccount(
+          adventurer.stripe_connected_id,
+        )
+      : null;
+    if (!stripeAccount?.details_submitted || !stripeAccount?.payouts_enabled)
       throw new AppError(
-        messages.MISSION.JOIN.ADVENTURER_BANK_ACCOUNT_NOT_CONFIGURED,
+        messages.SERVICE.JOIN.COLLABORATOR_BANK_ACCOUNT_NOT_CONFIGURED,
         403,
       );
 
@@ -792,12 +803,12 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
         MISSION_PARTICIPATION_STATUS.JOINED.ID,
         client,
       );
-    if (!joinedVacancy) throw new AppError(messages.MISSION.JOIN.FAILED, 409);
+    if (!joinedVacancy) throw new AppError(messages.SERVICE.JOIN.FAILED, 409);
 
-    // Updates mission occupied vacancies
+    // Updates service occupied vacancies
     await missionService.updateOccupiedVacancies(mid, 1, client);
 
-    // Adds participant into mission conversation
+    // Adds participant into service conversation
     await conversationService.createMissionConversationParticipant(
       mid,
       adventurerId,
@@ -824,7 +835,7 @@ const respondToMissionJoinNotification = async ({ notification, response }) => {
   return { message: 'Adventurer successfully added' };
 };
 
-// Rejects join mission request
+// Rejects join service request
 const rejectMissionJoinNotification = async (notification, mission) => {
   // Rejects join notification and sends follow-up notification, so database transaction is needed
   const event = await withTransaction(async (client) => {
@@ -920,17 +931,17 @@ const createJoinNotificationEvent = async (
   // Chooses correct message
   const message = accepted
     ? notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
-      ? messages.NOTIFICATION.JOIN_MISSION_DECISION.INVITATION.ACCEPTED(
+      ? messages.NOTIFICATION.JOIN_SERVICE_DECISION.INVITATION.ACCEPTED(
           mission.title,
         )
-      : messages.NOTIFICATION.JOIN_MISSION_DECISION.REQUEST.ACCEPTED(
+      : messages.NOTIFICATION.JOIN_SERVICE_DECISION.REQUEST.ACCEPTED(
           mission.title,
         )
     : notification.action === NOTIFICATION_ACTION.MISSION_INVITE.ID
-      ? messages.NOTIFICATION.JOIN_MISSION_DECISION.INVITATION.REJECTED(
+      ? messages.NOTIFICATION.JOIN_SERVICE_DECISION.INVITATION.REJECTED(
           mission.title,
         )
-      : messages.NOTIFICATION.JOIN_MISSION_DECISION.REQUEST.REJECTED(
+      : messages.NOTIFICATION.JOIN_SERVICE_DECISION.REQUEST.REJECTED(
           mission.title,
         );
 
@@ -968,7 +979,7 @@ const respondToVacancyMonetaryRewardEdition = async ({
   response,
   user,
 }) => {
-  // Gets mission information
+  // Gets service information
   const mission = await missionService.getMissionByIdOrThrow(
     notification.payload.associated_mission_id,
   );
@@ -980,9 +991,9 @@ const respondToVacancyMonetaryRewardEdition = async ({
       user.uid,
     );
 
-  // Checks if mission can actually be edited by status
+  // Checks if service can actually be edited by status
   if (!MISSION_STATUS[mission.status].CAN_EDIT)
-    throw new AppError(messages.MISSION.EDIT.CANNOT_EDIT_MISSION, 409);
+    throw new AppError(messages.SERVICE.EDIT.CANNOT_EDIT_SERVICE, 409);
 
   // Rejects the new monetary reward offer
   if (response === 'rejected')
@@ -1177,7 +1188,7 @@ const acceptRewardEdition = async ({
 const prepareNegotiationRefunds = async (mission, participation, newOffer) => {
   if (participation.monetary_reward <= newOffer) return [];
 
-  // Gets mission payments
+  // Gets service payments
   const payments = await missionService.getMissionPaymentsByVacancyId(
     participation.id,
   );
@@ -1255,7 +1266,7 @@ const persistNegotiationPaymentChanges = async (
       client,
     );
 
-    // So mission payment can be correctly updated
+    // So service payment can be correctly updated
     await missionService.updateMissionPayment(
       mission.mid,
       occupied.reduce(
@@ -1426,7 +1437,7 @@ const buildNotification = ({
   },
 });
 
-// Builds mission event for that type of notification
+// Builds service event for that type of notification
 const buildMissionEvent = (
   notificationId,
   mission,

@@ -43,9 +43,9 @@ router.get('/me', userController.getMe);
 // Get my profile
 router.get('/me/profile', userController.getMyProfile);
 
-// Get missions from user
+// Get services from user
 router.get(
-  '/:uid/missions',
+  '/:uid/services',
   validateParamsSchema(getUserMissionsParamSchema),
   validateQuerySchema(getUserMissionsQuerySchema),
   pagination(),
@@ -59,9 +59,9 @@ router.get(
   userController.getUserPublicProfile,
 );
 
-// Get user public profile missions by username
+// Get user public profile services by username
 router.get(
-  '/:username/profile/missions',
+  '/:username/profile/services',
   validateParamsSchema(getUserPublicProfileParamSchema),
   validateQuerySchema(getUserPublicProfileMissionsQuerySchema),
   pagination(),

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { messages } from '../messages/messages.js';
 import { consts } from '../consts/consts.js';
+import { limitBaseSchema, pageBaseSchema } from './pagination.validation.js';
 
 /// Base validations, raw logic
 export const nidBaseSchema = z.coerce
@@ -24,6 +25,13 @@ export const notificationMessageBaseSchema = z
   );
 
 /// Endpoint complex validations
+// Get current user's notifications
+export const getNotificationsQuerySchema = z.object({
+  page: pageBaseSchema,
+  limit: limitBaseSchema,
+  status: z.enum(['all', 'accepted', 'rejected']).default('all'),
+});
+
 // Respond to notification
 export const respondToNotificationParamSchema = z.object({
   nid: nidBaseSchema,

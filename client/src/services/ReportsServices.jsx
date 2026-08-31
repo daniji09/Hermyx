@@ -1,9 +1,9 @@
 import { consts } from '@hermyx/shared';
 import api from '../config/api';
 
-// Reports an adventurer
+// Reports a collaborator
 export const reportAdventurer = async ({ message, mid, vacancyId }) => {
-  const { data } = await api.post(`/reports/adventurer`, {
+  const { data } = await api.post(`/reports/collaborator`, {
     message,
     mid,
     vacancyId,
@@ -22,7 +22,7 @@ export const reportUser = async ({ message, uid }) => {
 
 // Reports user
 export const reportMission = async ({ message, mid }) => {
-  const { data } = await api.post(`/reports/mission`, {
+  const { data } = await api.post(`/reports/service`, {
     message,
     mid,
   });
@@ -50,13 +50,13 @@ export const getReports = async (options = {}) => {
   return data;
 };
 
-// Accepts adventurer's work
+// Accepts a collaborator's work
 export const acceptAdventurersWork = async (rid, reason) => {
   const { data } = await api.post(`/reports/${rid}/accept`, { reason });
   return data;
 };
 
-// Rejects adventurer's work
+// Rejects a collaborator's work
 export const rejectAdventurersWork = async (rid, reason) => {
   const { data } = await api.post(`/reports/${rid}/reject`, { reason });
   return data;

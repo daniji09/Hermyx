@@ -29,7 +29,7 @@ jobs:
           npm run build --if-present
           npm run test --if-present
 
-      - name: Crear archivo de Firebase
+      - name: Create Firebase file
         run: |
           mkdir -p server/src/config
           echo '${{ secrets.FIREBASE_JSON }}' > server/src/config/firebase-service-account.json

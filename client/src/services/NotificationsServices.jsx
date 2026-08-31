@@ -4,9 +4,10 @@ import api from '../config/api';
 export const getMyNotifications = async (
   page = consts.PAGINATION.DEFAULT_PAGE,
   limit = consts.PAGINATION.DEFAULT_LIMIT,
+  status = 'all',
 ) => {
   const { data } = await api.get('/notifications/me', {
-    params: { page, limit },
+    params: { page, limit, status },
   });
   return data;
 };

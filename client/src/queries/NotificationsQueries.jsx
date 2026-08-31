@@ -14,10 +14,14 @@ export const getMyNotificationsQueryOptions = (limit, options) => {
   });
 };
 
-export const getMyNotificationsInfiniteQueryOptions = (limit, options) =>
+export const getMyNotificationsInfiniteQueryOptions = (
+  limit,
+  status = 'all',
+  options,
+) =>
   infiniteQueryOptions({
-    queryKey: ['getMyNotifications', 'infinite', limit],
-    queryFn: ({ pageParam }) => getMyNotifications(pageParam, limit),
+    queryKey: ['getMyNotifications', 'infinite', limit, status],
+    queryFn: ({ pageParam }) => getMyNotifications(pageParam, limit, status),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.pagination.hasMore

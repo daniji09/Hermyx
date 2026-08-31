@@ -40,7 +40,7 @@ export const setDefaultCard = async (req, res, next) => {
   }
 };
 
-// Charges the mission cost using the user's saved default card.
+// Charges the service cost using the user's saved default card.
 export const payDefault = async (req, res, next) => {
   try {
     const { mid } = req.params;
@@ -81,7 +81,7 @@ export const confirmPayment = async (req, res, next) => {
   }
 };
 
-//Initiates Stripe Connect onboarding so the user (adventurer) can receive money.
+//Initiates Stripe Connect onboarding so the user (collaborator) can receive money.
 export const connectOnboard = async (req, res, next) => {
   try {
     const accountLink = await paymentService.connectOnBoard(req.user);

@@ -46,6 +46,12 @@ export const verifyToken = async (req, res, next) => {
   }
 };
 
+// Verifies a token when one is provided, while allowing anonymous requests
+export const optionalVerifyToken = (req, res, next) => {
+  if (!req.headers.authorization) return next();
+  return verifyToken(req, res, next);
+};
+
 // Verifies admin token
 export const verifyAdmin = async (req, res, next) => {
   // Firebase token is already checked, so only the admin role is checked

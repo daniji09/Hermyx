@@ -31,7 +31,7 @@ import {
   messages as sharedMessages,
 } from '@hermyx/shared';
 import { useQuery } from '@tanstack/react-query';
-import { getMissionPaymentInfoByIdQueryOptions } from '../queries/MissionsQueries.jsx';
+import { getMissionPaymentInfoByIdQueryOptions } from '../queries/ServicesQueries.jsx';
 import { BanknoteArrowUp } from 'lucide-react';
 import { getSavedCardsQueryOptions } from '../queries/PaymentQueries.jsx';
 import { Label } from '@/components/ui/label';
@@ -53,11 +53,11 @@ export const Payment = () => {
     return failureCount < 3;
   };
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: missionPaymentInfo,
     isLoading,
     isError,
+    error,
   } = useQuery(
     getMissionPaymentInfoByIdQueryOptions(id, {
       enabled: enabledOption,
@@ -65,11 +65,10 @@ export const Payment = () => {
     }),
   );
 
-  // API call using React Query (if the same query is used in more than one componente it should be isolated)
   const {
     data: cardsInfo,
-    isLoadingCards,
-    isErrorCards,
+    isLoading: isLoadingCards,
+    isError: isErrorCards,
   } = useQuery(
     getSavedCardsQueryOptions({
       enabled: enabledOption,
@@ -81,25 +80,40 @@ export const Payment = () => {
     return (
       <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
         <div role='status' className='p-8 text-center text-muted-foreground'>
-          Loading mission payment...
+          Loading service payment...
         </div>
       </main>
     );
   }
 
-  if (isError || isErrorCards || !missionPaymentInfo) {
+  if (isError && error?.response?.status === 404) {
     return <NotFound></NotFound>;
   }
 
+  if (isError || isErrorCards) {
+    return (
+      <main className='container mx-auto max-w-6xl p-4 sm:p-6'>
+        <div
+          role='alert'
+          className='rounded-lg border border-destructive/20 bg-destructive/5 p-8 text-center text-destructive'
+        >
+          Could not load service payment.
+        </div>
+      </main>
+    );
+  }
+
+  if (!missionPaymentInfo) return <NotFound></NotFound>;
+
   if (missionPaymentInfo.missionPayment.length === 0) {
     return (
-      <Navigate to={`/missions/${missionPaymentInfo.mission.mid}`} replace />
+      <Navigate to={`/services/${missionPaymentInfo.mission.mid}`} replace />
     );
   }
 
   return (
     <>
-      <title>{`Mission ${missionPaymentInfo?.mission?.title} payment| Hermyx`}</title>
+      <title>{`Service ${missionPaymentInfo?.mission?.title} payment | Hermyx`}</title>
       <meta
         name='description'
         content={`Hermyx log in via username/e-mail and password or Google.`}
@@ -141,7 +155,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
       if (!missionId) {
         return {
           success: false,
-          errors: { general: [messages.PAYMENT.MISSION_NOT_FOUND] },
+          errors: { general: [messages.PAYMENT.SERVICE_NOT_FOUND] },
         };
       }
 
@@ -197,7 +211,6 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
           errors: { general: [sharedMessages.GENERAL.UNEXPECTED_ERROR] },
         };
       } catch (e) {
-        console.log(e.response.data.errors.general[0]);
         return {
           success: false,
           errors: {
@@ -215,7 +228,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
   );
 
   useEffect(() => {
-    if (state?.success) navigate(`/missions/${missionId}`);
+    if (state?.success) navigate(`/services/${missionId}`);
   }, [state?.success, missionId, navigate]);
 
   const [prevServerState, setPrevServerState] = useState(state);
@@ -236,7 +249,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
   const groupsMap = {};
 
   (missionPaymentInfo || []).forEach((payment) => {
-    const title = payment.title || 'Adventurer';
+    const title = payment.title || 'Collaborator';
     const amountPaid = Number(payment.amount_paid || 0);
     const totalReward = Number(payment.monetary_reward || 0);
     const rewardToPay = totalReward - amountPaid;
@@ -249,7 +262,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
       ? 'Reward adjustment'
       : isMissionFunding
         ? 'Initial deposit'
-        : 'New adventurer deposit';
+        : 'New collaborator deposit';
 
     const key = `${title}_${paymentType}_${rewardToPay}`;
 
@@ -298,10 +311,14 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
           </span>
           <div className='min-w-0 flex-1'>
             <h1 className='text-3xl sm:text-4xl font-bold tracking-tight min-w-0 wrap-break-words wrap-anywhere'>
-              Mission payment
+              Service payment
             </h1>
             <p className='text-muted-foreground mt-1'>
               Pay all participations that are needed.
+            </p>
+            <p className='mt-3 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-foreground'>
+              Demo mode: Stripe uses test keys. No real charge will be made and
+              Hermyx does not provide a real escrow service.
             </p>
           </div>
         </div>
@@ -313,9 +330,9 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
             <CardHeader className='pb-4 border-b bg-muted/20'>
               <CardTitle className='min-w-0 wrap-break-words wrap-anywhere text-3xl'>
                 <Link
-                  to={`/missions/${missionId}`}
+                  to={`/services/${missionId}`}
                   className='hover:text-primary hover:underline transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-sm'
-                  title='Go back to mission details'
+                  title='Go back to service details'
                 >
                   {mission?.title}
                 </Link>
@@ -522,7 +539,7 @@ const PaymentForm = ({ missionId, mission, missionPaymentInfo, cardsInfo }) => {
               >
                 {isPending
                   ? 'Processing payment...'
-                  : `Pay ${formatCurrency(totalDue)}`}
+                  : `Simulate payment ${formatCurrency(totalDue)}`}
               </Button>
             </CardForm.Footer>
           </CardForm>

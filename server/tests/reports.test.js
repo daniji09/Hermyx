@@ -97,7 +97,7 @@ describe('Report API', () => {
     reportService.reportAdventurer.mockResolvedValue(report);
 
     const response = await request(app)
-      .post('/api/reports/adventurer')
+      .post('/api/reports/collaborator')
       .send(reportPayload);
 
     expect(response.status).toBe(201);
@@ -132,7 +132,7 @@ describe('Report API', () => {
     reportService.reportMission.mockResolvedValue(report);
 
     const response = await request(app)
-      .post('/api/reports/mission')
+      .post('/api/reports/service')
       .send(payload);
 
     expect(response.status).toBe(201);
@@ -147,16 +147,16 @@ describe('Report API', () => {
   it('returns conflict when the same mission already has an active report from the user', async () => {
     const payload = { mid: 6, message: 'This mission violates the rules.' };
     reportService.reportMission.mockRejectedValue(
-      new AppError(messages.REPORT.REPORT_MISSION.ACTIVE_REPORT, 409),
+      new AppError(messages.REPORT.REPORT_SERVICE.ACTIVE_REPORT, 409),
     );
 
     const response = await request(app)
-      .post('/api/reports/mission')
+      .post('/api/reports/service')
       .send(payload);
 
     expect(response.status).toBe(409);
     expect(response.body.errors.general).toEqual([
-      messages.REPORT.REPORT_MISSION.ACTIVE_REPORT,
+      messages.REPORT.REPORT_SERVICE.ACTIVE_REPORT,
     ]);
     expect(reportService.reportMission).toHaveBeenCalledWith({
       message: payload.message,
@@ -200,7 +200,7 @@ describe('Report API', () => {
     ['message', ''],
   ])('rejects an adventurer report with invalid %s', async (field, value) => {
     const response = await request(app)
-      .post('/api/reports/adventurer')
+      .post('/api/reports/collaborator')
       .send({ ...reportPayload, [field]: value });
 
     expect(response.status).toBe(400);
@@ -242,7 +242,7 @@ describe('Report API', () => {
       );
 
       const response = await request(app)
-        .post('/api/reports/adventurer')
+        .post('/api/reports/collaborator')
         .send(reportPayload);
 
       expect(response.status).toBe(status);

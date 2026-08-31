@@ -12,13 +12,13 @@ export const REPORT_TYPE = {
   },
   REPORT_MISSION: {
     ID: 'REPORT_MISSION',
-    LABEL: 'Report mission',
+    LABEL: 'Report service',
     CAN_BE_REJECTED_ACCEPTED: false,
     CAN_BE_DISMISSED: true,
   },
   REPORT_ADVENTURER: {
     ID: 'REPORT_ADVENTURER',
-    LABEL: 'Report adventurer',
+    LABEL: 'Report collaborator',
     CAN_BE_REJECTED_ACCEPTED: false,
     CAN_BE_DISMISSED: true,
   },
@@ -43,19 +43,19 @@ export const REPORT_DECISION = {
   },
   BAN_MISSION: {
     ID: 'BAN_MISSION',
-    LABEL: 'Ban mission',
+    LABEL: 'Ban service',
   },
   KICK_ADVENTURER_OUT: {
     ID: 'KICK_ADVENTURER_OUT',
-    LABEL: 'Kick adventurer out',
+    LABEL: 'Kick collaborator out',
   },
   ACCEPT_ADVENTURERS_WORK: {
     ID: 'ACCEPT_ADVENTURERS_WORK',
-    LABEL: `Accept adventurer's work`,
+    LABEL: `Accept collaborator's work`,
   },
   REJECT_ADVENTURERS_WORK: {
     ID: 'REJECT_ADVENTURERS_WORK',
-    LABEL: `Reject adventurer's work`,
+    LABEL: `Reject collaborator's work`,
   },
   DISMISS: {
     ID: 'DISMISS',

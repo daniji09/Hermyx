@@ -38,7 +38,7 @@ describe('Review API', () => {
     currentUser.role = USER_ROLE.ADMIN.ID;
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/owner')
+      .post('/api/reviews/services/6/owner')
       .send({ rating: 5, comment: 'Administrative review.' });
 
     expect(response.status).toBe(403);
@@ -74,7 +74,7 @@ describe('Review API', () => {
     reviewService.reviewAdventurer.mockResolvedValue(review);
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/adventurers/82')
+      .post('/api/reviews/services/6/collaborators/82')
       .send({ rating: review.rating, comment: review.comment });
 
     expect(response.status).toBe(201);
@@ -93,7 +93,7 @@ describe('Review API', () => {
     reviewService.reviewOwner.mockResolvedValue(review);
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/owner')
+      .post('/api/reviews/services/6/owner')
       .send({ rating: review.rating, comment: review.comment });
 
     expect(response.status).toBe(201);
@@ -129,7 +129,7 @@ describe('Review API', () => {
     'rejects the out-of-range rating %s',
     async (rating) => {
       const response = await request(app)
-        .post('/api/reviews/missions/6/adventurers/82')
+        .post('/api/reviews/services/6/collaborators/82')
         .send({ rating, comment: 'Invalid rating.' });
 
       expect(response.status).toBe(400);
@@ -139,8 +139,8 @@ describe('Review API', () => {
   );
 
   it.each([
-    ['/api/reviews/missions/invalid/adventurers/82', 'mid'],
-    ['/api/reviews/missions/6/adventurers/invalid', 'adventurerId'],
+    ['/api/reviews/services/invalid/collaborators/82', 'mid'],
+    ['/api/reviews/services/6/collaborators/invalid', 'adventurerId'],
   ])('rejects invalid review parameter %s', async (url, field) => {
     const response = await request(app)
       .post(url)
@@ -152,16 +152,16 @@ describe('Review API', () => {
   });
 
   it.each([
-    [403, messages.REVIEW.GENERAL.MISSION_REVIEW_NOT_ALLOWED],
-    [404, messages.MISSION.VACANCY.NOT_FOUND],
-    [409, messages.REVIEW.GENERAL.MISSION_COMPLETED],
+    [403, messages.REVIEW.GENERAL.SERVICE_REVIEW_NOT_ALLOWED],
+    [404, messages.SERVICE.VACANCY.NOT_FOUND],
+    [409, messages.REVIEW.GENERAL.SERVICE_COMPLETED],
   ])('maps a review service error with status %s', async (status, message) => {
     reviewService.reviewAdventurer.mockRejectedValue(
       new AppError(message, status),
     );
 
     const response = await request(app)
-      .post('/api/reviews/missions/6/adventurers/82')
+      .post('/api/reviews/services/6/collaborators/82')
       .send({ rating: 4, comment: 'Good work.' });
 
     expect(response.status).toBe(status);

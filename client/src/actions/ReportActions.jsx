@@ -11,7 +11,7 @@ import {
   reportUser,
 } from './../services/ReportsServices';
 
-// Reports an adventurer
+// Reports a collaborator
 export const reportAdventurerAction = async (previousState, formData) => {
   // Data is collected
   const fieldsData = Object.fromEntries(formData);
@@ -101,7 +101,7 @@ export const reportUserAction = async (previousState, formData) => {
   }
 };
 
-// Report mission action
+// Report service action
 export const reportMissionAction = async (previousState, formData) => {
   // Data is collected
   const fieldsData = Object.fromEntries(formData);

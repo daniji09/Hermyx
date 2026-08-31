@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import {
   InputGroup,
   InputGroupAddon,
@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/input-group';
 import { FieldLegend, FieldSet } from '@/components/ui/field';
 import { Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export const SearchBar = ({ id: externalId, legend, ...props }) => {
   const reactId = useId();
@@ -17,16 +17,26 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
   const buttonId = `${id}-button`;
 
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const trimmedQuery = query.trim();
 
+  useEffect(() => {
+    if (location.pathname === '/login' || location.pathname === '/signup') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setQuery('');
+      setIsMenuOpen(false);
+      setFocusedIndex(-1);
+    }
+  }, [location.pathname]);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (trimmedQuery) {
-      navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
+      navigate(`/services?title=${encodeURIComponent(trimmedQuery)}`);
       setIsMenuOpen(false);
       setFocusedIndex(-1);
     }
@@ -34,7 +44,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
 
   const handleMissionSearch = () => {
     if (trimmedQuery) {
-      navigate(`/missions?title=${encodeURIComponent(trimmedQuery)}`);
+      navigate(`/services?title=${encodeURIComponent(trimmedQuery)}`);
       setIsMenuOpen(false);
       setFocusedIndex(-1);
     }
@@ -96,8 +106,8 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
               onFocus={() => setIsMenuOpen(true)}
               onKeyDown={handleKeyDown}
               required
-              placeholder='Search mission in Hermyx...'
-              aria-label='Search mission'
+              placeholder='Search service in Hermyx...'
+              aria-label='Search service'
               aria-describedby={searchId}
               {...props}
               className='w-full'
@@ -141,7 +151,7 @@ export const SearchBar = ({ id: externalId, legend, ...props }) => {
               <span className='font-semibold text-foreground'>
                 {`"${trimmedQuery}"`}
               </span>{' '}
-              in missions
+              in services
             </span>
           </button>
 
