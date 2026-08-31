@@ -334,6 +334,11 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
                         src={getImageUrl(photo.url)}
                         alt={`Service ${mission?.title} - Photo ${index + 1}`}
                         className='w-full aspect-video object-cover'
+                        loading={index === 0 ? 'eager' : 'lazy'}
+                        fetchPriority={index === 0 ? 'high' : undefined}
+                        decoding='async'
+                        width='800'
+                        height='450'
                       />
                     </CarouselItem>
                   ))}
@@ -348,9 +353,14 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
             ) : (
               <div className='w-full rounded-2xl overflow-hidden border bg-muted/20 shadow-sm'>
                 <img
-                  src='https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+                  src='https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=75&w=800&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
                   alt='Service placeholder'
                   className='w-full aspect-video object-cover'
+                  loading='eager'
+                  fetchPriority='high'
+                  decoding='async'
+                  width='800'
+                  height='450'
                 />
               </div>
             )}

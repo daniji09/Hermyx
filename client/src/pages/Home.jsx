@@ -158,7 +158,7 @@ export const Home = () => {
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
               <Map className='h-7 w-7' aria-hidden='true' />
             </div>
-            <h3 className='text-xl font-bold mb-2'>1. Post a service</h3>
+            <h2 className='text-xl font-bold mb-2'>1. Post a service</h2>
             <p className='text-muted-foreground'>
               Define the task, set the reward, and publish it to board.
             </p>
@@ -167,7 +167,7 @@ export const Home = () => {
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
               <Users className='h-7 w-7' aria-hidden='true' />
             </div>
-            <h3 className='text-xl font-bold mb-2'>2. Choose collaborators</h3>
+            <h2 className='text-xl font-bold mb-2'>2. Choose collaborators</h2>
             <p className='text-muted-foreground'>
               Review applications and pick the best collaborators for your team.
             </p>
@@ -176,7 +176,7 @@ export const Home = () => {
             <div className='h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary'>
               <ShieldCheck className='h-7 w-7' aria-hidden='true' />
             </div>
-            <h3 className='text-xl font-bold mb-2'>3. Use test payments</h3>
+            <h2 className='text-xl font-bold mb-2'>3. Use test payments</h2>
             <p className='text-muted-foreground'>
               The prototype uses Stripe in test mode to demonstrate the payment
               flow. No real payment or escrow service is provided.
@@ -208,12 +208,16 @@ export const Home = () => {
           ) : (
             <Carousel opts={{ align: 'start' }} className='w-full'>
               <CarouselContent className='-ml-4 py-4'>
-                {interestMissions.slice(0, 6).map((mission) => (
+                {interestMissions.slice(0, 6).map((mission, index) => (
                   <CarouselItem
                     key={mission.mid}
                     className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
                   >
-                    <MissionSearchCard mission={mission} />
+                    <MissionSearchCard
+                      mission={mission}
+                      priority={index === 0}
+                      asListItem={false}
+                    />
                   </CarouselItem>
                 ))}
               </CarouselContent>
@@ -356,12 +360,16 @@ export const Home = () => {
             ) : (
               <Carousel opts={{ align: 'start' }} className='w-full'>
                 <CarouselContent className='-ml-4 py-4'>
-                  {joinedMissions.map((mission) => (
+                  {joinedMissions.map((mission, index) => (
                     <CarouselItem
                       key={mission.mid}
                       className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
                     >
-                      <MissionSearchCard mission={mission} />
+                      <MissionSearchCard
+                        mission={mission}
+                        priority={index === 0}
+                        asListItem={false}
+                      />
                     </CarouselItem>
                   ))}
                   {hasNextJoinedPage && (
@@ -402,12 +410,16 @@ export const Home = () => {
             ) : (
               <Carousel opts={{ align: 'start' }} className='w-full'>
                 <CarouselContent className='-ml-4 py-4'>
-                  {publishedMissions.map((mission) => (
+                  {publishedMissions.map((mission, index) => (
                     <CarouselItem
                       key={mission.mid}
                       className='pl-4 basis-full sm:basis-1/2 lg:basis-1/3'
                     >
-                      <MissionSearchCard mission={mission} />
+                      <MissionSearchCard
+                        mission={mission}
+                        priority={index === 0}
+                        asListItem={false}
+                      />
                     </CarouselItem>
                   ))}
                   {hasNextPublishedPage && (

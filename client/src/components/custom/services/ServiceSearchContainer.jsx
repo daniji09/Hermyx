@@ -125,8 +125,12 @@ const MissionSearchContent = ({
             className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'
             aria-label='Services list'
           >
-            {missions?.map((mission) => (
-              <MissionSearchCard key={mission.mid} mission={mission} />
+            {missions?.map((mission, index) => (
+              <MissionSearchCard
+                key={mission.mid}
+                mission={mission}
+                priority={index === 0}
+              />
             ))}
           </ul>
           {infiniteScroll ? (
@@ -170,12 +174,17 @@ const MissionSearchContent = ({
   );
 };
 
-export const MissionSearchCard = ({ mission }) => {
+export const MissionSearchCard = ({
+  mission,
+  priority = false,
+  asListItem = true,
+}) => {
   const missionPhoto = mission.photos?.[0]
     ? getImageUrl(mission.photos[0])
-    : 'https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=80&w=1932&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+    : 'https://images.unsplash.com/photo-1647221597996-54f3d0f73809?q=75&w=800&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+  const CardWrapper = asListItem ? 'li' : 'div';
   return (
-    <li className='list-none h-full'>
+    <CardWrapper className='list-none h-full'>
       <Card
         asChild
         className='justify-between group relative transition-all hover:border-primary/50 hover:shadow-md overflow-hidden pt-0 focus-within:ring-1 focus-within:ring-secondary-foreground focus-within:ring-offset-2'
@@ -193,6 +202,11 @@ export const MissionSearchCard = ({ mission }) => {
           <div className='aspect-video w-full overflow-hidden bg-muted'>
             <img
               src={missionPhoto}
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : undefined}
+              decoding='async'
+              width='800'
+              height='450'
               alt={
                 mission?.title
                   ? `Cover of the service ${mission.title}`
@@ -246,6 +260,6 @@ export const MissionSearchCard = ({ mission }) => {
           </CardContent>
         </article>
       </Card>
-    </li>
+    </CardWrapper>
   );
 };
