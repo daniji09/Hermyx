@@ -46,6 +46,7 @@ export const messages = {
       INVALID_CREDENTIALS: `Invalid credentials.`,
       COULD_NOT_LOG_IN: `Could not log in.`,
       EMAIL_NOT_VERIFIED: `Please verify your e-mail before logging in.`,
+      GOOGLE_SIGNUP_REQUIRED: `Please go to Sign up and accept the Hermyx terms and conditions before using Google for the first time.`,
     },
     EMAIL_VERIFICATION: {
       COULD_NOT_SEND: `Could not send the e-mail verification message.`,
