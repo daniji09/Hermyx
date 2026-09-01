@@ -262,7 +262,8 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
           </h1>
           {!currentUser?.isAdmin &&
             mission?.status !== MISSION_STATUS.CANCELLED.ID &&
-            mission?.status !== MISSION_STATUS.DELETED.ID && (
+            mission?.status !== MISSION_STATUS.DELETED.ID &&
+            (!isCreator || mission?.status !== MISSION_STATUS.FINISHED.ID) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
