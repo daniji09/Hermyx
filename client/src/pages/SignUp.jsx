@@ -269,9 +269,13 @@ const SignUpForm = ({
           </div>
         </CardForm.Footer>
       </CardForm>
-      {state.errors?.general && !isAlertClosed && (
+      {(state.errors?.general || isError) && !isAlertClosed && (
         <FormAlert onClose={() => setIsAlertClosed(true)}>
-          {isError ? error : state.errors.general[0]}
+          {isError
+            ? error?.errors?.general?.[0] ||
+              Object.values(error?.errors || {}).flat()[0] ||
+              messages.GENERAL.UNEXPECTED_ERROR
+            : state.errors.general[0]}
         </FormAlert>
       )}
     </div>

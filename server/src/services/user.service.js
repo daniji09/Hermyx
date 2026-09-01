@@ -414,12 +414,16 @@ export const updateMyEmail = async (user, email) => {
     if (!firebaseChange)
       throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
 
+    // Creates a fresh session after the e-mail change invalidates the old one
+    const token = await authProvider.createCustomToken(user.firebase_uid);
+
     // Then is changed on Hermyx database
     const hermyxChange = await userModel.updateEmailByUid(user.uid, email);
 
     if (hermyxChange)
       return {
         email: hermyxChange.email,
+        token,
       };
     else {
       // If email was changed on Firebase but not in Hermyx, it should rollback

@@ -1,4 +1,4 @@
-import { USER_STATUS } from '@hermyx/shared';
+import { USER_ROLE, USER_STATUS } from '@hermyx/shared';
 import pool from '../config/db.config.js';
 import { executePaginatedQuery } from '../utils/pagination.util.js';
 
@@ -87,8 +87,8 @@ export const searchByUsername = async ({
   // COUNT(*) OVER() allows to count all rows that meet the condition without taking into account LIMIT and with no aggregation
   let query = `SELECT uid, username, description, avatar, name, surnames, COUNT(*) OVER() AS total_count
     FROM app_user 
-    WHERE uid <> $1 AND status = $2`;
-  const values = [excludedUid, USER_STATUS.ACTIVE.ID];
+    WHERE uid <> $1 AND status = $2 AND role = $3`;
+  const values = [excludedUid, USER_STATUS.ACTIVE.ID, USER_ROLE.USER.ID];
 
   if (username) {
     values.push(username);

@@ -40,9 +40,7 @@ const formatParticipationReviewDuration = (remainingMilliseconds) => {
   const days = Math.floor(totalMinutes / (24 * 60));
   const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
   const minutes = totalMinutes % 60;
-  const digitalTime = [hours, minutes]
-    .map((unit) => String(unit).padStart(2, '0'))
-    .join(':');
+  const digitalTime = `${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m`;
 
   return `Automatic approval in ${days > 0 ? `${days}d ` : ''}${digitalTime}`;
 };

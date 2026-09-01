@@ -262,7 +262,8 @@ const MissionContent = ({ mission, isCreator, isFull, currentUser }) => {
           </h1>
           {!currentUser?.isAdmin &&
             mission?.status !== MISSION_STATUS.CANCELLED.ID &&
-            mission?.status !== MISSION_STATUS.DELETED.ID && (
+            mission?.status !== MISSION_STATUS.DELETED.ID &&
+            (!isCreator || mission?.status !== MISSION_STATUS.FINISHED.ID) && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -2047,12 +2048,12 @@ const SubmitParticipationButton = ({
 
 const MissionOwnerStatusMessage = ({ status, canFinish }) => {
   if (status === MISSION_STATUS.FINISHED.ID) {
-    return <p className='p-1'>{messages.SERVICE.SERVICE_FINISHED_OWNER}</p>;
+    return <p className='px-1'>{messages.SERVICE.SERVICE_FINISHED_OWNER}</p>;
   }
 
   if (canFinish) {
     return (
-      <p className='p-1'>
+      <p className='px-1'>
         Finish this service for the records or add some more collaborators if
         needed!
       </p>
@@ -2061,14 +2062,14 @@ const MissionOwnerStatusMessage = ({ status, canFinish }) => {
 
   if (status === MISSION_STATUS.IN_PROGRESS.ID) {
     return (
-      <p className='p-1'>
+      <p className='px-1'>
         Waiting for collaborators to submit their participation.
       </p>
     );
   }
 
   if (status === MISSION_STATUS.IN_DISPUTE.ID) {
-    return <p className='p-1'>{messages.SERVICE.SERVICE_IN_DISPUTE}</p>;
+    return <p className='px-1'>{messages.SERVICE.SERVICE_IN_DISPUTE}</p>;
   }
 
   if (
@@ -2078,20 +2079,20 @@ const MissionOwnerStatusMessage = ({ status, canFinish }) => {
   )
     return <EndedStatusMessage status={status}></EndedStatusMessage>;
 
-  return <p className='p-1'>{messages.SERVICE.SERVICE_CLOSED}</p>;
+  return <p className='px-1'>{messages.SERVICE.SERVICE_CLOSED}</p>;
 };
 
 const EndedStatusMessage = ({ status }) => {
   if (status === MISSION_STATUS.CANCELLED.ID) {
-    return <p className='p-1 '>This service has been cancelled.</p>;
+    return <p className='px-1 '>This service has been cancelled.</p>;
   }
 
   if (status === MISSION_STATUS.DELETED.ID) {
-    return <p className='p-1'>This service has been deleted.</p>;
+    return <p className='px-1'>This service has been deleted.</p>;
   }
 
   if (status === MISSION_STATUS.REPORTED.ID) {
-    return <p className='p-1'>This service has been reported.</p>;
+    return <p className='px-1'>This service has been reported.</p>;
   }
 };
 
