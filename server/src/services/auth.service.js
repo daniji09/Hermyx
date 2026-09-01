@@ -182,9 +182,9 @@ export const syncGoogle = async (
 
   if (termsAccepted !== true)
     throw new AppError(
-      messages.AUTH.SIGNUP.TERMS_REQUIRED,
+      messages.AUTH.LOGIN.GOOGLE_SIGNUP_REQUIRED,
       400,
-      'termsAccepted',
+      'general',
     );
 
   // Otherwise, it is a signup, so unique username is generated
