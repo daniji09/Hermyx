@@ -229,7 +229,7 @@ const SignUpForm = ({
                   >
                     privacy policy
                   </Link>{' '}
-                  se consulta por separado.
+                  is addressed separately.
                 </label>
               </div>
               {state.errors?.termsAccepted && (
