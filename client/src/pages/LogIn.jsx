@@ -74,7 +74,6 @@ const LogInForm = ({ state, action, isPending }) => {
   const [clearedFields, setClearedFields] = useState({});
   const [prevServerState, setPrevServerState] = useState(state);
   const [isAlertClosed, setIsAlertClosed] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // If the state has changed, field errors should be cleared
   if (state !== prevServerState) {
@@ -185,46 +184,9 @@ const LogInForm = ({ state, action, isPending }) => {
               <span className='text-muted-foreground self-center-safe'>o</span>
               <Separator className='my-4 w-fit'></Separator>
             </div>
-            <div className='space-y-2 pb-3'>
-              <div className='flex items-start gap-3'>
-                <input
-                  id='logInTermsAccepted'
-                  name='logInTermsAccepted'
-                  type='checkbox'
-                  checked={termsAccepted}
-                  onChange={(event) => setTermsAccepted(event.target.checked)}
-                  className='mt-1 h-4 w-4 rounded border-input accent-primary'
-                />
-                <label
-                  htmlFor='logInTermsAccepted'
-                  className='text-sm leading-5 text-muted-foreground'
-                >
-                  I confirm that I am at least 18 years old and have read and
-                  accept the{' '}
-                  <Link
-                    to='/terms'
-                    target='_blank'
-                    rel='noreferrer'
-                    className='text-primary underline'
-                  >
-                    Hermyx terms and conditions
-                  </Link>
-                  . The{' '}
-                  <Link
-                    to='/privacy'
-                    target='_blank'
-                    rel='noreferrer'
-                    className='text-primary underline'
-                  >
-                    privacy policy
-                  </Link>{' '}
-                  applies separately.
-                </label>
-              </div>
-            </div>
             <GoogleSignInButton
-              disabled={isPending || isGoogleAuthPending || !termsAccepted}
-              onClick={() => mutate({ termsAccepted: true })}
+              disabled={isPending || isGoogleAuthPending}
+              onClick={() => mutate()}
               isPending={isGoogleAuthPending}
               text='Log in with Google'
             ></GoogleSignInButton>
