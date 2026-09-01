@@ -451,7 +451,17 @@ export const ConversationThread = ({
     },
     onSettled: () => {
       window.requestAnimationFrame(() => {
-        messageInputRef.current?.focus();
+        const activeElement = document.activeElement;
+        const shouldRestoreFocus =
+          shouldRestoreInputFocusRef.current &&
+          (activeElement === document.body ||
+            formRef.current?.contains(activeElement));
+
+        shouldRestoreInputFocusRef.current = false;
+
+        if (shouldRestoreFocus) {
+          messageInputRef.current?.focus();
+        }
       });
     },
   });
@@ -881,7 +891,7 @@ export const ConversationThread = ({
                       onKeyDown={handleMessageKeyDown}
                       placeholder='Write a message'
                       maxLength={consts.CONVERSATION.MESSAGES.TEXT_LIMIT}
-                      disabled={isPending}
+                      readOnly={isPending}
                       className='min-h-14 max-h-32 px-3 py-2.5'
                     />
                     <InputGroupAddon align='block-end' className='pt-1'>
