@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useContext, useState } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
+import { SocketContext } from '../../contexts/SocketContext';
 import { useTheme } from '../../contexts/ThemeProvider';
 import { SearchBar } from './form/SearchBar';
 import { getImageUrl } from '@/utils/media';
@@ -468,7 +469,7 @@ const LogButton = ({ currentUser, logout, fullWidth }) => {
 };
 
 const NotificationsButton = () => {
-  const { latestNotification } = useContext(AuthContext);
+  const { latestNotification } = useContext(SocketContext);
   const { data } = useQuery(
     getMyNotificationsQueryOptions(PAGINATION_LIMIT.NOTIFICATIONS, {
       staleTime: 30000,

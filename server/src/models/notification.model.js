@@ -74,7 +74,7 @@ export const findByRecipientId = async (
       COUNT(*) FILTER (WHERE n.seen = FALSE) OVER()::int AS total_unseen
     FROM notification n
     JOIN app_user sender ON sender.uid = n.sender_id
-    JOIN mission m ON m.mid = (n.payload->>'associated_mission_id')::int
+    LEFT JOIN mission m ON m.mid = (n.payload->>'associated_mission_id')::int
     WHERE n.recipient_id = $1
   `;
   const values = [recipientId, NOTIFICATION_STATUS.PENDING.ID];

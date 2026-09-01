@@ -203,6 +203,7 @@ export const reportAdventurer = async ({
           associated_mission_id: missionId,
           associated_vacancy_id: vacancyId,
           associated_user_id: adventurer.uid,
+          previous_mission_status: mission.status,
           previous_participation_status: vacancy.status,
         },
         conversationId: conversation.cid,
@@ -791,6 +792,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
 
   let notificationData;
   let notificationEvent;
+  let notificationRecipientId;
   let participationToRestore;
   if (report.type === REPORT_TYPE.REPORT_ADVENTURER.ID) {
     // Gets service info
@@ -815,6 +817,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
       missionId: mission.mid,
       adventurerId: adventurer.uid,
       currentStatus: vacancy.status,
+      previousMissionStatus: report.payload.previous_mission_status,
       previousStatus:
         report.payload.previous_participation_status ||
         MISSION_PARTICIPATION_STATUS.IN_PROGRESS.ID,
@@ -824,6 +827,7 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
     const message = messages.NOTIFICATION.DISMISS.REPORT_COLLABORATOR(
       adventurer.username,
       mission.title,
+      reason,
     );
     notificationData = {
       type: NOTIFICATION_TYPE.MISSION.ID,
@@ -833,6 +837,50 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
       message,
       senderId: HERMYX_SYSTEM_ID,
       receiverId: report.sender_id,
+      payload: { associated_mission_id: mission.mid },
+    };
+    notificationEvent = {
+      missionId: mission.mid,
+      missionTitle: mission.title,
+      message,
+    };
+  } else if (report.type === REPORT_TYPE.REPORT_PROFILE.ID) {
+    const reportedUser = await userService.getUserByUidOrThrow(
+      report.payload.associated_user_id,
+    );
+    const message = messages.NOTIFICATION.DISMISS.REPORT_USER(
+      reportedUser.username,
+      reason,
+    );
+    notificationRecipientId = report.sender_id;
+    notificationData = {
+      type: NOTIFICATION_TYPE.REPORT.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.REPORT_DISMISSED.ID,
+      status: null,
+      message,
+      senderId: HERMYX_SYSTEM_ID,
+      receiverId: notificationRecipientId,
+      payload: { associated_user_id: reportedUser.uid },
+    };
+    notificationEvent = { message };
+  } else if (report.type === REPORT_TYPE.REPORT_MISSION.ID) {
+    const mission = await missionService.getMissionByIdOrThrow(
+      report.payload.associated_mission_id,
+    );
+    const message = messages.NOTIFICATION.DISMISS.REPORT_SERVICE(
+      mission.title,
+      reason,
+    );
+    notificationRecipientId = report.sender_id;
+    notificationData = {
+      type: NOTIFICATION_TYPE.MISSION.ID,
+      kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+      action: NOTIFICATION_ACTION.REPORT_DISMISSED.ID,
+      status: null,
+      message,
+      senderId: HERMYX_SYSTEM_ID,
+      receiverId: notificationRecipientId,
       payload: { associated_mission_id: mission.mid },
     };
     notificationEvent = {
@@ -872,10 +920,20 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
       if (!restoredParticipation)
         throw new AppError(messages.SERVICE.VACANCY.ALREADY_MODIFIED, 409);
 
-      await missionService.syncMissionCompletionStatus(
-        participationToRestore.missionId,
-        client,
-      );
+      if (participationToRestore.previousMissionStatus) {
+        const restoredMission = await missionService.updateStatusByMid(
+          participationToRestore.missionId,
+          participationToRestore.previousMissionStatus,
+          client,
+        );
+        if (!restoredMission)
+          throw new AppError(messages.SERVICE.GENERAL.ALREADY_MODIFIED, 409);
+      } else {
+        await missionService.syncMissionCompletionStatus(
+          participationToRestore.missionId,
+          client,
+        );
+      }
     }
 
     // Closes report and associated conversation on db
@@ -905,11 +963,20 @@ export const dismiss = async ({ adminId, reason, reportId }) => {
   // Sends conversation closed and notification if necessary
   emitConversationClosed(participantIds, closedReport);
   if (notificationEvent) {
-    for (const participantId of participantIds) {
-      emitToUser(participantId, 'dispute:dismissed', {
-        ...(participantId === report.sender_id ? { notificationId } : {}),
+    if (notificationRecipientId) {
+      emitToUser(notificationRecipientId, 'notification:created', {
+        notificationId,
+        receiverId: notificationRecipientId,
+        senderId: HERMYX_SYSTEM_ID,
         ...notificationEvent,
       });
+    } else {
+      for (const participantId of participantIds) {
+        emitToUser(participantId, 'dispute:dismissed', {
+          ...(participantId === report.sender_id ? { notificationId } : {}),
+          ...notificationEvent,
+        });
+      }
     }
   }
 
