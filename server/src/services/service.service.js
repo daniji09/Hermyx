@@ -1778,6 +1778,40 @@ export const banMission = async (user, mid, rid, reason) => {
     if (!reportClosed)
       throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
 
+    const reporterMessage = messages.NOTIFICATION.BAN_SERVICE.REPORT_RESOLVED(
+      mission.title,
+      reason,
+    );
+    const reporterNotificationId =
+      await notificationService.createNotification(
+        {
+          type: NOTIFICATION_TYPE.MISSION.ID,
+          kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+          action: NOTIFICATION_ACTION.MISSION_BAN.ID,
+          status: null,
+          message: reporterMessage,
+          senderId: HERMYX_SYSTEM_ID,
+          receiverId: report.sender_id,
+          payload: { associated_mission_id: mission.mid },
+        },
+        client,
+      );
+
+    notificationsToSend.push({
+      receiverId: report.sender_id,
+      eventName: 'notification:created',
+      payload: {
+        notificationId: reporterNotificationId,
+        missionId: mission.mid,
+        missionTitle: mission.title,
+        senderId: HERMYX_SYSTEM_ID,
+        receiverId: report.sender_id,
+        type: NOTIFICATION_TYPE.MISSION.ID,
+        action: NOTIFICATION_ACTION.MISSION_BAN.ID,
+        message: reporterMessage,
+      },
+    });
+
     const ownerMessage = isDeleting
       ? messages.NOTIFICATION.BAN_SERVICE.DELETE
       : messages.NOTIFICATION.CANCEL_SERVICE.CANCEL;

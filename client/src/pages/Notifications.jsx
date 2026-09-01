@@ -20,7 +20,7 @@ import {
   formatLastMessageTime,
   formatParticipationReviewTimeRemaining,
 } from '../utils/date';
-import { AuthContext } from '../contexts/AuthContext';
+import { SocketContext } from '../contexts/SocketContext';
 import {
   NOTIFICATION_ACTION,
   NOTIFICATION_KIND,
@@ -39,7 +39,7 @@ export const Notifications = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { setLatestNotification } = useContext(AuthContext);
+  const { setLatestNotification } = useContext(SocketContext);
   const [filter, setFilter] = useState('all');
   const [disputeNotificationId, setDisputeNotificationId] = useState(null);
   const [currentTime, setCurrentTime] = useState(() => Date.now());

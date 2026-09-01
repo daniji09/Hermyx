@@ -1,9 +1,13 @@
 import {
   consts,
+  HERMYX_SYSTEM_ID,
   messages,
   REPORT_DECISION,
   REPORT_STATUS,
   REPORT_TYPE,
+  NOTIFICATION_ACTION,
+  NOTIFICATION_KIND,
+  NOTIFICATION_TYPE,
   USER_ROLE,
   USER_STATUS,
 } from '@hermyx/shared';
@@ -16,6 +20,7 @@ import * as userModel from '../models/user.model.js';
 import * as authProvider from '../providers/auth.provider.js';
 import * as paymentProvider from '../providers/payment.provider.js';
 import * as storageProvider from '../providers/storage.provider.js';
+import { emitToUser } from '../providers/socket.provider.js';
 import pool from '../config/db.config.js';
 import { AZURE_CONN_STRING } from '../config/config.js';
 
@@ -597,6 +602,7 @@ export const banUser = async (uid, rid, reason, admin) => {
   // After user is unable to log in, they are banned in database and report is closed
   const client = await pool.connect();
   let reportClosed;
+  let notificationId;
   try {
     await client.query('BEGIN');
 
@@ -615,6 +621,23 @@ export const banUser = async (uid, rid, reason, admin) => {
     );
     if (!reportClosed)
       throw new AppError(messages.REPORT.GENERAL.REPORT_NOT_FOUND, 404);
+
+    notificationId = await notificationService.createNotification(
+      {
+        type: NOTIFICATION_TYPE.REPORT.ID,
+        kind: NOTIFICATION_KIND.INFORMATIONAL.ID,
+        action: NOTIFICATION_ACTION.USER_BAN.ID,
+        status: null,
+        message: messages.NOTIFICATION.BAN_USER.REPORT_RESOLVED(
+          user.username,
+          reason,
+        ),
+        senderId: HERMYX_SYSTEM_ID,
+        receiverId: report.sender_id,
+        payload: { associated_user_id: user.uid },
+      },
+      client,
+    );
 
     // All conversations are closed
     await conversationService.removeUserFromAllConversations(uid, client);
@@ -635,6 +658,15 @@ export const banUser = async (uid, rid, reason, admin) => {
     reportClosed.participantIds,
     reportClosed.report,
   );
+  emitToUser(report.sender_id, 'notification:created', {
+    notificationId,
+    senderId: HERMYX_SYSTEM_ID,
+    receiverId: report.sender_id,
+    message: messages.NOTIFICATION.BAN_USER.REPORT_RESOLVED(
+      user.username,
+      reason,
+    ),
+  });
 
   return;
 };
