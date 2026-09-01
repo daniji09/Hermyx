@@ -7,6 +7,7 @@ import {
 import { updateUserEmail, userConfiguration } from '../services/UsersServices';
 import {
   sendVerificationEmailToCurrentUser,
+  signInWithCustomToken,
   updateUserPassword,
 } from '../services/AuthServices';
 
@@ -28,15 +29,16 @@ export const updateEmailAction = async (previousState, formData) => {
 
   // API call
   try {
-    const success = await updateUserEmail(fieldsData.email);
+    const updatedUser = await updateUserEmail(fieldsData.email);
 
-    if (!success)
+    if (!updatedUser?.token)
       throw {
         errors: {
           general: [messages.COULD_NOT_UPDATE_EMAIL],
         },
       };
 
+    await signInWithCustomToken(updatedUser.token);
     await sendVerificationEmailToCurrentUser();
 
     // Success

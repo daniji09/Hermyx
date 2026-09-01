@@ -8,7 +8,6 @@ import { FormInputField } from '../components/custom/form/FormInputField.jsx';
 import { FormAlert } from '../components/custom/form/FormAlert.jsx';
 import { FormPasswordInputField } from '../components/custom/form/FormPasswordInputField.jsx';
 import { messages } from '../messages/messages.js';
-import { consts } from '@hermyx/shared';
 import { GoogleSignInButton } from '../components/custom/GoogleSignInButton';
 import { UseGoogleAuth } from '../hooks/UseGoogleAuth.jsx';
 import { Separator } from '../components/ui/separator.jsx';
@@ -131,7 +130,6 @@ const LogInForm = ({ state, action, isPending }) => {
             name='usernameEmail'
             defaultValue={state.data?.usernameEmail || ''}
             autoComplete='username'
-            maxLength={consts.USER.USERNAME.MAX_LENGTH}
             required
             aria-invalid={
               !clearedFields.usernameEmail && !!state.errors?.usernameEmail
@@ -194,9 +192,7 @@ const LogInForm = ({ state, action, isPending }) => {
                   name='logInTermsAccepted'
                   type='checkbox'
                   checked={termsAccepted}
-                  onChange={(event) =>
-                    setTermsAccepted(event.target.checked)
-                  }
+                  onChange={(event) => setTermsAccepted(event.target.checked)}
                   className='mt-1 h-4 w-4 rounded border-input accent-primary'
                 />
                 <label

@@ -17,8 +17,35 @@ export const signup = async (email, username, password, termsAccepted) => {
   // Checks if the email is already in use
   const userByEmail = await userService.getUserByEmail(email);
 
-  // If it exists, then its a bad request error
-  if (userByEmail) throw buildEmailAlreadyExistsError(email);
+  // Reuses pending accounts so users can request another verification e-mail
+  if (userByEmail) {
+    let firebaseUser;
+    try {
+      firebaseUser = await authProvider.getUserByUid(userByEmail.firebase_uid);
+    } catch {
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+
+    if (firebaseUser.emailVerified) throw buildEmailAlreadyExistsError(email);
+
+    try {
+      await authProvider.firebaseSignIn(email, password);
+    } catch (error) {
+      const errorBuilder = consts.AUTH.FIREBASE_ERRORS[error.code];
+      if (errorBuilder) {
+        const mappedError = errorBuilder({ email });
+        throw new AppError(
+          mappedError.message,
+          mappedError.status,
+          mappedError.field,
+        );
+      }
+
+      throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
+    }
+
+    return userByEmail;
+  }
 
   // Checks if the username is already in use
   const userByUsername = await userService.getUserByUsername(username);
