@@ -58,6 +58,7 @@ import {
   MessageScrollerViewport,
 } from '@/components/ui/message-scroller';
 import { AuthContext } from '../contexts/AuthContext';
+import { SocketContext } from '../contexts/SocketContext';
 import {
   getOrCreatePrivateConversation,
   markConversationAsRead,
@@ -166,7 +167,8 @@ export const ConversationThread = ({
   const conversationId = providedConversationId || routeConversationId;
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, isAdmin, socket } = useContext(AuthContext);
+  const { currentUser, isAdmin } = useContext(AuthContext);
+  const { socket } = useContext(SocketContext);
   const isDraftRoute = conversationId === 'new';
   const draftRecipient = isDraftRoute ? location.state?.recipient : null;
   const isDraftPrivate = isDraftRoute && !!draftRecipient;

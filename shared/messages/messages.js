@@ -104,6 +104,7 @@ export const messages = {
     GENERAL: {
       SERVICE_NOT_FOUND: `Service not found.`,
       SERVICES_NOT_FOUND: `Services not found.`,
+      ALREADY_MODIFIED: `Service already modified.`,
       VACANCY_NOT_IN_SERVICE: `This vacancy is not in this service.`,
     },
     VACANCY: {
@@ -243,6 +244,8 @@ export const messages = {
 
     // Messages sent to users in a notification
     BAN_USER: {
+      REPORT_RESOLVED: (username, reason) =>
+        `Your report on user ${username} was accepted, and the user has been banned by Hermyx administration. Reason: ${reason}`,
       OPENED_SERVICE: (username, title) =>
         `Collaborator ${username} of your service ${title} has been banned by Hermyx administration, so this vacancy has been emptied.`,
       CLOSED_SERVICE: {
@@ -285,6 +288,8 @@ export const messages = {
         `Service ${title} has been cancelled. We had an issue transferring your compensation. Please contact support.`,
     },
     BAN_SERVICE: {
+      REPORT_RESOLVED: (title, reason) =>
+        `Your report on service ${title} was accepted, and the service has been banned by Hermyx administration. Reason: ${reason}`,
       DELETE: `This service has been banned by Hermyx administration, now is retired from the public and won't be done.`,
       CANCEL: {
         SUCCESSFUL: `This service has been banned by Hermyx administration, now is retired from the public and it has been cancelled, so payment will be made to the collaborators.`,
@@ -358,8 +363,12 @@ export const messages = {
         `Participation ${vacancyTitle} disputed by ${username} in service ${serviceTitle} was rejected by the administration. The vacancy is in progress again.`,
     },
     DISMISS: {
-      REPORT_COLLABORATOR: (username, title) =>
-        `Your report on collaborator ${username} from service ${title} has been dismissed, so they will not be kicked out.`,
+      REPORT_COLLABORATOR: (username, title, reason) =>
+        `Your report on collaborator ${username} from service ${title} has been dismissed, so they will not be kicked out. Reason: ${reason}`,
+      REPORT_USER: (username, reason) =>
+        `Your report on user ${username} has been dismissed. Reason: ${reason}`,
+      REPORT_SERVICE: (title, reason) =>
+        `Your report on service ${title} has been dismissed. Reason: ${reason}`,
     },
   },
 

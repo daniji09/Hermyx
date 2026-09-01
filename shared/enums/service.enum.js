@@ -99,7 +99,13 @@ export const MISSION_STATUS = {
     CAN_DELETE_ADVENTURERS: false,
     ADVENTURERS_CAN_UNJOIN: false,
     CAN_SUBMIT_PARTICIPATION: true,
-    VALID_NEXT_STATES: ['OPENED', 'REOPENED', 'IN_PROGRESS', 'REPORTED'],
+    VALID_NEXT_STATES: [
+      'OPENED',
+      'CLOSED',
+      'REOPENED',
+      'IN_PROGRESS',
+      'REPORTED',
+    ],
   },
   FINISHED: {
     ID: 'FINISHED',
