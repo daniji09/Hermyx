@@ -211,6 +211,13 @@ export const updateRating = async (uid, client = pool) => {
   return result.rows[0]?.rating;
 };
 
+// Updates user's role
+export const updateRole = async (uid, role, client = pool) => {
+  const query = `UPDATE app_user SET role = $1 WHERE uid = $2`;
+  const result = await client.query(query, [role, uid]);
+  return result.rowCount;
+};
+
 // Anonymize user info
 export const anonymize = async (uid, client = pool) => {
   const query = `UPDATE app_user SET

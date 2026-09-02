@@ -128,6 +128,13 @@ export const updateUserStripeConnectedIdByUid = async (
   await userModel.updateStripeConnectedByUid(uid, stripeConnectedId);
 };
 
+// Updates user's role
+export const updateUserRole = async (uid, role) => {
+  checkRequired(uid, 'User id');
+  checkRequired(role, 'Role');
+  return await userModel.updateRole(uid, role);
+};
+
 /// Endpoint complex functions
 // Search user by username with partial matches
 export const searchUserByUsername = async (
