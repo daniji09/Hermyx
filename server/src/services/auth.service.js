@@ -98,6 +98,7 @@ export const signup = async (email, username, password, termsAccepted) => {
 
     throw buildUnexpectedError(messages.GENERAL.UNEXPECTED_ERROR);
   }
+
   try {
     // Creates user in Hermyx DB
     const user = await userService.createUser(
