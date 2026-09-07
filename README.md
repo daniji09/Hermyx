@@ -1,8 +1,6 @@
 <div align="center">
 
-# Hermyx
-
-### A gamified platform for publishing services, finding help and completing paid work securely.
+# HERMYX, A SYSTEM FOR THE DEMAND OF PAID SERVICES
 
 Hermyx is an academic prototype that connects people who need a task completed with collaborators who can complete it. It combines user profiles, service workflows, conversations, reviews, moderation and test payment flows in one application.
 
@@ -47,85 +45,119 @@ The application includes authentication, service discovery and publishing, user 
 ## Repository structure
 
 ```text
-.
-├── client/                 # React frontend
+Hermyx/
+├── client/                     # React frontend
+│   ├── e2e/                    # End-to-end tests
+│   ├── public/
+│   │   └── images/             # Static application images
+│   └── src/
+│       ├── actions/            # React Actions
+│       ├── App.jsx             # Root component and routing orchestration
+│       ├── components/         # Reusable components
+│       │   ├── custom/         # Hermyx-specific components
+│       │   └── ui/             # Base shadcn/ui components
+│       ├── config/             # Third-party configuration (Axios, Firebase)
+│       ├── consts/             # Frontend constants
+│       ├── contexts/           # Global state providers
+│       ├── hooks/              # Extracted component logic
+│       ├── lib/                # UI library helpers
+│       ├── main.jsx            # Application entry point that mounts React
+│       ├── messages/           # Frontend messages
+│       ├── pages/              # Full screens associated with routes
+│       ├── queries/            # React Query rules
+│       ├── services/           # Backend API and external service calls
+│       └── utils/              # Frontend utilities
+├── server/                     # Express backend
+│   ├── database/               # DDL scripts
+│   ├── public/                 # Media content for development
+│   ├── scripts/                # CLI utilities for data seeding and administration
 │   ├── src/
-│   │   ├── actions/        # Form and workflow actions
-│   │   ├── components/     # Reusable UI and domain components
-│   │   ├── contexts/       # Authentication, theme and alerts
-│   │   ├── pages/          # Application routes
-│   │   ├── queries/        # TanStack Query options
-│   │   └── services/       # API and Firebase client services
-│   └── e2e/                # Playwright end-to-end tests
-├── server/                 # Express API
-│   ├── database/           # PostgreSQL schema and setup scripts
-│   ├── src/
-│   │   ├── controllers/    # HTTP request orchestration
-│   │   ├── middlewares/     # Authentication and validation
-│   │   ├── models/         # Database access
-│   │   ├── providers/      # External and realtime providers
-│   │   ├── routes/         # API routes
-│   │   └── services/       # Domain and integration services
-│   └── tests/              # Vitest and Supertest tests
-├── shared/                 # Shared validation and domain definitions
-├── docs/                   # API and Postman documentation
-└── vercel.json             # SPA rewrite configuration
+│   │   ├── app.js              # Main Express configuration
+│   │   ├── config/             # Database and Firebase Authentication configuration
+│   │   ├── controllers/        # API endpoint handlers
+│   │   ├── jobs/               # Scheduled tasks (cron)
+│   │   ├── middlewares/        # Request interceptors
+│   │   ├── models/             # Data persistence access
+│   │   ├── providers/          # External service capabilities
+│   │   ├── routes/             # REST API routes and endpoints
+│   │   ├── server.js           # HTTP server startup and network connections
+│   │   ├── services/           # Business logic
+│   │   └── utils/              # Shared backend utilities
+│   └── tests/                  # Backend tests
+├── shared/                     # Common validations and domain definitions
+└── docs/                       # API and Postman documentation
 ```
 
 ## Requirements
 
 Before running Hermyx locally, install or configure:
 
-- Node.js and npm.
-- PostgreSQL with the PostGIS extension available.
-- A Firebase project with a web application and Firebase Admin credentials.
-- Stripe test credentials for payment-related flows.
-- Azure Blob Storage credentials only if remote file storage is required.
+- Node.js 24.x or later and npm.
+- PostgreSQL installed and running, with PostGIS available.
+- A Stripe developer account with test API keys.
+- A Firebase Authentication project with web application configuration and Firebase Admin credentials.
 
 ## Local setup
 
-### 1. Install dependencies
-
-From the repository root:
+### 1. Clone the repository and install dependencies
 
 ```bash
+git clone https://github.com/daniji09/Hermyx.git
+cd Hermyx
 npm install
 ```
 
+NPM Workspaces installs and links the dependencies for `client`, `server` and `shared` with this single command.
+
 ### 2. Configure environment variables
 
-Copy the provided examples and fill in the required values locally:
+Copy the environment templates in their respective directories and complete their values locally:
 
 ```bash
-cp client/.env.development.example client/.env.development
 cp server/.env.example server/.env
+cp client/.env.development.example client/.env.development
+cp client/.env.production.example client/.env.production
 ```
 
-The client configuration contains the API URL, Firebase web configuration and Stripe publishable key. The server configuration contains the PostgreSQL, Firebase Admin, Stripe and optional Azure settings.
+The frontend has separate development and production files so each environment can use its own Firebase and Stripe accounts. Use `http://localhost:3000/api` for the local `VITE_API_URL` and Stripe test keys for local payment flows.
 
-For real-account Playwright tests, create the E2E environment file from its example and provide only local test credentials:
+The templates document the configuration fields:
+
+- [`server/.env.example`](server/.env.example): server URLs and port, PostgreSQL connection, Firebase Admin, `ADMIN_FIREBASE_UID`, Stripe, scheduled jobs and optional Azure Blob Storage. Leave `AZURE_CONN_STRING` empty to use local file storage.
+- [`client/.env.development.example`](client/.env.development.example) and [`client/.env.production.example`](client/.env.production.example): API URL, Firebase web application configuration and Stripe publishable key.
+
+Download the Firebase Admin private key JSON file and place it at `server/src/config/firebase-service-account.json`. Leave `FIREBASE_JSON` empty when using this local file.
+
+For real-account Playwright tests, also copy the E2E template and fill in local test credentials:
 
 ```bash
 cp client/.env.e2e.example client/.env.e2e
 ```
 
-Never commit `.env` files, Firebase service-account files or private Stripe keys.
+Never commit environment files containing credentials or Firebase service-account private keys.
 
-### 3. Prepare the database
+### 3. Initialize the database
 
-After PostgreSQL is running and the server environment is configured, apply the schema with:
+Create an empty PostgreSQL database matching the connection settings in `server/.env`, and make sure PostgreSQL is reachable at the configured host and port. From the repository root, run:
 
 ```bash
 npm run db:push -w @hermyx/server
 ```
 
-> **Warning:** this command drops and recreates the application tables. Use it only with a disposable or intentionally reset database.
+This command enables `unaccent` and `postgis`, builds the relational schema (tables, indexes and constraints), and inserts the system user and initial administrator record. Set `ADMIN_FIREBASE_UID` to the UID of an existing Firebase account before running it.
 
-The script also seeds the initial admin record using `ADMIN_FIREBASE_UID`.
+If the database user cannot enable the extensions, enable them first using the PostgreSQL administrator account:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS unaccent;
+CREATE EXTENSION IF NOT EXISTS postgis;
+```
+
+> **Warning:** `db:push` drops and recreates the application tables. Use it only with a disposable or intentionally reset database.
 
 ### 4. Start the application
 
-Run the API and frontend in separate terminals:
+Run the backend and frontend in separate terminals from the repository root:
 
 ```bash
 npm run dev -w @hermyx/server
@@ -135,11 +167,28 @@ npm run dev -w @hermyx/server
 npm run dev -w @hermyx/client
 ```
 
-The default local URLs are:
+The backend listens for HTTP requests and WebSocket connections. Open the frontend URL printed by Vite, typically `http://localhost:5173`. The default backend URL is `http://localhost:3000`.
 
-- Frontend: `http://localhost:5173`
-- API: `http://localhost:3000`
+### 5. Configure administrator access
 
+To grant the Firebase administrator claim, set `ADMIN_FIREBASE_UID` in `server/.env` to the target account and run:
+
+```bash
+npm run firebase:admin -w @hermyx/server
+```
+
+The account must already exist in Firebase. This script grants the Firebase `admin` claim; the initial database administrator role is created separately during database initialization.
+
+## Production deployment
+
+The deployment setup described in the project report uses continuous integration and deployment with:
+
+- Azure Database for PostgreSQL with PostGIS enabled.
+- A Vercel frontend project linked to the GitHub repository for automatic deployments.
+- Azure App Service configured with a Node.js runtime for the backend.
+- The GitHub repository secrets `FIREBASE_JSON` and `AZURE_WEBAPP_PUBLISH_PROFILE`.
+
+Configure the production environment variables for the deployed services, including the production API URL and the corresponding Firebase and Stripe accounts.
 ## Useful commands
 
 Run these commands from the repository root:
