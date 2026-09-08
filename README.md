@@ -191,20 +191,30 @@ The deployment setup described in the project report uses continuous integration
 Configure the production environment variables for the deployed services, including the production API URL and the corresponding Firebase and Stripe accounts.
 ## Useful commands
 
-Run these commands from the repository root:
+To speed up the development lifecycle, provide tools to standardize code checks and facilitate local deployment of the system, a series of automated commands has been configured. These are divided into backend and frontend commands.
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev -w @hermyx/client` | Start the Vite development server |
-| `npm run dev -w @hermyx/server` | Start the API with Nodemon |
-| `npm run build -w @hermyx/client` | Build the frontend for production |
-| `npm run test -w @hermyx/server` | Run backend tests |
-| `npm run test:e2e -w @hermyx/client` | Run Playwright end-to-end tests |
-| `npm run lint -w @hermyx/client` | Lint and auto-fix client files |
-| `npm run lint -w @hermyx/server` | Lint and auto-fix server files |
-| `npm run db:push -w @hermyx/server` | Recreate and seed the database schema |
+### Backend
 
-The lint scripts currently include ESLint's `--fix` option, so review the working tree after running them.
+Starting with the server commands, these use the Node.js package orchestration tool, npm [103], and combine dependencies such as cross-env [104] to ensure compatibility of environment variables across different operating systems. They are as follows:
+
+- **`npm run dev`**: starts the backend server in development mode using nodemon. This utility actively watches (through the `--watch` flag) for any changes made in the source code directory (`src`) and the shared folder (`../shared`), automatically restarting the server to apply changes in real time.
+- **`npm run dev:test`**: launches the server in development mode, but first injects the `NODE_ENV=test` variable. This allows the API to run connected exclusively to the test database, avoiding changes to the data in the main development environment.
+- **`npm test`**: runs the unit and integration test suite using the Vitest framework, automatically setting the test environment to guarantee data isolation.
+- **`npm run format`**: runs the Prettier formatting tool with the `--write` parameter, which scans all the project code and automatically rewrites files so that they comply with the established style and spacing rules.
+- **`npm run lint`**: runs the ESLint static code analyzer on all `.js` and `.jsx` files. By using the `--fix` parameter, the tool not only reports syntax errors and bad practices, but also automatically corrects those that can be fixed.
+- **`npm run db:push`**: runs the initialization file `scripts/init_db.js`, which connects to the PostgreSQL instance and synchronizes or resets the database schema of the development environment.
+- **`npm run db:push:test`**: performs the same database synchronization operation described in the previous command, but forces the connection to the test database by injecting `NODE_ENV=test`.
+- **`npm run firebase:admin`**: runs the utility script `scripts/set_firebase_admin.js` to promote a standard user to the administrator role in both the internal database and Firebase.
+
+### Frontend
+
+In the client directory, the commands focus on the Vite [105] build and bundling tool, as well as on running interface tests. The defined scripts are as follows:
+
+- **`npm run dev`**: starts the development server using Vite. It provides an optimized environment that automatically reflects changes made to the interface code almost instantly in the browser without losing the application state.
+- **`npm run build`**: runs the production build process. Vite compiles and optimizes the source code, generating the final static files that will be deployed on the server.
+- **`npm run test` and `npm run test:ui`**: run the client-side unit and component test suite using Vitest.
+- **`npm run format` and `npm run lint`**: perform the same aesthetic formatting (Prettier) and static code analysis (ESLint) operations described in the server section, but applied to the frontend codebase.
+- **`npm run test:e2e:[variant]`**: runs end-to-end tests using the Playwright framework. Given the complexity of the application, this base command has been subdivided into multiple variants to facilitate debugging and focus the tests.
 
 ## API documentation
 
