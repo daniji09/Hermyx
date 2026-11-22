@@ -7,7 +7,7 @@ Hermyx is an academic prototype that connects people who need a task completed w
 </div>
 
 ## Demo
-[![Watch Hermyx demo](https://img.youtube.com/vi/TU_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/TU_VIDEO_ID)
+[![Watch Hermyx demo](https://img.youtube.com/vi/fISIs6lDdNg/maxresdefault.jpg)](https://youtu.be/fISIs6lDdNg)
 
 ## Overview
 
