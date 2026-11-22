@@ -6,6 +6,20 @@ Hermyx is an academic prototype that connects people who need a task completed w
 
 </div>
 
+## Demo
+
+### Service publishing, discovery & participation
+
+<!-- Paste your GitHub-hosted video URL here -->
+
+### Real-time chat, Stripe payments & payouts
+
+<!-- Paste your GitHub-hosted video URL here -->
+
+### Moderation & dispute resolution
+
+<!-- Paste your GitHub-hosted video URL here -->
+
 ## Overview
 
 Hermyx is built as an npm monorepo with three workspaces:
@@ -31,16 +45,17 @@ The application includes authentication, service discovery and publishing, user 
 
 ## Technology stack
 
-| Area | Technologies |
-| --- | --- |
-| Frontend | React 19, Vite, React Router, TanStack Query, Tailwind CSS 4 |
-| Backend | Node.js, Express 5, Socket.IO |
-| Database | PostgreSQL with PostGIS and `unaccent` |
-| Authentication | Firebase Authentication and Firebase Admin |
-| Payments | Stripe, Stripe Elements and Stripe Connect |
-| Validation | Zod through `@hermyx/shared` |
-| Testing | Vitest, Supertest and Playwright |
-| Storage | Local file storage in development or Azure Blob Storage when configured |
+| Area             | Technologies                                                            |
+| ---------------- | ----------------------------------------------------------------------- |
+| Frontend         | React 19, Vite, React Router, TanStack Query, Tailwind CSS 4            |
+| Backend          | Node.js, Express 5, Socket.IO                                           |
+| Database         | PostgreSQL with PostGIS and `unaccent`                                  |
+| Authentication   | Firebase Authentication and Firebase Admin                              |
+| Payments         | Stripe, Stripe Elements and Stripe Connect                              |
+| Validation       | Zod through `@hermyx/shared`                                            |
+| Testing          | Vitest, Supertest and Playwright                                        |
+| Storage          | Local file storage in development or Azure Blob Storage when configured |
+| Containerization | Docker, Docker Compose                                                  |
 
 ## Repository structure
 
@@ -85,29 +100,31 @@ Hermyx/
 │   │   └── utils/              # Shared backend utilities
 │   └── tests/                  # Backend tests
 ├── shared/                     # Common validations and domain definitions
-└── docs/                       # API and Postman documentation
+├── docs/                       # API and Postman documentation
+├── Dockerfile                  # Unified container image for client and server
+├── compose.yml                 # Local multi-container orchestration (PostGIS, server, client)
+└── .dockerignore               # Build context exclusions
 ```
 
 ## Requirements
 
-Before running Hermyx locally, install or configure:
+Before running Hermyx locally, you will need:
 
-- Node.js 24.x or later and npm.
-- PostgreSQL installed and running, with PostGIS available.
-- A Stripe developer account with test API keys.
-- A Firebase Authentication project with web application configuration and Firebase Admin credentials.
+- **External services (required for all setups):**
+  - A Stripe developer account with test API keys.
+  - A Firebase Authentication project with web application configuration and Firebase Admin credentials.
+- **Runtime (choose one):**
+  - **Docker setup (recommended):** Docker Desktop (or Docker Engine with Compose v2) and npm to run the convenience scripts. No local PostgreSQL or PostGIS installation required.
+  - **Manual setup:** Node.js 24.x or later, npm, and PostgreSQL with PostGIS installed and running.
 
 ## Local setup
 
-### 1. Clone the repository and install dependencies
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/daniji09/Hermyx.git
 cd Hermyx
-npm install
 ```
-
-NPM Workspaces installs and links the dependencies for `client`, `server` and `shared` with this single command.
 
 ### 2. Configure environment variables
 
@@ -123,10 +140,10 @@ The frontend has separate development and production files so each environment c
 
 The templates document the configuration fields:
 
-- [`server/.env.example`](server/.env.example): server URLs and port, PostgreSQL connection, Firebase Admin, `ADMIN_FIREBASE_UID`, Stripe, scheduled jobs and optional Azure Blob Storage. Leave `AZURE_CONN_STRING` empty to use local file storage.
+- [`server/.env.example`](server/.env.example): server URLs and port, PostgreSQL connection (`DB_NAME`, `DB_USER`, `DB_PASSWORD`), Firebase Admin, `ADMIN_FIREBASE_UID`, Stripe, scheduled jobs and optional Azure Blob Storage. Leave `AZURE_CONN_STRING` empty to use local file storage.
 - [`client/.env.development.example`](client/.env.development.example) and [`client/.env.production.example`](client/.env.production.example): API URL, Firebase web application configuration and Stripe publishable key.
 
-Download the Firebase Admin private key JSON file and place it at `server/src/config/firebase-service-account.json`. Leave `FIREBASE_JSON` empty when using this local file.
+Download the Firebase Admin private key JSON file and place it at `server/src/config/firebase-service-account.json` **before starting the application**. Leave `FIREBASE_JSON` empty when using this local file.
 
 For real-account Playwright tests, also copy the E2E template and fill in local test credentials:
 
@@ -136,85 +153,137 @@ cp client/.env.e2e.example client/.env.e2e
 
 Never commit environment files containing credentials or Firebase service-account private keys.
 
-### 3. Initialize the database
+---
 
-Create an empty PostgreSQL database matching the connection settings in `server/.env`, and make sure PostgreSQL is reachable at the configured host and port. From the repository root, run:
+### Option A: Quick start with Docker (Recommended)
 
-```bash
-npm run db:push -w @hermyx/server
-```
+Docker Compose starts three containers, PostgreSQL with PostGIS (`db`), the Express API (`server`) and the Vite frontend (`client`), reusing the `server/.env` and `client/.env.development` files automatically.
 
-This command enables `unaccent` and `postgis`, builds the relational schema (tables, indexes and constraints), and inserts the system user and initial administrator record. Set `ADMIN_FIREBASE_UID` to the UID of an existing Firebase account before running it.
+1. **Build and start the containers:**
 
-If the database user cannot enable the extensions, enable them first using the PostgreSQL administrator account:
+   ```bash
+   npm run docker:up
+   ```
 
-```sql
-CREATE EXTENSION IF NOT EXISTS unaccent;
-CREATE EXTENSION IF NOT EXISTS postgis;
-```
+   _(Equivalent to `docker compose --env-file ./server/.env up --build -d`.)_
 
-> **Warning:** `db:push` drops and recreates the application tables. Use it only with a disposable or intentionally reset database.
+2. **Initialize the database (first time only):**
 
-### 4. Start the application
+   ```bash
+   npm run docker:db:push
+   ```
 
-Run the backend and frontend in separate terminals from the repository root:
+   > **Warning:** `db:push` drops and recreates the application tables. Use it only with a fresh or intentionally reset database.
 
-```bash
-npm run dev -w @hermyx/server
-```
+3. **Grant administrator access (optional):**
 
-```bash
-npm run dev -w @hermyx/client
-```
+   Set `ADMIN_FIREBASE_UID` in `server/.env` to an existing Firebase account UID and run:
 
-The backend listens for HTTP requests and WebSocket connections. Open the frontend URL printed by Vite, typically `http://localhost:5173`. The default backend URL is `http://localhost:3000`.
+   ```bash
+   docker compose --env-file ./server/.env exec server npm run firebase:admin -w @hermyx/server
+   ```
 
-### 5. Configure administrator access
+4. **Open the application:**
 
-To grant the Firebase administrator claim, set `ADMIN_FIREBASE_UID` in `server/.env` to the target account and run:
+   Visit `http://localhost:5173`. The backend API and Socket.IO server listen on `http://localhost:3000`, and PostgreSQL is exposed on port `5432`.
 
-```bash
-npm run firebase:admin -w @hermyx/server
-```
+5. **Stop the containers:**
 
-The account must already exist in Firebase. This script grants the Firebase `admin` claim; the initial database administrator role is created separately during database initialization.
+   ```bash
+   npm run docker:down
+   ```
 
-## Production deployment
+   Database data and uploaded files are persisted in named Docker volumes (`pgdata` and `uploads_data`). To wipe them completely, run `docker compose --env-file ./server/.env down -v`.
 
-The deployment setup described in the project report uses continuous integration and deployment with:
+---
 
-- Azure Database for PostgreSQL with PostGIS enabled.
-- A Vercel frontend project linked to the GitHub repository for automatic deployments.
-- Azure App Service configured with a Node.js runtime for the backend.
-- The GitHub repository secrets `FIREBASE_JSON` and `AZURE_WEBAPP_PUBLISH_PROFILE`.
+### Option B: Manual local setup (without Docker)
 
-Configure the production environment variables for the deployed services, including the production API URL and the corresponding Firebase and Stripe accounts.
+1. **Install dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+   NPM Workspaces installs and links the dependencies for `client`, `server` and `shared` with this single command.
+
+2. **Initialize the database:**
+
+   Create an empty PostgreSQL database matching the connection settings in `server/.env`, and make sure PostgreSQL is reachable at the configured host and port. From the repository root, run:
+
+   ```bash
+   npm run db:push -w @hermyx/server
+   ```
+
+   This command enables `unaccent` and `postgis`, builds the relational schema (tables, indexes and constraints), and inserts the system user and initial administrator record. Set `ADMIN_FIREBASE_UID` to the UID of an existing Firebase account before running it.
+
+   If the database user cannot enable the extensions, enable them first using the PostgreSQL administrator account:
+
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS unaccent;
+   CREATE EXTENSION IF NOT EXISTS postgis;
+   ```
+
+3. **Start the application:**
+
+   Run the backend and frontend in separate terminals from the repository root:
+
+   ```bash
+   npm run dev -w @hermyx/server
+   ```
+
+   ```bash
+   npm run dev -w @hermyx/client
+   ```
+
+   Open the frontend URL printed by Vite, typically `http://localhost:5173`. The default backend URL is `
+
+## Cloud deployment (archived)
+
+> **Note:** The live cloud environment was active during the academic evaluation and has since been decommissioned. To explore the application today, watch the [demo videos](#demo) or run it locally using the [Docker setup](#option-a-quick-start-with-docker-recommended).
+
+During the project's active phase, Hermyx was deployed with continuous integration and delivery using:
+
+- **Azure Database for PostgreSQL** with PostGIS enabled.
+- **Vercel** linked to the GitHub repository for automatic frontend deployments.
+- **Azure App Service** configured with a Node.js runtime for the backend API.
+- **GitHub Actions** using the `FIREBASE_JSON` and `AZURE_WEBAPP_PUBLISH_PROFILE` repository secrets.
+
+The deployment workflows and production configuration remain in the repository for reference.
+
 ## Useful commands
 
-To speed up the development lifecycle, provide tools to standardize code checks and facilitate local deployment of the system, a series of automated commands has been configured. These are divided into backend and frontend commands.
+To speed up the development lifecycle, standardize code checks and facilitate local execution, a series of automated npm scripts has been configured across the root, backend and frontend workspaces.
+
+### Root (Docker)
+
+- **`npm run docker:up`**: builds the application image and starts the `db`, `server` and `client` containers in detached mode using `server/.env`.
+- **`npm run docker:down`**: stops and removes the running containers while preserving database and upload volumes.
+- **`npm run docker:db:push`**: runs the database initialization script (`db:push`) inside the running `server` container.
+- **`npm run docker:firebase:admin`**: grants administration access to the user specified on environment variables.
 
 ### Backend
 
-Starting with the server commands, these use the Node.js package orchestration tool, npm [103], and combine dependencies such as cross-env [104] to ensure compatibility of environment variables across different operating systems. They are as follows:
+The server commands use npm and `cross-env` to ensure environment variable compatibility across operating systems:
 
-- **`npm run dev`**: starts the backend server in development mode using nodemon. This utility actively watches (through the `--watch` flag) for any changes made in the source code directory (`src`) and the shared folder (`../shared`), automatically restarting the server to apply changes in real time.
-- **`npm run dev:test`**: launches the server in development mode, but first injects the `NODE_ENV=test` variable. This allows the API to run connected exclusively to the test database, avoiding changes to the data in the main development environment.
-- **`npm test`**: runs the unit and integration test suite using the Vitest framework, automatically setting the test environment to guarantee data isolation.
-- **`npm run format`**: runs the Prettier formatting tool with the `--write` parameter, which scans all the project code and automatically rewrites files so that they comply with the established style and spacing rules.
-- **`npm run lint`**: runs the ESLint static code analyzer on all `.js` and `.jsx` files. By using the `--fix` parameter, the tool not only reports syntax errors and bad practices, but also automatically corrects those that can be fixed.
-- **`npm run db:push`**: runs the initialization file `scripts/init_db.js`, which connects to the PostgreSQL instance and synchronizes or resets the database schema of the development environment.
-- **`npm run db:push:test`**: performs the same database synchronization operation described in the previous command, but forces the connection to the test database by injecting `NODE_ENV=test`.
-- **`npm run firebase:admin`**: runs the utility script `scripts/set_firebase_admin.js` to promote a standard user to the administrator role in both the internal database and Firebase.
+- **`npm run dev`**: starts the backend server in development mode using nodemon. It watches `src` and `../shared`, automatically restarting the server when files change.
+- **`npm run dev:test`**: launches the server in development mode with `NODE_ENV=test`, connecting exclusively to the test database.
+- **`npm test`**: runs the unit and integration test suite using Vitest in the isolated test environment.
+- **`npm run format`**: runs Prettier with `--write` to format the codebase according to the project style rules.
+- **`npm run lint`**: runs ESLint with `--fix` on all `.js` and `.jsx` files to detect and fix code quality issues.
+- **`npm run db:push`**: runs `scripts/init_db.js` to initialize or reset the development database schema.
+- **`npm run db:push:test`**: initializes or resets the test database schema (`NODE_ENV=test`).
+- **`npm run firebase:admin`**: runs `scripts/set_firebase_admin.js` to promote a user to administrator in Firebase and the database.
 
 ### Frontend
 
-In the client directory, the commands focus on the Vite [105] build and bundling tool, as well as on running interface tests. The defined scripts are as follows:
+The client commands focus on Vite bundling and interface testing:
 
-- **`npm run dev`**: starts the development server using Vite. It provides an optimized environment that automatically reflects changes made to the interface code almost instantly in the browser without losing the application state.
-- **`npm run build`**: runs the production build process. Vite compiles and optimizes the source code, generating the final static files that will be deployed on the server.
+- **`npm run dev`**: starts the Vite development server with hot module replacement.
+- **`npm run build`**: compiles and optimizes the frontend into static production assets.
 - **`npm run test` and `npm run test:ui`**: run the client-side unit and component test suite using Vitest.
-- **`npm run format` and `npm run lint`**: perform the same aesthetic formatting (Prettier) and static code analysis (ESLint) operations described in the server section, but applied to the frontend codebase.
-- **`npm run test:e2e:[variant]`**: runs end-to-end tests using the Playwright framework. Given the complexity of the application, this base command has been subdivided into multiple variants to facilitate debugging and focus the tests.
+- **`npm run format` and `npm run lint`**: run Prettier and ESLint on the frontend codebase.
+- **`npm run test:e2e:[variant]`**: runs Playwright end-to-end test suites split by feature variant for focused debugging.
 
 ## API documentation
 
@@ -241,7 +310,7 @@ Detailed endpoint documentation is available in [`docs/api`](docs/api), and a Po
 
 ## Project status
 
-Hermyx is an academic prototype created to demonstrate a complete service marketplace workflow, including authentication, participation, communication, moderation and test payments. Production deployment requires additional operational, security and compliance configuration.
+Hermyx is a completed academic prototype created to demonstrate a full-stack service marketplace workflow, including authentication, participation, real-time communication, moderation and test payments. The hosted cloud environment has been retired, so local execution via Docker is the recommended way to run and inspect the application.
 
 ## Authors
 

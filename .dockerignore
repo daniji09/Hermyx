@@ -1,0 +1,67 @@
+# --- Previous builds and dependencies ---
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.vite
+
+# --- Environment variables and secrets ---
+.env
+.env.*
+**/.env
+**/.env.*
+server/src/config/firebase-service-account.json
+
+# --- CI/CD ---
+.git
+.gitignore
+.github
+
+# --- Linter and formatting ---
+.prettierrc
+.prettierrc.*
+.prettierignore
+**/.prettierrc*
+**/.prettierignore
+eslint.config.*
+**/eslint.config.*
+.eslintrc*
+**/.eslintrc*
+.eslintignore
+**/.eslintignore
+
+# --- Tests ---
+client/e2e
+server/tests
+**/__tests__
+**/*.test.js
+**/*.test.jsx
+**/*.spec.js
+**/*.spec.jsx
+**/playwright.config.*
+**/vitest.config.*
+**/playwright-report
+**/test-results
+**/coverage
+
+# --- Docs and deployment ---
+docs
+README.md
+**/*.md
+LICENSE
+vercel.json
+.vercel
+
+# --- Docker Compose files ---
+.dockerignore
+compose.yml
+compose.*.yml
+docker-compose*.yml
+
+# --- IDE, OS ---
+.vscode
+.idea
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db

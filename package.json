@@ -7,6 +7,10 @@
     "shared"
   ],
   "scripts": {
-    "lint:all": "npm run lint --workspaces"
+    "lint:all": "npm run lint --workspaces",
+    "docker:up": "docker compose --env-file ./server/.env up --build -d",
+    "docker:down": "docker compose --env-file ./server/.env down",
+    "docker:db:push": "docker compose --env-file ./server/.env exec server npm run db:push -w @hermyx/server",
+    "docker:firebase:admin": "docker compose --env-file ./server/.env exec server npm run firebase:admin -w @hermyx/server"
   }
 }

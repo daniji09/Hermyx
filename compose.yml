@@ -1,0 +1,64 @@
+services:
+  # Database container
+  db:
+    # Postgis image for PostgreSQL includes postgis and unaccent
+    image: postgis/postgis:16-3.4
+    # Server is restarted when failure
+    restart: on-failure
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    # Exposes port 5432
+    ports:
+      - '5433:5432'
+    # Creates persistent volume
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Checks that PostgreSQL database actually can receive petitions
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Server container
+  server:
+    image: hermyx-app
+    # Builds it using Dockerfile on root
+    build: .
+    # Runs server using its workspace directory
+    command: npm run dev -w @hermyx/server
+    restart: on-failure
+    ports:
+      - '3000:3000'
+    env_file:
+      - ./server/.env
+    environment:
+      DB_HOST: db
+    volumes:
+      - ./server/src/config/firebase-service-account.json:/app/server/src/config/firebase-service-account.json:ro
+      - uploads_data:/app/server/public
+    # Dependency on db using the previous defined health check
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    image: hermyx-app
+    # Client shares its image with server, so it must not be pulled, it has to reuse it
+    pull_policy: never
+    # "-- --host" is mandatory so Vite accepts connections outside the container
+    command: npm run dev -w @hermyx/client -- --host
+    restart: on-failure
+    ports:
+      - '5173:5173'
+    env_file:
+      - ./client/.env.development
+    # Dependency on server, so client container waits for server to be initialized
+    depends_on:
+      - server
+
+volumes:
+  pgdata:
+  uploads_data:
