@@ -7,18 +7,7 @@ Hermyx is an academic prototype that connects people who need a task completed w
 </div>
 
 ## Demo
-
-### Service publishing, discovery & participation
-
-<!-- Paste your GitHub-hosted video URL here -->
-
-### Real-time chat, Stripe payments & payouts
-
-<!-- Paste your GitHub-hosted video URL here -->
-
-### Moderation & dispute resolution
-
-<!-- Paste your GitHub-hosted video URL here -->
+[![Watch Hermyx demo](https://img.youtube.com/vi/TU_VIDEO_ID/maxresdefault.jpg)](https://youtu.be/TU_VIDEO_ID)
 
 ## Overview
 
